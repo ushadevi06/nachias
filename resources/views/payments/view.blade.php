@@ -102,7 +102,7 @@
                                                 <div class="button-box">
                                                     <a href="{{ url('view_payment') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
                                                     <a href="{{ url('add_payment') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                                    <a href="javascript:;" class="btn btn-delete"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                                    <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -151,7 +151,7 @@
                                                 <div class="button-box">
                                                     <a href="{{ url('view_payment') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
                                                     <a href="{{ url('add_payment') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                                    <a href="javascript:;" class="btn btn-delete"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                                    <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                                 </div>
                                             </td>
                                         </tr>

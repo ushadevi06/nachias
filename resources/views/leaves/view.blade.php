@@ -38,7 +38,7 @@
                                     <a href="{{ url('view_leave') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
                                     <a href="{{ url('add_leave') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                     <a href="javascript:;" class="btn btn-edit"><i class="icon-base ri ri-checkbox-circle-line"></i></a>
-                                    <a href="javascript:;" class="btn btn-delete"><i class="icon-base ri ri-close-circle-line"></i></a>
+                                    <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-close-circle-line"></i></a>
                                 </div>
                             </td>
                         </tr>

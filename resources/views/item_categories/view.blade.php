@@ -39,7 +39,7 @@
                                     <td>
                                         <div class="button-box">
                                             <a href="{{ url('add_item_category') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -58,7 +58,7 @@
                                     <td>
                                         <div class="button-box">
                                             <a href="{{ url('add_item_category') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -77,7 +77,7 @@
                                     <td>
                                         <div class="button-box">
                                             <a href="{{ url('add_item_category') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -96,7 +96,7 @@
                                     <td>
                                         <div class="button-box">
                                             <a href="{{ url('add_item_category') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
@@ -115,7 +115,7 @@
                                     <td>
                                         <div class="button-box">
                                             <a href="{{ url('add_item_category') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
