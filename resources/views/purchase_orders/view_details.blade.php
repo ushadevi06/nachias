@@ -99,22 +99,59 @@
                         <div class="col-lg-12">
                             <h6>Tax & Charges:</h6>
                         </div>
-                        <div class="col-md-3">
-                            <label class="detail-title">Discount (2%):</label>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">Sub Total:</label>
+                            <div class="text-muted">₹175.00</div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">Discount %:</label>
+                            <div class="text-muted">2%</div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">Discount Amount:</label>
                             <div class="text-muted">₹3.50</div>
                         </div>
-                        <div class="col-md-3">
+
+                        <div class="col-md-3 col-xl-2">
                             <label class="detail-title">Taxable Amount:</label>
                             <div class="text-muted">₹171.50</div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="detail-title">GST (3%):</label>
-                            <div class="text-muted">₹5.15</div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">Other State:</label>
+                            <div class="text-muted">No</div>
                         </div>
-                        <div class="col-md-3">
+
+                        <!-- IGST (show only if Other State = Yes) -->
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">IGST (18%):</label>
+                            <div class="text-muted">₹0.00</div>
+                        </div>
+
+                        <!-- CGST + SGST -->
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">CGST (9%):</label>
+                            <div class="text-muted">₹7.72</div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">SGST (9%):</label>
+                            <div class="text-muted">₹7.72</div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">Tax Amount:</label>
+                            <div class="text-muted">₹15.44</div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
                             <label class="detail-title">Total Amount:</label>
-                            <div class="text-muted text-success">₹176.75</div>
+                            <div class="text-muted text-success">₹186.94</div>
                         </div>
+
                         <div class="col-md-3">
                             <label class="detail-title">Additional Notes:</label>
                             <div class="text-muted">Goods are received</div>

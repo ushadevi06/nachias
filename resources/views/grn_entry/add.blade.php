@@ -1,13 +1,6 @@
 @extends('layouts.common')
 @section('title', 'Add GRN Entry - ' . env('WEBSITE_NAME'))
 @section('content')
-<style>
-    .art-no-input {
-        width: 180px !important;
-        max-width: none !important;
-        display: inline-block !important;
-    }
-</style>
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
@@ -182,12 +175,12 @@
 <div class="modal fade" id="variantModal" tabindex="-1" aria-labelledby="variantModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="modal-title mb-0" id="variantModalLabel">
+            <div class="modal-header bg-primary d-flex justify-content-between align-items-center">
+                <h5 class="modal-title mb-0 text-white" id="variantModalLabel">
                     Add Variants (Specify Quantity per Color)
                 </h5>
-                <h5 class="mb-0 text-muted">Total Ordered Quantity: 500</h5>
-                <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="mb-0 text-muted text-white">Total Ordered Quantity: 500</h5>
+                <button type="button" class="btn-close ms-2 btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-4">

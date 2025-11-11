@@ -69,7 +69,7 @@
                                     <td>₹186.75</td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="">
+                                            <select id="" class="form-select" data-placeholder="">
                                                 <option value="Draft">Draft</option>
                                                 <option value="Finalized" selected>Finalized</option>
                                                 <option value="Paid">Paid</option>
@@ -95,7 +95,7 @@
                                     <td>₹110.36</td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="">
+                                            <select id="" class="form-select" data-placeholder="">
                                                 <option value="Draft">Draft</option>
                                                 <option value="Finalized">Finalized</option>
                                                 <option value="Paid" selected>Paid</option>

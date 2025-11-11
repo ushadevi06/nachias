@@ -24,6 +24,10 @@
                             <div class="text-muted">Inward</div>
                         </div>
                         <div class="col-md-4">
+                            <label class="detail-title">Type:</label>
+                            <div class="text-muted">Raw Materials</div>
+                        </div>
+                        <div class="col-md-4">
                             <label class="detail-title">Material Category:</label>
                             <div class="text-muted">Fabric(MC001)</div>
                         </div>

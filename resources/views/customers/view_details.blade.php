@@ -28,7 +28,27 @@
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Email:</label>
-                            <div class="text-muted">arultex34@gmail.com</div>
+                            <div class="text-muted">abinaya.1900@gmail.com</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Website URL:</label>
+                            <div class="text-muted">https://www.abinaya.com/</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Transport Name:</label>
+                            <div class="text-muted">MSS Logistics</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Booking Office:</label>
+                            <div class="text-muted">Hosur</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Zone:</label>
+                            <div class="text-muted">South Zone</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Stores:</label>
+                            <div class="text-muted">Finished Goods</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Status:</label>
@@ -38,7 +58,7 @@
                             <hr>
                         </div>
                         <div class="col-lg-12">
-                            <h6>Location Details:</h6>
+                            <h6>Location Information:</h6>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Country:</label>
@@ -58,11 +78,15 @@
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Address Line 1:</label>
-                            <div class="text-muted">No. 12, South Masi Street</div>
+                            <div class="text-muted">No. 250, Bazzar Street</div>
                         </div> 
                         <div class="col-md-3">
                             <label class="detail-title">Address Line 2:</label>
-                            <div class="text-muted">Near Meenakshi Temple</div>
+                            <div class="text-muted">Bangalore Main Road</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Address Line 3:</label>
+                            <div class="text-muted"></div>
                         </div>
                         <div class="col-lg-12">
                             <hr>
@@ -79,7 +103,7 @@
                             <div class="text-muted">Store Manager</div>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">Phone Number:</label>
+                            <label class="detail-title">Mobile Number:</label>
                             <div class="text-muted">7410258963</div>
                         </div>
                         <div class="col-md-3">
@@ -90,15 +114,33 @@
                             <hr>
                         </div>
                         <div class="col-lg-12">
-                            <h6>Tax & Compliance:</h6>
+                            <h6>Commission Information:</h6>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">PAN NO:</label>
-                            <div class="text-muted">AAAPH1234C</div>
+                            <label class="detail-title">Sales Agent:</label>
+                            <div class="text-muted">Amit Kumar(SA101)</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Commission (%):</label>
+                            <div class="text-muted">12.36%</div>
+                        </div>
+                        <div class="col-lg-12">
+                            <hr>
+                        </div>  
+                        <div class="col-lg-12">
+                            <h6>Tax & Compliance:</h6>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">GST No:</label>
                             <div class="text-muted">33ARULTX1234Z1Z </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Tax Type:</label>
+                            <div class="text-muted">IGST8%</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">PAN NO:</label>
+                            <div class="text-muted">AAAPH1234C</div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Credit Limit:</label>
@@ -107,6 +149,36 @@
                         <div class="col-md-3">
                             <label class="detail-title">Payment Terms:</label>
                             <div class="text-muted text-success"> Net 30 Days</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Sales Discount (%):</label>
+                            <div class="text-muted"> 12 %</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Box Discount (%):</label>
+                            <div class="text-muted"> 3.2 %</div>
+                        </div>
+                        <div class="col-lg-12">
+                            <hr>
+                        </div>  
+                        <div class="col-lg-12">
+                            <h6>Bank Information:</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Bank Name:</label>
+                            <div class="text-muted">Indian Bank</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Branch:</label>
+                            <div class="text-muted">Anna Nagar</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Account Number:</label>
+                            <div class="text-muted">MAD1234567</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">IFSC Code:</label>
+                            <div class="text-muted">IDIB000M004</div>
                         </div>
                     </div>
                 </div>

@@ -86,7 +86,7 @@
                                     <td>30-09-2025</td>
                                     <td>Production</td>
                                     <td>
-                                        <select class="select2 form-select" data-placeholder="Select Status">
+                                        <select class="form-select" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started" selected>Not Started</option>
                                             <option value="In Progress">In Progress</option>
@@ -113,7 +113,7 @@
                                     <td>26-09-2025</td>
                                     <td>Store</td>
                                     <td>
-                                        <select class="select2 form-select" data-placeholder="Select Status">
+                                        <select class="form-select" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started">Not Started</option>
                                             <option value="In Progress" selected>In Progress</option>
@@ -140,7 +140,7 @@
                                     <td>03-10-2025</td>
                                     <td>Production</td>
                                     <td>
-                                        <select class="select2 form-select" data-placeholder="Select Status">
+                                        <select class="form-select" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started">Not Started</option>
                                             <option value="In Progress">In Progress</option>

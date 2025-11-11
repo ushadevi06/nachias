@@ -44,7 +44,7 @@
                                 </tr>
                                 <tr>
                                     <td>2</td>
-                                    <td>Supervisior</td>
+                                    <td>Assistant Manager</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -63,7 +63,7 @@
                                 </tr>
                                 <tr>
                                     <td>3</td>
-                                    <td>Store Keeper</td>
+                                    <td>Incharge</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -82,7 +82,7 @@
                                 </tr>
                                 <tr>
                                     <td>4</td>
-                                    <td>Production Head</td>
+                                    <td>Assistant Incharge</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -101,7 +101,26 @@
                                 </tr>
                                 <tr>
                                     <td>5</td>
-                                    <td>Accountant</td>
+                                    <td>Supervisior</td>
+                                    <td>
+                                        <label class="switch switch-success switch-lg">
+                                            <input type="checkbox" class="switch-input" checked>
+                                            <span class="switch-toggle-slider">
+                                                <span class="switch-on"></span>
+                                                <span class="switch-off"></span>
+                                            </span>
+                                        </label>
+                                    </td>
+                                    <td>
+                                        <div class="button-box">
+                                            <a href="{{ url('add_role') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>6</td>
+                                    <td>Executive</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>

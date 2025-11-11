@@ -91,7 +91,7 @@
                                             <td>₹7,900</td>
                                             <td>25-09-2025</td>
                                             <td>
-                                                <select class="select2 form-select">
+                                                <select class="form-select">
                                                     <option value="">Select Status</option>
                                                     <option value="Cleared">Cleared</option>
                                                     <option value="Pending" selected>Pending</option>
@@ -140,7 +140,7 @@
                                             <td>₹6,900</td>
                                             <td>25-09-2025</td>
                                             <td>
-                                                <select class="select2 form-select">
+                                                <select class="form-select">
                                                     <option value="">Select Status</option>
                                                     <option value="Cleared" selected>Cleared</option>
                                                     <option value="Pending">Pending</option>

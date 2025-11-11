@@ -319,7 +319,7 @@
                 <!-- Submit Buttons -->
                 <div class="text-end mt-4">
                     <button type="submit" class="btn btn-primary">Submit</button>
-                    <a href="{{ url('sales_invoice') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ url('   ') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

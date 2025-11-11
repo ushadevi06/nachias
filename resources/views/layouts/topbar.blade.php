@@ -107,8 +107,7 @@
                                 <!-- Master -->
                                 <li class="menu-item 
                                     {{ request()->is('countries') || request()->is('add_country') || request()->is('states') || request()->is('add_state') || request()->is('cities') || request()->is('add_city') || request()->is('places') || request()->is('add_place') || request()->is('uom') || request()->is('add_uom') || request()->is('operation_stages') || request()->is('add_operation_stage') || request()->is('zones') || request()->is('add_zone') || request()->is('size_ratio') || request()->is('add_size_ratio') || request()->is('fabric_type') || request()->is('add_fabric_type') || request()->is('charges') || request()->is('add_charge') || request()->is('store_location') || request()->is('add_store_location') || request()->is('departments') || request()->is('add_department') || request()->is('suppliers') || request()->is('add_supplier') || request()->is('view_supplier') || request()->is('customers') || request()->is('add_customer') || request()->is('view_customer') || request()->is('service_providers') || request()->is('add_service_provider') || request()->is('view_service_provider')  || request()->is('sales_agent') || request()->is('add_sales_agent') || request()->is('view_sales_agent')
-                                    || request()->is('rmaterial_categories') || request()->is('add_rmaterial_category') || request()->is('rmaterials') || request()->is('add_rmaterial') || request()->is('item_categories') || request()->is('add_item_category') || request()->is('items') || request()->is('add_item') || request()->is('view_item') || request()->is('purchase_commission_agent') || request()->is('add_purchase_commission_agent') || request()->is('view_purchase_commission_agent') ? 'active' : '' }}">
-                                    
+                                    || request()->is('rmaterial_categories') || request()->is('add_rmaterial_category') || request()->is('rmaterials') || request()->is('add_rmaterial') || request()->is('item_categories') || request()->is('add_item_category') || request()->is('items') || request()->is('add_item') || request()->is('view_item') || request()->is('purchase_commission_agent') || request()->is('add_purchase_commission_agent') || request()->is('view_purchase_commission_agent') || request()->is('tax_types') || request()->is('add_tax_type') || request()->is('brands') || request()->is('add_brand') || request()->is('taxes') || request()->is('add_tax') ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-layout-2-line"></i>
                                         <div>Master</div>
@@ -177,11 +176,21 @@
                                                 <div>Departments</div>
                                             </a>
                                         </li>
+                                        {{-- <li class="menu-item {{ request()->is('tax_types') || request()->is('add_tax_type') ? 'active' : '' }}">
+                                            <a href="{{ url('tax_types') }}" class="menu-link">
+                                                <div>Tax Types</div>
+                                            </a>
+                                        </li> --}}
+                                        <li class="menu-item {{ request()->is('taxes') || request()->is('add_tax') ? 'active' : '' }}">
+                                            <a href="{{ url('taxes') }}" class="menu-link">
+                                                <div>Taxes</div>
+                                            </a>
+                                        </li>
                                         <!-- Parties -->
                                         <li class="menu-item 
                                             {{ request()->is('customers') || request()->is('add_customer') || request()->is('view_customer') 
                                             || request()->is('suppliers') || request()->is('add_supplier') || request()->is('view_supplier') || request()->is('service_providers') || request()->is('add_service_provider') || request()->is('view_service_provider') 
-                                            || request()->is('sales_agent') || request()->is('add_sales_agent') || request()->is('view_sales_agent') || request()->is('purchase_commission_agent') || request()->is('add_purchase_commission_agent') || request()->is('view_purchase_commission_agent') 
+                                            || request()->is('sales_agent') || request()->is('add_sales_agent') || request()->is('view_sales_agent') || request()->is('purchase_commission_agent') || request()->is('add_purchase_commission_agent') || request()->is('view_purchase_commission_agent')
                                             ? 'active' : '' }}">
                                             
                                             <a href="javascript:void(0)" class="menu-link menu-toggle">
@@ -217,7 +226,7 @@
                                             </ul>
                                         </li>
                                         <!-- Item Setup -->
-                                        <li class="menu-item {{ request()->is('rmaterial_categories') || request()->is('add_rmaterial_category') || request()->is('rmaterials') || request()->is('add_rmaterial') || request()->is('item_categories') || request()->is('add_item_category') || request()->is('items') || request()->is('add_item') || request()->is('view_item')  ? 'active' : '' }}">
+                                        <li class="menu-item {{ request()->is('rmaterial_categories') || request()->is('add_rmaterial_category') || request()->is('rmaterials') || request()->is('add_rmaterial') || request()->is('item_categories') || request()->is('add_item_category') || request()->is('items') || request()->is('add_item') || request()->is('view_item')  || request()->is('brands') || request()->is('add_brand') ? 'active' : '' }}">
                                             <a href="javascript:void(0)" class="menu-link menu-toggle">
                                                 <div>Item Setup</div>
                                             </a>
@@ -235,6 +244,11 @@
                                                 <li class="menu-item {{ request()->is('item_categories') || request()->is('add_item_category') ? 'active' : '' }}">
                                                     <a href="{{ url('item_categories') }}" class="menu-link">
                                                         <div>Brand Category</div>
+                                                    </a>
+                                                </li>
+                                                <li class="menu-item {{ request()->is('brands') || request()->is('add_brand') ? 'active' : '' }}">
+                                                    <a href="{{ url('brands') }}" class="menu-link">
+                                                        <div>Brands</div>
                                                     </a>
                                                 </li>
                                                 <li class="menu-item {{ request()->is('items') || request()->is('add_item') || request()->is('view_item') ? 'active' : '' }}">

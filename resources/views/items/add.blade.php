@@ -35,6 +35,17 @@
                                     <label for="brand_category">Brand Category </label>
                                 </div>
                             </div>
+                            <div class="col-lg-6 col-xl-4 mb-4">
+                                <label class="form-label d-block">Select Type *</label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="entry_type_radio" id="raw_material" value="raw_material">
+                                    <label class="form-check-label" for="raw_material">Raw Material</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="entry_type_radio" id="items" value="items">
+                                    <label class="form-check-label" for="items">Items</label>
+                                </div>
+                            </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="name" placeholder="Enter Name" name="name" required>
@@ -282,8 +293,8 @@
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
         <div class="modal-header">
-        <h5 class="modal-title" id="sizeRatioModalLabel">Select Size / Ratio</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title text-white" id="sizeRatioModalLabel">Select Size / Ratio</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
         <table class="table align-middle mb-0" id="sizeRatioTable">

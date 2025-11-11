@@ -143,9 +143,9 @@
     <div class="modal fade" id="variantModal1" tabindex="-1" aria-labelledby="variantModalLabel1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title" id="variantModalLabel1">Variants for Men’s Casual Denim Shirt</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white" id="variantModalLabel1">Variants for Men’s Casual Denim Shirt</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="table-responsive">
@@ -172,9 +172,9 @@
     <div class="modal fade" id="variantModal2" tabindex="-1" aria-labelledby="variantModalLabel2" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title" id="variantModalLabel2">Variants for Men’s Formal Cotton Shirt</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white" id="variantModalLabel2">Variants for Men’s Formal Cotton Shirt</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="table-responsive">

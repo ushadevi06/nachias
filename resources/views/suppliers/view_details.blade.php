@@ -39,7 +39,7 @@
                             <div class="text-muted">North Masi Street</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Supplier Type:</label>
+                            <label class="detail-title">Store:</label>
                             <div class="text-muted">Fabric</div>
                         </div>
                         <div class="col-md-4">
@@ -53,7 +53,7 @@
                             <hr>
                         </div>
                         <div class="col-lg-12">
-                            <h6>Location Details:</h6>
+                            <h6>Location Information:</h6>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Country:</label>
@@ -73,11 +73,15 @@
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Address Line 1:</label>
-                            <div class="text-muted">68/1 East Perumal Maistry Street</div>
+                            <div class="text-muted">5,130 Ramwadi Building</div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Address Line 2:</label>
-                            <div class="text-muted">Mahal Area, Madurai – 625001, Tamil Nadu, India</div>
+                            <div class="text-muted">Kalbadevi Road</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Address Line 3:</label>
+                            <div class="text-muted">Lower Parrel</div>
                         </div>
                         <div class="col-lg-12">
                             <hr>
@@ -94,7 +98,7 @@
                             <div class="text-muted">Store Manager</div>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">Phone Number:</label>
+                            <label class="detail-title">Mobile Number:</label>
                             <div class="text-muted">7410258963</div>
                         </div>
                         <div class="col-md-3">
@@ -102,13 +106,13 @@
                             <div class="text-muted">rio90@gmail.com</div>
                         </div>
                         <div class="col-lg-12">
-                            <h6>Commission Details:</h6>
+                            <h6>Commission Information:</h6>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="detail-title">Purchase Commission Agent:</label>
                             <div class="text-muted">Rayan (PC001)</div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="detail-title">Commission (%):</label>
                             <div class="text-muted">12.36%</div>
                         </div>
@@ -119,12 +123,16 @@
                             <h6>Tax & Compliance:</h6>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">PAN NO:</label>
-                            <div class="text-muted">AAAPH1234C</div>
-                        </div>
-                        <div class="col-md-3">
                             <label class="detail-title">GST No:</label>
                             <div class="text-muted">33AXFPK5008A1Z6</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Tax Type:</label>
+                            <div class="text-muted">IGST8%</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">PAN NO:</label>
+                            <div class="text-muted">AAAPH1234C</div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">ECC No:</label>
@@ -137,6 +145,28 @@
                         <div class="col-md-3">
                             <label class="detail-title">Payment Terms:</label>
                             <div class="text-muted">Net 30 Days</div>
+                        </div>
+                        <div class="col-lg-12">
+                            <hr>
+                        </div>  
+                        <div class="col-lg-12">
+                            <h6>Bank Information:</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Bank Name:</label>
+                            <div class="text-muted">Indian Bank</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Branch:</label>
+                            <div class="text-muted">Anna Nagar</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">Account Number:</label>
+                            <div class="text-muted">MAD1234567</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="detail-title">IFSC Code:</label>
+                            <div class="text-muted">IDIB000M004</div>
                         </div>
                     </div>
                 </div>

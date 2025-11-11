@@ -98,8 +98,8 @@
                                                 <option value="Premium Linen Shirt(ITEM005)">Premium Linen Shirt(ITEM005)</option>
                                             </select>
                                         </td>
-                                        <td><input type="text" class="form-control hsn_code" readonly></td>
-                                        <td><input type="number" class="form-control quantity" step="0.01"></td>
+                                        <td><input type="text" class="form-control hsn_code" placeholder="Enter HSN Code" readonly></td>
+                                        <td><input type="number" class="form-control quantity" placeholder="Enter Unit Price" step="0.01"></td>
                                         <td>
                                             <select class="select2 form-select uom" data-placeholder="Select UOM">
                                                 <option value="">Select UOM</option>
@@ -110,8 +110,8 @@
                                                 <option value="SET">SET</option>
                                             </select>
                                         </td>
-                                        <td><input type="number" class="form-control unit_price" step="0.01"></td>
-                                        <td><input type="number" class="form-control total_amount" step="0.01" readonly></td>
+                                        <td><input type="number" class="form-control unit_price" placeholder="Enter Unit Price" step="0.01"></td>
+                                        <td><input type="number" class="form-control total_amount" placeholder="Enter Line Total" step="0.01" readonly></td>
                                         <td><button type="button" class="btn btn-primary add_item">+</button></td>
                                     </tr>
                                 </tbody>
@@ -278,10 +278,20 @@ $(document).ready(function () {
                         <option value="Premium Linen Shirt(ITEM005)">Premium Linen Shirt(ITEM005)</option>
                     </select>
                 </td>
-                <td><input type="text" class="form-control hsn_code" readonly></td>
-                <td><input type="number" class="form-control quantity" step="0.01"></td>
-                <td><input type="number" class="form-control unit_price" step="0.01"></td>
-                <td><input type="number" class="form-control total_amount" step="0.01" readonly></td>
+                <td><input type="text" class="form-control hsn_code" placeholder="Enter HSN Code" readonly></td>
+                <td><input type="number" class="form-control quantity" placeholder="Enter Quantity" step="0.01"></td>
+                <td>
+                    <select class="select2 form-select uom" data-placeholder="Select UOM">
+                        <option value="">Select UOM</option>
+                        <option value="PCS">PCS</option>
+                        <option value="MTR">MTR</option>
+                        <option value="ROLL">ROLL</option>
+                        <option value="KG">KG</option>
+                        <option value="SET">SET</option>
+                    </select>
+                </td>
+                <td><input type="number" class="form-control unit_price" placeholder="Enter Unit Price" step="0.01"></td>
+                <td><input type="number" class="form-control total_amount" placeholder="Enter Line Total" step="0.01" readonly></td>
                 <td><button type="button" class="btn btn-danger remove_item">-</button></td>
             </tr>
         `;

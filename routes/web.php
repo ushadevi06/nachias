@@ -50,11 +50,14 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ChargeController;
 use App\Http\Controllers\FabricTypeController;
 use App\Http\Controllers\PurchaseCommissionAgentController;
-use App\Http\Controllers\SizeratioController;
+use App\Http\Controllers\SizeRatioController;
 use App\Http\Controllers\StoreLocationController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\OperationStageController;
+use App\Http\Controllers\TaxTypeController;
+use App\Http\Controllers\TaxController;
+use App\Http\Controllers\BrandController;
 
 /*
 |--------------------------------------------------------------------------
@@ -126,6 +129,18 @@ Route::get('add_store_location', [StoreLocationController::class, 'add']);
 Route::get('departments', [DepartmentController::class, 'index']);
 Route::get('add_department', [DepartmentController::class, 'add']);
 
+/* Tax Types */
+Route::get('tax_types', [TaxTypeController::class, 'index']);
+Route::get('add_tax_type', [TaxTypeController::class, 'add']);
+
+/* Tax Types */
+Route::get('taxes', [TaxController::class, 'index']);
+Route::get('add_tax', [TaxController::class, 'add']);
+
+/* Brands */
+Route::get('brands', [BrandController::class, 'index']);
+Route::get('add_brand', [BrandController::class, 'add']);
+
 /* Zone */
 Route::get('zones', [ZoneController::class, 'index']);
 Route::get('add_zone', [ZoneController::class, 'add']);
@@ -135,8 +150,8 @@ Route::get('operation_stages', [OperationStageController::class, 'index']);
 Route::get('add_operation_stage', [OperationStageController::class, 'add']);
 
 /* Size & ratio */
-Route::get('size_ratio', [SizeratioController::class, 'index']);
-Route::get('add_size_ratio', [SizeratioController::class, 'add']);
+Route::get('size_ratio', [SizeRatioController::class, 'index']);
+Route::get('add_size_ratio', [SizeRatioController::class, 'add']);
 
 /* Customer */
 Route::get('customers', [CustomerController::class, 'index']);

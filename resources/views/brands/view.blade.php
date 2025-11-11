@@ -1,12 +1,12 @@
 @extends('layouts.common')
-@section('title', 'Charges - ' . env('WEBSITE_NAME'))
+@section('title', 'Brands - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Charges</h4>
-                <a class="btn btn-primary" href="{{ url('add_charge') }}">
+                <h4>Brands</h4>
+                <a class="btn btn-primary" href="{{ url('add_brand') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
             </div>
@@ -17,7 +17,7 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Charges</th>
+                                    <th>Brand Name</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -25,7 +25,7 @@
                             <tbody>
                                 <tr>
                                     <td>1</td>
-                                    <td>Freight/Courier</td>
+                                    <td>Blackberrys</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -37,14 +37,14 @@
                                     </td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                                            <a href="{{ url('add_brand') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>2</td>
-                                    <td>Slitting</td>
+                                    <td>Hugo Boss</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -56,14 +56,14 @@
                                     </td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                                            <a href="{{ url('add_brand') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>3</td>
-                                    <td>Cutting</td>
+                                    <td>Calvin Klein</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -75,14 +75,14 @@
                                     </td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                                            <a href="{{ url('add_brand') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>4</td>
-                                    <td>Assistant Incharge</td>
+                                    <td>Peter England</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -94,14 +94,14 @@
                                     </td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                                            <a href="{{ url('add_brand') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>5</td>
-                                    <td>Insurance</td>
+                                    <td>Pepe Jeans</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -113,14 +113,14 @@
                                     </td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                                            <a href="{{ url('add_brand') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>6</td>
-                                    <td>TCS</td>
+                                    <td>Park Avenue</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>
@@ -132,7 +132,7 @@
                                     </td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                                            <a href="{{ url('add_brand') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>

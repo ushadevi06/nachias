@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-class SizeRatioController extends Controller
+class BrandController extends Controller
 {
     public function index(){
-        return view('size_ratio/view');
+        return view('brands/view');
     }
 
     public function add(){
-        return view('size_ratio/add');
+        return view('brands/add');
     }
 }

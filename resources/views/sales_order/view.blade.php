@@ -72,7 +72,7 @@
                                     <td>Neha Sharma <span class="mini-title">(SA102)</span></td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="">
+                                            <select id="" class="form-select" data-placeholder="">
                                                 <option value="Pending">Pending</option>
                                                 <option value="In Production">In Production</option>
                                                 <option value="Dispatched">Dispatched</option>
@@ -100,7 +100,7 @@
                                     <td>Neha Sharma <span class="mini-title">(SA102)</span></td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="">
+                                            <select id="" class="form-select" data-placeholder="">
                                                 <option value="Pending">Pending</option>
                                                 <option value="In Production">In Production</option>
                                                 <option value="Dispatched">Dispatched</option>
@@ -113,7 +113,6 @@
                                         <div class="button-box">
                                             <a href="{{ url('view_sale_order') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
                                             <a href="{{ url('add_sale_order') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                             <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
                                         </div>
                                     </td>

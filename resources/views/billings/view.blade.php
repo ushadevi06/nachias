@@ -72,7 +72,7 @@
                                         <input type="text" class="form-control" placeholder="Enter remarks" value="Awaiting payment">
                                     </td>
                                     <td>
-                                        <select class="select2 form-select">
+                                        <select class="form-select">
                                             <option value="">Select Status</option>
                                             <option value="Pending" selected>Pending</option>
                                             <option value="Dispatch">Dispatch</option>
@@ -105,7 +105,7 @@
                                         <input type="text" class="form-control" placeholder="Enter remarks" value="Invoice cleared">
                                     </td>
                                     <td>
-                                        <select class="select2 form-select">
+                                        <select class="form-select">
                                             <option value="">Select Status</option>
                                             <option value="Pending">Pending</option>
                                             <option value="Dispatch" selected>Dispatch</option>
@@ -138,7 +138,7 @@
                                         <input type="text" class="form-control" placeholder="Enter remarks" value="Part payment received">
                                     </td>
                                     <td>
-                                        <select class="select2 form-select">
+                                        <select class="form-select">
                                             <option value="">Select Status</option>
                                             <option value="Pending">Pending</option>
                                             <option value="Dispatch">Dispatch</option>

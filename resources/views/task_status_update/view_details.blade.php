@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>View Status Updates</h4>
-                <a href="{{ url('task_tracking_monitoring') }}" class="btn btn-primary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
+                <a href="{{ url('task_status_updates') }}" class="btn btn-primary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
             </div>
             <div class="card detail-card">
                 <div class="card-body">

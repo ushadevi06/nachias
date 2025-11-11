@@ -37,7 +37,7 @@
                                     <td>3</td>
                                     <td>1</td>
                                     <td>
-                                        <select class="select2 form-select" data-placeholder="Select Status">
+                                        <select class="form-select" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started">Not Started</option>
                                             <option value="In Progress" selected>In Progress</option>
@@ -61,7 +61,7 @@
                                     <td>0</td>
                                     <td>0</td>
                                     <td>
-                                        <select class="select2 form-select" data-placeholder="Select Status">
+                                        <select class="form-select" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started" selected>Not Started</option>
                                             <option value="In Progress">In Progress</option>
@@ -85,7 +85,7 @@
                                     <td>10</td>
                                     <td>0</td>
                                     <td>
-                                        <select class="select2 form-select" data-placeholder="Select Status">
+                                        <select class="form-select" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started">Not Started</option>
                                             <option value="In Progress">In Progress</option>

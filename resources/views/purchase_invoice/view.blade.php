@@ -71,9 +71,9 @@
                                     <td>₹141,000.00</td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="">
+                                            <select id="" class="form-select" data-placeholder="">
                                                 <option value="Draft">Draft</option>
-                                                <option value="Finalized" selected>Finalized</option>
+                                                <option value="Unpaid/Credit">Unpaid/Credit</option>
                                                 <option value="Paid">Paid</option>
                                                 <option value="Partially Paid">Partially Paid</option>
                                             </select>
@@ -102,9 +102,9 @@
                                     <td>₹95,000</td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="">
-                                                <option value="Draft" selected>Draft</option>
-                                                <option value="Finalized">Finalized</option>
+                                            <select id="" class="form-select" data-placeholder="">
+                                                <option value="Draft">Draft</option>
+                                                <option value="Unpaid/Credit">Unpaid/Credit</option>
                                                 <option value="Paid">Paid</option>
                                                 <option value="Partially Paid">Partially Paid</option>
                                             </select>
@@ -133,9 +133,9 @@
                                     <td>₹42,750</td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="">
-                                                <option value="Draft" selected>Draft</option>
-                                                <option value="Finalized">Finalized</option>
+                                            <select id="" class="form-select" data-placeholder="">
+                                                <option value="Draft">Draft</option>
+                                                <option value="Unpaid/Credit">Unpaid/Credit</option>
                                                 <option value="Paid">Paid</option>
                                                 <option value="Partially Paid">Partially Paid</option>
                                             </select>

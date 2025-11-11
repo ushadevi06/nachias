@@ -28,19 +28,19 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="code" placeholder="Enter Mobile Number" name="name">
+                                    <input type="text" class="form-control" id="mobile_no" placeholder="Enter Mobile Number" name="name">
                                     <label for="code">Mobile Number * </label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="code" placeholder="Enter Email" name="name">
+                                    <input type="text" class="form-control" id="email" placeholder="Enter Email" name="name">
                                     <label for="code">Email </label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="code" placeholder="Enter Website URL" name="name">
+                                    <input type="text" class="form-control" id="website_url" placeholder="Enter Website URL" name="name">
                                     <label for="code">Website URL </label>
                                 </div>
                             </div>
@@ -58,12 +58,12 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="" class="select2 form-select" data-placeholder="Select Supplier Type">
-                                        <option value="">Select Supplier Type</option>
+                                    <select id="" class="select2 form-select" data-placeholder="Select Stores">
+                                        <option value="">Select Stores</option>
                                         <option value="Fabric">Fabric</option>
-                                        <option value="Accessories">Accessories</option>
+                                        <option value="Finished Goods">Finished Goods</option>
                                     </select>
-                                    <label for="booking_area">Supplier Type </label>
+                                    <label for="stores">Stores </label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
@@ -131,19 +131,25 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline mb-6">
-                                    <input type="text" class="form-control" id="address" placeholder="Enter Address Line 1">
+                                    <input type="text" class="form-control" id="address_line_1" placeholder="Enter Address Line 1">
                                     <label for="address">Address Line 1 *</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="address" placeholder="Enter Address Line 2">
+                                    <input type="text" class="form-control" id="address_line_2" placeholder="Enter Address Line 2">
                                     <label for="address">Address Line 2</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="code" placeholder="Enter ZipCode" name="name">
+                                    <input type="text" class="form-control" id="address_line_3" placeholder="Enter Address Line 3">
+                                    <label for="address">Address Line 3</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="zip_code" placeholder="Enter ZipCode" name="name">
                                     <label for="code">Zip Code </label>
                                 </div>
                             </div>
@@ -167,13 +173,13 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="phn_no" placeholder="Enter Phone Number" name="phn_no">
-                                    <label for="phn_no">Phone Number</label>
+                                    <input type="text" class="form-control" id="phn_no" placeholder="Enter Mobile Number" name="phn_no">
+                                    <label for="phn_no">Mobile Number</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="email" placeholder="Enter Email" name="email">
+                                    <input type="text" class="form-control" id="contact_email" placeholder="Enter Email" name="email">
                                     <label for="email">Email</label>
                                 </div>
                             </div>
@@ -209,19 +215,33 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="gst_no" placeholder="Enter PAN No" name="gst_no">
-                                    <label for="name">PAN No</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="gst_no" placeholder="Enter GST No" name="gst_no">
+                                    <input type="text" class="form-control" id="pan_no" placeholder="Enter GST No" name="gst_no">
                                     <label for="name">GST No</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="Zipcode" placeholder="Enter ECC No" name="phn_no">
+                                    <select id="" class="select2 form-select" data-placeholder="Select Tax Types">
+                                        <option value="">Select Tax Types</option>
+                                        <option value="IGST5">IGST5</option>
+                                        <option value="IGST12">IGST12</option>
+                                        <option value="CGST2.5">CGST2.5</option>
+                                        <option value="SGST2.5">SGST2.5</option>
+                                        <option value="CGST6">CGST6</option>
+                                        <option value="SGST6">SGST6</option>
+                                    </select>
+                                    <label for="name">Tax Types</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="gst_no" placeholder="Enter PAN No" name="pan_no">
+                                    <label for="name">PAN No</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="ecc_no" placeholder="Enter ECC No" name="phn_no">
                                     <label for="name">ECC No</label>
                                 </div>
                             </div>
@@ -235,6 +255,36 @@
                                 <div class="form-floating form-floating-outline mb-6">
                                     <textarea class="form-control h-px-100" id="payment_terms" placeholder="Enter Payment Terms"></textarea>
                                     <label for="payment_terms">Payment Terms </label>
+                                </div>
+                            </div>
+                            <div class="col-lg-12">
+                                <hr>
+                            </div>
+                            <div class="col-lg-12">
+                                <h6>Bank Information: </h6>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="bank_name" placeholder="Enter Bank Name" name="bank_name">
+                                    <label for="bank_name">Bank Name</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="branch" placeholder="Enter Branch" name="branch">
+                                    <label for="branch">Branch</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="acc_no" placeholder="Enter Account Number" name="acc_no">
+                                    <label for="acc_no">Account Number</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="ifsc_code" placeholder="Enter IFSC Code" name="ifsc_code">
+                                    <label for="ifsc_code">IFSC Code</label>
                                 </div>
                             </div>
                             <div class="col-lg-12 text-end">
