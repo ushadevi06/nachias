@@ -34958,3 +34958,16 @@ Responsive
     color: inherit;
     text-decoration: none;
 }
+
+.grn_table .form-control {
+    width: 100% !important;
+    min-width: 100px;
+}
+
+.grn_table .select2-container {
+    width: 100% !important;
+}
+
+.grn_table {
+    min-width: 1500px;
+}

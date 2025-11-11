@@ -82,7 +82,7 @@
                                 </tr>
                                 <tr>
                                     <td>4</td>
-                                    <td>Assistant Incharge</td>
+                                    <td>Moulding</td>
                                     <td>
                                         <label class="switch switch-success switch-lg">
                                             <input type="checkbox" class="switch-input" checked>

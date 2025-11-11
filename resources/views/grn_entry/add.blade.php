@@ -55,8 +55,8 @@
                                         </div>
                                     </div>
                                     <div class="col-lg-12 mt-5">
-                                        <div class="table-responsive" style="overflow-x: auto; white-space: nowrap;">
-                                            <table class="table table-bordered align-middle text-center">
+                                        <div class="table-responsive grn_table" style="overflow-x: auto; white-space: nowrap;">
+                                            <table class="table table-bordered align-middle text-center grn_table">
                                                 <thead class="table-light">
                                                     <tr>
                                                         <th>S.No.</th>
