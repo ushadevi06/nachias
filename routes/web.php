@@ -186,6 +186,7 @@ Route::get('view_purchase_order', [PurchaseOrderController::class, 'view']);
 Route::get('purchase_invoices', [PurchaseInvoiceController::class, 'index']);
 Route::get('add_purchase_invoice', [PurchaseInvoiceController::class, 'add']);
 Route::get('view_purchase_invoice', [PurchaseInvoiceController::class, 'view']);
+Route::get('download_purchase_invoice', [PurchaseInvoiceController::class, 'downloadPDF']);
 
 /* Debit Notes */
 Route::get('debit_notes', [DebitNoteController::class, 'index']);

@@ -20,6 +20,21 @@
     document.addEventListener('DOMContentLoaded', function() {
         const stepper = new Stepper(document.querySelector('.bs-stepper.wizard-numbered'));
     });
+    const menuInner = document.querySelector('.menu-inner');
+const lastMenuItem = menuInner ? menuInner.lastElementChild : null;
+
+// Ensure margin is not negative
+if (menuInner) {
+    menuInner.style.marginLeft = '0';
+}
+
+// When last item is clicked, scroll only if necessary
+if (lastMenuItem) {
+    lastMenuItem.addEventListener('click', () => {
+        lastMenuItem.scrollIntoView({ behavior: 'smooth', inline: 'end' });
+    });
+}
+
 </script>
 <script>
     $(document).ready(function() {

@@ -34971,3 +34971,21 @@ Responsive
 .grn_table {
     min-width: 1500px;
 }
+
+.jc-item-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.jc-item-row:hover {
+    background-color: #f0f9ff;
+}
+
+.jc-item-row a.item-link {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.jc-item-row a.item-link:hover {
+    text-decoration: underline;
+}

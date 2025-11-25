@@ -6,7 +6,14 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>View Purchase Invoice</h4>
-                <a href="{{ url('purchase_invoices') }}" class="btn btn-primary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
+                <div>
+                    <a href="{{ url('purchase_invoices') }}" class="btn btn-secondary me-2">
+                        <i class="ri ri-arrow-left-line"></i> Back
+                    </a>
+                    <a href="{{ url('download_purchase_invoice') }}" class="btn btn-primary">
+                        <i class="ri ri-printer-line"></i> Print / Download PDF
+                    </a>
+                </div>
             </div>
             <div class="card detail-card">
                 <div class="card-body">
