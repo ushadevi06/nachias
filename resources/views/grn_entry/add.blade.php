@@ -20,7 +20,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="grn_date" class="form-control grn_date @error('grn_date') is-invalid @enderror" value="{{ old('grn_date', $grn ? $grn->grn_date->format('d-m-Y') : date('d-m-Y')) }}" />
+                                    <input type="text" name="grn_date" autocomplete="off" class="form-control grn_date @error('grn_date') is-invalid @enderror" value="{{ old('grn_date', $grn ? $grn->grn_date->format('d-m-Y') : date('d-m-Y')) }}" />
                                     <label>GRN Date * </label>
                                 </div>
                                 @error('grn_date')
@@ -51,7 +51,7 @@
                                     </div>
                                     <div class="col-md-6 col-xl-4">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" name="supplier_invoice_date" id="sup_inv_date" class="form-control sup_inv_date @error('supplier_invoice_date') is-invalid @enderror" value="{{ old('supplier_invoice_date', $grn ? $grn->supplier_invoice_date->format('d-m-Y') : '') }}" />
+                                            <input type="text" name="supplier_invoice_date" id="sup_inv_date" autocomplete="off" class="form-control sup_inv_date @error('supplier_invoice_date') is-invalid @enderror" value="{{ old('supplier_invoice_date', $grn ? $grn->supplier_invoice_date->format('d-m-Y') : '') }}" />
                                             <label>Supplier Invoice Date * </label>
                                         </div>
                                         @error('supplier_invoice_date')

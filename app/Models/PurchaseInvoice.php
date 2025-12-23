@@ -36,6 +36,7 @@ class PurchaseInvoice extends Model
         'due_amount',
         'invoice_status',
         'payment_mode',
+        'transaction_id',
         'due_date',
         'notes',
         'auth_signature',
@@ -66,5 +67,10 @@ class PurchaseInvoice extends Model
     public function charges()
     {
         return $this->hasMany(PurchaseInvoiceCharge::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(PurchaseInvoicePayment::class);
     }
 }

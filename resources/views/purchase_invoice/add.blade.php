@@ -28,6 +28,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control invoice_date @error('invoice_date') is-invalid @enderror"
                                         placeholder="Enter Invoice Date" name="invoice_date"
+                                        autocomplete="off"
                                         value="{{ old('invoice_date', $invoice ? $invoice->invoice_date->format('d-m-Y') : '') }}" {{ isset($invoice) ? 'readonly' : '' }} />
                                     <label for="invoice_date">Invoice Date <span class="text-danger">*</span></label>
                                 </div>
@@ -37,7 +38,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="purchase_order_id" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" {{ isset($invoice) ? 'readonly' : '' }}>
+                                    <select name="purchase_order_id" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" {{ isset($invoice) ? 'disabled' : '' }}>
                                         <option value="">Select Purchase Order</option>
                                         @foreach($purchaseOrders as $po)
                                         <option value="{{ $po->id }}"
@@ -46,6 +47,9 @@
                                         </option>
                                         @endforeach
                                     </select>
+                                    @if(isset($invoice))
+                                        <input type="hidden" name="purchase_order_id" value="{{ $invoice->purchase_order_id }}">
+                                    @endif
                                     <label for="purchase_order">Purchase Order No <span class="text-danger">*</span></label>
                                 </div>
                                 @error('purchase_order_id')
@@ -422,14 +426,25 @@
                                 </select>
                                 <label for="payment_mode">Payment Mode</label>
                             </div>
-                            @error('payment_mode')
-                            <div class="text-danger mt-1">{{ $message }}</div>
+                             @error('payment_mode')
+                             <div class="text-danger mt-1">{{ $message }}</div>
+                             @enderror
+                             
+                             <div class="form-floating form-floating-outline mb-3 d-none" id="transaction_id_div">
+                                 <input type="text" 
+                                     name="transaction_id" 
+                                     id="transaction_id" 
+                                     class="form-control @error('transaction_id') is-invalid @enderror" 
+                                     placeholder="Enter details"
+                                     value="{{ old('transaction_id', $invoice->transaction_id ?? '') }}">
+                                 <label for="transaction_id" id="transaction_id_label">Transaction Details</label>
+                             </div>
+                             @error('transaction_id')
+                             <div class="text-danger mt-1 mb-3">{{ $message }}</div>
                             @enderror
 
                             <div class="form-floating form-floating-outline mb-3">
-                                <input type="text" class="form-control due_date @error('due_date') is-invalid @enderror"
-                                    placeholder="Enter Due Date" name="due_date"
-                                    value="{{ old('due_date', $invoice && $invoice->due_date ? $invoice->due_date->format('d-m-Y') : '') }}" />
+                                <input type="text" class="form-control due_date @error('due_date') is-invalid @enderror" placeholder="Enter Due Date" name="due_date" autocomplete="off" value="{{ old('due_date', $invoice && $invoice->due_date ? $invoice->due_date->format('d-m-Y') : '') }}" />
                                 <label for="due_date">Due Date</label>
                             </div>
                             @error('due_date')
@@ -437,8 +452,7 @@
                             @enderror
 
                             <div class="form-floating form-floating-outline mb-3">
-                                <textarea name="notes" id="notes" class="form-control h-px-100 @error('notes') is-invalid @enderror"
-                                    placeholder="Enter Additional Notes">{{ old('notes', $invoice->notes ?? '') }}</textarea>
+                                <textarea name="notes" id="notes" class="form-control h-px-100 @error('notes') is-invalid @enderror" placeholder="Enter Additional Notes">{{ old('notes', $invoice->notes ?? '') }}</textarea>
                                 <label for="notes">Additional Notes</label>
                             </div>
                             @error('notes')
@@ -652,6 +666,9 @@
                             <strong id="other_charges">{{ number_format($otherCharges, 2) }}</strong>
                             <input type="hidden" name="other_charges" id="other_charges_input" value="{{ $otherCharges }}">
                         </div>
+                        @error('other_charges')
+                        <div class="text-danger mt-1">{{ $message }}</div>
+                        @enderror
 
                         {{-- Grand Total --}}
                         <div class="d-flex justify-content-between py-2 border-top fw-semibold">
@@ -659,17 +676,38 @@
                             <strong id="grand_total">{{ number_format($grandTotal, 2) }}</strong>
                             <input type="hidden" name="grand_total" id="grand_total_input" value="{{ $grandTotal }}">
                         </div>
+                        @error('grand_total')
+                        <div class="text-danger mt-1">{{ $message }}</div>
+                        @enderror
+
+                        @if(isset($invoice))
+                        {{-- Paid So Far --}}
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Paid So Far:</span>
+                            <div class="d-flex align-items-center">
+                                <strong id="paid_so_far_display">₹{{ number_format($paid_so_far, 2) }}</strong>
+                                <button type="button" class="btn btn-link p-0 ms-1 text-info" id="view_history_btn" title="View Payment History">
+                                    <i class="ri ri-history-line" style="font-size: 1.1rem;"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="paid_so_far_input" value="{{ $paid_so_far }}">
+                        </div>
+                        @else
+                        <input type="hidden" id="paid_so_far_input" value="0">
+                        @endif
 
                         {{-- Received --}}
-                        <div class="d-flex justify-content-between py-2 border-bottom">
-                            <span>Received Amount:</span>
-                            <input type="number"
-                                name="received_amount"
-                                id="received_amount_input"
-                                class="form-control form-control-sm text-end @error('received_amount') is-invalid @enderror"
-                                style="width:120px;"
-                                value="{{ $receivedAmt }}"
-                                step="0.01">
+                        <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                            <span>{{ isset($invoice) ? 'Add New Payment:' : 'Initial Payment:' }}</span>
+                            <div class="d-flex flex-column align-items-end">
+                                <input type="number"
+                                    name="received_amount"
+                                    id="received_amount_input"
+                                    class="form-control form-control-sm text-end @error('received_amount') is-invalid @enderror"
+                                    style="width:120px;"
+                                    value="{{ isset($invoice) ? 0 : ($receivedAmt ?? 0) }}"
+                                    step="0.01">
+                            </div>
                         </div>
                         @error('received_amount')
                         <div class="text-danger mt-1">{{ $message }}</div>
@@ -695,6 +733,43 @@
     </form>
 </div>
 </div>
+</div>
+</div>
+
+{{-- Payment History Modal --}}
+@if(isset($invoice))
+<div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Payment Transaction History - {{ $invoice->invoice_no }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment_history_body">
+                            {{-- Content loaded via AJAX --}}
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold bg-light">
+                                <td colspan="1" class="text-end">Total Received:</td>
+                                <td class="text-end" id="history_total_paid">₹0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 @section('scripts')
 <script>
@@ -707,6 +782,32 @@
             dateFormat: 'd-m-Y',
             allowInput: true
         });
+
+        function toggleTransactionId() {
+            const mode = $('#payment_mode').val();
+            const $div = $('#transaction_id_div');
+            const $label = $('#transaction_id_label');
+            const $input = $('#transaction_id');
+
+            if (mode === 'Cheque') {
+                $div.removeClass('d-none');
+                $label.text('Cheque Number');
+                $input.attr('placeholder', 'Enter Cheque Number');
+            } else if (mode === 'UPI') {
+                $div.removeClass('d-none');
+                $label.text('UPI ID / Transaction ID');
+                $input.attr('placeholder', 'Enter UPI ID / Transaction ID');
+            } else {
+                $div.addClass('d-none');
+            }
+        }
+
+        $('#payment_mode').on('change', function() {
+            toggleTransactionId();
+        });
+
+        // Initial call
+        toggleTransactionId();
         $('#purchase_order').on('change', function() {
             let poId = $(this).val();
             if (poId) {
@@ -886,15 +987,11 @@
             let $row = $checkbox.closest('tr');
             let $hsnInput = $row.find('.item-hsn');
             let $qtyInput = $row.find('.item-quantity');
-            let isEditMode = document
-                .querySelector('meta[name="edit-mode"]')
-                .getAttribute('content') === 'true';
+            let isEditMode = $('#isEditMode').val() == '1';
 
             if ($checkbox.is(':checked')) {
-                if (!isEditMode) {
-                    $hsnInput.prop('readonly', false);
-                    $qtyInput.prop('readonly', false);
-                }
+                $hsnInput.prop('readonly', false);
+                $qtyInput.prop('readonly', false);
             } else {
                 $hsnInput.prop('readonly', true);
                 $qtyInput.prop('readonly', true);
@@ -939,16 +1036,7 @@
 
 
         $(document).on('change', '.item-checkbox', function() {
-            let row = $(this).closest('tr');
-            let qtyInput = row.find('.item-quantity');
-
-            if ($(this).is(':checked')) {
-                qtyInput.prop('readonly', false);
-            } else {
-                qtyInput.prop('readonly', true);
-                row.find('.item-amount').text('0.00');
-            }
-
+            toggleItemFields($(this));
             calculateTotals();
         });
 
@@ -983,10 +1071,11 @@
         });
 
         $('#received_amount_input').on('input', function() {
-            // Only recalculate due amount, don't touch other values
+            // Only recalculate due amount
             let grandTotal = parseFloat($('#grand_total_input').val()) || 0;
-            let receivedAmount = parseFloat($(this).val()) || 0;
-            let dueAmount = grandTotal - receivedAmount;
+            let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
+            let newPayment = parseFloat($(this).val()) || 0;
+            let dueAmount = grandTotal - paidSoFar - newPayment;
 
             $('#due_amount').text(dueAmount.toFixed(2));
             $('#due_amount_input').val(dueAmount.toFixed(2));
@@ -1393,12 +1482,58 @@
             $('#grand_total').text(grandTotal.toFixed(2));
             $('#grand_total_input').val(grandTotal.toFixed(2));
 
-            let received = parseFloat($('#received_amount_input').val()) || 0;
-            let due = grandTotal - received;
+            let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
+            let newPayment = parseFloat($('#received_amount_input').val()) || 0;
+            let due = grandTotal - paidSoFar - newPayment;
 
             $('#due_amount').text(due.toFixed(2));
             $('#due_amount_input').val(due.toFixed(2));
         }
+
+        @if(isset($invoice))
+        $('#view_history_btn').click(function(e) {
+            e.preventDefault();
+            let invoiceId = "{{ $invoice->id }}";
+            $('#payment_history_body').html('<tr><td colspan="2" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading history...</td></tr>');
+            $('#paymentHistoryModal').modal('show');
+
+            $.ajax({
+                url: "{{ url('purchase_invoices/payment-history') }}/" + invoiceId,
+                type: "GET",
+                success: function(response) {
+                    if (response.success) {
+                        let html = "";
+                        let total = 0;
+                        response.payments.forEach(function(payment) {
+                            let date = new Date(payment.payment_date);
+                            let formattedDate = date.toLocaleString('en-IN', { 
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                hour12: true 
+                            });
+                            html += `
+                                <tr>
+                                    <td>${formattedDate}</td>
+                                    <td class="text-end fw-bold">₹${parseFloat(payment.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            `;
+                            total += parseFloat(payment.amount);
+                        });
+
+                        if (response.payments.length === 0) {
+                            html = '<tr><td colspan="2" class="text-center py-3 text-muted">No transaction logs found</td></tr>';
+                        }
+
+                        $('#payment_history_body').html(html);
+                        $('#history_total_paid').text('₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2}));
+                    }
+                },
+                error: function() {
+                    $('#payment_history_body').html('<tr><td colspan="2" class="text-center text-danger py-3">Error loading history</td></tr>');
+                }
+            });
+        });
+        @endif
 
     });
 </script>

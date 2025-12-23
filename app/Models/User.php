@@ -127,7 +127,7 @@ class User extends Authenticatable
             return asset('uploads/employee/' . $this->id . '/' . $this->profile_image);
         }
 
-        return asset('assets/img/default-user.png');
+        return asset('assets/images/user.jpg');
     }
 
     public function getEsiDocumentUrlAttribute()

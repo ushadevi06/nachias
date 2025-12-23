@@ -33,6 +33,7 @@
                                         class="form-control po_date @error('po_date') is-invalid @enderror"
                                         id="po_date"
                                         name="po_date"
+                                        autocomplete="off"
                                         placeholder="Enter PO Date" value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
                                     <label for="po_date">PO Date <span class="text-danger">*</span></label>
                                 </div>
@@ -122,6 +123,7 @@
                                         class="form-control reference_date @error('reference_date') is-invalid @enderror"
                                         id="reference_date"
                                         name="reference_date"
+                                        autocomplete="off"
                                         placeholder="Enter Reference Date" value="{{ old('reference_date', $purchaseOrder ? optional($purchaseOrder->reference_date)->format('d-m-Y') : '') }}" />
                                     <label for="reference_date">Reference Date <span class="text-danger">*</span></label>
                                 </div>
@@ -136,6 +138,7 @@
                                         class="form-control due_date @error('due_date') is-invalid @enderror"
                                         id="due_date"
                                         name="due_date"
+                                        autocomplete="off"
                                         placeholder="Enter Due Date" value="{{ old('due_date', $purchaseOrder ? $purchaseOrder->due_date->format('d-m-Y') : '') }}" />
                                     <label for="due_date">Due Date <span class="text-danger">*</span></label>
                                 </div>
@@ -168,6 +171,7 @@
                                         class="form-control order_date @error('order_date') is-invalid @enderror"
                                         id="order_date"
                                         name="order_date"
+                                        autocomplete="off"
                                         placeholder="Enter Order Date" value="{{ old('order_date', $purchaseOrder ? $purchaseOrder->order_date->format('d-m-Y') : '') }}" />
                                     <label for="order_date">Order Date <span class="text-danger">*</span></label>
                                 </div>

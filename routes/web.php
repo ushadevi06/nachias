@@ -416,3 +416,5 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     });
 
 });
+
+Route::group(['middleware' => ['auth']], function () { Route::get('purchase_invoices/payment-history/{id}', [\App\Http\Controllers\PurchaseInvoiceController::class, 'getPaymentHistory']); });

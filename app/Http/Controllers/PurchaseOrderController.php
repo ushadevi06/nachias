@@ -95,7 +95,7 @@ class PurchaseOrderController extends Controller
                     'DT_RowIndex' => $count++,
                     'po_number' => $po->po_number,
                     'po_date' => $po->po_date->format('d-m-Y'),
-                    'supplier_name' => $po->supplier->name . ' <span class="mini-title">(' . $po->supplier->code . ')</span>',
+                    'supplier_name' => $po->supplier->name . ' <a href="' . url('view_supplier/' . $po->supplier->id) . '" target="_blank"><span class="mini-title">(' . $po->supplier->code . ')</span></a>',
                     'reference_no' => $po->reference_no ?? '-',
                     'due_date' => $po->due_date->format('d-m-Y'),
                     'delivery_location' => $po->storeType->store_type_name ?? '-',

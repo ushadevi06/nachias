@@ -115,7 +115,7 @@ class PurchaseInvoiceController extends Controller
             $request = request();
 
             $rules = [
-                'invoice_no' => 'required|string|max:50|unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'invoice_no' => ($id ? 'nullable' : 'required') . '|string|max:50|unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'invoice_date' => 'required|date',
                 'purchase_order_id' => 'required|exists:purchase_orders,id',
                 'supplier_id' => 'required|exists:suppliers,id',
@@ -124,6 +124,16 @@ class PurchaseInvoiceController extends Controller
                 'items.*.raw_material_id' => 'required|exists:raw_materials,id',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'required|numeric|min:0',
+                'other_state' => 'required|in:Y,N',
+                'igst_percent' => 'nullable|numeric|min:0|max:100',
+                'cgst_percent' => 'nullable|numeric|min:0|max:100',
+                'sgst_percent' => 'nullable|numeric|min:0|max:100',
+                'other_charges' => 'nullable|numeric|min:0',
+                'grand_total' => 'required|numeric|min:0',
+                'received_amount' => 'nullable|numeric|min:0',
+                'charges_select' => 'nullable',
+                'charge_amount' => 'nullable|numeric|min:0',
+                'charges.amount.*' => 'nullable|numeric|min:0',
             ];
 
             $messages = [
@@ -131,8 +141,19 @@ class PurchaseInvoiceController extends Controller
                 '*.exists' => 'Selected value is invalid.',
                 '*.unique' => 'This field already exists.',
                 '*.date' => 'Please enter a valid date.',
-                'items.required' => 'This field is required.',
-                'items.*.quantity' => 'This field is required.',
+                'items.required' => 'Please add at least one item.',
+                'items.*.quantity' => 'Quantity is required.',
+                'other_state.required' => 'Please select if it is an other state transaction.',
+                'igst_percent.numeric' => 'IGST % must be a number.',
+                'cgst_percent.numeric' => 'CGST % must be a number.',
+                'sgst_percent.numeric' => 'SGST % must be a number.',
+                'other_charges.numeric' => 'Other Charges must be a number.',
+                'grand_total.required' => 'Grand Total is required.',
+                'grand_total.min' => 'Grand Total cannot be negative.',
+                'received_amount.numeric' => 'Received Amount must be a number.',
+                'charges_select.required' => 'Please select a charge.',
+                'charge_amount.numeric' => 'Charge amount must be a number.',
+                'charges.amount.*.numeric' => 'Charge amount must be a number.',
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -199,6 +220,7 @@ class PurchaseInvoiceController extends Controller
                     'due_amount' => $request->due_amount ?? 0,
                     'invoice_status' => $request->invoice_status,
                     'payment_mode' => $request->payment_mode,
+                    'transaction_id' => $request->transaction_id,
                     'due_date' => $request->due_date ? Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d') : null,
                     'notes' => $request->notes,
                 ];
@@ -226,22 +248,64 @@ class PurchaseInvoiceController extends Controller
 
 
                 if ($id) {
-                    $oldData = PurchaseInvoice::findOrFail($id)->toArray();
-                    $invoice = PurchaseInvoice::findOrFail($id);
+                    $oldInvoice = PurchaseInvoice::findOrFail($id);
+                    $oldData = $oldInvoice->toArray();
+                    $oldReceived = $oldInvoice->received_amount ?? 0;
+                    
                     $invoiceData['updated_by'] = auth()->id();
-                    $invoice->update($invoiceData);
+                    $oldInvoice->update($invoiceData);
+                    $invoice = $oldInvoice;
+
                     PurchaseInvoiceItem::where('purchase_invoice_id', $id)->forceDelete();
                     PurchaseInvoiceCharge::where('purchase_invoice_id', $id)->forceDelete();
+                    
                     $newData = $invoice->fresh()->toArray();
                     addLog('update','Purchase Invoice','purchase_invoices',$id,$oldData,$newData);
                     $message = 'Purchase Invoice updated successfully';
+
+                    // Log new payment if provided
+                    $newPayment = $request->received_amount ?? 0;
+                    if ($newPayment > 0) {
+                        \App\Models\PurchaseInvoicePayment::create([
+                            'purchase_invoice_id' => $invoice->id,
+                            'amount' => $newPayment,
+                            'payment_date' => now(),
+                            'payment_mode' => $request->payment_mode ?? 'Cash',
+                            'transaction_id' => $request->transaction_id,
+                            'notes' => 'Additional payment from invoice edit',
+                            'created_by' => auth()->id(),
+                        ]);
+                    }
+
+                    // Recalculate totals from all payments
+                    $totalReceived = \App\Models\PurchaseInvoicePayment::where('purchase_invoice_id', $invoice->id)->sum('amount');
+                    $invoice->update([
+                        'received_amount' => $totalReceived,
+                        'due_amount' => ($request->grand_total ?? $invoice->grand_total) - $totalReceived
+                    ]);
                 } else {
                     $invoiceData['created_by'] = auth()->id();
                     $invoice = PurchaseInvoice::create($invoiceData);
+                    
+                    // Log initial payment if positive
+                    if ($request->received_amount > 0) {
+                        \App\Models\PurchaseInvoicePayment::create([
+                            'purchase_invoice_id' => $invoice->id,
+                            'amount' => $request->received_amount,
+                            'payment_date' => now(),
+                            'payment_mode' => $request->payment_mode ?? 'Cash',
+                            'transaction_id' => $request->transaction_id,
+                            'notes' => 'Initial payment from invoice creation',
+                            'created_by' => auth()->id(),
+                        ]);
+                    }
+
                     $newData = $invoice->toArray();
                     addLog('create','Purchase Invoice','purchase_invoices',$invoice->id,null,$newData);
                     $message = 'Purchase Invoice created successfully';
                 }
+
+                // Final sync of totals happens inside the if/else blocks now
 
 
                 if ($request->has('items')) {
@@ -289,27 +353,33 @@ class PurchaseInvoiceController extends Controller
 
         $purchaseOrders = PurchaseOrder::with('supplier')
             ->where('purchase_orders.status', '!=', 'Draft')
-            ->whereIn('purchase_orders.id', function ($q) {
-
-                $q->select('purchase_order_items.purchase_order_id')
-                    ->from('purchase_order_items')
-                    ->leftJoin(
-                        'purchase_invoice_items',
-                        'purchase_invoice_items.purchase_order_item_id',
-                        '=',
-                        'purchase_order_items.id'
-                    )
-                    ->groupBy(
-                        'purchase_order_items.id',
-                        'purchase_order_items.quantity',
-                        'purchase_order_items.purchase_order_id'
-                    )
-                    ->havingRaw('SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)) < purchase_order_items.quantity');
+            ->where(function($query) use ($invoice) {
+                $query->whereIn('purchase_orders.id', function ($q) {
+                    $q->select('purchase_order_items.purchase_order_id')
+                        ->from('purchase_order_items')
+                        ->leftJoin(
+                            'purchase_invoice_items',
+                            'purchase_invoice_items.purchase_order_item_id',
+                            '=',
+                            'purchase_order_items.id'
+                        )
+                        ->groupBy(
+                            'purchase_order_items.id',
+                            'purchase_order_items.quantity',
+                            'purchase_order_items.purchase_order_id'
+                        )
+                        ->havingRaw('SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)) < purchase_order_items.quantity');
+                });
+                
+                if ($invoice) {
+                    $query->orWhere('id', $invoice->purchase_order_id);
+                }
             })
             ->get();
             $suppliers = Supplier::where('status', 'Active')->get();
+        $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
 
-        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges'));
+        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far'));
     }
 
 
@@ -429,5 +499,17 @@ class PurchaseInvoiceController extends Controller
                 'message' => 'Failed to delete charge: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function getPaymentHistory($id)
+    {
+        $payments = \App\Models\PurchaseInvoicePayment::where('purchase_invoice_id', $id)
+            ->orderBy('payment_date', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'payments' => $payments
+        ]);
     }
 }
