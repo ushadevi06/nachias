@@ -10,7 +10,7 @@
                     <a href="{{ url('purchase_invoices') }}" class="btn btn-secondary me-2">
                         <i class="ri ri-arrow-left-line"></i> Back
                     </a>
-                    <a href="{{ url('download_purchase_invoice') }}" class="btn btn-primary">
+                    <a href="{{ url('download_purchase_invoice/' . $invoice->id) }}" class="btn btn-primary">
                         <i class="ri ri-printer-line"></i> Print / Download PDF
                     </a>
                 </div>
@@ -21,35 +21,24 @@
                     <div class="row g-4">
                         <div class="col-md-4">
                             <label class="detail-title">Invoice No: </label>
-                            <div class="text-muted">PO-2025-001</div>
+                            <div class="text-muted">{{ $invoice->invoice_no }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Invoice Date:</label>
-                            <div class="text-muted">19-09-2025</div>
+                            <div class="text-muted">{{ $invoice->invoice_date->format('d-m-Y') }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Supplier:</label>
-                            <div class="text-muted">Krishna Fabrics(SUP001)</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Consignee Location:</label>
-                            <div class="text-muted">Delhi Warehouse</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Dispatch Location:</label>
-                            <div class="text-muted">Gurugram Factory</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Service Provider:</label>
-                            <div class="text-muted">Udaan Road Ways Pvt Ltd</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Destination:</label>
-                            <div class="text-muted">Chennai</div>
+                            <div class="text-muted">
+                                {{ $invoice->supplier->name ?? 'N/A' }}
+                                @if($invoice->supplier && $invoice->supplier->supplier_code)
+                                ({{ $invoice->supplier->supplier_code }})
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">PO Reference No:</label>
-                            <div class="text-muted">PO-2025-001</div>
+                            <div class="text-muted">{{ $invoice->po_reference ?? '-' }}</div>
                         </div>
                         <div class="col-lg-12">
                             <hr>
@@ -60,37 +49,43 @@
                         <div class="col-lg-12">
                             <div class="table-responsive">
                                 <table class="table table-bordered">
-                                    <tr>
-                                        <th>S.No</th>
-                                        <th>Item</th>
-                                        <th>HSN Code</th>
-                                        <th>Quantity</th>
-                                        <th>Rate</th>
-                                        <th>Amount</th>
-                                        <th>Remarks</th>
-                                    </tr>
-                                    <tr>
-                                        <td>1</td>
-                                        <td>Men’s Casual Denim Shirt <span class="mini-title">(ITEM001)</span></td>
-                                        <td>D45SD/72-23</td>
-                                        <td>3</td>
-                                        <td>₹50</td>
-                                        <td>₹150</td>
-                                        <td>-</td>
-                                    </tr>
-                                    <tr>
-                                        <td>2</td>
-                                        <td>Men’s Formal Cotton Shirt <span class="mini-title">(ITEM002)</span></td>
-                                        <td>Q9KD34-23</td>
-                                        <td>1</td>
-                                        <td>₹25</td>
-                                        <td>₹25</td>
-                                        <td>-</td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="6" class="text-end"><strong>Subtotal</strong></td>
-                                        <td colspan="2"><strong>₹175.00</strong></td>
-                                    </tr>
+                                    <thead>
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Item</th>
+                                            <th>HSN Code</th>
+                                            <th>Quantity</th>
+                                            <th>Rate</th>
+                                            <th>Amount</th>
+                                            <th>Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($invoice->items as $index => $item)
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td>
+                                                {{ $item->rawMaterial->name ?? 'N/A' }}
+                                                @if($item->rawMaterial && $item->rawMaterial->material_code)
+                                                <span class="mini-title">({{ $item->rawMaterial->material_code }})</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $item->hsn_code ?? '-' }}</td>
+                                            <td>{{ number_format($item->quantity, 0) }}</td>
+                                            <td>₹{{ number_format($item->rate, 2) }}</td>
+                                            <td>₹{{ number_format($item->quantity * $item->rate, 2) }}</td>
+                                            <td>{{ $item->remarks ?? '-' }}</td>
+                                        </tr>
+                                        @empty
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">No items found</td>
+                                        </tr>
+                                        @endforelse
+                                        <tr>
+                                            <td colspan="5" class="text-end"><strong>Subtotal</strong></td>
+                                            <td colspan="2"><strong>₹{{ number_format($invoice->sub_total, 2) }}</strong></td>
+                                        </tr>
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
@@ -98,63 +93,124 @@
                             <h6>Tax & Charges:</h6>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">Discount (2%):</label>
-                            <div class="text-muted">₹3.50</div>
+                            <label class="detail-title">Discount ({{ number_format($invoice->discount_percent, 2) }}%):</label>
+                            <div class="text-muted">₹{{ number_format($invoice->discount_amount, 2) }}</div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Taxable Amount:</label>
-                            <div class="text-muted">₹171.50</div>
+                            <div class="text-muted">₹{{ number_format($invoice->taxable_amount, 2) }}</div>
+                        </div>
+
+                        @if($invoice->other_state == 'Y')
+                        <div class="col-md-3">
+                            <label class="detail-title">IGST ({{ number_format($invoice->igst_percent, 2) }}%):</label>
+                            <div class="text-muted">₹{{ number_format($invoice->igst_amount, 2) }}</div>
+                        </div>
+                        @else
+                        <div class="col-md-3">
+                            <label class="detail-title">CGST ({{ number_format($invoice->cgst_percent, 2) }}%):</label>
+                            <div class="text-muted">₹{{ number_format($invoice->cgst_amount, 2) }}</div>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">GST (3%):</label>
-                            <div class="text-muted">₹5.15</div>
+                            <label class="detail-title">SGST ({{ number_format($invoice->sgst_percent, 2) }}%):</label>
+                            <div class="text-muted">₹{{ number_format($invoice->sgst_amount, 2) }}</div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="detail-title">Freight Charges:</label>
-                            <div class="text-muted">₹100.00</div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="detail-title">Total Invoice Amount:</label>
-                            <div class="fw-bold text-success">₹276.65</div>
-                        </div>
+                        @endif
+
+                        @if($invoice->charges && $invoice->charges->count() > 0)
                         <div class="col-lg-12">
                             <hr>
                         </div>
                         <div class="col-lg-12">
-                            <h6>Bank Details:</h6>
+                            <h6>Other Charges:</h6>
+                        </div>
+                        @foreach($invoice->charges as $charge)
+                        <div class="col-md-3">
+                            <label class="detail-title">{{ $charge->charge_name }}:</label>
+                            <div class="text-muted">₹{{ number_format($charge->charge_amount, 2) }}</div>
+                        </div>
+                        @endforeach
+                        <div class="col-md-3">
+                            <label class="detail-title">Total Other Charges:</label>
+                            <div class="text-muted">₹{{ number_format($invoice->other_charges, 2) }}</div>
+                        </div>
+                        @endif
+
+                        <div class="col-md-3">
+                            <label class="detail-title">Total Invoice Amount:</label>
+                            <div class="fw-bold text-success">₹{{ number_format($invoice->grand_total, 2) }}</div>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">Bank A/C No:</label>
-                            <div class="text-muted">1325467890</div>
+                            <label class="detail-title">Receive Amount:</label>
+                            <div class="fw-bold">
+                                ₹{{ number_format($invoice->receive_amount, 2) }}
+                            </div>
                         </div>
                         <div class="col-md-3">
-                            <label class="detail-title">IFSC No:</label>
-                            <div class="text-muted">IB009712122</div>
+                            <label class="detail-title">Due Amount:</label>
+                            <div class="fw-bold text-danger">
+                                ₹{{ number_format($invoice->due_amount, 2) }}
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="detail-title">Branch:</label>
-                            <div class="text-muted">Indian Bank</div>
+
+                        <div class="col-lg-12">
+                            <hr>
+                        </div>
+                        <div class="col-lg-12">
+                            <h6>Invoice Details:</h6>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Invoice Status:</label>
-                            <div><span class="badge bg-label-success">Finalized</span></div>
+                            <div>
+                                @php
+                                $statusClass = match($invoice->invoice_status) {
+                                'Paid' => 'bg-label-success',
+                                'Unpaid/Credit' => 'bg-label-warning',
+                                'Partially Paid' => 'bg-label-info',
+                                'Draft' => 'bg-label-secondary',
+                                default => 'bg-label-secondary'
+                                };
+                                @endphp
+                                <span class="badge {{ $statusClass }}">{{ $invoice->invoice_status }}</span>
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Payment Mode:</label>
-                            <div class="text-muted">UPI</div>
+                            <div class="text-muted">{{ $invoice->payment_mode ?? '-' }}</div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Due Date:</label>
-                            <div class="text-muted">19-Sep-2025</div>
+                            <div class="text-muted">
+                                {{ $invoice->due_date ? $invoice->due_date->format('d-M-Y') : '-' }}
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Attachments:</label>
-                            <div class="text-muted"><img src="{{ url('assets/images/documents.jpg') }}" alt="document" class="detail-img"></div>
+                            <div class="text-muted">
+                                @if($invoice->attachments != '')
+                                <img src="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}" alt="document" class="detail-img">
+                                @else
+                                -
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <label class="detail-title">Authorized Signature:</label>
-                            <div class="text-muted"><img src="{{ url('assets/images/signature_images.jpg') }}" alt="signature" class="detail-img"></div>
+                            <div class="text-muted">
+                                @if($invoice->auth_sign != '')
+                                <img src="{{ url('uploads/purchase_invoices/' . $invoice->auth_sign) }}" alt="signature" class="detail-img">
+                                @else
+                                -
+                                @endif
+                            </div>
                         </div>
+
+                        @if($invoice->notes)
+                        <div class="col-md-12">
+                            <label class="detail-title">Additional Notes:</label>
+                            <div class="text-muted">{{ $invoice->notes }}</div>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>

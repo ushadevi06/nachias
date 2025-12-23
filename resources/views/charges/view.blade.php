@@ -6,138 +6,33 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Charges</h4>
-                <a class="btn btn-primary" href="{{ url('add_charge') }}">
+                @if(auth()->id() == 1 || auth()->user()->can('create charges'))
+                <a class="btn btn-primary" href="{{ url('charges/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
+
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
+
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table" id="chargeTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Charges</th>
+                                    <th>Charge Name</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Freight/Courier</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Slitting</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Cutting</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>4</td>
-                                    <td>Moulding</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>5</td>
-                                    <td>Insurance</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>6</td>
-                                    <td>TCS</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_charge') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
@@ -145,4 +40,48 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(function() {
+        $('#chargeTable').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: "{{ url('charges') }}",
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'charge_name'
+                },
+                {
+                    data: 'status'
+                },
+                {
+                    data: 'action'
+                },
+            ]
+        });
+        $(document).on('change', '.charge-status-toggle', function() {
+            let chargeId = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+            $.ajax({
+                url: "{{ url('charges/status') }}/" + chargeId,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function(response) {
+
+                    let msg = response.status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Deactivated</span>';
+
+                    $('.status_msg_' + chargeId).html(msg).fadeIn().delay(1200).fadeOut();
+                }
+            });
+        });
+    });
+</script>
 @endsection

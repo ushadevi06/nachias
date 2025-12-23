@@ -1,15 +1,24 @@
 @extends('layouts.common')
-@section('title', 'Purchase Order - ' . env('WEBSITE_NAME'))
+@section('title', 'Purchase Orders - ' . env('WEBSITE_NAME'))
+
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Purchase Order</h4>
-                <a class="btn btn-primary" href="{{ url('add_purchase_order') }}">
+                <h4>Purchase Orders</h4>
+                <a class="btn btn-primary" href="{{ url('purchase_orders/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
             </div>
+
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+
             <div class="card">
                 <div class="card-body">
                     <div class="filter-box">
@@ -26,119 +35,34 @@
                                     <option value="Received">Received</option>
                                 </select>
                             </div>
+                            <div class="col-md-4 col-lg-3">
+                                <input type="text" id="po_date_range" class="form-control" placeholder="Select PO Date Range">
+                            </div>
                             <div class="col-md-3">
-                                <button type="button" class="btn btn-primary">Filter</button>
-                                <button type="button" class="btn btn-secondary">Reset</button>
+                                <button type="button" id="filterBtn" class="btn btn-primary">Filter</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
                             </div>
                         </div>
                     </div>
                     <div class="card-datatable">
-                        <table class="datatables-products table nowrap w-100">
+                        <table id="purchaseOrderTable" class="table nowrap w-100">
                             <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>PO Number</th>
                                     <th>PO Date</th>
                                     <th>Supplier Name</th>
-                                    <th>Reference No. </th>
-                                    <th>Delivery Date </th>
-                                    <th>Delivery Location </th>
-                                    <th>Total Order Meters</th>
+                                    <th>Reference No.</th>
+                                    <th>Due Date</th>
+                                    <th>Store Type</th>
+                                    <th>Total Order Qty</th>
                                     <th>Order Date</th>
                                     <th>Status</th>
                                     <th>Total Amount</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>PO-2025-001</td>
-                                    <td>17-09-2025</td>
-                                    <td>Krishna Fabrics <span class="mini-title">(SUP001)</span></td>
-                                    <td>REF-987232</td>
-                                    <td>24-09-2025</td>
-                                    <td>Mumbai Warehouse</td>
-                                    <td>9261.60 MTR</td>
-                                    <td>31-10-2025</td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select id="" class="form-select" data-placeholder="">
-                                                <option value="Draft">Draft</option>
-                                                <option value="Approved" selected>Approved</option>
-                                                <option value="Dispatched">Dispatched</option>
-                                                <option value="Received">Received</option>
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td>₹24,000</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_purchase_order') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_purchase_order') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>PO-2025-002</td>
-                                    <td>17-09-2025</td>
-                                    <td>Sri Meena Traders <span class="mini-title">(SUP002)</span></td>
-                                    <td>REF-98723</td>
-                                    <td>21-09-2025</td>
-                                    <td>Delhi Distribution</td>
-                                    <td>2351.60 MTR</td>
-                                    <td>31-10-2025</td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select id="" class="form-select" data-placeholder="">
-                                                <option value="Draft">Draft</option>
-                                                <option value="Approved">Approved</option>
-                                                <option value="Dispatched" selected>Dispatched</option>
-                                                <option value="Received">Received</option>
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td>₹24,000</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_purchase_order') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_purchase_order') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>PO-2025-003</td>
-                                    <td>17-09-2025</td>
-                                    <td>Vasanth Garments <span class="mini-title">(SUP003)</span></td>
-                                    <td>REF-98765</td>
-                                    <td>27-09-2025</td>
-                                    <td>Chennai Warehouse</td>
-                                    <td>8.692 MTR</td>
-                                    <td>31-10-2025</td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select id="" class="form-select" data-placeholder="" disabled>
-                                                <option value="Draft">Draft</option>
-                                                <option value="Approved">Approved</option>
-                                                <option value="Dispatched">Dispatched</option>
-                                                <option value="Received" selected>Received</option>
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td>₹42,750</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_purchase_order') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_purchase_order') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
@@ -146,4 +70,108 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    $(function() {
+        let table = $('#purchaseOrderTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
+            ajax: {
+                url: "{{ url('purchase_orders') }}",
+                data: function(d) {
+                    d.status = $('#status').val();
+                    d.po_date_range = $('#po_date_range').val();
+                }
+            },
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'po_number'
+                },
+                {
+                    data: 'po_date'
+                },
+                {
+                    data: 'supplier_name'
+                },
+                {
+                    data: 'reference_no'
+                },
+                {
+                    data: 'due_date'
+                },
+                {
+                    data: 'delivery_location'
+                },
+                {
+                    data: 'total_qty'
+                },
+                {
+                    data: 'order_date'
+                },
+                {
+                    data: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'total_amount'
+                },
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                },
+            ]
+        });
+
+        // Initialize Flatpickr
+        $('#po_date_range').flatpickr({
+            mode: 'range',
+            dateFormat: 'd-m-Y',
+            allowInput: true
+        });
+
+        $('#filterBtn').click(function() {
+            table.ajax.reload();
+        });
+
+        $('#resetBtn').click(function() {
+            $('#status').val('').trigger('change');
+            $('#po_date_range').val('');
+            table.ajax.reload();
+        });
+
+        $(document).on('change', '.po-status-change', function() {
+            let id = $(this).data('id');
+            let status = $(this).val();
+
+            $.ajax({
+                url: "{{ url('purchase_orders/status') }}/" + id,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function(response) {
+                    let msg = '<span class="text-success">Status Changed</span>';
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                    table.ajax.reload(null, false);
+                },
+                error: function() {
+                    toastr.error('Failed to update status');
+                }
+            });
+        });
+    });
+</script>
 @endsection

@@ -248,7 +248,7 @@
                         <td style="vertical-align:top;">
                             No. 10, Textile Market Road,<br>
                             Tirupur – 641602,<br>
-                            Tamil Nadu.
+                            TamilNadu.
                         </td>
                     </tr>
                     <tr>

@@ -132,15 +132,15 @@
                             <div class="row">
                                 <div class="col-lg-4 mb-4">
                                     <div class="form-floating form-floating-outline">
-                                        <select id="item_category" class="select2 form-select" data-placeholder="Select Item Category">
-                                            <option value="">Select Item Category</option>
+                                        <select id="item_category" class="select2 form-select" data-placeholder="Select Brand Category">
+                                            <option value="">Select Brand Category</option>
                                             <option value="	Formal Shirts(IC001)">Formal Shirts(IC001)</option>
                                             <option value="Casual Shirts(IC002)">Casual Shirts(IC002)</option>
                                             <option value="Uniform Shirts(IC003)">Uniform Shirts(IC003)</option>
                                             <option value="Kids Shirts(IC004)">Kids Shirts(IC004)</option>
                                             <option value="Premium Shirts(IC004)">Premium Shirts(IC005)</option>
                                         </select>
-                                        <label for="item_category">Item Category </label>
+                                        <label for="item_category">Brand Category </label>
                                     </div>
                                 </div>
                                 <div class="col-lg-4 mb-4">
@@ -314,15 +314,15 @@
             <div class="row sales-return-row">
                 <div class="col-lg-4 mb-4">
                     <div class="form-floating form-floating-outline">
-                        <select class="select2 form-select" data-placeholder="Select Item Category">
-                            <option value="">Select Item Category</option>
+                        <select class="select2 form-select" data-placeholder="Select Brand Category">
+                            <option value="">Select Brand Category</option>
                             <option value="	Formal Shirts(IC001)">Formal Shirts(IC001)</option>
                             <option value="Casual Shirts(IC002)">Casual Shirts(IC002)</option>
                             <option value="Uniform Shirts(IC003)">Uniform Shirts(IC003)</option>
                             <option value="Kids Shirts(IC004)">Kids Shirts(IC004)</option>
                             <option value="Premium Shirts(IC004)">Premium Shirts(IC005)</option>
                         </select>
-                        <label for="item_category">Item Category </label>
+                        <label for="item_category">Brand Category </label>
                     </div>
                 </div>
                 <div class="col-lg-4 mb-4">

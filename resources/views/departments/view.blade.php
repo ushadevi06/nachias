@@ -6,14 +6,24 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Departments</h4>
-                <a class="btn btn-primary" href="{{ url('add_department') }}">
+                @if(auth()->id() == 1 || auth()->user()->can('create departments'))
+                <a class="btn btn-primary" href="{{ url('departments/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
+
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
+
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table" id="departmentTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -23,101 +33,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Cutting</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_department') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Stitching</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_department') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Ironing</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_department') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>4</td>
-                                    <td>Quality Control</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_department') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>5</td>
-                                    <td>Packing</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_department') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -126,4 +41,52 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(function() {
+
+        $('#departmentTable').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: "{{ url('departments') }}",
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'department'
+                },
+                {
+                    data: 'status'
+                },
+                {
+                    data: 'action'
+                },
+            ]
+        });
+
+        $(document).on('change', '.department-status-toggle', function() {
+
+            let id = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+            $.ajax({
+                url: "{{ url('department/status') }}/" + id,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function() {
+                    let msg = status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Deactivated</span>';
+
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                }
+            });
+        });
+
+    });
+</script>
 @endsection

@@ -10,7 +10,7 @@
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="logs-table table">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -22,47 +22,7 @@
                                     <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Create</td>
-                                    <td>Ramesh <span class="mini-title">(EMP001)</span></td>
-                                    <td>Sales Order</td>
-                                    <td>SO-1001 (3 Items)</td>
-                                    <td>27-09-2025 09:30 AM</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <a href="javascript:void(0)" class="btn btn-view" data-bs-toggle="modal" data-bs-target="#logDetailModal"><i class="icon-base ri ri-eye-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Edit</td>
-                                    <td>Karthick <span class="mini-title">(EMP002)</span></td>
-                                    <td>Production Order</td>
-                                    <td>PO-2025-001(2 Items)</td>
-                                    <td>26-09-2025 09:30 AM</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <a href="javascript:void(0)" class="btn btn-view" data-bs-toggle="modal" data-bs-target="#logDetailModal"><i class="icon-base ri ri-eye-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Delete</td>
-                                    <td>Admin</td>
-                                    <td>Production Order</td>
-                                    <td>PO-2025-0910 (Cancelled due to fabric shortage)</td>
-                                    <td>26-09-2025 04:30 PM</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <a href="javascript:void(0)" class="btn btn-view" data-bs-toggle="modal" data-bs-target="#logDetailModal"><i class="icon-base ri ri-eye-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
@@ -74,43 +34,154 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary">
-                <h5 class="modal-title text-white" id="logDetailModalLabel">Log Details</h5>
+                <h5 class="modal-title text-white" id="logDetailModalLabel">
+                    <i class="icon-base ri ri-file-list-3-line me-2"></i>Log Details
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <table class="table table-bordered">
-                    <tr>
-                        <th>Action Type</th>
-                        <td>Create</td>
-                    </tr>
-                    <tr>
-                        <th>Employee</th>
-                        <td>Ramesh <span class="mini-title">(CUS001)</span></td>
-                    </tr>
-                    <tr>
-                        <th>Module</th>
-                        <td>Sales Order</td>
-                    </tr>
-                    <tr>
-                        <th>Record</th>
-                        <td>SO-1001 (3 Items)</td>
-                    </tr>
-                    <tr>
-                        <th>Date & Time</th>
-                        <td>27-09-2025 09:30 AM</td>
-                    </tr>
-                    <tr>
-                        <th>Details</th>
-                        <td>
-                            <ul class="mb-0">
-                                <li>Item 1: Men’s Formal Cotton Shirt(ITEM001), Qty 500</li>
-                                <li>Item 2: Men’s Casual Denim Shirt(ITEM002), Qty 300</li>
-                            </ul>
-                        </td>
-                    </tr>
-                </table>
+            <div class="modal-body p-4">
+                <!-- Summary Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100 bg-light">
+                            <div class="text-muted small mb-1"><i class="icon-base ri ri-shield-check-line me-1"></i>Action</div>
+                            <span id="modalActionType" class="badge bg-primary fs-6"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100 bg-light">
+                            <div class="text-muted small mb-1"><i class="icon-base ri ri-user-line me-1"></i>Employee</div>
+                            <div class="fw-semibold" id="modalEmployee"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100 bg-light">
+                            <div class="text-muted small mb-1"><i class="icon-base ri ri-time-line me-1"></i>Date & Time</div>
+                            <div class="fw-semibold" id="modalDate"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small mb-1"><i class="icon-base ri ri-apps-line me-1"></i>Module</div>
+                            <div class="fw-semibold" id="modalModule"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small mb-1"><i class="icon-base ri ri-file-text-line me-1"></i>Record</div>
+                            <div class="fw-semibold" id="modalRecord"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Changed Fields Section -->
+                <div class="border rounded">
+                    <div class="bg-light border-bottom px-3 py-2">
+                        <h6 class="mb-0"><i class="icon-base ri ri-exchange-line me-2"></i>Changed Fields</h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0" id="changedFieldsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="px-3" style="width:30%">Field</th>
+                                    <th class="px-3" style="width:35%">Old Value</th>
+                                    <th class="px-3" style="width:35%">New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    $(function() {
+        let table = $('.logs-table').DataTable({
+            processing: true,
+            responsive: true,
+            serverSide: false,
+            ajax: {
+                url: "{{ url('logs') }}",
+                data: function(d) {
+                }
+            },
+            columns: [{
+                    data: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action_type'
+                },
+                {
+                    data: 'user_name'
+                },
+                {
+                    data: 'module'
+                },
+                {
+                    data: 'record'
+                },
+                {
+                    data: 'created_at'
+                },
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+        });
+    });
+
+    function viewLogDetails(id) {
+        $.ajax({
+            url: "{{ url('logs/details') }}/" + id,
+            type: "GET",
+            success: function(response) {
+                if (response.success) {
+                    $('#modalModule').text(response.module);
+                    $('#modalEmployee').text(response.user_name);
+                    $('#modalRecord').text(response.record);
+                    $('#modalDate').text(response.created_at);
+
+                    // Dynamic badge color based on action type
+                    let badgeClass = 'bg-secondary';
+                    if (response.action_type.toLowerCase() === 'create') badgeClass = 'bg-success';
+                    else if (response.action_type.toLowerCase() === 'update') badgeClass = 'bg-info';
+                    else if (response.action_type.toLowerCase() === 'delete') badgeClass = 'bg-danger';
+                    
+                    $('#modalActionType')
+                        .removeClass('bg-primary bg-success bg-info bg-danger bg-secondary')
+                        .addClass(badgeClass)
+                        .text(response.action_type);
+
+                    let changedBody = '';
+                    if (response.changed_fields && response.changed_fields.length > 0) {
+                        $.each(response.changed_fields, function(index, item) {
+                            changedBody += `<tr>
+                                <td class="px-3"><strong>${item.field}</strong></td>
+                                <td class="px-3"><span class="text-danger">${item.old !== '-' ? '<del>' + item.old + '</del>' : '-'}</span></td>
+                                <td class="px-3"><span class="text-success fw-semibold">${item.new}</span></td>
+                            </tr>`;
+                        });
+                    } else {
+                        changedBody = '<tr><td colspan="3" class="text-center text-muted py-3">No changes recorded</td></tr>';
+                    }
+                    $('#changedFieldsTable tbody').html(changedBody);
+
+                    $('#logDetailModal').modal('show');
+                }
+            }
+        });
+    }
+</script>
 @endsection

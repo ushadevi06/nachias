@@ -1,192 +1,180 @@
 @extends('layouts.common')
 @section('title', 'Items - ' . env('WEBSITE_NAME'))
+
 @section('content')
-<!-- / Menu -->
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+
             <div class="table-header-box">
-                <h4>Items </h4>
-                <a class="btn btn-primary" href="{{ url('add_item') }}">
+                <h4>Items</h4>
+                @if(auth()->id() == 1 || auth()->user()->can('create items'))
+                <a class="btn btn-primary" href="{{ url('items/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
+            </div>
+
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form id="filter-form">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <select id="filter_brand_category" class="form-select select2" data-placeholder="Select Brand Category">
+                                    <option value="">Select Brand Category</option>
+                                    @foreach($brandCategories as $category)
+                                    <option value="{{ $category->id }}">
+                                        {{ $category->name }} ({{ $category->code }})
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <select id="filter_brand" class="form-select select2" data-placeholder="Select Brand">
+                                    <option value="">Select Brand</option>
+                                    @foreach($brands as $brand)
+                                    <option value="{{ $brand->id }}">
+                                        {{ $brand->brand_name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3 d-flex gap-2">
+                                <button type="button" id="filterBtn" class="btn btn-primary">Filter</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
             </div>
             <div class="card">
                 <div class="card-body">
-                    <div class="filter-box">
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <h5>Filter</h5>
-                            </div>
-                            <div class="col-md-4 col-lg-3">
-                                <select id="item_category" class="select2 form-select" data-placeholder="Select Item Category">
-                                    <option value="">Select Item Category</option>
-                                    <option value="	Formal Shirts(IC001)">Formal Shirts(IC001)</option>
-                                    <option value="Casual Shirts(IC002)">Casual Shirts(IC002)</option>
-                                    <option value="Uniform Shirts(IC003)">Uniform Shirts(IC003)</option>
-                                    <option value="Kids Shirts(IC004)">Kids Shirts(IC004)</option>
-                                    <option value="Premium Shirts(IC004)">Premium Shirts(IC005)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <button type="button" class="btn btn-primary">Filter</button>
-                                <button type="button" class="btn btn-secondary">Reset</button>
-                            </div>
-                        </div>
-                    </div>
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table" id="itemsTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Item Category</th>
+                                    <th>Brand Category</th>
                                     <th>Name</th>
                                     <th>Brand</th>
                                     <th>Color</th>
                                     <th>UOM</th>
-                                    <th>Barcode</th>
-                                    <th>Pricing(Wholesale / Retail / Export)</th>
+                                    <th>Pricing (W / R / E)</th>
+                                    <th>Created By</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Formal Shirts <span class="mini-title">(IC001)</span></td>
-                                    <td>Men’s Formal Cotton Shirt <span class="mini-title">(ITEM001)</span></td>
-                                    <td>Hero Mens Wear</td>
-                                    <td>White, Blue</td>
-                                    <td>PCS</td>
-                                    <td>890100000001</td>
-                                    <td>450 / 550 / 600</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_item') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_item') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Casual Shirts <span class="mini-title">(IC002)</span></td>
-                                    <td>Men’s Casual Denim Shirt <span class="mini-title">(ITEM002)</span></td>
-                                    <td>Unlimited Fashion</td>
-                                    <td>Red, Blue, Black</td>
-                                    <td>PCS</td>
-                                    <td>890100000002</td>
-                                    <td>400 / 500 / 550</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_item') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_item') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Uniform Shirts <span class="mini-title">(IC003)</span></td>
-                                    <td>School Uniform Shirt <span class="mini-title">(ITEM003)</span></td>
-                                    <td>EduWear</td>
-                                    <td>White</td>
-                                    <td>PCS</td>
-                                    <td>890100000003</td>
-                                    <td>350 / 450 / 500</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_item') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_item') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>4</td>
-                                    <td>Kids Shirts <span class="mini-title">(IC004)</span></td>
-                                    <td>Kids Polo Shirt <span class="mini-title">(ITEM004)</span></td>
-                                    <td>TinyWear</td>
-                                    <td>Yellow, Green</td>
-                                    <td>PCS</td>
-                                    <td>890100000004</td>
-                                    <td>250 / 300 / 350</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_item') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_item') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>5</td>
-                                    <td>Premium Shirts <span class="mini-title">(IC005)</span></td>
-                                    <td>Premium Linen Shirt <span class="mini-title">(ITEM005)</span></td>
-                                    <td>LuxeWear</td>
-                                    <td>White, Navy</td>
-                                    <td>PCS</td>
-                                    <td>890100000005</td>
-                                    <td>900 / 1100 / 1200</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_item') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_item') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(document).ready(function() {
+
+        let table = $('#itemsTable').DataTable({
+            processing: true,
+            responsive: true,
+            serverSide: false,
+            ajax: {
+                url: "{{ url('items') }}",
+                type: "GET",
+                data: function(d) {
+                    d.brand_category_id = $('#filter_brand_category').val();
+                    d.brand_id = $('#filter_brand').val();
+                },
+                dataSrc: "data"
+            },
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'brand_category'
+                },
+                {
+                    data: 'name'
+                },
+                {
+                    data: 'brand'
+                },
+                {
+                    data: 'color'
+                },
+                {
+                    data: 'uom'
+                },
+                {
+                    data: 'pricing'
+                },
+                {
+                    data: 'created_by'
+                },
+                {
+                    data: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+        });
+
+        // ✅ FILTER
+        $('#filterBtn').click(function() {
+            table.ajax.reload();
+        });
+
+        // ✅ RESET
+        $('#resetBtn').click(function() {
+            $('#filter_brand_category').val('');
+            $('#filter_brand').val('');
+            table.ajax.reload();
+        });
+
+        // ✅ STATUS TOGGLE (AJAX)
+        $(document).on('change', '.item-status-toggle', function() {
+
+            let id = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+            $.ajax({
+                url: "{{ url('items/status') }}/" + id,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function() {
+
+                    let msg = status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Deactivated</span>';
+
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                }
+            });
+        });
+
+    });
+</script>
 @endsection

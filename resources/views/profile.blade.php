@@ -38,7 +38,7 @@
                         <div class="row mb-5">
                             <div class="col-lg-6">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="Phone Number" placeholder="Enter Phone Number" name="phn_no" value="{{ old('phn_no', $user->phn_no) }}">
+                                    <input type="text" class="form-control" id="Phone Number" placeholder="Enter Phone Number" name="phn_no" value="{{ old('phn_no', $user->phone) }}">
                                     <label for="name">Phone Number *</label>
                                 </div>
                                 <p class="text-danger">{{ $errors->first('phn_no') }}</p>
@@ -55,14 +55,6 @@
                                     </div>
                                 </div>
                                 <p class="text-danger">{{ $errors->first('password') }}</p>
-                            </div>
-                        </div>
-                        <div class="row mb-5">
-                            <div class="col-lg-6">
-                                <div class="form-floating form-floating-outline mb-6">
-                                    <textarea class="form-control h-px-100" id="address" name="address" placeholder="Enter Address">{{ old('address',$user->address) }}</textarea>
-                                    <label for="address">Address *</label>
-                                </div>
                             </div>
                         </div>
                         <div class="text-end">

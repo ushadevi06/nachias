@@ -6,14 +6,24 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Fabric Type</h4>
-                <a class="btn btn-primary" href="{{ url('add_fabric_type') }}">
+                @if(auth()->id() == 1 || auth()->user()->can('create fabric-type'))
+                <a class="btn btn-primary" href="{{ url('fabric_type/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
+
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
+
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table" id="fabricTypesTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -22,51 +32,70 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Polyester</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_fabric_type') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>PolyCotton</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input">
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_fabric_type') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr> 
-                            </tbody>
                         </table>
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(function() {
+
+        let table = $('#fabricTypesTable').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: {
+                url: "{{ url('fabric_type') }}"
+            },
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'fabric_type'
+                },
+                {
+                    data: 'status'
+                },
+                {
+                    data: 'action'
+                }
+            ]
+        });
+
+        $(document).on('change', '.fabric-type-status-toggle', function() {
+            let fabricTypeId = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+            $.ajax({
+                url: "{{ url('fabric_type/status') }}/" + fabricTypeId,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function(response) {
+                    if (response.success) {
+
+                        let msg = response.status === 'Active' ?
+                            '<span class="text-success">Activated</span>' :
+                            '<span class="text-danger">Deactivated</span>';
+
+                        $('.status_msg_' + fabricTypeId).html(msg).fadeIn().delay(1200).fadeOut();
+
+                    } else {
+                        alert('Status update failed');
+                    }
+                },
+                error: function() {
+                    alert('Error updating status');
+                }
+            });
+        });
+
+    });
+</script>
 @endsection

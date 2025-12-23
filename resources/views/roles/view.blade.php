@@ -6,14 +6,19 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Roles</h4>
-                <a class="btn btn-primary" href="{{ url('add_role') }}">
+                @if(auth()->id() == 1 || auth()->user()->can('create roles'))
+                <a class="btn btn-primary" href="{{ url('roles/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
+            </div>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table" id="rolesTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -23,120 +28,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Manager</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_role') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Assistant Manager</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_role') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Incharge</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_role') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>4</td>
-                                    <td>Assistant Incharge</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_role') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>5</td>
-                                    <td>Supervisior</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_role') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>6</td>
-                                    <td>Executive</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_role') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
+
                             </tbody>
                         </table>
                     </div>
@@ -145,4 +37,75 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        $('#rolesTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
+            ajax: {
+                url: "{{ url('roles') }}",
+                type: "GET"
+            },
+            columns: [{
+                    data: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'name'
+                },
+                {
+                    data: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+        });
+    });
+    $(document).on('change', '.role-status-toggle', function() {
+
+        let roleId = $(this).data('id');
+        let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+        $.ajax({
+            url: "{{ url('roles/status') }}/" + roleId,
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                id: roleId,
+                status: status
+            },
+            success: function(response) {
+
+                if (response.success) {
+
+                    let message = status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Inactivated</span>';
+
+                    $('.status_msg_' + roleId)
+                        .html(message)
+                        .fadeIn()
+                        .delay(1000)
+                        .fadeOut();
+                } else {
+                    alert('Error updating status.');
+                }
+            }
+        });
+    });
+</script>
 @endsection

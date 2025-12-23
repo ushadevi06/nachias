@@ -19,6 +19,6 @@ class CheckAdminLogin
         if(Auth::guard('web')->check()){
             return $next($request);
         }
-        return redirect('admin')->with('error', 'Please log in to continue.')->withInput();
+        return redirect('')->with('danger', 'Please log in to continue.')->withInput();
     }
 }

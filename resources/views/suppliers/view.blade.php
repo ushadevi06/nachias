@@ -6,191 +6,36 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Suppliers</h4>
-                <a class="btn btn-primary" href="{{ url('add_supplier') }}">
+                @if(auth()->id() == 1 || auth()->user()->can('create suppliers'))
+
+                <a href="{{ url('suppliers/add') }}" class="btn btn-primary">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
-            </div>
+                @endif
 
+            </div>
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
             <div class="card">
                 <div class="card-body">
-                    <div class="filter-box">
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <h5>Filter</h5>
-                            </div>
-                            <div class="col-md-4 col-lg-3 party_type">
-                                <select name="supplier_type" id="supplier_type" class="form-select select2" data-placeholder="Select Supplier Type">
-                                    <option value="">Select Supplier Type</option>
-                                    <option value="Fabrics">Fabrics</option>
-                                    <option value="Accessories">Accessories</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <button type="button" class="btn btn-primary">Filter</button>
-                                <button type="button" class="btn btn-secondary">Reset</button>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="datatables-suppliers table" id="suppliers-table">
                             <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>Name</th>
                                     <th>Contact Info</th>
-                                    <th>Supplier Type</th>
+                                    <th>Location</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-
-                                <!-- 1 -->
-                                <tr>
-                                    <td>1</td>
-                                    <td>Krishna Fabrics <span class="mini-title">(SUP001)</span></td>
-                                    <td>
-                                        <div class="contact-info">
-                                            <div><i class="ri ri-mail-line icon-email"></i> krishnafabrics12@gmail.com</div>
-                                            <div><i class="ri ri-phone-line icon-phone"></i> 9080706050</div>
-                                        </div>
-                                    </td>
-                                    <td>Fabrics</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_supplier') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_supplier') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- 2 -->
-                                <tr>
-                                    <td>2</td>
-                                    <td>Vasanth Garments <span class="mini-title">(SUP002)</span></td>
-                                    <td>
-                                        <div class="contact-info">
-                                            <div><i class="ri ri-mail-line icon-email"></i> vasanthgarments21@gmail.com</div>
-                                            <div><i class="ri ri-phone-line icon-phone"></i> 9870123489</div>
-                                        </div>
-                                    </td>
-                                    <td>Fabrics</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_supplier') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_supplier') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- 3 -->
-                                <tr>
-                                    <td>3</td>
-                                    <td>Jaya Fabrics <span class="mini-title">(SUP003)</span></td>
-                                    <td>
-                                        <div class="contact-info">
-                                            <div><i class="ri ri-mail-line icon-email"></i> jayafabrics1998@gmail.com</div>
-                                            <div><i class="ri ri-phone-line icon-phone"></i> 8520369741</div>
-                                        </div>
-                                    </td>
-                                    <td>Fabrics</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_supplier') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_supplier') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- 4 -->
-                                <tr>
-                                    <td>4</td>
-                                    <td>Sri Meena Traders <span class="mini-title">(SUP004)</span></td>
-                                    <td>
-                                        <div class="contact-info">
-                                            <div><i class="ri ri-mail-line icon-email"></i> grasim.secretarial@adityabirla.com</div>
-                                            <div><i class="ri ri-phone-line icon-phone"></i> 9630230230</div>
-                                        </div>
-                                    </td>
-                                    <td>Accessories</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_supplier') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_supplier') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- 5 -->
-                                <tr>
-                                    <td>5</td>
-                                    <td>Royal Stitch Wear <span class="mini-title">(SUP005)</span></td>
-                                    <td>
-                                        <div class="contact-info">
-                                            <div><i class="ri ri-mail-line icon-email"></i> royalstitchwear23@gmail.com</div>
-                                            <div><i class="ri ri-phone-line icon-phone"></i> 9843011122</div>
-                                        </div>
-                                    </td>
-                                    <td>Accessories</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_supplier') }}" title="View" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_supplier') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-
                             </tbody>
                         </table>
                     </div>
@@ -199,4 +44,77 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        var table = $('#suppliers-table').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: {
+                url: "{{ url('suppliers') }}",
+                type: "GET",
+            },
+            columns: [{
+                    data: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'name'
+                },
+                {
+                    data: 'contact_info',
+                    orderable: false
+                },
+                {
+                    data: 'location',
+                    orderable: false
+                },
+                {
+                    data: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+        });
+
+        $('#filter-btn').on('click', function() {
+            table.ajax.reload();
+        });
+
+        $('#reset-btn').on('click', function() {
+            table.ajax.reload();
+        });
+
+        $(document).on('change', '.supplier-status-toggle', function() {
+
+            let id = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+            $.ajax({
+                url: "{{ url('supplier/status') }}/" + id,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function() {
+
+                    let msg = status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Deactivated</span>';
+
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                }
+            });
+        });
+    });
+</script>
 @endsection

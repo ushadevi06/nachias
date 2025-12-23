@@ -29,9 +29,7 @@
         </a> -->
         <div class="authentication-inner row m-0">
             <div class="d-none d-lg-flex col-lg-5 align-items-center justify-content-center p-0 login-background">
-                <img src="{{ url('assets/images/login.png') }}"
-                    class="img-fluid"
-                    alt="login background" />
+                <img src="{{ url('assets/images/login.png') }}" class="img-fluid" alt="login background" />
             </div>
             <!-- Login -->
             <div class="d-flex col-12 col-lg-7 align-items-center authentication-bg position-relative py-sm-5 px-4 py-4">

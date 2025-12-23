@@ -1,19 +1,42 @@
 @extends('layouts.common')
-@section('title', 'Store Location - ' . env('WEBSITE_NAME'))
+@section('title', 'Store Locations - ' . env('WEBSITE_NAME'))
+
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
+
+        <div class="col-lg-12">
+            @if (session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+
+            @if (session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            @endif
+        </div>
+
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Store Location</h4>
-                <a class="btn btn-primary" href="{{ url('add_store_location') }}">
+                <h4>Store Locations</h4>
+
+                @if(auth()->id() == 1 || auth()->user()->can('create store-location'))
+
+                <a class="btn btn-primary" href="{{ url('store_location/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
+
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table" id="storeLocationTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -22,51 +45,73 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Warehouse - SD3</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_store_location') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Warehouse - DF3</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_store_location') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
+@endsection
+
+
+@section('scripts')
+<script>
+    $(function() {
+
+        $('#storeLocationTable').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: "{{ url('store_location') }}",
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'store_location'
+                },
+                {
+                    data: 'status'
+                },
+                {
+                    data: 'action'
+                }
+            ]
+        });
+
+
+        $(document).on('change', '.store-status-toggle', function() {
+
+            let id = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+            $.ajax({
+                url: "{{ url('store_location/status') }}/" + id,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function() {
+
+                    let msg = status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Deactivated</span>';
+
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                }
+            });
+        });
+
+    });
+
+
+    // ✅ COMMON DELETE FUNCTION
+    function delete_data(url) {
+        if (confirm('Are you sure you want to delete this Store Location?')) {
+            window.location.href = url;
+        }
+    }
+</script>
 @endsection

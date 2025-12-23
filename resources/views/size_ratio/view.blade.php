@@ -6,14 +6,25 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Size/Ratio</h4>
-                <a class="btn btn-primary" href="{{ url('add_size_ratio') }}">
+                @if(auth()->id() == 1 || auth()->user()->can('create size-ratio'))
+
+                <a class="btn btn-primary" href="{{ url('size_ratio/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
+
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
+
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table sizeratioTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -24,66 +35,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>38,40,42,44</td>
-                                    <td>1,2,3,1</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_size_ratio') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>38,40,42,44</td>
-                                    <td>5,6,7,8</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_size_ratio') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete" delete-btn><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>38,40,42,44</td>
-                                    <td>5,1,2,3</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_size_ratio') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete" delete-btn><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -92,4 +43,64 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(document).ready(function() {
+
+        $('.sizeratioTable').DataTable({
+            processing: true,
+            serverSide: false,
+            ajax: {
+                url: "{{ url('size_ratio') }}",
+                type: "GET",
+                dataSrc: 'data'
+            },
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'size'
+                },
+                {
+                    data: 'ratio'
+                },
+                {
+                    data: 'status'
+                },
+                {
+                    data: 'action'
+                }
+            ]
+        });
+
+        $(document).on('change', '.size-ratio-status-toggle', function() {
+            let ratioId = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+            $.ajax({
+                url: "{{ url('size_ratio/status') }}/" + ratioId,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function(response) {
+                    if (response.success) {
+                        let msg = response.status === 'Active' ?
+                            '<span class="text-success">Activated</span>' :
+                            '<span class="text-danger">Deactivated</span>';
+
+                        $('.status_msg_' + ratioId).html(msg).fadeIn().delay(1200).fadeOut();
+                    } else {
+                        alert('Status update failed');
+                    }
+                },
+                error: function() {
+                    alert('Error updating status');
+                }
+            });
+        });
+    });
+</script>
 @endsection

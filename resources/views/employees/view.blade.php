@@ -1,20 +1,59 @@
 @extends('layouts.common')
 @section('title', 'Employees - ' . env('WEBSITE_NAME'))
+
 @section('content')
-<!-- / Menu -->
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4 class="mb-0">Employees</h4>
-                <a class="btn btn-primary" href="{{ url('add_employee') }}">
+                @if(auth()->id() == 1 || auth()->user()->can('create employee'))
+                <a class="btn btn-primary" href="{{ url('employees/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
+            </div>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
             <div class="card">
                 <div class="card-body">
+                    <div class="filter-box mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <h5>Filter</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="department" class="form-select select2" data-placeholder="Select Department">
+                                    <option value="">Select Department</option>
+                                    @foreach(\App\Models\Department::where('status','Active')->get() as $dept)
+                                    <option value="{{ $dept->id }}">{{ $dept->department }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <select id="role" class="form-select select2" data-placeholder="Select Role">
+                                    <option value="">Select Role</option>
+                                    @foreach(\App\Models\Role::where('status','Active')->get() as $role)
+                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-primary" id="filter-btn">
+                                    <i class="ri ri-filter-3-line me-3"></i> Filter
+                                </button>
+
+                                <button type="button" class="btn btn-secondary" id="reset-btn">
+                                    <i class="ri ri-refresh-line me-3"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table" id="employeesTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -22,139 +61,112 @@
                                     <th>Image</th>
                                     <th>Role</th>
                                     <th>Department</th>
-                                    <th>Mobile Number</th>
+                                    <th>Contact Info</th>
                                     <th>Status</th>
-                                    <th>Created On</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Ramesh<span class="mini-title">(EMP001)</span></td>
-                                    <td><img src="{{ url('assets/images/user.jpg') }}" alt="alt" class="rounded-circle" width="50"></td>
-                                    <td>Manager</td>
-                                    <td>Cutting</td>
-                                    <td>7894561230</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>04-11-2025</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_employee') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Karthick <span class="mini-title">(EMP002)</span></td>
-                                    <td><img src="{{ url('assets/images/user.jpg') }}" alt="alt" class="rounded-circle" width="50"></td>
-                                    <td>Supervisior</td>
-                                    <td>Stitching</td>
-                                    <td>7410258963</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>03-11-2025</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_employee') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Akash Mehta <span class="mini-title">(EMP003)</span></td>
-                                    <td><img src="{{ url('assets/images/user.jpg') }}" alt="alt" class="rounded-circle" width="50"></td>
-                                    <td>Store Keeper</td>
-                                    <td>Ironing</td>
-                                    <td>9652308741</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input">
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>03-11-2025</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_employee') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>4</td>
-                                    <td>Rithivika <span class="mini-title">(EMP004)</span></td>
-                                    <td><img src="{{ url('assets/images/user.jpg') }}" alt="alt" class="rounded-circle" width="50"></td>
-                                    <td>Production Head</td>
-                                    <td>Packing</td>
-                                    <td>8458986810</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input" checked>
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>01-11-2025</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_employee') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>5</td>
-                                    <td>Kishore Kumar <span class="mini-title">(EMP005)</span></td>
-                                    <td><img src="{{ url('assets/images/user.jpg') }}" alt="alt" class="rounded-circle" width="50"></td>
-                                    <td>Accountant</td>
-                                    <td>Cutting</td>
-                                    <td>8458986810</td>
-                                    <td>
-                                        <label class="switch switch-success switch-lg">
-                                            <input type="checkbox" class="switch-input">
-                                            <span class="switch-toggle-slider">
-                                                <span class="switch-on"></span>
-                                                <span class="switch-off"></span>
-                                            </span>
-                                        </label>
-                                    </td>
-                                    <td>01-11-2025</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('add_employee') }}" title="Edit" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" title="Delete" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
+@endsection
+
+
+@section('scripts')
+
+<script>
+    $(document).ready(function() {
+
+        let table = $('#employeesTable').DataTable({
+            processing: true,
+            ajax: {
+                url: "{{ url('employees') }}",
+                type: "GET",
+                data: function(d) {
+                    d.department = $('#department').val();
+                    d.role = $('#role').val();
+                }
+            },
+            columns: [{
+                    data: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'name'
+                },
+                {
+                    data: 'image',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'role'
+                },
+                {
+                    data: 'department'
+                },
+                {
+                    data: 'contact_info'
+                },
+                {
+                    data: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ]
+        });
+        $('#filter-btn').on('click', function() {
+            table.ajax.reload();
+        });
+
+        $('#reset-btn').on('click', function() {
+            $('#department').val('').trigger('change');
+            $('#role').val('').trigger('change');
+            table.ajax.reload();
+        });
+    });
+
+    $(document).on('change', '.employee-status-toggle', function() {
+
+        let employeeId = $(this).data('id');
+        let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+        $.ajax({
+            url: "{{ url('employees/status') }}/" + employeeId,
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                status: status
+            },
+            success: function(response) {
+                if (response.success) {
+
+                    let msg = response.status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Deactivated</span>';
+
+                    $('.status_msg_' + employeeId).html(msg).fadeIn().delay(1200).fadeOut();
+
+                } else {
+                    alert('Status update failed');
+                }
+            }
+        });
+
+    });
+</script>
+
 @endsection

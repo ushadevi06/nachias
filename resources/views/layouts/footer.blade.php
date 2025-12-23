@@ -3,38 +3,43 @@
 </div>
 </div>
 </div>
+
+<script src="{{ url('assets/js/select2.js') }}"></script>
+<script src="{{ url('assets/js/jquery.dataTables.min.js') }}"></script>
+<script src="{{ url('assets/js/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ url('assets/js/dataTables.responsive.min.js') }}"></script>
+<script src="{{ url('assets/js/bs-stepper.js') }}"></script>
+<script src="{{ url('assets/js/form-wizard-numbered.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url('assets/js/bootstrap.js') }}"></script>
+<script src="{{ url('assets/js/flatpickr.js') }}"></script>
 <script src="{{ url('assets/js/config.js') }}"></script>
 <script src="{{ url('assets/js/helpers.js') }}"></script>
 <script src="{{ url('assets/js/menu.js') }}"></script>
 <script src="{{ url('assets/js/main.js') }}"></script>
-<script src="{{ url('assets/js/select2.js') }}"></script>
-<script src="{{ url('assets/js/bootstrap.js') }}"></script>
-<script src="{{ url('assets/js/bs-stepper.js') }}"></script>
-<script src="{{ url('assets/js/form-wizard-numbered.js') }}"></script>
-<script src="{{ url('assets/js/flatpickr.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ url('assets/js/jquery.dataTables.min.js') }}"></script>
-<script src="{{ url('assets/js/dataTables.bootstrap5.min.js') }}"></script>
-<script src="{{ url('assets/js/dataTables.responsive.min.js') }}"></script>
+<script src="{{ url('assets/js/common.js') }}"></script>
+@yield('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const stepper = new Stepper(document.querySelector('.bs-stepper.wizard-numbered'));
     });
     const menuInner = document.querySelector('.menu-inner');
-const lastMenuItem = menuInner ? menuInner.lastElementChild : null;
+    const lastMenuItem = menuInner ? menuInner.lastElementChild : null;
 
-// Ensure margin is not negative
-if (menuInner) {
-    menuInner.style.marginLeft = '0';
-}
+    // Ensure margin is not negative
+    if (menuInner) {
+        menuInner.style.marginLeft = '0';
+    }
 
-// When last item is clicked, scroll only if necessary
-if (lastMenuItem) {
-    lastMenuItem.addEventListener('click', () => {
-        lastMenuItem.scrollIntoView({ behavior: 'smooth', inline: 'end' });
-    });
-}
-
+    // When last item is clicked, scroll only if necessary
+    if (lastMenuItem) {
+        lastMenuItem.addEventListener('click', () => {
+            lastMenuItem.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'end'
+            });
+        });
+    }
 </script>
 <script>
     $(document).ready(function() {
@@ -49,7 +54,7 @@ if (lastMenuItem) {
             pageLength: 10
         });
 
-        table.on('responsive-display.dt', function (e, datatable, row, showHide, update) {
+        table.on('responsive-display.dt', function(e, datatable, row, showHide, update) {
             if (showHide) {
                 var $selects = row.child().find('.select2');
                 $selects.each(function() {
@@ -63,41 +68,39 @@ if (lastMenuItem) {
         $('#select2Basic').select2({
             placeholder: "Select a country",
             allowClear: false
-        }); 
-        $('#generateReport').on('shown.bs.modal', function () {
+        });
+        $('#generateReport').on('shown.bs.modal', function() {
             flatpickr("#date_range", {
                 mode: "range",
                 dateFormat: "d-m-Y",
                 allowInput: true,
                 appendTo: document.getElementById('generateReport'),
                 onOpen: function(selectedDates, dateStr, instance) {
-                    instance.calendarContainer.style.zIndex = 1050; 
+                    instance.calendarContainer.style.zIndex = 1050;
                 }
             });
         });
         $('.po_date').flatpickr({
             dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
             allowInput: true
-        }); 
+        });
+
         $('#doj').flatpickr({
             dateFormat: 'd-m-Y',
             allowInput: true
-        }); 
+        });
         $('#order_date').flatpickr({
             dateFormat: 'd-m-Y',
             allowInput: true
         });
         $('#reference_date').flatpickr({
             dateFormat: 'd-m-Y',
-            defaultDate: 'today',
             allowInput: true
-        });  
+        });
         flatpickr("#date_range", {
-            mode: "range",     
-            dateFormat: "d-m-Y",  
-            allowInput: true   
+            mode: "range",
+            dateFormat: "d-m-Y",
+            allowInput: true
         });
 
         $('.so_date').flatpickr({
@@ -118,12 +121,11 @@ if (lastMenuItem) {
         });
         $('.due_date').flatpickr({
             dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
             allowInput: true
         });
     });
-    $(document).on("click", ".delete-btn", function () {
+
+    function delete_data(deleteUrl) {
         Swal.fire({
             title: "Are you sure?",
             text: "Do you really want to delete?",
@@ -132,8 +134,13 @@ if (lastMenuItem) {
             confirmButtonColor: "#8c57ff",
             cancelButtonColor: "#ff4c51",
             confirmButtonText: "Yes, delete it!"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = deleteUrl;
+            }
         });
-    });
+    }
 </script>
 </body>
+
 </html>
