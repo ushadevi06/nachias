@@ -22,10 +22,7 @@ class ZoneController extends Controller
                 $checked = $zone->status === 'Active' ? 'checked' : '';
                 $status = '
                 <label class="switch switch-success switch-lg">
-                    <input type="checkbox"
-                        class="switch-input zone-status-toggle"
-                        data-id="' . $zone->id . '"
-                        ' . $checked . '>
+                    <input type="checkbox" class="switch-input zone-status-toggle" data-id="' . $zone->id . '" ' . $checked . '>
                     <span class="switch-toggle-slider">
                         <span class="switch-on"></span>
                         <span class="switch-off"></span>
@@ -126,11 +123,9 @@ class ZoneController extends Controller
             return redirect('zones')->with('success', $message);
         }
 
-        $states = State::all();
+        $states = State::active()->get();
         $cities = [];
-
         $stateId = old('state_id') ?? ($zone->state_id ?? null);
-
         if ($stateId) {
             $cities = City::where('state_id', $stateId)->get();
         }
@@ -159,7 +154,7 @@ class ZoneController extends Controller
         $zone->save();
 
         $newData = $zone->toArray();
-        addLog('update', 'Zone Status', 'zones', $zone->id, $oldData, $newData);
+        addLog('update_status', 'Zone Status', 'zones', $zone->id, $oldData, $newData);
 
         return response()->json(['success' => true, 'status' => $zone->status]);
     }

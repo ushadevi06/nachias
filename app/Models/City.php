@@ -14,6 +14,8 @@ class City extends Model
         'city_name',
         'city_code',
         'status',
+        'created_by',
+        'updated_by',
     ];
 
     protected $dates = ['deleted_at'];

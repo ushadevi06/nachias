@@ -219,11 +219,11 @@ class CustomerController extends Controller
             return redirect('customers')->with('success', $message);
         }
 
-        $zones = Zone::where('status', 'Active')->get();
-        $states = State::where('status', 'Active')->get();
+        $zones = Zone::active()->get();
+        $states = State::active()->get();
         $cities = [];
         $places = [];
-        $taxes = Tax::where('status','Active')->get();
+        $taxes = Tax::active()->get();
 
         $stateId = old('state_id') ?? ($customer->state_id ?? null);
         $cityId  = old('city_id')  ?? ($customer->city_id ?? null);
@@ -261,7 +261,7 @@ class CustomerController extends Controller
         $customer->status = $request->status;
         $customer->save();
         $newData = $customer->toArray();
-        addLog('update', 'Customer Status', 'customers', $id, $oldData, $newData);
+        addLog('update_status', 'Customer Status', 'customers', $id, $oldData, $newData);
         return response()->json(['success' => true]);
     }
 }

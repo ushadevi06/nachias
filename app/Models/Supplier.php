@@ -50,6 +50,8 @@ class Supplier extends Model
         'branch',
         'account_number',
         'ifsc_code',
+        'created_by',
+        'updated_by',
     ];
     public function state()
     {

@@ -18,7 +18,7 @@
                                     <input type="text" class="form-control @error('size') is-invalid @enderror" id="size" name="size"
                                         placeholder="Enter Size (comma separated)"
                                         value="{{ old('size', $sizeRatio->size ?? '') }}">
-                                    <label for="size">Size * (comma separated e.g., 38,40,42,44)</label>
+                                    <label for="size">Size <span class="text-danger">*</span> (comma separated e.g., 38,40,42,44)</label>
                                 </div>
                                 @error('size')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -30,7 +30,7 @@
                                     <input type="text" class="form-control @error('ratio') is-invalid @enderror" id="ratio" name="ratio"
                                         placeholder="Enter Ratio (comma separated)"
                                         value="{{ old('ratio', $sizeRatio->ratio ?? '') }}">
-                                    <label for="ratio">Ratio * (comma separated e.g., 1,2,3,1)</label>
+                                    <label for="ratio">Ratio <span class="text-danger">*</span> (comma separated e.g., 1,2,3,1)</label>
                                 </div>
                                 @error('ratio')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -52,7 +52,7 @@
                                             {{ old('status', $sizeRatio->status ?? '') == 'Inactive' ? 'selected' : '' }}>
                                             Inactive</option>
                                     </select>
-                                    <label for="status">Status *</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status')
                                 <div class="text-danger mt-1">{{ $message }}</div>

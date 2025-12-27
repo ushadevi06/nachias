@@ -73,13 +73,15 @@
                                     <label for="receipt_store">Receipt Store </label>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline input-group">
-                                    <input type="text" id="process_group" name="process_group" class="form-control" placeholder="Select Process Group" readonly>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="input-group">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" id="process_group" name="process_group" class="form-control" placeholder="Select Process Group" readonly>
+                                        <label for="process_group">Process Group</label>
+                                    </div>
                                     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#processGroupModal">
-                                    <i class="ri ri-search-line"></i>
+                                        <i class="ri ri-search-line"></i>
                                     </button>
-                                    <label for="process_group">Process Group</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">

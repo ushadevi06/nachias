@@ -30,7 +30,9 @@ class SalesAgent extends Model
         'pan_no',
         'gst_no',
         'commission_value',
-        'sales_target'
+        'sales_target',
+        'created_by',
+        'updated_by',
     ];
 
     public function state()

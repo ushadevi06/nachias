@@ -19,7 +19,7 @@
                                     <input type="text" class="form-control @error('fabric_type') is-invalid @enderror" id="fabric_type"
                                         placeholder="Enter Fabric Type" name="fabric_type"
                                         value="{{ old('fabric_type', $fabricType->fabric_type ?? '') }}">
-                                    <label for="fabric_type">Fabric Type *</label>
+                                    <label for="fabric_type">Fabric Type <span class="text-danger">*</span></label>
                                 </div>
                                 @error('fabric_type')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -37,7 +37,7 @@
                                             {{ old('status', $fabricType->status ?? '') == 'Inactive' ? 'selected' : '' }}>
                                             Inactive</option>
                                     </select>
-                                    <label for="status">Status *</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status')
                                 <div class="text-danger mt-1">{{ $message }}</div>

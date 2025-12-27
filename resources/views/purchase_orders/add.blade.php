@@ -14,12 +14,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text"
-                                        class="form-control @error('po_number') is-invalid @enderror"
-                                        id="po_number"
-                                        name="po_number"
-                                        placeholder="Enter PO Number"
-                                        value="{{ old('po_number', $purchaseOrder->po_number ?? '') }}">
+                                    <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? '') }}">
                                     <label for="po_number">PO Number <span class="text-danger">*</span></label>
                                 </div>
                                 @error('po_number')
@@ -29,29 +24,19 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text"
-                                        class="form-control po_date @error('po_date') is-invalid @enderror"
-                                        id="po_date"
-                                        name="po_date"
-                                        autocomplete="off"
-                                        placeholder="Enter PO Date" value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
+                                    <input type="text" class="form-control po_date @error('po_date') is-invalid @enderror" id="po_date" name="po_date" autocomplete="off" placeholder="Enter PO Date" value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
                                     <label for="po_date">PO Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('po_date')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="sales_agent_id"
-                                        name="sales_agent_id"
-                                        class="select2 form-select @error('sales_agent_id') is-invalid @enderror"
-                                        data-placeholder="Select Broker/Sales Agent">
+                                    <select id="sales_agent_id" name="sales_agent_id" class="select2 form-select @error('sales_agent_id') is-invalid @enderror" data-placeholder="Select Broker/Sales Agent">
                                         <option value="">Select Broker/Sales Agent</option>
                                         @foreach($salesAgents as $agent)
-                                        <option value="{{ $agent->id }}"
-                                            {{ old('sales_agent_id', $purchaseOrder->sales_agent_id ?? '') == $agent->id ? 'selected' : '' }}>
+                                        <option value="{{ $agent->id }}" {{ old('sales_agent_id', $purchaseOrder->sales_agent_id ?? '') == $agent->id ? 'selected' : '' }}>
                                             {{ $agent->name }} ({{ $agent->code }})
                                         </option>
                                         @endforeach
@@ -279,7 +264,7 @@
                                                 $selectedMaterial = \App\Models\RawMaterial::find($item['raw_material_id']);
                                                 @endphp
                                                 @if($selectedMaterial)
-                                                <option value="{{ $selectedMaterial->id }}" selected>
+                                                <option value="{{ $selectedMaterial->id }}" data-uom-id="{{ $selectedMaterial->uom_id }}" selected>
                                                     {{ $selectedMaterial->name }} ({{ $selectedMaterial->code }})
                                                 </option>
                                                 @endif
@@ -291,7 +276,7 @@
                                         </td>
                                         <td>
                                             <select class="select2 form-select uom @error('items.'.$index.'.uom_id') is-invalid @enderror"
-                                                name="items[{{ $index }}][uom_id]"
+                                                disabled
                                                 data-placeholder="Select UOM">
                                                 <option value="">Select UOM</option>
                                                 @foreach($uoms as $uom)
@@ -300,6 +285,7 @@
                                                 </option>
                                                 @endforeach
                                             </select>
+                                            <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}" class="uom_hidden">
                                             @error('items.'.$index.'.uom_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
@@ -385,7 +371,7 @@
                                             <select class="select2 form-select material @error('items.'.$index.'.raw_material_id') is-invalid @enderror"
                                                 name="items[{{ $index }}][raw_material_id]"
                                                 data-placeholder="Select Material">
-                                                <option value="{{ $item->raw_material_id }}">
+                                                <option value="{{ $item->raw_material_id }}" data-uom-id="{{ $item->rawMaterial->uom_id }}">
                                                     {{ $item->rawMaterial->name }} ({{ $item->rawMaterial->code }})
                                                 </option>
                                             </select>
@@ -395,7 +381,7 @@
                                         </td>
                                         <td>
                                             <select class="select2 form-select uom @error('items.'.$index.'.uom_id') is-invalid @enderror"
-                                                name="items[{{ $index }}][uom_id]"
+                                                disabled
                                                 data-placeholder="Select UOM">
                                                 @foreach($uoms as $uom)
                                                 <option value="{{ $uom->id }}" {{ $item->uom_id == $uom->id ? 'selected' : '' }}>
@@ -403,6 +389,7 @@
                                                 </option>
                                                 @endforeach
                                             </select>
+                                            <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item->uom_id }}" class="uom_hidden">
                                             @error('items.'.$index.'.uom_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
@@ -439,8 +426,7 @@
                                         </td>
                                         <td>
                                             <textarea class="form-control remarks @error('items.'.$index.'.remarks') is-invalid @enderror"
-                                                name="items[{{ $index }}][remarks]"
-                                                style="height: 58px;">{{ $item->remarks }}</textarea>
+                                                name="items[{{ $index }}][remarks]">{{ $item->remarks }}</textarea>
                                             @error('items.'.$index.'.remarks')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
@@ -492,13 +478,14 @@
                                         </td>
                                         <td>
                                             <select class="select2 form-select uom"
-                                                name="items[0][uom_id]"
+                                                disabled
                                                 data-placeholder="Select UOM">
                                                 <option value="">Select UOM</option>
                                                 @foreach($uoms as $uom)
                                                 <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
                                                 @endforeach
                                             </select>
+                                            <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
                                         </td>
                                         <td>
                                             <input type="number" class="form-control quantity"
@@ -723,13 +710,14 @@
                 </td>
                 <td>
                     <select class="select2 form-select uom" 
-                            name="items[${itemIndex}][uom_id]" 
+                            disabled
                             data-placeholder="Select UOM">
                         <option value="">Select UOM</option>
                         @foreach($uoms as $uom)
                         <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
                         @endforeach
                     </select>
+                    <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
                 </td>
                 <td>
                     <input type="number" class="form-control quantity" 
@@ -766,8 +754,100 @@
             </tr>`;
 
             $('#item-rows tbody').append(rowHtml);
-            $('.select2').select2();
+            $('.select2').each(function() {
+                $(this).select2({
+                    dropdownParent: $(this).parent(),
+                    placeholder: $(this).data('placeholder'),
+                    width: '100%'
+                });
+            });
             itemIndex++;
+        });
+
+        function updateDisabledMaterials() {
+            let selectedMaterialIds = [];
+            $('.material').each(function() {
+                let val = $(this).val();
+                if (val) {
+                    selectedMaterialIds.push(val.toString());
+                }
+            });
+
+            $('.material').each(function() {
+                let currentVal = $(this).val();
+                $(this).find('option').each(function() {
+                    let optionId = $(this).val();
+                    if (optionId && selectedMaterialIds.includes(optionId.toString()) && optionId.toString() !== currentVal) {
+                        $(this).attr('disabled', 'disabled');
+                    } else {
+                        $(this).removeAttr('disabled');
+                    }
+                });
+                
+                $(this).select2({
+                    dropdownParent: $(this).parent(),
+                    placeholder: $(this).data('placeholder'),
+                    width: '100%'
+                });
+            });
+        }
+
+        // Call on page load
+        updateDisabledMaterials();
+
+        // Load materials based on category
+        $(document).on('change', '.store_category', function() {
+            let category_id = $(this).val();
+            let row = $(this).closest('tr');
+            let materialSelect = row.find('.material');
+
+            if (!category_id) {
+                materialSelect.html('<option value="">Select Material</option>').trigger('change');
+                return;
+            }
+
+            $.ajax({
+                url: '{{ url("get-materials-by-category") }}',
+                type: 'GET',
+                data: {
+                    category_id: category_id
+                },
+                success: function(response) {
+                    let materialsHtml = '<option value="">Select Material</option>';
+
+                    if (response.materials && response.materials.length > 0) {
+                        response.materials.forEach(function(material) {
+                            materialsHtml += `<option value="${material.id}" data-uom-id="${material.uom_id}">
+                            ${material.name} (${material.code})
+                        </option>`;
+                        });
+                    } else {
+                        materialsHtml += '<option value="">No materials found</option>';
+                    }
+
+                    materialSelect.html(materialsHtml).trigger('change');
+                    updateDisabledMaterials(); // Update after AJAX load
+                },
+                error: function(xhr) {
+                    console.error('Error fetching materials:', xhr);
+                    materialSelect.html('<option value="">Select Material</option>').trigger('change');
+                }
+            });
+        });
+
+        // Set UOM based on material
+        $(document).on('change', '.material', function() {
+            let uom_id = $(this).find(':selected').data('uom-id');
+            if (uom_id) {
+                let row = $(this).closest('tr');
+                row.find('.uom').val(uom_id).trigger('change');
+                row.find('.uom_hidden').val(uom_id);
+            } else {
+                let row = $(this).closest('tr');
+                row.find('.uom').val('').trigger('change');
+                row.find('.uom_hidden').val('');
+            }
+            updateDisabledMaterials(); // Update after selection
         });
 
         // Delete item row
@@ -775,6 +855,7 @@
             if ($('#item-rows tbody tr').length > 1) {
                 $(this).closest('tr').remove();
                 calculateTotals();
+                updateDisabledMaterials(); // Update after removal
             } else {
                 alert('At least one item is required');
             }

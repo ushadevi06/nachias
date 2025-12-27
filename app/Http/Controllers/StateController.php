@@ -94,9 +94,8 @@ class StateController extends Controller
             ]);
 
             if ($id) {
+                $validated['updated_by'] = auth()->id();
                 $state->update($validated);
-                $state->updated_by = auth()->id();
-                $state->save();
                 $newData = State::find($id)->toArray();
                 addLog('update', 'State', 'states', $state->id, $oldData, $newData);
                 return redirect('states')->with('success', 'State updated successfully.');
@@ -119,7 +118,7 @@ class StateController extends Controller
         $state->status = $request->status;
         $state->save();
         $newData = $state->toArray();
-        addLog('update', 'State Status', 'states', $state->id, $oldData, $newData);
+        addLog('update_status', 'State Status', 'states', $state->id, $oldData, $newData);
         return response()->json([
             'success' => true,
             'message' => 'Status updated successfully'
@@ -129,16 +128,35 @@ class StateController extends Controller
     public function destroy($id)
     {
         $state = State::findOrFail($id);
-        $citiesCount = City::where('state_id', $id)->count();
-        if ($citiesCount > 0) {
-            session()->flash('danger', "This state cannot be deleted because it has associated cities.");
-            return redirect('states');
+        $tables = [
+            'cities' => 'Cities',
+            'suppliers' => 'Suppliers',
+            'customers' => 'Customers',
+            'employees' => 'Employees',
+            'zones' => 'Zones',
+            'sales_agents' => 'Sales Agents',
+            'purchase_commission_agents' => 'Purchase Commission Agents',
+            'service_providers' => 'Service Providers',
+            'places' => 'Places',
+            'users' => 'Users',
+            'settings' => 'Settings',
+        ];
+
+        foreach ($tables as $table => $label) {
+            $query = \Illuminate\Support\Facades\DB::table($table)->where('state_id', $id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+            if ($query->exists()) {
+                session()->flash('danger', "This state is currently referenced in {$label} and cannot be deleted..");
+                return redirect('states');
+            }
         }
 
         $oldData = $state->toArray();
         $state->delete();
         addLog('delete', 'State', 'states', $id, $oldData, null);
-        session()->flash('success', 'State deleted successfully');
+        session()->flash('success', 'State deleted successfully');  
         return redirect('states');
     }
 }

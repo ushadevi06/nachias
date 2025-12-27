@@ -17,7 +17,9 @@ class Place extends Model
         'place_type',
         'latitude',
         'longitude',
-        'status'
+        'status',
+        'created_by',
+        'updated_by',
     ];
 
     protected $dates = ['deleted_at'];

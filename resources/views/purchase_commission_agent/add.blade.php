@@ -284,7 +284,7 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control h-px-100 @error('remarks') is-invalid @enderror"
+                                    <textarea class="form-control @error('remarks') is-invalid @enderror"
                                         id="remarks" placeholder="Enter Remarks"
                                         name="remarks">{{ old('remarks', $agent->remarks ?? '') }}</textarea>
                                     <label for="remarks">Remarks</label>

@@ -120,7 +120,7 @@ class RoleController extends Controller
         $role->status = $request->status;
         $role->save();
         $newData = $role->toArray();
-        addLog('update','Role Status','roles', $role->id, $oldData,$newData);
+        addLog('update_status','Role Status','roles', $role->id, $oldData,$newData);
         return response()->json([
             'success' => true,
             'message' => 'Status updated successfully'

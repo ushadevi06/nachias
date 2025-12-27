@@ -104,9 +104,8 @@ class CityController extends Controller
             ]);
 
             if ($id) {
+                $validated['updated_by'] = auth()->id();
                 $city->update($validated);
-                $city->updated_by = auth()->id();
-                $city->save();
                 $newData = City::find($id)->toArray();
                 addLog('update', 'City', 'cities', $city->id, $oldData, $newData);
                 return redirect('cities')->with('success', 'City updated successfully.');
@@ -130,7 +129,7 @@ class CityController extends Controller
         $city->status = $request->status;
         $city->save();
         $newData = $city->toArray();
-        addLog('update', 'City Status', 'cities', $city->id, $oldData, $newData);
+        addLog('update_status', 'City Status', 'cities', $city->id, $oldData, $newData);
 
         return response()->json([
             'success' => true,
@@ -140,18 +139,34 @@ class CityController extends Controller
     public function destroy($id)
     {
         $city = City::findOrFail($id);
+        $tables = [
+            'suppliers' => 'Suppliers',
+            'customers' => 'Customers',
+            'employees' => 'Employees',
+            'zones' => 'Zones',
+            'sales_agents' => 'Sales Agents',
+            'purchase_commission_agents' => 'Purchase Commission Agents',
+            'service_providers' => 'Service Providers',
+            'places' => 'Places',
+            'users' => 'Users',
+            'settings' => 'Settings',
+        ];
 
-        $placesCount = Place::where('city_id', $id)->count();
-
-        if ($placesCount > 0) {
-            session()->flash('error', "This city cannot be deleted because it has associated places.");
-            return redirect('cities');
+        foreach ($tables as $table => $label) {
+            $query = \Illuminate\Support\Facades\DB::table($table)->where('city_id', $id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+            if ($query->exists()) {
+                session()->flash('danger', "This city is currently referenced in {$label} and cannot be deleted.");
+                return redirect('cities');
+            }
         }
 
         $oldData = $city->toArray();
         $city->delete();
         addLog('delete', 'City', 'cities', $id, $oldData, null);
-
-        return redirect('cities')->with('success', 'City deleted successfully.');
+        session()->flash('success', 'City deleted successfully');  
+        return redirect('cities');
     }
 }

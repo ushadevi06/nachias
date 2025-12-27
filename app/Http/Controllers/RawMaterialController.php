@@ -207,7 +207,7 @@ class RawMaterialController extends Controller
 
         $newData = $material->toArray();
 
-        addLog('update', 'Raw Material Status', 'raw_materials', $id, $oldData, $newData);
+        addLog('update_status', 'Raw Material Status', 'raw_materials', $id, $oldData, $newData);
 
         return response()->json([
             'status'  => true,

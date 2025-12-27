@@ -68,12 +68,12 @@
                             <label class="detail-title">Status:</label>
                             <div>
                                 @php
-                                $statusClass = [
-                                'Draft' => 'bg-secondary',
-                                'Approved' => 'bg-success',
-                                'Dispatched' => 'bg-info',
-                                'Received' => 'bg-primary'
-                                ];
+                                    $statusClass = [
+                                    'Draft' => 'bg-secondary',
+                                    'Approved' => 'bg-success',
+                                    'Dispatched' => 'bg-info',
+                                    'Received' => 'bg-primary'
+                                    ];
                                 @endphp
                                 <span class="badge {{ $statusClass[$purchaseOrder->status] ?? 'bg-secondary' }}">{{ $purchaseOrder->status }}</span>
                             </div>
@@ -167,13 +167,11 @@
                         </div>
 
                         @if($purchaseOrder->other_state)
-                        <!-- IGST (show only if Other State = Yes) -->
                         <div class="col-md-3 col-xl-2">
                             <label class="detail-title">IGST ({{ number_format($purchaseOrder->igst_percent, 2) }}%):</label>
                             <div class="text-muted">₹{{ number_format(($purchaseOrder->taxable_amount * $purchaseOrder->igst_percent) / 100, 2) }}</div>
                         </div>
                         @else
-                        <!-- CGST + SGST -->
                         <div class="col-md-3 col-xl-2">
                             <label class="detail-title">CGST ({{ number_format($purchaseOrder->cgst_percent, 2) }}%):</label>
                             <div class="text-muted">₹{{ number_format(($purchaseOrder->taxable_amount * $purchaseOrder->cgst_percent) / 100, 2) }}</div>
@@ -220,7 +218,6 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
-        // Image preview
         $(document).on('click', '.view-image', function() {
             let imageSrc = $(this).data('image');
             $('#modalImage').attr('src', imageSrc);

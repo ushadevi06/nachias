@@ -38,7 +38,7 @@
                         <table class="table" id="citiesTable">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>#</th>
                                     <th>State</th>
                                     <th>City Name</th>
                                     <th>City Code</th>

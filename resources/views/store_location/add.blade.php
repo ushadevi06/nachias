@@ -19,7 +19,7 @@
                                     <input type="text" class="form-control @error('store_location') is-invalid @enderror" id="store_location"
                                         placeholder="Enter Store Location" name="store_location"
                                         value="{{ old('store_location', $storeLocation->store_location ?? '') }}">
-                                    <label for="store_location">Store Location * </label>
+                                    <label for="store_location">Store Location <span class="text-danger">*</span></label>
                                 </div>
                                 @error('store_location')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -37,7 +37,7 @@
                                             {{ old('status', $storeLocation->status ?? '') == 'Inactive' ? 'selected' : '' }}>
                                             Inactive</option>
                                     </select>
-                                    <label for="status">Status</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status')
                                 <div class="text-danger mt-1">{{ $message }}</div>

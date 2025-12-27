@@ -10,9 +10,9 @@
                     <a href="{{ url('purchase_invoices') }}" class="btn btn-secondary me-2">
                         <i class="ri ri-arrow-left-line"></i> Back
                     </a>
-                    <a href="{{ url('download_purchase_invoice/' . $invoice->id) }}" class="btn btn-primary">
+                    {{-- <a href="{{ url('download_purchase_invoice/' . $invoice->id) }}" class="btn btn-primary">
                         <i class="ri ri-printer-line"></i> Print / Download PDF
-                    </a>
+                    </a> --}}
                 </div>
             </div>
             <div class="card detail-card">

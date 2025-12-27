@@ -32,9 +32,10 @@ class LogController extends Controller
                     'create' => 'bg-success',
                     'update' => 'bg-info',
                     'delete' => 'bg-danger',
+                    'update_status' => 'bg-warning text-dark',
                     default => 'bg-secondary',
                 };
-                $actionDisplay = '<span class="badge ' . $badgeClass . '">' . ucfirst($log->action_type) . '</span>';
+                $actionDisplay = '<span class="badge ' . $badgeClass . '">' . ucwords(str_replace('_', ' ', $log->action_type)) . '</span>';
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -42,7 +43,6 @@ class LogController extends Controller
                     'user_name' => $log->user->name ?? 'System',
                     'module' => ucwords(str_replace(['_', '-'], ' ', $log->module)),
                     'action_type' => $actionDisplay,
-                    'record' => $log->description ?? '-',
                     'action' => '<div class="d-flex align-items-center"><button class="btn btn-view" onclick="viewLogDetails(' . $log->id . ')"><i class="icon-base ri ri-eye-line"></i></button></div>',
                 ];
             }
@@ -128,10 +128,9 @@ class LogController extends Controller
             'success' => true,
             'changed_fields' => $changedFields,
             'module' => ucwords(str_replace(['_', '-'], ' ', $log->module)),
-            'action_type' => ucfirst($log->action_type),
+            'action_type' => ucwords(str_replace('_', ' ', $log->action_type)),
             'user_name' => $log->user->name ?? 'System',
             'created_at' => $log->created_at ? \Carbon\Carbon::parse($log->created_at)->format('d-m-Y h:i A') : '-',
-            'record' => $log->description ?? '-'
         ]);
     } 
 }

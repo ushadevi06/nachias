@@ -113,7 +113,6 @@ class UomController extends Controller
                 addLog('update', 'UOM', 'uoms', $uom->id, $oldData, $newData);
                 $message = 'UOM updated successfully';
             } else {
-                $validated['created_by'] = auth()->id();
                 $uom->uom_code = $request->uom_code;
                 $uom->uom_name = $request->uom_name;
                 $uom->description = $request->description;
@@ -135,6 +134,25 @@ class UomController extends Controller
     public function destroy($id)
     {
         $uom = Uom::findOrFail($id);
+
+        $tables = [
+            'stock_entry_items' => 'Stock Entry Items',
+            'purchase_invoice_items' => 'Purchase Invoice Items',
+            'purchase_order_items' => 'Purchase Order Items',
+            'items' => 'Items',
+            'raw_materials' => 'Raw Materials',
+        ];
+
+        foreach ($tables as $table => $label) {
+            $query = \Illuminate\Support\Facades\DB::table($table)->where('uom_id', $id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+            if ($query->exists()) {
+                return redirect('uoms')->with('danger', "This uom is currently referenced in {$label} and cannot be deleted.");
+            }
+        }
+
         $oldData = $uom->toArray();
         $uom->delete();
         addLog('delete','UOM','uoms',$id,$oldData,null);
@@ -152,7 +170,7 @@ class UomController extends Controller
 
         $newData = $uom->toArray();
 
-        addLog('update', 'UOM Status', 'uoms', $uom->id, $oldData, $newData);
+        addLog('update_status', 'UOM Status', 'uoms', $uom->id, $oldData, $newData);
 
         return response()->json([
             'success' => true,

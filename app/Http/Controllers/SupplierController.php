@@ -90,8 +90,6 @@ class SupplierController extends Controller
         return view('suppliers.view');
     }
 
-
-
     public function add($id = null)
     {
         $supplier = null;
@@ -211,15 +209,21 @@ class SupplierController extends Controller
             return redirect('suppliers')->with('success', $message);
         }
 
-        $states = State::where('status','Active')->get();
+        $states = State::active()->get();
         $cities = [];
         $places = [];
-        $taxes = Tax::where('status', 'Active')->get();
-        $purchase_commission_agents = PurchaseCommissionAgent::where('status', 'Active')->get();
+        $taxes = Tax::active()->get();
+        $purchase_commission_agents = PurchaseCommissionAgent::active()->get();
 
-        if ($supplier) {
-            $cities = City::where('state_id', $supplier->state_id)->get();
-            $places = Place::where('city_id', $supplier->city_id)->get();
+        $stateId = old('state_id', $supplier->state_id ?? null);
+        $cityId = old('city_id', $supplier->city_id ?? null);
+
+        if ($stateId) {
+            $cities = City::where('state_id', $stateId)->get();
+        }
+
+        if ($cityId) {
+            $places = Place::where('city_id', $cityId)->get();
         }
 
         return view('suppliers.add', compact('supplier', 'states', 'cities', 'places', 'taxes', 'purchase_commission_agents'));
@@ -247,7 +251,7 @@ class SupplierController extends Controller
         $supplier->status = $request->status;
         $supplier->save();
         $newData = $supplier->toArray();
-        addLog('update', 'Supplier Status', 'suppliers', $id, $oldData, $newData);
+        addLog('update_status', 'Supplier Status', 'suppliers', $id, $oldData, $newData);
         return response()->json(['success' => true]);
     }
 }

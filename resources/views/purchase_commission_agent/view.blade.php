@@ -29,6 +29,7 @@
                             <th>Name</th>
                             <th>Code</th>
                             <th>Contact Info</th>
+                            <th>Location</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -65,6 +66,9 @@
                 },
                 {
                     data: 'contact_info'
+                },
+                {
+                    data: 'location'
                 },
                 {
                     data: 'status',

@@ -13,7 +13,9 @@ class SizeRatio extends Model
     protected $fillable = [
         'size',
         'ratio',
-        'status'
+        'status',
+        'created_by',
+        'updated_by',
     ];
 
     // Accessor to get size array

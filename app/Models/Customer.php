@@ -44,7 +44,9 @@ class Customer extends Model
         'bank_name',
         'branch',
         'account_number',
-        'ifsc_code'
+        'ifsc_code',
+        'created_by',
+        'updated_by',
     ];
 
     // Relationships

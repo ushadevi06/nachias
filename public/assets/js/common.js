@@ -1,5 +1,4 @@
 $(document).ready(function () {
-    loadAgentsTable(); 
     /*  Fetch Cities */
     $('#state_id').change(function () {
         var stateId = $(this).val();
@@ -7,7 +6,7 @@ $(document).ready(function () {
         if (stateId) {
             $.get('/get-cities/' + stateId, function (data) {
                 $.each(data, function (key, city) {
-                    $('#city_id').append('<option value="' + city.id + '">' + city .city_name + '</option>');
+                    $('#city_id').append('<option value="' + city.id + '">' + city.city_name + '</option>');
                 });
             });
         }
@@ -62,31 +61,4 @@ $(document).ready(function () {
         }
     });
 });
-function loadAgentsTable() {
-
-    if ($.fn.DataTable.isDataTable('#agentsTable')) {
-        $('#agentsTable').DataTable().clear().destroy();
-    }
-    $('#agentsTable').DataTable({
-        processing: true,
-        serverSide: false,
-        ajax: {
-            url: "{{ url('purchase_commission_agent') }}",
-            type: "GET",
-            dataSrc: 'data'
-        },
-        columns: [
-            { data: 'id' },
-            { data: 'name' },
-            { data: 'code' },
-            { data: 'email' },
-            { data: 'mobile_no' },
-            { data: 'state' },
-            { data: 'city' },
-            { data: 'service_point' },
-            { data: 'status' },
-            { data: 'actions' }
-        ],
-    });
-}
 

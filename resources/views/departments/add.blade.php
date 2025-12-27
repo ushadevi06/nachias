@@ -18,7 +18,7 @@
                                     <input type="text" class="form-control @error('department') is-invalid @enderror" id="department"
                                         placeholder="Enter Department" name="department"
                                         value="{{ old('department', $department->department ?? '') }}">
-                                    <label for="department">Department * </label>
+                                    <label for="department">Department <span class="text-danger">*</span></label>
                                 </div>
                                 @error('department')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -36,7 +36,7 @@
                                             {{ old('status', $department->status ?? '') == 'Inactive' ? 'selected' : '' }}>
                                             Inactive</option>
                                     </select>
-                                    <label for="status">Status</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status')
                                 <div class="text-danger mt-1">{{ $message }}</div>

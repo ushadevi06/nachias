@@ -434,7 +434,7 @@ $isSuper = $user->id == 1;
                                 </li>
                                 @endif
                                 @if($isSuper || $user->can('view task-creation') || $user->can('view task-assignment') || $user->can('view task-tracking-monitoring') || $user->can('view task-status-updates'))
-                                <li class="menu-item {{ (request()->is('tasks') || request()->is('add_task') || request()->is('view_task') || request()->is('task_assigned') || request()->is('view_task_assigned') || request()->is('task_management')) ? 'active' : '' }}">
+                                <li class="menu-item {{ (request()->is('task_creation') || request()->is('add_task_creation') || request()->is('view_task_creation') || request()->is('task_assignment') || request()->is('view_task_assignment') || request()->is('task_management')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-task-line"></i>
                                         <div>Task Management</div>
@@ -443,16 +443,16 @@ $isSuper = $user->id == 1;
                                     <ul class="menu-sub">
 
                                         @if($isSuper || $user->can('view task-creation'))
-                                        <li class="menu-item {{ request()->is('tasks') || request()->is('add_task') ? 'active' : '' }}">
-                                            <a href="{{ url('tasks') }}" class="menu-link">
+                                        <li class="menu-item {{ request()->is('task_creation') || request()->is('add_task_creation') ? 'active' : '' }}">
+                                            <a href="{{ url('task_creation') }}" class="menu-link">
                                                 <div>Task Creation</div>
                                             </a>
                                         </li>
                                         @endif
 
                                         @if($isSuper || $user->can('view task-assignment'))
-                                        <li class="menu-item {{ request()->is('task_assigned') ? 'active' : '' }}">
-                                            <a href="{{ url('task_assigned') }}" class="menu-link">
+                                        <li class="menu-item {{ request()->is('task_assignment') ? 'active' : '' }}">
+                                            <a href="{{ url('task_assignment') }}" class="menu-link">
                                                 <div>Task Assignment</div>
                                             </a>
                                         </li>
@@ -693,7 +693,12 @@ $isSuper = $user->id == 1;
                                     </a>
                                 </li>
                                 @endif
-
+                                <li class="menu-item {{ request()->is('update_page') ? 'active' : '' }}">
+                                    <a href="{{ url('update_page') }}" class="menu-link">
+                                        <i class="menu-icon icon-base ri ri-settings-5-line"></i>
+                                        <div>Update Page</div>
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                         <a href="#" class="menu-horizontal-next"></a>

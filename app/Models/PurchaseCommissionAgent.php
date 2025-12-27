@@ -18,7 +18,7 @@ class PurchaseCommissionAgent extends Model
         'status',
         'state_id',
         'city_id',
-        'service_point_id',
+        'place_id',
         'address_line_1',
         'address_line_2',
         'zipcode',
@@ -28,7 +28,9 @@ class PurchaseCommissionAgent extends Model
         'contact_email',
         'pan_no',
         'gst_no',
-        'remarks'
+        'remarks',
+        'created_by',
+        'updated_by',
     ];
 
     // ------------------------
@@ -48,5 +50,9 @@ class PurchaseCommissionAgent extends Model
     public function servicePoint()
     {
         return $this->belongsTo(Place::class, 'place_id');
+    }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
     }
 }

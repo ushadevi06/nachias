@@ -146,7 +146,7 @@ class FabricTypeController extends Controller
 
         $newData = $fabricType->toArray();
 
-        addLog('update', 'Fabric Type Status', 'fabric_types', $id, $oldData, $newData);
+        addLog('update_status', 'Fabric Type Status', 'fabric_types', $id, $oldData, $newData);
 
         return response()->json([
             'success' => true,

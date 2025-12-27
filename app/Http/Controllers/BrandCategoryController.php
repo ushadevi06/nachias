@@ -89,8 +89,12 @@ class BrandCategoryController extends Controller
                 'description' => 'nullable|string',
                 'status' => 'required|in:Active,Inactive',
             ];
+            $messages = [
+                '*.required' => 'This field is required.',
+                '*.unique'   => 'This field already exists.',
+            ];
 
-            $validated = $request->validate($rules);
+            $validated = $request->validate($rules, $messages);
 
             $data = [
                 'code' => $request->code,
@@ -150,7 +154,7 @@ class BrandCategoryController extends Controller
 
         $newData = $brandCategory->toArray();
 
-        addLog('update', 'Brand Category Status', 'brand_categories', $id, $oldData, $newData);
+        addLog('update_status', 'Brand Category Status', 'brand_categories', $id, $oldData, $newData);
 
         return response()->json([
             'success' => true,

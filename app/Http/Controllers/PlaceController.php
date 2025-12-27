@@ -100,13 +100,11 @@ class PlaceController extends Controller
                 'place_name' => [
                     'required',
                     'max:255',
-                    Rule::unique('places', 'place_name')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
+                    Rule::unique('places', 'place_name')->ignore($id)->whereNull('deleted_at')
                 ],
                 'place_type' => 'required|max:100',
-                'latitude' => 'nullable|numeric',
-                'longitude' => 'nullable|numeric',
+                'latitude' => 'nullable|numeric|max_length[10]',
+                'longitude' => 'nullable|numeric|max_length[11]',
                 'status' => 'required|in:Active,Inactive'
             ], [
                 '*.required' => 'This field is required.',
@@ -114,9 +112,8 @@ class PlaceController extends Controller
             ]);
 
             if ($id) {
+                $validated['updated_by'] = auth()->id();
                 $place->update($validated);
-                $place->updated_by = auth()->id();
-                $place->save();
                 $newData = Place::find($id)->toArray();
                 addLog('update', 'Place', 'places', $place->id, $oldData, $newData);
                 $message = 'Place updated successfully';
@@ -131,7 +128,7 @@ class PlaceController extends Controller
             return redirect('places')->with('success', $message);
         }
 
-        $states = State::all();
+        $states = State::active()->get();
         $cities = [];
         $stateId = old('state_id') ?? ($place->state_id ?? null);
 
@@ -159,7 +156,7 @@ class PlaceController extends Controller
         $place->status = request('status');
         $place->save();
         $newData = $place->toArray();
-        addLog('update', 'Place Status', 'places', $place->id, $oldData, $newData);
+        addLog('update_status', 'Place Status', 'places', $place->id, $oldData, $newData);
 
         return response()->json([
             'success' => true,

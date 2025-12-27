@@ -9,7 +9,7 @@ class Charge extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['charge_name', 'status'];
+    protected $fillable = ['charge_name', 'status','created_by','updated_by'];
 
     public function purchaseInvoiceCharges()
     {

@@ -129,7 +129,7 @@ class TaxController extends Controller
 
         $newData = $tax->toArray();
 
-        addLog('update', 'Tax Status', 'taxes', $tax->id, $oldData, $newData);
+        addLog('update_status', 'Tax Status', 'taxes', $tax->id, $oldData, $newData);
 
         return response()->json([
             'success' => true,

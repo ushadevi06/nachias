@@ -17,7 +17,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('item_name') is-invalid @enderror" id="item_name" placeholder="Enter Item Name"
                                         name="item_name" value="{{ old('item_name', $tax->item_name ?? '') }}">
-                                    <label for="item_name">Item Name * </label>
+                                    <label for="item_name">Item Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('item_name')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -28,7 +28,7 @@
                                     <input type="number" step="0.01" class="form-control @error('tax_rate') is-invalid @enderror" id="tax_rate"
                                         placeholder="Enter Tax Rate %" name="tax_rate"
                                         value="{{ old('tax_rate', $tax->tax_rate ?? '') }}">
-                                    <label for="tax_rate">Tax Rate % * </label>
+                                    <label for="tax_rate">Tax Rate % <span class="text-danger">*</span></label>
                                 </div>
                                 @error('tax_rate')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -46,7 +46,7 @@
                                             {{ old('status', $tax->status ?? '') == 'Inactive' ? 'selected' : '' }}>
                                             Inactive</option>
                                     </select>
-                                    <label for="status">Status</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status')
                                 <div class="text-danger mt-1">{{ $message }}</div>

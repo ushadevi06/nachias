@@ -237,7 +237,7 @@ class SalesAgentController extends Controller
 
         $newData = $agent->toArray();
 
-        addLog('update', 'Sales Agent Status', 'sales_agents', $id, $oldData, $newData);
+        addLog('update_status', 'Sales Agent Status', 'sales_agents', $id, $oldData, $newData);
 
         return response()->json(['success' => true]);
     }

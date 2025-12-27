@@ -135,7 +135,7 @@ class BrandController extends Controller
 
         $newData = $brand->toArray();
 
-        addLog('update', 'Brand Status', 'brands', $id, $oldData, $newData);
+        addLog('update_status', 'Brand Status', 'brands', $id, $oldData, $newData);
 
         return response()->json(['success' => true]);
     }

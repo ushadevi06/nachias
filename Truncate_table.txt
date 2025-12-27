@@ -1,0 +1,46 @@
+TRUNCATE `brand_categories`;
+TRUNCATE `brands`;
+TRUNCATE `charges`;
+TRUNCATE `cities`;
+TRUNCATE `departments`;
+TRUNCATE `fabric_types`;
+TRUNCATE `places`;
+TRUNCATE `customers`;
+TRUNCATE `purchase_commission_agents`;
+TRUNCATE `raw_materials`;
+TRUNCATE `items`;
+TRUNCATE `role_has_permissions`;
+TRUNCATE `sales_agents`;
+TRUNCATE `service_providers`;
+TRUNCATE `size_ratios`;
+TRUNCATE `states`;
+TRUNCATE `store_categories`;
+TRUNCATE `store_locations`;
+TRUNCATE `suppliers`;
+TRUNCATE `taxes`;
+TRUNCATE `uoms`;
+TRUNCATE `zones`;
+TRUNCATE `operation_stages`;
+
+
+TRUNCATE `grn_entries`;
+TRUNCATE `grn_entry_item_variants`;
+TRUNCATE `grn_entry_items`;
+TRUNCATE `logs`;
+TRUNCATE `purchase_orders`;
+TRUNCATE `purchase_order_items`;
+TRUNCATE `purchase_invoices`;
+TRUNCATE `purchase_invoice_items`;
+TRUNCATE `purchase_invoice_charges`;
+TRUNCATE `grn_entries`;
+TRUNCATE `grn_entry_item_variants`;
+TRUNCATE `grn_entry_items`;
+TRUNCATE `stock_entries`;
+TRUNCATE `stock_entry_items`;
+
+
+TRUNCATE `roles`;
+TRUNCATE `model_has_roles`;
+
+DELETE FROM users WHERE id != 1;
+ALTER TABLE users AUTO_INCREMENT = 2;

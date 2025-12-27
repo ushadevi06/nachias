@@ -68,7 +68,7 @@ class StorelocationController extends Controller
         if ($request->isMethod('post')) {
 
             $request->validate([
-                'store_location' => 'required|string|max:255|unique:store_locations,store_location,' . $id,
+                'store_location' => 'required|string|max:255|unique:store_locations,store_location,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive'
             ],[
                 '*.required' => 'This field is required.',
@@ -105,6 +105,27 @@ class StorelocationController extends Controller
     public function destroy($id)
     {
         $storeLocation = StoreLocation::findOrFail($id);
+
+        $checks = [
+            ['table' => 'stock_entry_items', 'column' => 'store_location_id', 'label' => 'Stock Entry Items'],
+            ['table' => 'grn_entry_items', 'column' => 'store_location_id', 'label' => 'GRN Entry Items'],
+        ];
+
+        foreach ($checks as $check) {
+            $table = $check['table'];
+            $column = $check['column'];
+            $label = $check['label'];
+
+            $query = \Illuminate\Support\Facades\DB::table($table)->where($column, $id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+
+            if ($query->exists()) {
+                return redirect('store_location')->with('danger', "This store location is currently referenced in {$label} and cannot be deleted.");
+            }
+        }
+
         $oldData = $storeLocation->toArray();
         $storeLocation->delete();
         addLog('delete', 'Store Location', 'store_locations', $id, $oldData, null);
@@ -118,7 +139,7 @@ class StorelocationController extends Controller
         $storeLocation->status = $request->status;
         $storeLocation->save();
         $newData = $storeLocation->toArray();
-        addLog('update', 'Store Location Status', 'store_locations', $id, $oldData, $newData);
+        addLog('update_status', 'Store Location Status', 'store_locations', $id, $oldData, $newData);
         return response()->json(['success' => true]);
     }
 }

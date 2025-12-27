@@ -12,7 +12,9 @@ class OperationStage extends Model
 
     protected $fillable = [
         'operation_stage_name',
-        'status'
+        'status',
+        'created_by',
+        'updated_by',
     ];
     protected $dates = ['deleted_at'];
 }

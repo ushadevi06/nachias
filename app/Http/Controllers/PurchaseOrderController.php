@@ -293,7 +293,7 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->status = $request->status;
         $purchaseOrder->save();
         $newData = $purchaseOrder->toArray();
-        addLog('update', 'Purchase Order Status', 'purchase_orders', $id, $oldData, $newData);
+        addLog('update_status', 'Purchase Order Status', 'purchase_orders', $id, $oldData, $newData);
         return response()->json(['success' => true, 'message' => 'Status updated successfully']);
     }
 

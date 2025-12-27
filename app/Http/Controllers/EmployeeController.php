@@ -346,7 +346,7 @@ class EmployeeController extends Controller
         $employee->status = request('status');
         $employee->save();
 
-        addLog('update', 'User', 'users', $id, $oldData, $employee->fresh()->toArray());
+        addLog('update_status', 'User', 'users', $id, $oldData, $employee->fresh()->toArray());
 
         return response()->json([
             'success' => true,

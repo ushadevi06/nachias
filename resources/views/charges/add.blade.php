@@ -18,7 +18,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="charge_name" placeholder="Enter Charge"
                                         name="charge_name" value="{{ old('charge_name', $charge->charge_name ?? '') }}">
-                                    <label for="charge_name">Charge *</label>
+                                    <label for="charge_name">Charge <span class="text-danger">*</span></label>
                                 </div>
                                 @error('charge_name')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -36,7 +36,7 @@
                                             {{ old('status', $charge->status ?? '') == 'Inactive' ? 'selected' : '' }}>
                                             Inactive</option>
                                     </select>
-                                    <label for="status">Status *</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status')
                                 <div class="text-danger mt-1">{{ $message }}</div>

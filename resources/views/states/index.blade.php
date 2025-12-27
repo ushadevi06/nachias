@@ -12,10 +12,10 @@
                 <a class="btn btn-primary" href="{{ url('states/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
-                @endif
-                <div class="col-lg-12">
-                    @include('flash_messages')
-                </div>
+            </div>
+            @endif
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
             <div class="card">
                 <div class="card-body">
@@ -60,7 +60,9 @@
                 },
                 {
                     data: 'status',
-                    name: 'status'
+                    name: 'status',
+                    orderable: false,
+                    searchable: false
                 },
                 {
                     data: 'action',
@@ -86,7 +88,7 @@
                         '<span class="text-success">Activated</span>' :
                         '<span class="text-danger">Inactivated</span>';
 
-                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(3000).fadeOut();
                 }
             });
         });

@@ -61,8 +61,19 @@ class ServiceProviderController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'name'   => $provider->name . ' (' . $provider->code . ')',
-                    'mobile' => $provider->mobile_no,
-                    'email'  => $provider->email ?? '-',
+                    'contact_info' => '
+                        <div class="contact-info">
+                            <div><i class="ri ri-phone-line icon-phone"></i> ' . ($provider->mobile_no ?? '-') . '</div>
+                            <div><i class="ri ri-mail-line icon-email"></i> ' . ($provider->email ?? '-') . '</div>
+                        </div>
+                    ',
+                    'location' => '
+                        <div class="location-info">
+                            <div><strong>State:</strong> ' . ($provider->state->state_name ?? '-') . '</div>
+                            <div><strong>City:</strong> ' . ($provider->city->city_name ?? '-') . '</div>
+                            <div><strong>Place:</strong> ' . ($provider->place->place_name ?? '-') . '</div>
+                        </div>
+                    ',
                     'service_type' => $provider->serviceType->service_type_name ?? '-',
                     'service_rate' => $provider->service_rate,
                     'status' => $status,
@@ -211,7 +222,7 @@ class ServiceProviderController extends Controller
 
         $newData = $provider->toArray();
 
-        addLog('update', 'Service Provider Status', 'service_providers', $id, $oldData, $newData);
+        addLog('update_status', 'Service Provider Status', 'service_providers', $id, $oldData, $newData);
 
         return response()->json(['success' => true]);
     }

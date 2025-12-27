@@ -9,7 +9,7 @@ class Department extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['department', 'status'];
+    protected $fillable = ['department', 'status','created_by','updated_by'];
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

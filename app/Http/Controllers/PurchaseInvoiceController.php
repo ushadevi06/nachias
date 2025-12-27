@@ -421,8 +421,11 @@ class PurchaseInvoiceController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $invoice = PurchaseInvoice::findOrFail($id);
+        $oldData = $invoice->toArray();
         $invoice->invoice_status = $request->status;
         $invoice->save();
+        $newData = $invoice->toArray();
+        addLog('update_status', 'Purchase Invoice Status', 'purchase_invoices', $id, $oldData, $newData);
         return response()->json(['success' => true, 'message' => 'Status updated successfully']);
     }
 

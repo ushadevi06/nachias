@@ -36,18 +36,11 @@ class SizeRatioController extends Controller
                 $action = '<div class="button-box">';
 
                 if (auth()->id() == 1 || auth()->user()->can('edit size-ratio')) {
-                    $action .= '
-                        <a href="' . url('size_ratio/add/' . $sizeRatio->id) . '" class="btn btn-edit">
-                            <i class="icon-base ri ri-edit-box-line"></i>
-                        </a>';
+                    $action .= '<a href="' . url('size_ratio/add/' . $sizeRatio->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete size-ratio')) {
-                    $action .= '
-                        <a href="javascript:;" class="btn btn-delete"
-                        onclick="delete_data(\'' . url('size_ratio/delete/' . $sizeRatio->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('size_ratio/delete/' . $sizeRatio->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $action .= '</div>';
@@ -157,7 +150,7 @@ class SizeRatioController extends Controller
         $sizeRatio->save();
 
         $newData = $sizeRatio->toArray();
-        addLog('update', 'Size Ratio Status', 'size_ratios', $id, $oldData, $newData);
+        addLog('update_status', 'Size Ratio Status', 'size_ratios', $id, $oldData, $newData);
 
         return response()->json(['success' => true, 'status' => $sizeRatio->status]);
     }

@@ -60,27 +60,20 @@ class DepartmentController extends Controller
         return view('departments.view');
     }
 
-
     public function add(Request $request, $id = null)
     {
         $department = $id ? Department::findOrFail($id) : null;
-
         if ($request->isMethod('post')) {
-
             $rules = [
-                'department' => 'required|string|max:255|unique:departments,department,' . $id,
+                'department' => 'required|string|max:255|unique:departments,department,' . $id . ',id,deleted_at,NULL',
                 'status'     => 'required|in:Active,Inactive'
             ];
-
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
             ];
-
             $request->validate($rules, $messages);
-
             $data = $request->only(['department', 'status']);
-
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 Department::where('id', $id)->update($data);
@@ -96,7 +89,6 @@ class DepartmentController extends Controller
 
             return redirect('departments')->with('success', $msg);
         }
-
         return view('departments.add', compact('department'));
     }
 
@@ -105,37 +97,18 @@ class DepartmentController extends Controller
         $department = Department::findOrFail($id);
         $oldData = $department->toArray();   
         $department->delete();             
-        addLog(
-            'delete',
-            'Department',
-            'departments',
-            $id,
-            $oldData,
-            null
-        );
+        addLog('delete', 'Department', 'departments', $id, $oldData, null);
         return redirect('departments')->with('success', 'Department deleted successfully');
     }
-
 
     public function updateStatus(Request $request, $id)
     {
         $department = Department::findOrFail($id);
         $oldData = $department->toArray();  
-
         $department->status = $request->status;
         $department->save();
-
         $newData = $department->toArray(); 
-
-        addLog(
-            'update',
-            'Department Status',
-            'departments',
-            $department->id,
-            $oldData,
-            $newData
-        );
-
+        addLog('update_status', 'Department Status', 'departments', $department->id, $oldData, $newData);
         return response()->json([
             'success' => true,
             'status'  => $department->status

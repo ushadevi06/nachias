@@ -9,5 +9,5 @@ class StoreLocation extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['store_location', 'status'];
+    protected $fillable = ['store_location', 'status','created_by','updated_by'];
 }

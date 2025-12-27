@@ -14,6 +14,8 @@ class State extends Model
         'state_code',
         'state_name',
         'status',
+        'created_by',
+        'updated_by',
     ];
 
     protected $dates = ['deleted_at'];

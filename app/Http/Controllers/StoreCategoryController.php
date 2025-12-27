@@ -159,7 +159,7 @@ class StoreCategoryController extends Controller
 
         $newData = $storeCategory->toArray();
 
-        addLog('update', 'Store Category Status', 'store_categories', $id, $oldData, $newData);
+        addLog('update_status', 'Store Category Status', 'store_categories', $id, $oldData, $newData);
 
         return response()->json([
             'success' => true,

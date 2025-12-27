@@ -363,38 +363,3 @@
     </div>
 </div>
 @endsection
-
-@section('scripts')
-<script>
-    $(document).ready(function() {
-        $('#state_id').on('change', function() {
-            var stateId = $(this).val();
-            $('#city_id').html('<option value="">Select City</option>');
-            $('#place_id').html('<option value="">Select Service Point</option>');
-
-            if (stateId) {
-                $.get('/get-cities/' + stateId, function(data) {
-                    $.each(data, function(index, city) {
-                        $('#city_id').append('<option value="' + city.id + '">' + city
-                            .city_name + '</option>');
-                    });
-                });
-            }
-        });
-
-        $('#city_id').on('change', function() {
-            var cityId = $(this).val();
-            $('#place_id').html('<option value="">Select Service Point</option>');
-
-            if (cityId) {
-                $.get('/get-places/' + cityId, function(data) {
-                    $.each(data, function(index, place) {
-                        $('#place_id').append('<option value="' + place.id + '">' + place
-                            .place_name + '</option>');
-                    });
-                });
-            }
-        });
-    });
-</script>
-@endsection

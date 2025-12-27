@@ -15,7 +15,7 @@ class PurchaseCommissionAgentController extends Controller
 
         if ($request->ajax()) {
 
-            $query = PurchaseCommissionAgent::query();
+            $query = PurchaseCommissionAgent::with(['state', 'city', 'servicePoint']);
             $agents = $query->orderBy('id', 'desc')->get();
 
             $count = 1;
@@ -72,11 +72,19 @@ class PurchaseCommissionAgentController extends Controller
                     </div>
                 </div>';
 
+                $location = '
+                <div class="location-info">
+                    <div><strong>State:</strong> ' . ($agent->state->state_name ?? '-') . '</div>
+                    <div><strong>City:</strong> ' . ($agent->city->city_name ?? '-') . '</div>
+                    <div><strong>Place:</strong> ' . ($agent->servicePoint->place_name ?? '-') . '</div>
+                </div>';
+
                 $data[] = [
                     'DT_RowIndex'  => $count++,
                     'name'         => $agent->name,
                     'code'         => $agent->code,
                     'contact_info' => $contactInfo,
+                    'location'     => $location,
                     'status'       => $status,
                     'action'       => $action,
                 ];
@@ -223,7 +231,7 @@ class PurchaseCommissionAgentController extends Controller
 
         $newData = $agent->toArray();
 
-        addLog('update', 'Purchase Commission Agent Status', 'purchase_commission_agents', $id, $oldData, $newData);
+        addLog('update_status', 'Purchase Commission Agent Status', 'purchase_commission_agents', $id, $oldData, $newData);
 
         return response()->json([
             'status'  => true,

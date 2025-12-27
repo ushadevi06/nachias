@@ -14,7 +14,9 @@ class Zone extends Model
         'zone_name',
         'state_id',
         'city_ids',
-        'status'
+        'status',
+        'created_by',
+        'updated_by',
     ];
 
     public function state()
@@ -22,7 +24,6 @@ class Zone extends Model
         return $this->belongsTo(State::class);
     }
 
-    // Helper method to get city names
     public function getCityNamesAttribute()
     {
         if (!$this->city_ids) return '';
@@ -30,5 +31,9 @@ class Zone extends Model
         $cityIds = explode(',', $this->city_ids);
         $cities = City::whereIn('id', $cityIds)->pluck('city_name')->toArray();
         return implode(', ', $cities);
+    }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
     }
 }

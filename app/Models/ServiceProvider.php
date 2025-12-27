@@ -35,7 +35,9 @@ class ServiceProvider extends Model
         'bank_name',
         'bank_acc_no',
         'ifsc_code',
-        'payment_terms'
+        'payment_terms',
+        'created_by',
+        'updated_by',
     ];
 
     public function serviceType()

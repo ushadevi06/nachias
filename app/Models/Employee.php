@@ -55,6 +55,8 @@ class Employee extends Authenticatable
         'account_number',
         'bank_name',
         'ifsc_code',
+        'created_by',
+        'updated_by',
     ];
 
     protected $hidden = [

@@ -272,7 +272,6 @@ class ItemController extends Controller
         return redirect('items')->with('success', 'Item deleted successfully');
     }
 
-
     public function updateStatus($id)
     {
         $item = Item::findOrFail($id);
@@ -280,37 +279,7 @@ class ItemController extends Controller
         $item->status = request('status');
         $item->save();
         $newData = $item->fresh()->toArray();
-        addLog(
-            'status_update',
-            'Item',
-            'items',
-            $id,
-            $oldData,
-            $newData
-        );
+        addLog('update_status', 'Item Status', 'items', $id, $oldData, $newData);
         return redirect('items')->with('success', 'Status updated successfully');
-    }
-
-    public function getCategoriesByBrand($brandId)
-    {
-        return response()->json(
-            BrandCategory::where('brand_id', $brandId)->where('status', 'Active')->get()
-        );
-    }
-
-    public function getMaterialsByCategory(Request $request)
-    {
-        $categoryId = $request->get('category_id');
-
-        if (!$categoryId) {
-            return response()->json(['materials' => []], 400);
-        }
-
-        $materials = RawMaterial::where('store_category_id', $categoryId)
-            ->whereNull('deleted_at') 
-            ->select('id', 'name', 'code')
-            ->get();
-
-        return response()->json(['materials' => $materials]);
     }
 }

@@ -9,7 +9,9 @@ class FabricType extends Model
     use SoftDeletes;
 
     protected $fillable = [
-    'fabric_type',
-    'status'
+        'fabric_type',
+        'status',
+        'created_by',
+        'updated_by',
     ];
 }

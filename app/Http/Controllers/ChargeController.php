@@ -100,14 +100,14 @@ class ChargeController extends Controller
                 addLog('update', 'Charge', 'charges', $id, $oldData, $newData);
                 $message = 'Charge updated successfully';
             } else {
-                Charge::create($data);
+                $data['created_by'] = auth()->id();
+                $charge = Charge::create($data);
                 $newData = $charge->toArray();
                 addLog('create', 'Charge', 'charges', $charge->id, null, $newData);
                 $message = 'Charge added successfully';
             }
             return redirect('charges')->with('success', $message);
         }
-
         return view('charges.add', compact('charge'));
     }
     
@@ -117,9 +117,8 @@ class ChargeController extends Controller
         $oldData = $charge->toArray();
         $charge->status = $request->status;
         $charge->save();
-
         $newData = $charge->toArray();
-        addLog('update', 'Charge Status', 'charges', $id, $oldData, $newData);
+        addLog('update_status', 'Charge Status', 'charges', $id, $oldData, $newData);
         return response()->json([
             'success' => true,
             'status'  => $charge->status
@@ -129,6 +128,21 @@ class ChargeController extends Controller
     public function destroy($id)
     {
         $charge = Charge::findOrFail($id);
+
+        $tables = [
+            'purchase_invoice_charges' => 'Purchase Invoice Charges',
+        ];
+
+        foreach ($tables as $table => $label) {
+            $query = \Illuminate\Support\Facades\DB::table($table)->where('charge_id', $id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+            if ($query->exists()) {
+                return redirect('charges')->with('danger', "This charge is currently referenced in {$label} and cannot be deleted.");
+            }
+        }
+
         $oldData = $charge->toArray();
         $charge->delete();
         addLog('delete', 'Charge', 'charges', $id, $oldData, null);

@@ -17,7 +17,6 @@
                                     <th>Action Type</th>
                                     <th>Employee</th>
                                     <th>Module</th>
-                                    <th>Record</th>
                                     <th>Date & Time</th>
                                     <th>Action</th>
                                 </tr>
@@ -67,12 +66,6 @@
                         <div class="border rounded p-3 h-100">
                             <div class="text-muted small mb-1"><i class="icon-base ri ri-apps-line me-1"></i>Module</div>
                             <div class="fw-semibold" id="modalModule"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="border rounded p-3 h-100">
-                            <div class="text-muted small mb-1"><i class="icon-base ri ri-file-text-line me-1"></i>Record</div>
-                            <div class="fw-semibold" id="modalRecord"></div>
                         </div>
                     </div>
                 </div>
@@ -128,9 +121,6 @@
                     data: 'module'
                 },
                 {
-                    data: 'record'
-                },
-                {
                     data: 'created_at'
                 },
                 {
@@ -150,7 +140,6 @@
                 if (response.success) {
                     $('#modalModule').text(response.module);
                     $('#modalEmployee').text(response.user_name);
-                    $('#modalRecord').text(response.record);
                     $('#modalDate').text(response.created_at);
 
                     // Dynamic badge color based on action type

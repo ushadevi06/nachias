@@ -59,8 +59,8 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Name</th>
-                                    <th>Mobile</th>
-                                    <th>Email</th>
+                                    <th>Contact Info</th>
+                                    <th>Location</th>
                                     <th>Service Type</th>
                                     <th>Service Rate</th>
                                     <th>Status</th>
@@ -100,10 +100,10 @@
                     data: 'name'
                 },
                 {
-                    data: 'mobile'
+                    data: 'contact_info'
                 },
                 {
-                    data: 'email'
+                    data: 'location'
                 },
                 {
                     data: 'service_type'
