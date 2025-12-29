@@ -103,11 +103,16 @@
             $('#city_ids').html('<option value="">Select City</option>');
 
             if (stateId) {
-                $.get('{{ url("get-cities") }}/' + stateId, function(data) {
-                    $.each(data, function(index, city) {
-                        $('#city_ids').append('<option value="' + city.id + '">' + city.city_name + '</option>');
-                    });
-                    $('#city_ids').trigger('change');
+                  $.ajax({
+                    url: APP_URL + '/get-cities/' + stateId,
+                    type: 'GET',
+                    success: function(data) {
+                        $('#city_ids').html('<option value="">Select City</option>');
+                        $.each(data, function(index, city) {
+                            $('#city_ids').append('<option value="' + city.id + '">' + city.city_name + '</option>');
+                        });
+                        $('#city_ids').trigger('change');
+                    }
                 });
             }
         });

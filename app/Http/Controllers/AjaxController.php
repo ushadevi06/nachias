@@ -35,9 +35,8 @@ class AjaxController extends Controller
         return response()->json($charges);
     }
     
-    public function getMaterialsByCategory(Request $request)
+    public function getMaterialsByCategory($categoryId)
     {
-        $categoryId = $request->get('category_id');
         if (!$categoryId) {
             return response()->json(['materials' => []], 400);
         }

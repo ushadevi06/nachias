@@ -95,7 +95,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/get-places/{city_id}', [AjaxController::class, 'fetchPlaces']);
     Route::get('/raw-materials-by-category/{categoryId}', [AjaxController::class, 'getRawMaterialsByCategory']);
     Route::get('/get_charges', [AjaxController::class, 'getCharges']);
-    Route::get('get-materials-by-category', [AjaxController::class, 'getMaterialsByCategory']);
+    Route::get('get-materials-by-category/{category_id}', [AjaxController::class, 'getMaterialsByCategory']);
 
     /* Employees */
     Route::get('employees', [EmployeeController::class, 'index']);
@@ -278,27 +278,27 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('items/filter', [ItemController::class, 'filter']);
 
     /* Grn Entry */
-    // Route::get('grn_entries', [GrnEntryController::class, 'index']);
-    // Route::match(['get', 'post'], 'grn_entries/add/{id?}', [GrnEntryController::class, 'add']);
-    // Route::delete('grn_entries/delete/{id}', [GrnEntryController::class, 'destroy']);
-    // Route::post('grn_entries/status/{id}', [GrnEntryController::class, 'updateStatus']);
-    // Route::get('grn_entries/get-invoice-details/{id}', [GrnEntryController::class, 'getInvoiceDetails']);
-    // Route::get('grn_entries/view/{id}', [GrnEntryController::class, 'view']);
+    Route::get('grn_entries', [GrnEntryController::class, 'index']);
+    Route::match(['get', 'post'], 'grn_entries/add/{id?}', [GrnEntryController::class, 'add']);
+    Route::delete('grn_entries/delete/{id}', [GrnEntryController::class, 'destroy']);
+    Route::post('grn_entries/status/{id}', [GrnEntryController::class, 'updateStatus']);
+    Route::get('grn_entries/get-invoice-details/{id}', [GrnEntryController::class, 'getInvoiceDetails']);
+    Route::get('grn_entries/view/{id}', [GrnEntryController::class, 'view']);
 
-    // /* Stock Entry */
-    // Route::get('stock_entries/get-grn-items/{id}', [StockEntryController::class, 'getGrnEntryItems']);
-    // Route::get('stock_entries', [StockEntryController::class, 'index']);
-    // Route::match(['get', 'post'], 'stock_entries/add/{id?}', [StockEntryController::class, 'add']);
-    // Route::get('stock_entries/view/{id}', [StockEntryController::class, 'view']);
+    /* Stock Entry */
+    Route::get('stock_entries/get-grn-items/{id}', [StockEntryController::class, 'getGrnEntryItems']);
+    Route::get('stock_entries', [StockEntryController::class, 'index']);
+    Route::match(['get', 'post'], 'stock_entries/add/{id?}', [StockEntryController::class, 'add']);
+    Route::get('stock_entries/view/{id}', [StockEntryController::class, 'view']);
 
     /* Store */
-    Route::get('grn_entries', [GrnEntryController::class, 'index']);
-    Route::get('add_grn_entry', [GrnEntryController::class, 'add']);
-    Route::get('view_grn_entry', [GrnEntryController::class, 'view']);
+    // Route::get('grn_entries', [GrnEntryController::class, 'index']);
+    // Route::get('add_grn_entry', [GrnEntryController::class, 'add']);
+    // Route::get('view_grn_entry', [GrnEntryController::class, 'view']);
 
-    Route::get('stock_entries', [StockEntryController::class, 'index']);
-    Route::get('add_stock_entry', [StockEntryController::class, 'add']);
-    Route::get('view_stock_entry', [StockEntryController::class, 'view']);
+    // Route::get('stock_entries', [StockEntryController::class, 'index']);
+    // Route::get('add_stock_entry', [StockEntryController::class, 'add']);
+    // Route::get('view_stock_entry', [StockEntryController::class, 'view']);
 
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);
     Route::get('add_stock_consumables_return', [StockConsumableReturnController::class, 'add']);

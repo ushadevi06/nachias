@@ -780,57 +780,57 @@
                                 const balancedQty = item.qty_ordered - item.qty_invoiced;
 
                                 itemsHtml += `
-                        <tr class="item-row">
-                            <td>
-                                <input type="checkbox" name="items[${index}][selected]" 
-                                    class="form-check-input item-checkbox" value="1">
+                                    <tr class="item-row">
+                                        <td>
+                                            <input type="checkbox" name="items[${index}][selected]" 
+                                                class="form-check-input item-checkbox" value="1">
 
-                                <input type="hidden" name="items[${index}][purchase_order_item_id]" value="${item.id}">
-                                <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
-                                <input type="hidden" name="items[${index}][raw_material_name]" value="${item.raw_material_name}">
-                                <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
-                                <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code}">
-                                <input type="hidden" name="items[${index}][rate]" value="${item.rate}" class="item-rate">
-                                <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
-                                <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
-                            </td>
-                            <td>${item.raw_material_name}</td>
-                            <td>
-                                <input type="text" 
-                                    name="items[${index}][hsn_code]"
-                                    class="form-control form-control-sm item-hsn" 
-                                    value="${item.hsn_code || ''}"
-                                    placeholder="Enter HSN"
-                                    readonly>
-                            </td>
-                            
-                            <!-- Ordered Qty -->
-                            <td class="qty-ordered-display">${item.qty_ordered}</td>
-                            
-                            <!-- Invoiced Qty -->
-                            <td class="qty-invoiced-display">${item.qty_invoiced}</td>
-                            
-                            <!-- Balanced Qty -->
-                            <td class="balanced-qty-display">${balancedQty.toFixed(2)}</td>
+                                            <input type="hidden" name="items[${index}][purchase_order_item_id]" value="${item.id}">
+                                            <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
+                                            <input type="hidden" name="items[${index}][raw_material_name]" value="${item.raw_material_name}">
+                                            <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
+                                            <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code}">
+                                            <input type="hidden" name="items[${index}][rate]" value="${item.rate}" class="item-rate">
+                                            <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
+                                            <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
+                                        </td>
+                                        <td>${item.raw_material_name}</td>
+                                        <td>
+                                            <input type="text" 
+                                                name="items[${index}][hsn_code]"
+                                                class="form-control form-control-sm item-hsn" 
+                                                value="${item.hsn_code || ''}"
+                                                placeholder="Enter HSN"
+                                                readonly>
+                                        </td>
+                                        
+                                        <!-- Ordered Qty -->
+                                        <td class="qty-ordered-display">${item.qty_ordered}</td>
+                                        
+                                        <!-- Invoiced Qty -->
+                                        <td class="qty-invoiced-display">${item.qty_invoiced}</td>
+                                        
+                                        <!-- Balanced Qty -->
+                                        <td class="balanced-qty-display">${balancedQty.toFixed(2)}</td>
 
-                            <!-- Received Qty (Input Field) -->
-                            <td>
-                                <input type="number" 
-                                    name="items[${index}][quantity]"
-                                    class="form-control form-control-sm item-quantity received-qty-input" 
-                                    step="0.01"
-                                    value="${balancedQty}"
-                                    readonly
-                                    placeholder="0.00"
-                                    data-max-qty="${balancedQty}"
-                                    data-ordered-qty="${item.qty_ordered}">
-                            </td>
+                                        <!-- Received Qty (Input Field) -->
+                                        <td>
+                                            <input type="number" 
+                                                name="items[${index}][quantity]"
+                                                class="form-control form-control-sm item-quantity received-qty-input" 
+                                                step="0.01"
+                                                value="${balancedQty}"
+                                                readonly
+                                                placeholder="0.00"
+                                                data-max-qty="${balancedQty}"
+                                                data-ordered-qty="${item.qty_ordered}">
+                                        </td>
 
-                            <td>${item.uom_code}</td>
-                            <td class="rate-display">${parseFloat(item.rate).toFixed(2)}</td>
-                            <td class="item-amount">0.00</td>
+                                        <td>${item.uom_code}</td>
+                                        <td class="rate-display">${parseFloat(item.rate).toFixed(2)}</td>
+                                        <td class="item-amount">0.00</td>
 
-                        </tr>`;
+                                    </tr>`;
                             });
 
                             $('#items_tbody').html(itemsHtml);

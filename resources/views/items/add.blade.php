@@ -496,11 +496,9 @@
             }
 
             $.ajax({
-                url: APP_URL + '/get-materials-by-category',
+                url: APP_URL + '/get-materials-by-category/' + category_id,
                 type: 'GET',
-                data: {
-                    category_id: category_id
-                },
+                data: {},
                 success: function(response) {
                     let materialsHtml = '<option value="">Select Material</option>';
 

@@ -797,44 +797,65 @@
         updateDisabledMaterials();
 
         // Load materials based on category
-        $(document).on('change', '.store_category', function() {
-            let category_id = $(this).val();
-            let row = $(this).closest('tr');
-            let materialSelect = row.find('.material');
+        $(document).on('change', '.store_category', function () {
+    let category_id = $(this).val();
+    let row = $(this).closest('tr');
+    let materialSelect = row.find('.material');
 
-            if (!category_id) {
-                materialSelect.html('<option value="">Select Material</option>').trigger('change');
-                return;
-            }
+    // Fully destroy Select2 safely
+    if (materialSelect.hasClass("select2-hidden-accessible")) {
+        materialSelect.select2('destroy');
+    }
 
-            $.ajax({
-                url: APP_URL + '/get-materials-by-category',
-                type: 'GET',
-                data: {
-                    category_id: category_id
-                },
-                success: function(response) {
-                    let materialsHtml = '<option value="">Select Material</option>';
+    materialSelect.empty().append('<option value="">Select Material</option>');
 
-                    if (response.materials && response.materials.length > 0) {
-                        response.materials.forEach(function(material) {
-                            materialsHtml += `<option value="${material.id}" data-uom-id="${material.uom_id}">
+    if (!category_id) {
+        materialSelect.select2({
+            dropdownParent: materialSelect.parent(),
+            placeholder: materialSelect.data('placeholder'),
+            width: '100%'
+        });
+        return;
+    }
+
+    $.ajax({
+        url: APP_URL + '/get-materials-by-category/' + category_id,
+        type: 'GET',
+        success: function (response) {
+
+            let materialsHtml = '<option value="">Select Material</option>';
+
+            if (response.materials?.length) {
+                response.materials.forEach(material => {
+                    materialsHtml += `
+                        <option value="${material.id}" data-uom-id="${material.uom_id}">
                             ${material.name} (${material.code})
                         </option>`;
-                        });
-                    } else {
-                        materialsHtml += '<option value="">No materials found</option>';
-                    }
+                });
+            } else {
+                materialsHtml += '<option value="">No materials found</option>';
+            }
 
-                    materialSelect.html(materialsHtml).trigger('change');
-                    updateDisabledMaterials(); // Update after AJAX load
-                },
-                error: function(xhr) {
-                    console.error('Error fetching materials:', xhr);
-                    materialSelect.html('<option value="">Select Material</option>').trigger('change');
-                }
+            materialSelect.html(materialsHtml);
+
+            // Re-init Select2 AFTER HTML update
+            materialSelect.select2({
+                dropdownParent: materialSelect.parent(),
+                placeholder: materialSelect.data('placeholder'),
+                width: '100%'
             });
-        });
+
+            updateDisabledMaterials();
+        },
+        error: function () {
+            materialSelect.html('<option value="">Select Material</option>').select2({
+                dropdownParent: materialSelect.parent(),
+                width: '100%'
+            });
+        }
+    });
+});
+
 
         // Set UOM based on material
         $(document).on('change', '.material', function() {

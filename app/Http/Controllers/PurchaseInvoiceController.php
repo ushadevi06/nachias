@@ -220,7 +220,6 @@ class PurchaseInvoiceController extends Controller
                     'due_amount' => $request->due_amount ?? 0,
                     'invoice_status' => $request->invoice_status,
                     'payment_mode' => $request->payment_mode,
-                    'transaction_id' => $request->transaction_id,
                     'due_date' => $request->due_date ? Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d') : null,
                     'notes' => $request->notes,
                 ];
@@ -271,7 +270,6 @@ class PurchaseInvoiceController extends Controller
                             'amount' => $newPayment,
                             'payment_date' => now(),
                             'payment_mode' => $request->payment_mode ?? 'Cash',
-                            'transaction_id' => $request->transaction_id,
                             'notes' => 'Additional payment from invoice edit',
                             'created_by' => auth()->id(),
                         ]);
@@ -294,7 +292,6 @@ class PurchaseInvoiceController extends Controller
                             'amount' => $request->received_amount,
                             'payment_date' => now(),
                             'payment_mode' => $request->payment_mode ?? 'Cash',
-                            'transaction_id' => $request->transaction_id,
                             'notes' => 'Initial payment from invoice creation',
                             'created_by' => auth()->id(),
                         ]);

@@ -5,25 +5,26 @@ $(document).ready(function () {
     $('#state_id').on('change', function () {
         var state_id = $(this).val();
         $('#city_id').html('<option value="">Select City</option>');
+
         if (state_id) {
             $.ajax({
-                url: APP_URL + '/get-cities',
+                url: APP_URL + '/get-cities/' + state_id,
                 type: 'GET',
                 dataType: 'json',
-                data: {
-                    state_id: state_id,
-                    _token: csrfToken
-                },
                 success: function (data) {
                     $('#city_id').empty();
                     $('#city_id').append('<option value="">-- Select City --</option>');
-                    $.each(data, function (id, name) {
-                        $('#city_id').append('<option value="' + id + '">' + name + '</option>');
+
+                    $.each(data, function (key, city) {
+                        $('#city_id').append(
+                            '<option value="' + city.id + '">' + city.city_name + '</option>'
+                        );
                     });
                 }
             });
         }
     });
+
 
     /* Fetch Places */
     $('#city_id').on('change', function () {
@@ -31,13 +32,9 @@ $(document).ready(function () {
         $('#place_id').html('<option value="">Select Place</option>');
         if (city_id) {
             $.ajax({
-                url: APP_URL + '/get-places',
+                url: APP_URL + '/get-places/' + city_id,
                 type: 'GET',
                 dataType: 'json',
-                data: {
-                    city_id: city_id,
-                    _token: csrfToken
-                },
                 success: function (data) {
                     $('#place_id').empty();
                     $('#place_id').append('<option value="">-- Select Place --</option>');
@@ -57,13 +54,9 @@ $(document).ready(function () {
 
         if (state_id) {
             $.ajax({
-                url: APP_URL + '/get-cities',
+                url: APP_URL + '/get-cities/' + state_id,
                 type: 'GET',
                 dataType: 'json',
-                data: {
-                    state_id: state_id,
-                    _token: csrfToken
-                },
                 success: function (data) {
                     $('#city_ids').empty();
                     $('#city_ids').append('<option value="">-- Select City --</option>');
@@ -85,9 +78,6 @@ $(document).ready(function () {
                 url: APP_URL + '/raw-materials-by-category/' + categoryId,
                 type: 'GET',
                 dataType: 'json',
-                data: {
-                    _token: csrfToken
-                },
                 success: function (data) {
                     materialSelect.html('<option value="">Select Material</option>');
                     $.each(data, function (id, name) {

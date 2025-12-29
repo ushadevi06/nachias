@@ -78,7 +78,7 @@ class PurchaseOrderController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view purchase-order')) {
                     $action .= '<a href="' . url('purchase_orders/view/' . $po->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if ($po->status !== 'Approved') {
+                if ($po->status == 'Draft') {
                     if (auth()->id() == 1 || auth()->user()->can('edit purchase-order')) {
                         $action .= '<a href="' . url('purchase_orders/add/' . $po->id) . '" class="btn btn-edit">
                         <i class="icon-base ri ri-edit-box-line"></i>
