@@ -124,7 +124,7 @@ class PurchaseInvoiceController extends Controller
                 'items.*.raw_material_id' => 'required|exists:raw_materials,id',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'required|numeric|min:0',
-                'other_state' => 'required|in:Y,N',
+                'other_state' => ($id ? 'nullable' : 'required') . '|in:Y,N',
                 'igst_percent' => 'nullable|numeric|min:0|max:100',
                 'cgst_percent' => 'nullable|numeric|min:0|max:100',
                 'sgst_percent' => 'nullable|numeric|min:0|max:100',

@@ -655,6 +655,7 @@
                                     @endif
 
                                     {{-- Received --}}
+                                    @if(!isset($invoice) || $dueAmount > 0)
                                     <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
                                         <span>{{ isset($invoice) ? 'Add New Payment:' : 'Initial Payment:' }}</span>
                                         <div class="d-flex flex-column align-items-end">
@@ -664,6 +665,7 @@
                                     @error('received_amount')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
+                                    @endif
 
                                     {{-- Due --}}
                                     <div class="d-flex justify-content-between py-2 fw-semibold text-danger">
@@ -1319,6 +1321,7 @@
                 taxAmount = igstAmount;
 
             } else {
+
                 let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                 let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
                 let cgstAmount = (taxableAmount * cgstPercent) / 100;

@@ -1,0 +1,6 @@
+ALTER TABLE settings 
+MODIFY COLUMN email TEXT,
+ADD COLUMN toll_free_no TEXT NULL AFTER phone_number,
+ADD COLUMN working_days VARCHAR(255) NULL AFTER cin_no,
+ADD COLUMN opening_time VARCHAR(255) NULL AFTER working_days,
+ADD COLUMN closing_time VARCHAR(255) NULL AFTER opening_time;

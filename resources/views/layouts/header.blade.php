@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title')</title>
     <link rel="stylesheet" href="{{ url('assets/css/core.css') }}">
     <link rel="stylesheet" href="{{ url('assets/css/demo.css') }}">
@@ -16,6 +17,9 @@
     <link rel="stylesheet" href="{{ url('assets/datatables/css/dataTables.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/datatables/css/responsive.bootstrap5.min.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+	<script>
+		var APP_URL = {!! json_encode(url('/')) !!};
+	</script>
 </head>
 
 <body>

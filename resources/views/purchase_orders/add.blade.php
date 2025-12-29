@@ -775,7 +775,8 @@
 
             $('.material').each(function() {
                 let currentVal = $(this).val();
-                $(this).find('option').each(function() {
+                let $select = $(this);
+                $select.find('option').each(function() {
                     let optionId = $(this).val();
                     if (optionId && selectedMaterialIds.includes(optionId.toString()) && optionId.toString() !== currentVal) {
                         $(this).attr('disabled', 'disabled');
@@ -784,9 +785,9 @@
                     }
                 });
                 
-                $(this).select2({
-                    dropdownParent: $(this).parent(),
-                    placeholder: $(this).data('placeholder'),
+                $select.select2({
+                    dropdownParent: $select.parent(),
+                    placeholder: $select.data('placeholder'),
                     width: '100%'
                 });
             });
@@ -807,7 +808,7 @@
             }
 
             $.ajax({
-                url: '{{ url("get-materials-by-category") }}',
+                url: APP_URL + '/get-materials-by-category',
                 type: 'GET',
                 data: {
                     category_id: category_id

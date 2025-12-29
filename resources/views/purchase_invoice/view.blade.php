@@ -207,7 +207,7 @@
             var invoiceId = $(this).data('id');
 
             $.ajax({
-                url: '{{ url("purchase_invoices/get-items") }}/' + invoiceId,
+                url: APP_URL + '/purchase_invoices/get-items/' + invoiceId,
                 type: 'GET',
                 success: function(response) {
                     if (response.success) {
