@@ -38,8 +38,8 @@ $(document).ready(function () {
                 success: function (data) {
                     $('#place_id').empty();
                     $('#place_id').append('<option value="">-- Select Place --</option>');
-                    $.each(data, function (id, name) {
-                        $('#place_id').append('<option value="' + id + '">' + name + '</option>');
+                    $.each(data, function (key, place) {
+                        $('#place_id').append('<option value="' + place.id + '">' + place.place_name + '</option>');
                     });
                     $('#place_id').trigger('change');
                 }
@@ -60,8 +60,8 @@ $(document).ready(function () {
                 success: function (data) {
                     $('#city_ids').empty();
                     $('#city_ids').append('<option value="">-- Select City --</option>');
-                    $.each(data, function (id, name) {
-                        $('#city_ids').append('<option value="' + id + '">' + name + '</option>');
+                    $.each(data, function (key, city) {
+                        $('#city_ids').append('<option value="' + city.id + '">' + city.city_name + '</option>');
                     });
                     $('#city_ids').trigger('change');
                 }
@@ -80,8 +80,8 @@ $(document).ready(function () {
                 dataType: 'json',
                 success: function (data) {
                     materialSelect.html('<option value="">Select Material</option>');
-                    $.each(data, function (id, name) {
-                        materialSelect.append('<option value="' + id + '">' + name + '</option>');
+                    $.each(data, function (key, material) {
+                        materialSelect.append('<option value="' + material.id + '" data-uom-id="' + material.uom_id + '">' + material.name + '</option>');
                     });
                 }
             });
