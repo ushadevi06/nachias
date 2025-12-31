@@ -13,6 +13,9 @@ class ServiceProviderController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view service-providers')) {
+            return unauthorizedRedirect();
+        }
         $service_types = ServiceType::get();
         if ($request->ajax()) {
             $query = ServiceProvider::with(['serviceType', 'state', 'city', 'place']);
@@ -89,6 +92,15 @@ class ServiceProviderController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit service-providers')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create service-providers')) {
+                return unauthorizedRedirect();
+            }
+        }
         $serviceProvider = null;
         if ($id) {
             $serviceProvider = ServiceProvider::with(['serviceType',  'state', 'city', 'place'])->findOrFail($id);
@@ -202,6 +214,9 @@ class ServiceProviderController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete service-providers')) {
+            return unauthorizedRedirect();
+        }
         $provider = ServiceProvider::findOrFail($id);
         $oldData = $provider->toArray();
 

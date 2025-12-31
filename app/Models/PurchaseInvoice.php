@@ -31,6 +31,8 @@ class PurchaseInvoice extends Model
         'sgst_amount',
         'tax_amount',
         'other_charges',
+        'round_off',
+        'round_off_type',
         'grand_total',
         'received_amount',
         'due_amount',

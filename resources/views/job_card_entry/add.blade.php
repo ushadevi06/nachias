@@ -25,6 +25,17 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="sales_order" name="sales_order" class="form-select select2" data-placeholder="Select Sales Order">
+                                        <option value="">Select Sales Order</option>
+                                        <option value="SO-1001">SO-1001</option>
+                                        <option value="SO-1002">SO-1002</option>
+                                        <option value="SO-1003">SO-1003</option>
+                                    </select>
+                                    <label for="sales_order">Sales Order </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control form-control delivery_date" placeholder="Enter Delivery Date" />
                                     <label for="code">Delivery Date * </label>
                                 </div>

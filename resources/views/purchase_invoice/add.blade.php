@@ -17,7 +17,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('invoice_no') is-invalid @enderror"
                                         id="invoice_no" placeholder="Enter Invoice No" name="invoice_no"
-                                        value="{{ old('invoice_no', $invoice->invoice_no ?? '') }}" {{ isset($invoice) ? 'readonly' : '' }}>
+                                        value="{{ old('invoice_no', $invoice->invoice_no ?? $nextInvoiceNumber ?? '') }}" {{ isset($invoice) ? 'readonly' : '' }}>
                                     <label for="invoice_no">Invoice No. <span class="text-danger">*</span></label>
                                 </div>
                                 @error('invoice_no')
@@ -179,6 +179,9 @@
                                                 step="0.01"
                                                 data-max-qty="{{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}"
                                                 {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                            <small class="text-danger">
+                                                Note: Received quantity should not exceed 50% of ordered quantity.
+                                            </small>
 
                                             @error("items.$index.quantity")
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -238,6 +241,9 @@
                                                 value="{{ $invItem->quantity }}"
                                                 step="0.01"
                                                 data-max-qty="{{ $balancedQty }}">
+                                                <small class="text-danger">
+                                                    Note: Received quantity should not exceed 50% of ordered quantity.
+                                                </small>
                                             @error('items.'.$index.'.quantity')
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
                                             @enderror
@@ -509,6 +515,8 @@
 
                                 $taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
                                 $otherCharges = old('other_charges', $invoice->other_charges ?? 0);
+                                $roundOff = old('round_off', $invoice->round_off ?? 0);
+                                $roundOffType = old('round_off_type', $invoice->round_off_type ?? 'Add');
                                 $grandTotal = old('grand_total', $invoice->grand_total ?? 0);
                                 $receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
                                 $dueAmount = old('due_amount', $invoice->due_amount ?? 0);
@@ -627,6 +635,29 @@
                                         <input type="hidden" name="other_charges" id="other_charges_input" value="{{ $otherCharges }}">
                                     </div>
                                     @error('other_charges')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                    {{-- Round Off --}}
+                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                                        <span>Round Off:</span>
+                                        <div class="d-flex flex-column align-items-end gap-2">
+                                            <div class="d-flex gap-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ $roundOffType === 'Add' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="round_off_add">Add</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ $roundOffType === 'Less' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="round_off_less">Less</label>
+                                                </div>
+                                            </div>
+                                            <input type="number" name="round_off" id="round_off_input" class="form-control form-control-sm text-end @error('round_off') is-invalid @enderror" style="width:120px;" value="{{ $roundOff }}" step="0.01" min="0">
+                                        </div>
+                                    </div>
+                                    @error('round_off')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                    @error('round_off_type')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
 
@@ -770,6 +801,7 @@
                     success: function(response) {
                         if (response.success) {
                             $('#purchase_order_no').val(response.po_number);
+                            $('#po_reference').val(response.po_number);
                             $('#supplier_id').val(response.supplier_id);
                             $('#supplier_name').val(response.supplier_name);
                             $('#supplier_name_hidden').val(response.supplier_name);
@@ -824,6 +856,9 @@
                                                 placeholder="0.00"
                                                 data-max-qty="${balancedQty}"
                                                 data-ordered-qty="${item.qty_ordered}">
+                                                <small class="text-danger">
+                                                Note: Received quantity should not exceed 50% of ordered quantity.
+                                            </small>
                                         </td>
 
                                         <td>${item.uom_code}</td>
@@ -885,6 +920,7 @@
             } else {
                 $('#items_tbody').html('<tr><td colspan="10" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
                 $('#purchase_order_no').val('');
+                $('#po_reference').val('');
                 $('#supplier_name').val('');
                 $('#supplier_name_hidden').val('');
                 $('#supplier_id').val('');
@@ -901,16 +937,18 @@
             const invoicedQty = parseFloat($row.find('.qty-invoiced-val').val()) || 0;
             const rate = parseFloat($row.find('.item-rate').val()) || 0;
 
-            // Calculate balanced qty: Ordered - Invoiced - Received
-            const balancedQty = orderedQty - invoicedQty - receivedQty;
+            // Calculate balanced qty: Ordered - Invoiced - Received. Ensure it doesn't go below 0.
+            const balancedQty = Math.max(0, orderedQty - invoicedQty - receivedQty);
             $row.find('.balanced-qty-display').text(balancedQty.toFixed(2));
 
-            // Validate received qty doesn't exceed available balance
-            const maxQty = orderedQty - invoicedQty;
+            // Validate received qty doesn't exceed available balance (Ordered + 50% Tolerance)
+            const maxTotalQty = orderedQty * 1.5;
+            const maxQty = maxTotalQty - invoicedQty;
+            
             if (receivedQty > maxQty) {
                 $(this).addClass('is-invalid');
                 if (!$(this).next('.invalid-feedback').length) {
-                    $(this).after('<div class="invalid-feedback d-block">Received quantity cannot exceed ' + maxQty.toFixed(2) + '</div>');
+                    $(this).after('<div class="invalid-feedback d-block">Received quantity cannot exceed ' + maxQty.toFixed(2) + ' (Order + 50% Tolerance)</div>');
                 }
             } else {
                 $(this).removeClass('is-invalid');
@@ -926,7 +964,6 @@
                 calculateTotals();
             }
         });
-
 
         $('#select_all_items').on('change', function() {
             $('.item-checkbox').prop('checked', $(this).is(':checked'));
@@ -973,9 +1010,11 @@
                 return;
             }
 
-            if (qty > orderedQty) {
+            // Check against Ordered + 50% tolerance. 
+            // Note: Ideally getting invoicedQty here for exact check, but using simple tolerance checking as fallback or just 1.5x ordered for consistency
+            if (qty > (orderedQty * 1.5)) {
                 $input.addClass('is-invalid');
-                $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ordered quantity (${orderedQty})</div>`);
+                $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ordered quantity + 50% (${(orderedQty * 1.5).toFixed(2)})</div>`);
                 row.find('.item-amount').text('0.00');
                 calculateTotals();
                 return;
@@ -1015,7 +1054,7 @@
                 $('#cgst_sgst_div').show();
             }
 
-            calculateTaxOnly(); // ✅ IMPORTANT
+            calculateTaxOnly(); 
         });
 
 
@@ -1023,16 +1062,31 @@
             calculateTotals();
         });
 
-        $('#received_amount_input').on('input', function() {
-            // Only recalculate due amount
-            let grandTotal = parseFloat($('#grand_total_input').val()) || 0;
+        $('#received_amount_input, #round_off_input, .round-off-type-radio').on('input change', function() {
+            if (this.id === 'round_off_input') {
+                let val = parseFloat($(this).val());
+                if (val < 0) $(this).val(Math.abs(val));
+            }
+            calculateGrandTotalOnly();
+        });
+
+        function calculateGrandTotalOnly() {
+            let taxableAmount = parseFloat($('#taxable_amount_input').val()) || 0;
+            let taxAmount = parseFloat($('#tax_amount_input').val()) || 0;
+            let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
+            let roundOff = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
+            $('#grand_total').text(grandTotal.toFixed(2));
+            $('#grand_total_input').val(grandTotal.toFixed(2));
+
             let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
-            let newPayment = parseFloat($(this).val()) || 0;
+            let newPayment = parseFloat($('#received_amount_input').val()) || 0;
             let dueAmount = grandTotal - paidSoFar - newPayment;
 
             $('#due_amount').text(dueAmount.toFixed(2));
             $('#due_amount_input').val(dueAmount.toFixed(2));
-        });
+        }
 
 
         function calculateTotals() {
@@ -1110,7 +1164,9 @@
             $('#other_charges_input').val(otherCharges.toFixed(2));
 
             // ✅ Use the calculated otherCharges value
-            let grandTotal = taxableAmount + taxAmount + otherCharges;
+            let roundOff = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
             $('#grand_total').text(grandTotal.toFixed(2));
             $('#grand_total_input').val(grandTotal.toFixed(2));
 
@@ -1338,7 +1394,9 @@
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
             let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
-            let grandTotal = taxableAmount + taxAmount + otherCharges;
+            let roundOff = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
 
             $('#grand_total').text(grandTotal.toFixed(2));
             $('#grand_total_input').val(grandTotal.toFixed(2));
@@ -1354,8 +1412,10 @@
             let taxableAmount = parseFloat($('#taxable_amount_input').val()) || 0;
             let taxAmount = parseFloat($('#tax_amount_input').val()) || 0;
             let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
+            let roundOff = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
 
-            let grandTotal = taxableAmount + taxAmount + otherCharges;
+            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
             $('#grand_total').text(grandTotal.toFixed(2));
             $('#grand_total_input').val(grandTotal.toFixed(2));
 
@@ -1387,7 +1447,9 @@
             let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
 
             // Grand total
-            let grandTotal = taxableAmount + taxAmount + otherCharges;
+            let roundOff = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
 
             $('#grand_total').text(grandTotal.toFixed(2));
             $('#grand_total_input').val(grandTotal.toFixed(2));
@@ -1451,7 +1513,9 @@
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
             let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
-            let grandTotal = taxableAmount + taxAmount + otherCharges;
+            let roundOff = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
 
             $('#grand_total').text(grandTotal.toFixed(2));
             $('#grand_total_input').val(grandTotal.toFixed(2));

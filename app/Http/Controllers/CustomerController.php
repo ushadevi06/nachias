@@ -14,6 +14,9 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view customers')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
 
             $query = Customer::with(['zone', 'state', 'city'])->orderBy('id', 'desc');
@@ -95,6 +98,15 @@ class CustomerController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit customers')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create customers')) {
+                return unauthorizedRedirect();
+            }
+        }
         $customer = null;
         if ($id) {
             $customer = Customer::with(['zone', 'state', 'city', 'place', 'tax'])->findOrFail($id);
@@ -240,12 +252,18 @@ class CustomerController extends Controller
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details customers')) {
+            return unauthorizedRedirect();
+        }
         $customer = Customer::with(['zone', 'state', 'city', 'place', 'tax'])->findOrFail($id);
         return view('customers.view_details', compact('customer'));
     }
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete customers')) {
+            return unauthorizedRedirect();
+        }
         $customer = Customer::findOrFail($id);
         $oldData = $customer->toArray();
         $customer->delete();

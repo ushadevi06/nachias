@@ -31,7 +31,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('code') is-invalid @enderror" id="code" placeholder="Enter Code"
-                                        name="code" value="{{ old('code', $supplier->code ?? '') }}">
+                                        name="code" value="{{ old('code', $supplier->code ?? $nextCode) }}" readonly>
                                     <label for="code">Code <span class="text-danger">*</span></label>
                                 </div>
                                 @error('code')
@@ -106,6 +106,9 @@
                                         <option value="Fabric"
                                             {{ old('stores', $supplier->stores ?? '') == 'Fabric' ? 'selected' : '' }}>
                                             Fabric</option>
+                                        <option value="Accessories"
+                                            {{ old('stores', $supplier->stores ?? '') == 'Accessories' ? 'selected' : '' }}>
+                                            Accessories</option>
                                         <option value="Finished Goods"
                                             {{ old('stores', $supplier->stores ?? '') == 'Finished Goods' ? 'selected' : '' }}>
                                             Finished Goods</option>

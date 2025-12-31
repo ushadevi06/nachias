@@ -17,6 +17,9 @@ class PurchaseInvoiceController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view purchase-invoice')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $query = PurchaseInvoice::with(['supplier'])
                 ->orderBy('id', 'desc');
@@ -99,13 +102,13 @@ class PurchaseInvoiceController extends Controller
     {
         if ($id) {
             if (auth()->id() != 1 && !auth()->user()->can('edit purchase-invoice')) {
-                abort(403, 'Unauthorized action.');
+                return unauthorizedRedirect();
             }
             $invoice = PurchaseInvoice::with(['items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
             $charges = $invoice->charges;
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create purchase-invoice')) {
-                abort(403, 'Unauthorized action.');
+                return unauthorizedRedirect();
             }
         }
         $invoice = $invoice ?? null;
@@ -129,6 +132,8 @@ class PurchaseInvoiceController extends Controller
                 'cgst_percent' => 'nullable|numeric|min:0|max:100',
                 'sgst_percent' => 'nullable|numeric|min:0|max:100',
                 'other_charges' => 'nullable|numeric|min:0',
+                'round_off' => 'nullable|numeric',
+                'round_off_type' => 'required|in:Add,Less',
                 'grand_total' => 'required|numeric|min:0',
                 'received_amount' => 'nullable|numeric|min:0',
                 'charges_select' => 'nullable',
@@ -215,6 +220,8 @@ class PurchaseInvoiceController extends Controller
                     'sgst_amount' => $request->sgst_amount ?? 0,
                     'tax_amount' => $request->tax_amount ?? 0,
                     'other_charges' => $request->other_charges ?? 0,
+                    'round_off' => $request->round_off ?? 0,
+                    'round_off_type' => $request->round_off_type ?? 'Add',
                     'grand_total' => $request->grand_total ?? 0,
                     'received_amount' => $request->received_amount ?? 0,
                     'due_amount' => $request->due_amount ?? 0,
@@ -376,14 +383,34 @@ class PurchaseInvoiceController extends Controller
             $suppliers = Supplier::where('status', 'Active')->get();
         $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
 
-        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far'));
+        $nextInvoiceNumber = '';
+        if (!$id) {
+            $setting = \App\Models\Setting::first();
+            if ($setting && $setting->purchase_invoice_prefix) {
+                $prefix = $setting->purchase_invoice_prefix;
+                $lastInvoice = PurchaseInvoice::where('invoice_no', 'like', $prefix . '%')
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($lastInvoice) {
+                    $lastNumberStr = substr($lastInvoice->invoice_no, strlen($prefix));
+                    $lastNumber = intval($lastNumberStr);
+                    $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
+                } else {
+                    $nextNumber = '0001';
+                }
+                $nextInvoiceNumber = $prefix . $nextNumber;
+            }
+        }
+
+        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber'));
     }
 
 
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-invoice')) {
-            abort(403, 'Unauthorized action.');
+            return unauthorizedRedirect();
         }
         $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
         return view('purchase_invoice.view_details', compact('invoice'));
@@ -392,7 +419,7 @@ class PurchaseInvoiceController extends Controller
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete purchase-invoice')) {
-            abort(403, 'Unauthorized action.');
+            return unauthorizedRedirect();
         }
         $invoice = PurchaseInvoice::findOrFail($id);
 
@@ -481,7 +508,7 @@ class PurchaseInvoiceController extends Controller
         $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
         $pdf = Pdf::loadView('purchase_invoice.purchase_invoice_pdf', compact('invoice'));
         $pdf->setPaper('A4', 'portrait');
-        return $pdf->download('Purchase_Invoice_' . $invoice->invoice_no . '.pdf');
+        return $pdf->stream('Purchase_Invoice_' . $invoice->invoice_no . '.pdf');
     }
     public function deleteCharge($id)
     {

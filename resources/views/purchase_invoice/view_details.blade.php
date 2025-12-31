@@ -10,9 +10,9 @@
                     <a href="{{ url('purchase_invoices') }}" class="btn btn-secondary me-2">
                         <i class="ri ri-arrow-left-line"></i> Back
                     </a>
-                    {{-- <a href="{{ url('download_purchase_invoice/' . $invoice->id) }}" class="btn btn-primary">
-                        <i class="ri ri-printer-line"></i> Print / Download PDF
-                    </a> --}}
+                    <a href="{{ url('purchase_invoices/download-pdf/' . $invoice->id) }}" class="btn btn-primary" target="_blank">
+                        <i class="ri ri-printer-line"></i> Download PDF
+                    </a>
                 </div>
             </div>
             <div class="card detail-card">
@@ -136,6 +136,13 @@
                         </div>
                         @endif
 
+                        <div class="col-md-3">
+                            <label class="detail-title">Round Off:</label>
+                            <div class="text-muted">
+                                {{ $invoice->round_off_type }} 
+                                ₹{{ number_format($invoice->round_off, 2) }}
+                            </div>
+                        </div>
                         <div class="col-md-3">
                             <label class="detail-title">Total Invoice Amount:</label>
                             <div class="fw-bold text-success">₹{{ number_format($invoice->grand_total, 2) }}</div>

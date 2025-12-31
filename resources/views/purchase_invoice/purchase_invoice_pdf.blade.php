@@ -2,409 +2,493 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Purchase Invoice</title>
+    <title>Tax Invoice</title>
     <style>
-        @page { margin: 20px 25px; }
-        body {
-            font-family: DejaVu Sans, sans-serif;
-            font-size: 11px;
-            color: #333;
-            line-height: 1.3;
+        @page { 
+            margin: 15px 20px; 
+            size: A4;
+        }
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 2px solid #6a1b9a;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-        }
-        
-        .header .logo {
-            flex: 0 0 35%;
-        }
-        
-        .header .company-details {
-            flex: 0 0 60%;
-            text-align: right;
-        }
-        
-        .header img {
-            width: 90px;
-            height: auto;
-        }
-
-        .company-details h2 {
-            margin: 0;
-            color: #6a1b9a;
-            font-size: 16px;
-        }
-        
-        .company-details p {
-            margin: 1px 0;
-            font-size: 10px;
-        }
-        
-        .invoice-title {
-            text-align: center;
-            font-size: 16px;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: #6a1b9a;
-            margin: 12px 0;
-            padding: 4px 0;
-            border-top: 1px solid #6a1b9a;
-            border-bottom: 1px solid #6a1b9a;
-        }
-        
-        .info-section {
-            width: 100%;
-            margin: 8px 0;
-        }
-        
-        .info-section td {
-            padding: 1px 4px;
-            vertical-align: top;
-            font-size: 10px;
-        }
-        
-        .info-section strong {
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 9px;
             color: #000;
+            line-height: 1.2;
         }
         
-        table {
+        /* Main Wrapper Margin */
+        .pdf-section {
+            margin: 10px;
+        }
+        
+        /* Consistent spacing between sections */
+        .pdf-section > div, 
+        .pdf-section > table {
+            margin: 0;
+            width: 100%; /* Ensure full width */
+        }
+        
+        /* Header Section */
+        .header-container {
+            border: 1px solid #000;
+        }
+        .header-row {
+            display: table;
+            width: 100%;
+            border-bottom: 1px solid #000;
+        }
+        .header-left {
+            display: table-cell;
+            width: 70%;
+            padding: 5px;
+            vertical-align: top;
+            border-right: 1px solid #000;
+        }
+        .header-right {
+            display: table-cell;
+            width: 30%;
+            padding: 5px;
+            vertical-align: top;
+            text-align: center;
+        }
+        .company-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        .company-details {
+            font-size: 8px;
+            line-height: 1.3;
+        }
+        .tax-invoice-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .qr-placeholder {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #000;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7px;
+        }
+        
+        /* Invoice Details Section */
+        .details-section {
+            border: 1px solid #000;
+            border-top: none;
+        }
+        .details-row {
+            display: table;
+            width: 100%;
+        }
+        .details-left {
+            display: table-cell;
+            width: 50%;
+            padding: 4px;
+            vertical-align: top;
+            border-right: 1px solid #000;
+        }
+        .details-right {
+            display: table-cell;
+            width: 50%;
+            padding: 4px;
+            vertical-align: top;
+        }
+        .detail-line {
+            margin-bottom: 2px;
+            font-size: 8px;
+        }
+        .detail-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 80px;
+        }
+        
+        /* Supplier/Delivery Section */
+        .party-section {
+            border: 1px solid #000;
+            border-top: none;
+        }
+        .party-row {
+            display: table;
+            width: 100%;
+            border-bottom: 1px solid #000;
+        }
+        .party-row:last-child {
+            border-bottom: none;
+        }
+        .party-cell {
+            display: table-cell;
+            width: 50%;
+            padding: 4px;
+            vertical-align: top;
+        }
+        .party-cell:first-child {
+            border-right: 1px solid #000;
+        }
+        .party-title {
+            font-weight: bold;
+            font-size: 9px;
+            margin-bottom: 3px;
+            text-decoration: underline;
+        }
+        
+        /* Items Table */
+        .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 8px 0;
+            font-size: 8px;
         }
-        
-        table.items th {
-            background: #6a1b9a;
-            color: #fff;
-            text-align: center;
-            padding: 6px 4px;
-            font-size: 10px;
+        .items-table th {
+            background: #f0f0f0;
+            border: 1px solid #000;
+            padding: 3px 2px;
             font-weight: bold;
-        }
-        
-        table.items td {
-            border: 1px solid #ccc;
-            padding: 5px 4px;
-            text-align: center;
-            font-size: 10px;
-        }
-        
-        table.items tr:nth-child(even) {
-            background: #f8f8f8;
-        }
-        
-        .totals {
-            margin-top: 12px;
-            width: 100%;
-            font-size: 10px;
-        }
-        
-        .totals td {
-            padding: 3px;
-        }
-        
-        .totals .label {
-            text-align: right;
-            font-weight: bold;
-            width: 70%;
-        }
-        
-        .totals .value {
-            text-align: right;
-            color: #6a1b9a;
-            width: 30%;
-        }
-        
-        .details-box {
-            width: 100%;
-            border: 1px solid #ccc;
-            margin-top: 12px;
-            border-radius: 4px;
-            padding: 8px;
-            font-size: 10px;
-        }
-        
-        .details-box h4 {
-            margin: 0 0 6px 0;
-            color: #6a1b9a;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 3px;
-            font-size: 11px;
-        }
-        
-        .details-box p {
-            margin: 2px 0;
-        }
-        
-        .signature {
-            margin-top: 25px;
-            text-align: right;
-        }
-        
-        .signature img {
-            width: 80px;
-            height: auto;
-        }
-        
-        .signature p {
-            margin-top: 3px;
-            font-weight: bold;
-            font-size: 10px;
-        }
-        
-        .terms {
-            margin-top: 15px;
-            font-size: 9px;
-            border-top: 1px solid #ccc;
-            padding-top: 5px;
-        }
-        
-        .terms ol {
-            margin: 3px 0;
-            padding-left: 15px;
-        }
-        
-        .terms li {
-            margin-bottom: 2px;
-        }
-        
-        .footer {
-            position: fixed;
-            bottom: 10px;
-            left: 0;
-            right: 0;
             text-align: center;
             font-size: 8px;
-            color: #777;
-            border-top: 1px solid #ddd;
-            padding-top: 3px;
+        }
+        .items-table td {
+            border: 1px solid #000;
+            padding: 3px 2px;
+            text-align: center;
+        }
+        .items-table td.left {
+            text-align: left;
+        }
+        .items-table td.right {
+            text-align: right;
         }
         
-        .compact-row {
-            margin: 0;
-            padding: 0;
+        /* Summary Section */
+        .summary-section {
+            border: 1px solid #000;
+            border-top: none;
+        }
+        .summary-row {
+            display: table;
+            width: 100%;
+        }
+        .summary-left {
+            display: table-cell;
+            width: 60%;
+            padding: 4px;
+            vertical-align: top;
+            border-right: 1px solid #000;
+        }
+        .summary-right {
+            display: table-cell;
+            width: 40%;
+            padding: 4px;
+            vertical-align: top;
+        }
+        .summary-line {
+            display: table;
+            width: 100%;
+            margin-bottom: 1px;
+            font-size: 8px;
+        }
+        .summary-label {
+            display: table-cell;
+            text-align: right;
+            padding-right: 10px;
+            width: 70%;
+        }
+        .summary-value {
+            display: table-cell;
+            text-align: right;
+            width: 30%;
+        }
+        .total-words {
+            font-size: 8px;
+            font-weight: bold;
+            margin-top: 3px;
         }
         
-        .section-spacing {
-            margin: 5px 0;
+        /* Bank Details */
+        .bank-section {
+            border: 1px solid #000;
+            border-top: none;
+            padding: 4px;
+        }
+        .bank-title {
+            font-weight: bold;
+            font-size: 9px;
+            margin-bottom: 3px;
+        }
+        .bank-details {
+            font-size: 8px;
+            line-height: 1.4;
+        }
+        
+        /* Footer */
+        .footer-section {
+            border: 1px solid #000;
+            border-top: none;
+        }
+        .footer-row {
+            display: table;
+            width: 100%;
+        }
+        .footer-left {
+            display: table-cell;
+            width: 60%;
+            padding: 4px;
+            vertical-align: top;
+            border-right: 1px solid #000;
+        }
+        .footer-right {
+            display: table-cell;
+            width: 40%;
+            padding: 4px;
+            vertical-align: bottom;
+            text-align: center;
+        }
+        .terms-title {
+            font-weight: bold;
+            font-size: 8px;
+            margin-bottom: 2px;
+        }
+        .terms-list {
+            font-size: 7px;
+            padding-left: 12px;
+            line-height: 1.3;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 30px;
+            padding-top: 2px;
+            font-size: 8px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <!-- Header - Compact -->
-    <table width="100%" style="border-bottom:2px solid #6a1b9a;">
-        <tr>
-            <td style="width:35%; vertical-align:top;">
-                <img src="{{ public_path('assets/images/logo.jpg') }}" alt="Company Logo" style="width: 110px;">
-            </td>
-            <td style="width:65%; text-align: right; vertical-align: top;">
-                <h2 style="margin: 0; color: #6a1b9a; font-size: 18px;">
-                    {{ env('WEBSITE_NAME', 'Your Company Name') }}
-                </h2>
-                <p style="margin: 2px 0; font-size: 11px;">No.157, Muniyandi Kovil Street, Madurai - 625016.</p>
-                <p style="margin: 2px 0; font-size: 11px;">Email: casinoshirts2000@gmail.com</p>
-                <p style="margin: 2px 0; font-size: 11px;">Phone: +91 98765 43210</p>
-                <p style="margin: 2px 0; font-size: 11px;">GSTIN: 33AADCN9342A1ZU</p>
-            </td>
-        </tr>
-    </table>
-
-    <!-- Invoice Title -->
-    <div class="invoice-title">Purchase Invoice</div>
-
-    <!-- Invoice Info - Compact -->
-    <table class="info-section">
-        <tr>
-            <!-- Left Column -->
-            <td style="width:48%; vertical-align:top;">
-                <p class="compact-row"><strong>Invoice No:</strong> PO-2025-001</p>
-                <p class="compact-row"><strong>Date:</strong> 19-Sep-2025</p>
-                <p class="compact-row"><strong>Transport:</strong> Uttam Road Ways Pvt</p>
-                <p class="compact-row"><strong>LR No:</strong> 23062138</p>
-            </td>
-
-            <!-- Right Column -->
-            <td style="width:52%; vertical-align:top;">
-                <table width="100%" style="border-collapse: collapse; font-size: 10px;">
-                    <tr>
-                        <td colspan="2" style="color:#6a1b9a; font-weight:bold; padding-bottom:2px;">
-                            Supplier Details
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="width:35%; vertical-align:top; color:#000;"><strong>Name:</strong></td>
-                        <td style="vertical-align:top;">Krishna Fabrics (SUP001)</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:top; color:#000;"><strong>Address:</strong></td>
-                        <td style="vertical-align:top;">
-                            No. 10, Textile Market Road,<br>
-                            Tirupur – 641602,<br>
-                            TamilNadu.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="color:#000;"><strong>GSTIN:</strong></td>
-                        <td>33ABCDE1234F1Z5</td>
-                    </tr>
-                    <tr>
-                        <td style="color:#000;"><strong>Broker:</strong></td>
-                        <td>Bhagwan Textiles Agency</td>
-                    </tr>
-                    <tr>
-                        <td style="color:#000;"><strong>Destination:</strong></td>
-                        <td>Chennai</td>
-                    </tr>
-                    <tr>
-                        <td style="color:#000;"><strong>Payment Mode:</strong></td>
-                        <td>Bank Transfer</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-
-    <!-- Items Table - Compact -->
-    <table class="items">
-        <thead>
-            <tr>
-                <th style="width:5%">S.No</th>
-                <th style="width:45%">Item</th>
-                <th style="width:15%">HSN Code</th>
-                <th style="width:10%">Qty</th>
-                <th style="width:12%">Rate</th>
-                <th style="width:13%">Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>1</td>
-                <td>Men's Casual Denim Shirt</td>
-                <td>D45SD/72-23</td>
-                <td>3</td>
-                <td>₹50.00</td>
-                <td>₹150.00</td>
-            </tr>
-            <tr>
-                <td>2</td>
-                <td>Men's Formal Cotton Shirt</td>
-                <td>Q9KD34-23</td>
-                <td>1</td>
-                <td>₹25.00</td>
-                <td>₹25.00</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- Financial Details in Compact Layout -->
-    <div style="display: flex; gap: 10px; margin-top: 10px;">
-
-        <!-- Totals -->
-        <div style="flex: 1;">
-            <table class="totals">
-                <tr>
-                    <td class="label">Sub Total:</td>
-                    <td class="value">₹175.00</td>
-                </tr>
-                <tr>
-                    <td class="label">Discount (2%):</td>
-                    <td class="value">₹3.50</td>
-                </tr>
-                <tr>
-                    <td class="label">Taxable Amount:</td>
-                    <td class="value">₹171.50</td>
-                </tr>
-                <tr>
-                    <td class="label">CGST (9%):</td>
-                    <td class="value">₹15.44</td>
-                </tr>
-                <tr>
-                    <td class="label">SGST (9%):</td>
-                    <td class="value">₹15.44</td>
-                </tr>
-                <tr>
-                    <td class="label">Total GST:</td>
-                    <td class="value">₹30.88</td>
-                </tr>
-                <tr>
-                    <td class="label">Freight Charges:</td>
-                    <td class="value">₹100.00</td>
-                </tr>
-                <tr>
-                    <td class="label" style="border-top:2px solid #6a1b9a;">Grand Total:</td>
-                    <td class="value" style="border-top:2px solid #6a1b9a;"><strong>₹302.38</strong></td>
-                </tr>
-            </table>
-            <p style="font-size:10px; margin-top:4px; font-weight:bold; color:#000;">
-                Amount in Words: 
-                <span style="color:#6a1b9a;">
-                    Rupees Three Hundred Two and Thirty-Eight Paise Only
-                </span>
-            </p>
-
+    <section class="pdf-section">
+        <!-- Header Section -->
+        <div class="header-container">
+            <div class="header-row">
+                <div class="header-left">
+                    <div class="company-name">INDRAPUJA POLYCOT (INDIA)</div>
+                    <div class="company-details">
+                        <strong>Sales-Off :</strong> 1, Postal Addr.:Shop No. 6,7, Ground Floor, Ring Rd, 150, Dr. Viegas Street,Saudathi Khatari Bldg.,<br>
+                        Opp.Bata Showroom, Kalbadevi Road, Mumbai - 400 002 | <strong>Tel: 022-22015066/67</strong><br>
+                        <strong>Email:</strong> indrapujapolycot@gmail.com | <strong>Website:</strong> www.indrapujapolycot.com<br>
+                        <strong>GSTIN:</strong> 27AACFI6271F1ZT | <strong>PAN:</strong> AACFI6271F | <strong>State:</strong> Maharashtra (27)
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="tax-invoice-title">TAX INVOICE</div>
+                    <div class="qr-placeholder">
+                        QR CODE
+                    </div>
+                    <div style="font-size: 7px; margin-top: 3px;">IRN: 24 hrs Valid</div>
+                </div>
+            </div>
         </div>
-    </div>
-    <!-- Bank Details - Table Format -->
-    <table width="100%" style="border: 1px solid #ccc; border-radius: 4px; margin-top: 12px; font-size: 10px; border-collapse: collapse;">
-        <tr>
-            <td colspan="4" style="background: #6a1b9a; color: #fff; font-weight: bold; padding: 5px; text-align: left;">
-                Bank Details
-            </td>
-        </tr>
-        <tr>
-            <td style="width: 25%; padding: 5px;"><strong>Bank Name:</strong></td>
-            <td style="width: 25%; padding: 5px;">HDFC Bank</td>
-            <td style="width: 25%; padding: 5px;"><strong>Account Name:</strong></td>
-            <td style="width: 25%; padding: 5px;">Krishna Fabrics</td>
-        </tr>
-        <tr>
-            <td style="padding: 5px;"><strong>Account Number:</strong></td>
-            <td style="padding: 5px;">123456789012</td>
-            <td style="padding: 5px;"><strong>IFSC Code:</strong></td>
-            <td style="padding: 5px;">HDFC0001234</td>
-        </tr>
-        <tr>
-            <td style="padding: 5px;"><strong>Branch:</strong></td>
-            <td style="padding: 5px;">T. Nagar, Chennai</td>
-            <td style="padding: 5px;"><strong>Payment Mode:</strong></td>
-            <td style="padding: 5px;">Bank Transfer</td>
-        </tr>
-    </table>
 
-    <!-- Bank Details - Compact -->
-    <table width="100%" style="margin-top: 20px; border-top: 1px solid #ccc; font-size: 9px;">
-        <tr>
-            <!-- Left: Terms & Conditions -->
-            <td style="width: 65%; vertical-align: top; padding: 5px;">
-                <strong style="color:#6a1b9a;">Terms & Conditions:</strong>
-                <ol style="margin: 3px 0; padding-left: 15px;">
-                    <li>Goods once sold will not be taken back.</li>
-                    <li>Payment due within 15 days of invoice date.</li>
-                    <li>Interest @18% p.a. will be charged on overdue accounts.</li>
-                    <li>All disputes subject to Chennai jurisdiction only.</li>
-                </ol>
-            </td>
+        <!-- Invoice Details -->
+        <div class="details-section">
+            <div class="details-row">
+                <div class="details-left">
+                    <div class="detail-line"><span class="detail-label">Invoice No:</span> FSI/23/24/002211</div>
+                    <div class="detail-line"><span class="detail-label">Invoice Date:</span> 02/12/2023</div>
+                    <div class="detail-line"><span class="detail-label">Transport:</span> Uttam Road Ways Pvt Ltd</div>
+                    <div class="detail-line"><span class="detail-label">LR No:</span> 23062138</div>
+                    <div class="detail-line"><span class="detail-label">Broker:</span> BHAGWAN TEXTILES AGENCY</div>
+                </div>
+                <div class="details-right">
+                    <div class="detail-line"><span class="detail-label">Destination:</span> MADURAI</div>
+                    <div class="detail-line"><span class="detail-label">LR Date:</span> 02/12/2023</div>
+                    <div class="detail-line"><span class="detail-label">Vehicle No:</span> MH12AB1234</div>
+                    <div class="detail-line"><span class="detail-label">E-Way Bill No:</span> 123456789012</div>
+                </div>
+            </div>
+        </div>
 
-            <!-- Right: Authorized Signature -->
-            <td style="width: 35%; text-align: right; vertical-align: bottom; padding: 5px;">
-                <img src="{{ public_path('assets/images/signature_images.jpg') }}" 
-                    alt="Authorized Signature" 
-                    style="width: 90px; height: auto; margin-bottom: 4px;">
-                <p style="margin: 0; font-weight: bold; font-size: 10px;">Authorized Signatory</p>
-            </td>
-        </tr>
-    </table>
-    <!-- Footer -->
-    <div class="footer">
-        <p>Nachias.</p>
-    </div>
+        <!-- Supplier and Delivery Details -->
+        <div class="party-section">
+            <div class="party-row">
+                <div class="party-cell">
+                    <div class="party-title">BILLED TO</div>
+                    <div style="font-size: 8px;">
+                        <strong>NACHIAS FASHION PVT LTD.</strong><br>
+                        155, MUNIYANDI KOVIL STREET<br>
+                        MADURAI - 625016<br>
+                        State: <strong>TAMIL NADU (33)</strong><br>
+                        GSTIN: <strong>33AADCN9342A1ZU</strong>
+                    </div>
+                </div>
+                <div class="party-cell">
+                    <div class="party-title">DELIVERY AT</div>
+                    <div style="font-size: 8px;">
+                        <strong>NACHIAS FASHION PVT LTD.</strong><br>
+                        155, MUNIYANDI KOVIL STREET<br>
+                        MADURAI (PERIYAR)<br>
+                        State: <strong>TAMIL NADU (33)</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 4%;">S.N</th>
+                    <th style="width: 30%;">DESCRIPTION OF GOODS</th>
+                    <th style="width: 10%;">BALE No.</th>
+                    <th style="width: 6%;">PCS</th>
+                    <th style="width: 10%;">METERS</th>
+                    <th style="width: 6%;">UOM</th>
+                    <th style="width: 10%;">RATE</th>
+                    <th style="width: 12%;">AMOUNT(Rs.)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td class="left">60/60 X 90/130 [58/60 21021101]</td>
+                    <td>002211</td>
+                    <td>5</td>
+                    <td>227.00</td>
+                    <td>Mtr</td>
+                    <td class="right">160.00</td>
+                    <td class="right">36320.62</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td class="left">NOVA COTTON 58" [HSN 52081901]</td>
+                    <td>002211</td>
+                    <td>6</td>
+                    <td>303.15</td>
+                    <td>Mtr</td>
+                    <td class="right">115.00</td>
+                    <td class="right">34856.55</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td class="left">CHENILLE 58" [HSN 52082100]</td>
+                    <td>002211</td>
+                    <td>4</td>
+                    <td>219.08</td>
+                    <td>Mtr</td>
+                    <td class="right">130.65</td>
+                    <td class="right">28350.00</td>
+                </tr>
+                <!-- Empty rows for spacing -->
+                <tr style="height: 30px;">
+                    <td colspan="8"></td>
+                </tr>
+                <tr style="height: 30px;">
+                    <td colspan="8"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <div class="summary-row">
+                <div class="summary-left">
+                    <div class="total-words">
+                        <strong>Total Amount (in Words):</strong><br>
+                        RUPEES ONE LAKH TWO THOUSAND FOUR HUNDRED THIRTEEN AND EIGHT PAISE ONLY
+                    </div>
+                </div>
+                <div class="summary-right">
+                    <div class="summary-line">
+                        <div class="summary-label">Gross Total</div>
+                        <div class="summary-value">{{ number_format($invoice->sub_total, 2) }}</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label"><strong>Discount ({{ $invoice->discount_percent }}%)</strong></div>
+                        <div class="summary-value">{{ number_format($invoice->discount_amount, 2) }}</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">Round Off ({{ $invoice->round_off_type }})</div>
+                        <div class="summary-value">{{ number_format($invoice->round_off, 2) }}</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">CGST ({{ $invoice->cgst_percent }}%)</div>
+                        <div class="summary-value">{{ number_format($invoice->cgst_amount, 2) }}</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">SGST ({{ $invoice->sgst_percent }}%)</div>
+                        <div class="summary-value">{{ number_format($invoice->sgst_amount, 2) }}</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">IGST ({{ $invoice->igst_percent }}%)</div>
+                        <div class="summary-value">{{ number_format($invoice->igst_amount, 2) }}</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">Other Charges</div>
+                        <div class="summary-value">{{ number_format($invoice->other_charges, 2) }}</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label"><strong>Rate</strong></div>
+                        <div class="summary-value"><strong>Amount</strong></div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">9.00 %</div>
+                        <div class="summary-value">4870.87</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">9.00 %</div>
+                        <div class="summary-value">4870.87</div>
+                    </div>
+                    <div class="summary-line">
+                        <div class="summary-label">0.00 %</div>
+                        <div class="summary-value">0.00</div>
+                    </div>
+                    <div class="summary-line" style="border-top: 1px solid #000; padding-top: 2px; margin-top: 2px;">
+                        <div class="summary-label" style="font-size: 14px;"><strong>Total Invoice Amount</strong></div>
+                        <div class="summary-value" style="font-size: 14px;"><strong>{{ number_format($invoice->grand_total, 2) }}</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bank Details -->
+        <div class="bank-section">
+            <div class="bank-title">Bank Details:</div>
+            <div class="bank-details">
+                <strong>Bank Name: HDFC BANK</strong> &nbsp;&nbsp;&nbsp; 
+                <strong>BRANCH: KHAR</strong> &nbsp;&nbsp;&nbsp; 
+                <strong>IFSC NO: HDFC0000502</strong> &nbsp;&nbsp;&nbsp; 
+                <strong>RTGS NO: 5 0 2 0 1 0 0 1 2 4 1 3 7 1</strong><br>
+                <strong>A/C NO: 50200001241371</strong>
+            </div>
+        </div>
+
+        <!-- Terms and Signature -->
+        <div class="footer-section">
+            <div class="footer-row">
+                <div class="footer-left">
+                    <div class="terms-title">TERMS AND CONDITIONS:</div>
+                    <ol class="terms-list">
+                        <li>Interest @24% p.a. after 3 days of sale of goods or services.</li>
+                        <li>Shortage claim, if any, should be made within 3 days of receipt of goods & services.</li>
+                        <li>Our risk & responsibility ceases as soon as the goods leave our premises.</li>
+                        <li>Goods once sold will not be taken back or exchanged.</li>
+                        <li>All disputes are subject to Mumbai Jurisdiction only.</li>
+                        <li>E. & O.E.</li>
+                        <li>Subject to realization of Cheque or Draft or any mode of payment.</li>
+                    </ol>
+                </div>
+                <div class="footer-right">
+                    <div style="font-size: 8px; margin-bottom: 5px;">For <strong>INDRAPUJA POLYCOT (INDIA)</strong></div>
+                    <div class="signature-line">Authorised Signatory</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
 </body>
 </html>

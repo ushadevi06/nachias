@@ -27,18 +27,6 @@
                                 <h5>Filter</h5>
                             </div>
                             <div class="col-md-4 col-lg-3">
-                                <select id="entry_type" class="select2 form-select" data-placeholder="Select Entry Type">
-                                    <option value="">Select Entry Type</option>
-                                    <option value="Purchase Receipt">Purchase Receipt</option>
-                                    <option value="Transfer Receipt">Transfer Receipt</option>
-                                    <option value="Transfer Issue">Transfer Issue</option>
-                                    <option value="Production Issue">Production Issue</option>
-                                    <option value="Production Receipt">Production Receipt</option>
-                                    <option value="Stock Adjustment">Stock Adjustment</option>
-                                    <option value="Stock Conversion">Stock Conversion</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 col-lg-3">
                                 <div class="form-floating form-floating-outline">
                                     <select name="material_category" id="material_category" class="form-select select2" data-placeholder="Select Store Category">
                                         <option value="">Select Store Category</option>
@@ -71,11 +59,9 @@
                                     <th>#</th>
                                     <th>Stock Entry No.</th>
                                     <th>Stock Date</th>
-                                    <th>Entry Type</th>
                                     <th>Store Category</th>
                                     <th>Material</th>
                                     <th>GRN No.</th>
-
                                     <th>Total Qty</th>
                                     <th>Actions</th>
                                 </tr>
@@ -100,14 +86,12 @@
                 data: function(d) {
                     d.material_category = $('#material_category').val();
                     d.material = $('#material').val();
-                    d.entry_type = $('#entry_type').val();
                 }
             },
             columns: [
                 {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
                 {data: 'stock_entry_no', name: 'stock_entry_no'},
                 {data: 'stock_date', name: 'stock_date'},
-                {data: 'entry_type', name: 'entry_type'},
                 {data: 'material_category', name: 'material_category'},
                 {data: 'material', name: 'material'},
                 {data: 'grn_no', name: 'grn_no'},
@@ -148,7 +132,6 @@
         $('#btn-reset').click(function() {
             $('#material_category').val('').trigger('change');
             $('#material').val('').trigger('change');
-            $('#entry_type').val('').trigger('change');
             table.ajax.reload();
         });
     });

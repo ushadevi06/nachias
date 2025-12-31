@@ -11,6 +11,9 @@ class OperationStageController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view operation-stages')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $operationStages = OperationStage::orderBy('id','desc')->get();
             $data = [];
@@ -51,6 +54,15 @@ class OperationStageController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit operation-stages')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create operation-stages')) {
+                return unauthorizedRedirect();
+            }
+        }
         $operationStage = null;
         $oldData = null;
         if ($id) {
@@ -99,6 +111,9 @@ class OperationStageController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete operation-stages')) {
+            return unauthorizedRedirect();
+        }
         $operationStage = OperationStage::findOrFail($id);
         $oldData = $operationStage->toArray();
         $operationStage->delete();

@@ -21,6 +21,7 @@ class StockEntryItem extends Model
         'uom_id',
         'qty_in',
         'qty_out',
+        'price',
     ];
 
     // Relationships

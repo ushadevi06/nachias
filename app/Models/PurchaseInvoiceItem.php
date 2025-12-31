@@ -22,6 +22,7 @@ class PurchaseInvoiceItem extends Model
         'qty_ordered',
         'qty_received',
         'qty_invoiced',
+        'notes',
     ];
 
     public function purchaseInvoice()

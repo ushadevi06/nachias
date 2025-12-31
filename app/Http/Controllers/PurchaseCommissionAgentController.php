@@ -12,6 +12,9 @@ class PurchaseCommissionAgentController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view purchase-commission-agent')) {
+            return unauthorizedRedirect();
+        }
 
         if ($request->ajax()) {
 
@@ -99,6 +102,15 @@ class PurchaseCommissionAgentController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit purchase-commission-agent')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create purchase-commission-agent')) {
+                return unauthorizedRedirect();
+            }
+        }
         $agent = null;
 
         if ($id) {
@@ -216,6 +228,9 @@ class PurchaseCommissionAgentController extends Controller
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details purchase-commission-agent')) {
+            return unauthorizedRedirect();
+        }
         $agent = PurchaseCommissionAgent::with(['state', 'city', 'servicePoint'])->findOrFail($id);
         return view('purchase_commission_agent.view_details', compact('agent'));
     }
@@ -242,6 +257,9 @@ class PurchaseCommissionAgentController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete purchase-commission-agent')) {
+            return unauthorizedRedirect();
+        }
         $agent = PurchaseCommissionAgent::findOrFail($id);
 
         $oldData = $agent->toArray();

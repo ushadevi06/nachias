@@ -12,6 +12,9 @@ class PlaceController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view service-points')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
 
             $query = Place::with(['state', 'city'])->orderBy('id', 'desc');
@@ -88,6 +91,15 @@ class PlaceController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit service-points')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create service-points')) {
+                return unauthorizedRedirect();
+            }
+        }
         $place = $id ? Place::findOrFail($id) : new Place();
         $oldData = $id ? $place->toArray() : null;
 
@@ -141,6 +153,9 @@ class PlaceController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete service-points')) {
+            return unauthorizedRedirect();
+        }
         $place = Place::findOrFail($id);
         $oldData = $place->toArray();
         $place->delete();

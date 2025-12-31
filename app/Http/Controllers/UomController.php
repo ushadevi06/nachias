@@ -10,6 +10,9 @@ class UomController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view uoms')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
 
             $uoms = Uom::latest()->get();
@@ -67,6 +70,15 @@ class UomController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit uoms')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create uoms')) {
+                return unauthorizedRedirect();
+            }
+        }
         $uom = $id ? Uom::findOrFail($id) : new Uom();
         $oldData = $id ? $uom->toArray() : null;
 
@@ -133,6 +145,9 @@ class UomController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete uoms')) {
+            return unauthorizedRedirect();
+        }
         $uom = Uom::findOrFail($id);
 
         $tables = [

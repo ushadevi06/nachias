@@ -12,6 +12,9 @@ class SalesAgentController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view sales-agents')) {
+            return unauthorizedRedirect();
+        }
         $canViewDetail   = true;
         $canEdit   = true;
         $canDelete = true;
@@ -101,6 +104,15 @@ class SalesAgentController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit sales-agents')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create sales-agents')) {
+                return unauthorizedRedirect();
+            }
+        }
         $salesAgent = null;
         if ($id) {
             $salesAgent = SalesAgent::with(['state', 'city', 'place'])->findOrFail($id);
@@ -212,11 +224,17 @@ class SalesAgentController extends Controller
     }
     public function show($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details sales-agents')) {
+            return unauthorizedRedirect();
+        }
         $salesAgent = SalesAgent::with(['state', 'city', 'place'])->findOrFail($id);
         return view('sales_agent.view_details', compact('salesAgent'));
     }
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete sales-agents')) {
+            return unauthorizedRedirect();
+        }
         $agent = SalesAgent::findOrFail($id);
         $oldData = $agent->toArray();
 

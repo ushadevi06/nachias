@@ -123,9 +123,14 @@
                                 @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" placeholder="Enter Password" name="password">
-                                    <label for="password">Password {{ !$employee ? '*' : '' }}</label>
+                                <div class="form-password-toggle form-control-validation">
+                                    <div class="input-group input-group-merge">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" placeholder="Enter Password" name="password">
+                                            <label for="password">Password {{ !$employee ? '*' : '' }}</label>
+                                        </div>
+                                        <span class="input-group-text cursor-pointer" id="form-alignment-password2"><i class="icon-base ri ri-eye-off-line"></i></span>
+                                    </div>
                                 </div>
                                 @if($employee)
                                 <small class="text-muted">Leave blank to keep current password</small>

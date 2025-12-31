@@ -9,6 +9,9 @@ class BrandController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view brands')) {
+            return unauthorizedRedirect();
+        }
         $canAdd    = true;
         $canEdit   = true;
         $canDelete = true;
@@ -67,6 +70,15 @@ class BrandController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit brands')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create brands')) {
+                return unauthorizedRedirect();
+            }
+        }
         $brand = $id ? Brand::findOrFail($id) : null;
 
         if ($request->isMethod('post')) {
@@ -112,6 +124,9 @@ class BrandController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete brands')) {
+            return unauthorizedRedirect();
+        }
         $brand = Brand::findOrFail($id);
         $oldData = $brand->toArray();
 

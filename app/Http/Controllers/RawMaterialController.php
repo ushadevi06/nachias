@@ -13,6 +13,9 @@ class RawMaterialController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view raw-materials')) {
+            return unauthorizedRedirect();
+        }
         $canAdd    = true;
         $canEdit   = true;
         $canDelete = true;
@@ -89,6 +92,15 @@ class RawMaterialController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit raw-materials')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create raw-materials')) {
+                return unauthorizedRedirect();
+            }
+        }
         $rawMaterial = null;
         if ($id) {
             $rawMaterial = RawMaterial::findOrFail($id);
@@ -182,6 +194,9 @@ class RawMaterialController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete raw-materials')) {
+            return unauthorizedRedirect();
+        }
         $material = RawMaterial::findOrFail($id);
 
         $oldData = $material->toArray();

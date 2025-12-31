@@ -10,6 +10,9 @@ class ChargeController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view charges')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
 
             $charges = Charge::latest()->get();
@@ -67,6 +70,15 @@ class ChargeController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit charges')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create charges')) {
+                return unauthorizedRedirect();
+            }
+        }
         $charge = null;
         if ($id) {
             $charge = Charge::findOrFail($id);
@@ -127,6 +139,9 @@ class ChargeController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete charges')) {
+            return unauthorizedRedirect();
+        }
         $charge = Charge::findOrFail($id);
 
         $tables = [

@@ -37,7 +37,7 @@ $isSuper = $user->id == 1;
                                         <div class="d-flex align-items-center">
                                             <div class="flex-shrink-0 me-2">
                                                 <div class="avatar avatar-online">
-                                                    <img src="assets/images/user.jpg" alt="alt"
+                                                    <img src="{{ url('assets/images/user.jpg') }}" alt="alt"
                                                         class="w-px-40 h-auto rounded-circle">
                                                 </div>
                                             </div>

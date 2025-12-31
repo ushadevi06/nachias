@@ -31,6 +31,11 @@
                         </div>
 
                         <div class="col-md-4">
+                            <label class="detail-title">Sales Order:</label>
+                            <div class="text-muted">SO-1001</div>
+                        </div>
+
+                        <div class="col-md-4">
                             <label class="detail-title">Delivery Date:</label>
                             <div class="text-muted">15-10-2025</div>
                         </div>

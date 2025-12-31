@@ -24,6 +24,12 @@ class Setting extends Model
         'pan_no',
         'gst_no',
         'cin_no',
+        'toll_free_no',
+        'working_days',
+        'opening_time',
+        'closing_time',
+        'po_prefix',
+        'purchase_invoice_prefix',
     ];
 
     protected $casts = [

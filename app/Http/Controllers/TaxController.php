@@ -9,6 +9,9 @@ class TaxController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view taxes')) {
+            return unauthorizedRedirect();
+        }
 
         if ($request->ajax()) {
 
@@ -64,6 +67,15 @@ class TaxController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit taxes')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create taxes')) {
+                return unauthorizedRedirect();
+            }
+        }
         $tax = $id ? Tax::findOrFail($id) : null;
         $oldData = $tax ? $tax->toArray() : null;
 
@@ -109,6 +121,9 @@ class TaxController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete taxes')) {
+            return unauthorizedRedirect();
+        }
         $tax = Tax::findOrFail($id);
         $oldData = $tax->toArray();
 

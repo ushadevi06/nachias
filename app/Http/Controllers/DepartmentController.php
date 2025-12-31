@@ -9,6 +9,9 @@ class DepartmentController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view departments')) {
+            return unauthorizedRedirect();
+        }
 
         if ($request->ajax()) {
 
@@ -62,6 +65,15 @@ class DepartmentController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit departments')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create departments')) {
+                return unauthorizedRedirect();
+            }
+        }
         $department = $id ? Department::findOrFail($id) : null;
         if ($request->isMethod('post')) {
             $rules = [
@@ -94,6 +106,9 @@ class DepartmentController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete departments')) {
+            return unauthorizedRedirect();
+        }
         $department = Department::findOrFail($id);
         $oldData = $department->toArray();   
         $department->delete();             

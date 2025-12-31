@@ -80,23 +80,20 @@
                                             <table class="table table-bordered align-middle text-center" id="grn-items-table">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th>Select</th>
-                                                        <th>S.No.</th>
-                                                        <th>Supplier Design Name(Code)</th>
-                                                        <th>Item Image</th>
-                                                        <th>Art No. *</th>
-                                                        <th>UOM</th>
-                                                        <th>Fabric Type</th>
-                                                        <th>Quantity Ordered</th>
-                                                        <th>Qty Invoiced</th>
-                                                        <th>Quantity Received *</th>
-                                                        <th>Quantity Accepted *</th>
-                                                        <th>Quantity Rejected</th>
-                                                        <th>Quantity Balanced</th>
-                                                        <th>Rate</th>
-                                                        <th>Amount</th>
-                                                        <th>Quality Check Status</th>
-                                                        <th>Store Location</th>
+                                                        <th rowspan="2">Select</th>
+                                                        <th rowspan="2">S.No.</th>
+                                                        <th rowspan="2">Supplier Design Name(Code)</th>
+                                                        <th rowspan="2">Item Image</th>
+                                                        <th rowspan="2">Art No. *</th>
+                                                        <th rowspan="2">UOM</th>
+                                                        <th rowspan="2">Fabric Type</th>
+                                                        <th colspan="2">QUANTITY</th>
+                                                        <th rowspan="2">RATE & AMOUNT</th>
+                                                        <th rowspan="2">STATUS & LOCATION *</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Ordered / Inv / Rec</th>
+                                                        <th>Acc / Rej / Bal</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -171,39 +168,69 @@
                                                                 </select>
                                                                 @error("items.$idx.fabric_type_id") <div class="text-danger small">{{ $message }}</div> @enderror
                                                             </td>
-                                                            <td><input type="number" name="items[{{$idx}}][qty_ordered]" value="{{ $qtyOrdered }}" class="qty-ordered form-control" readonly></td>
-                                                            <td><input type="number" value="{{ $alreadyReceived }}" class="form-control" readonly disabled></td>
                                                             <td>
-                                                                <input type="number" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error("items.$idx.qty_received") is-invalid @enderror" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && count($variants) == 0) ? '' : 'readonly' }}>
-                                                                <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
-                                                                @error("items.$idx.qty_received") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                                <div class="mb-2">
+                                                                    <label class="small d-block fw-bold">Ordered:</label>
+                                                                    <input type="number" name="items[{{$idx}}][qty_ordered]" value="{{ $qtyOrdered }}" class="qty-ordered form-control" readonly>
+                                                                </div>
+                                                                <div class="mb-2">
+                                                                    <label class="small d-block fw-bold">Invoiced:</label>
+                                                                    <input type="number" value="{{ $alreadyReceived }}" class="form-control" readonly disabled>
+                                                                </div>
+                                                                <div>
+                                                                    <label class="small d-block fw-bold">Received *:</label>
+                                                                    <input type="number" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error("items.$idx.qty_received") is-invalid @enderror" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && count($variants) == 0) ? '' : 'readonly' }}>
+                                                                    <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
+                                                                    @error("items.$idx.qty_received") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                                </div>
                                                             </td>
                                                             <td>
-                                                                <input type="number" name="items[{{$idx}}][qty_accepted]" value="{{ $itemObj->qty_accepted }}" class="qty-accepted form-control @error("items.$idx.qty_accepted") is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
-                                                                <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
-                                                                @error("items.$idx.qty_accepted") <div class="text-danger small">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td><input type="number" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control" readonly></td>
-                                                            <td><input type="number" name="items[{{$idx}}][qty_balanced]" value="{{ $itemObj->qty_balanced }}" class="qty-balanced form-control" readonly></td>
-                                                            <td><input type="number" name="items[{{$idx}}][rate]" value="{{ $itemObj->rate }}" class="rate-input form-control @error("items.$idx.rate") is-invalid @enderror" readonly></td>
-                                                            <td><input type="number" name="items[{{$idx}}][amount]" value="{{ $itemObj->amount }}" class="amount-input form-control" readonly></td>
-                                                            <td>
-                                                                 <select class="form-control select2 @error("items.$idx.quality_check_status") is-invalid @enderror" name="items[{{$idx}}][quality_check_status]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
-                                                                    <option value="">Select Status</option>
-                                                                    <option value="Pass" {{ ($itemObj->quality_check_status ?? '') == 'Pass' ? 'selected' : '' }}>Pass</option>
-                                                                    <option value="Fail" {{ ($itemObj->quality_check_status ?? '') == 'Fail' ? 'selected' : '' }}>Fail</option>
-                                                                    <option value="Hold" {{ ($itemObj->quality_check_status ?? '') == 'Hold' ? 'selected' : '' }}>Hold</option>
-                                                                </select>
-                                                                @error("items.$idx.quality_check_status") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                                <div class="mb-2">
+                                                                    <label class="small d-block fw-bold">Accepted *:</label>
+                                                                    <input type="number" name="items[{{$idx}}][qty_accepted]" value="{{ $itemObj->qty_accepted }}" class="qty-accepted form-control @error("items.$idx.qty_accepted") is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
+                                                                    <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
+                                                                    @error("items.$idx.qty_accepted") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                                </div>
+                                                                <div class="mb-2">
+                                                                    <label class="small d-block fw-bold">Rejected:</label>
+                                                                    <input type="number" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control" readonly>
+                                                                </div>
+                                                                <div>
+                                                                    <label class="small d-block fw-bold">Balanced:</label>
+                                                                    <input type="number" name="items[{{$idx}}][qty_balanced]" value="{{ $itemObj->qty_balanced }}" class="qty-balanced form-control" readonly>
+                                                                </div>
                                                             </td>
                                                             <td>
-                                                                <select class="form-control select2 @error("items.$idx.store_location_id") is-invalid @enderror" name="items[{{$idx}}][store_location_id]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
-                                                                    <option value="">Select Store Location</option>
-                                                                    @foreach($storeLocations as $loc)
-                                                                        <option value="{{ $loc->id }}" {{ ($itemObj->store_location_id ?? '') == $loc->id ? 'selected' : '' }}>{{ $loc->store_location }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                                @error("items.$idx.store_location_id") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                                <div class="mb-2">
+                                                                    <label class="small d-block fw-bold">Rate:</label>
+                                                                    <input type="number" name="items[{{$idx}}][rate]" value="{{ $itemObj->rate }}" class="rate-input form-control @error("items.$idx.rate") is-invalid @enderror" readonly>
+                                                                </div>
+                                                                <div>
+                                                                    <label class="small d-block fw-bold">Amount:</label>
+                                                                    <input type="number" name="items[{{$idx}}][amount]" value="{{ $itemObj->amount }}" class="amount-input form-control" readonly>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div class="mb-3 text-start">
+                                                                    <label class="form-label small fw-bold d-block mb-1">QC Status:</label>
+                                                                    <select class="form-control select2 @error("items.$idx.quality_check_status") is-invalid @enderror" name="items[{{$idx}}][quality_check_status]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                                        <option value="">Select Status</option>
+                                                                        <option value="Pass" {{ ($itemObj->quality_check_status ?? '') == 'Pass' ? 'selected' : '' }}>Pass</option>
+                                                                        <option value="Fail" {{ ($itemObj->quality_check_status ?? '') == 'Fail' ? 'selected' : '' }}>Fail</option>
+                                                                        <option value="Hold" {{ ($itemObj->quality_check_status ?? '') == 'Hold' ? 'selected' : '' }}>Hold</option>
+                                                                    </select>
+                                                                    @error("items.$idx.quality_check_status") <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                                                </div>
+                                                                <div class="text-start">
+                                                                    <label class="form-label small fw-bold d-block mb-1">Store Location:</label>
+                                                                    <select class="form-control select2 @error("items.$idx.store_location_id") is-invalid @enderror" name="items[{{$idx}}][store_location_id]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                                        <option value="">Select Store Location</option>
+                                                                        @foreach($storeLocations as $loc)
+                                                                            <option value="{{ $loc->id }}" {{ ($itemObj->store_location_id ?? '') == $loc->id ? 'selected' : '' }}>{{ $loc->store_location }}</option>
+                                                                        @endforeach
+                                                                    </select>
+                                                                    @error("items.$idx.store_location_id") <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     @endforeach
@@ -318,22 +345,56 @@
                                 </td>
                                 <td>${item.uom}</td>
                                 <td><select class="form-control select2" name="items[${idx}][fabric_type_id]"><option value="">Select Fabric</option>${fabrics_options}</select></td>
-                                <td><input type="number" name="items[${idx}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered form-control" readonly></td>
-                                <td><input type="number" value="${item.qty_already_received}" class="form-control" readonly disabled></td>
                                 <td>
-                                    <input type="number" name="items[${idx}][qty_received]" value="0" class="qty-received form-control">
-                                    <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
+                                    <div class="mb-2">
+                                        <label class="small d-block fw-bold">Ordered:</label>
+                                        <input type="number" name="items[${idx}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered form-control" readonly>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="small d-block fw-bold">Invoiced:</label>
+                                        <input type="number" value="${item.qty_already_received}" class="form-control" readonly disabled>
+                                    </div>
+                                    <div>
+                                        <label class="small d-block fw-bold">Received *:</label>
+                                        <input type="number" name="items[${idx}][qty_received]" value="0" class="qty-received form-control">
+                                        <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
+                                    </div>
                                 </td>
                                 <td>
-                                    <input type="number" name="items[${idx}][qty_accepted]" value="0" class="qty-accepted form-control">
-                                    <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
+                                    <div class="mb-2">
+                                        <label class="small d-block fw-bold">Accepted *:</label>
+                                        <input type="number" name="items[${idx}][qty_accepted]" value="0" class="qty-accepted form-control">
+                                        <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="small d-block fw-bold">Rejected:</label>
+                                        <input type="number" name="items[${idx}][qty_rejected]" value="0" class="qty-rejected form-control" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="small d-block fw-bold">Balanced:</label>
+                                        <input type="number" name="items[${idx}][qty_balanced]" value="${item.qty_ordered}" class="qty-balanced form-control" readonly>
+                                    </div>
                                 </td>
-                                <td><input type="number" name="items[${idx}][qty_rejected]" value="0" class="qty-rejected form-control" readonly></td>
-                                <td><input type="number" name="items[${idx}][qty_balanced]" value="${item.qty_ordered}" class="qty-balanced form-control" readonly></td>
-                                <td><input type="number" name="items[${idx}][rate]" value="${item.rate}" class="rate-input form-control" readonly></td>
-                                <td><input type="number" name="items[${idx}][amount]" value="0" class="amount-input form-control" readonly></td>
-                                <td><select class="form-control select2" name="items[${idx}][quality_check_status]"><option value="">Select</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Hold">Hold</option></select></td>
-                                <td><select class="form-control select2" name="items[${idx}][store_location_id]"><option value="">Select Location</option>${locations_options}</select></td>
+                                <td>
+                                    <div class="mb-2">
+                                        <label class="small d-block fw-bold">Rate:</label>
+                                        <input type="number" name="items[${idx}][rate]" value="${item.rate}" class="rate-input form-control" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="small d-block fw-bold">Amount:</label>
+                                        <input type="number" name="items[${idx}][amount]" value="0" class="amount-input form-control" readonly>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="mb-3 text-start">
+                                        <label class="form-label small fw-bold d-block mb-1">QC Status:</label>
+                                        <select class="form-control select2" name="items[${idx}][quality_check_status]"><option value="">Select</option><option value="Pass">Pass</option><option value="Fail">Fail</option><option value="Hold">Hold</option></select>
+                                    </div>
+                                    <div class="text-start">
+                                        <label class="form-label small fw-bold d-block mb-1">Store Location:</label>
+                                        <select class="form-control select2" name="items[${idx}][store_location_id]"><option value="">Select Location</option>${locations_options}</select>
+                                    </div>
+                                </td>
                             </tr>
                         `);
                     });

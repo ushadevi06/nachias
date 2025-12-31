@@ -13,6 +13,9 @@ class RoleController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view roles')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $roles = Role::orderBy('id', 'desc')->get();
             $data = [];
@@ -69,6 +72,15 @@ class RoleController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit roles')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create roles')) {
+                return unauthorizedRedirect();
+            }
+        }
         $role = $id ? Role::with('permissions')->findOrFail($id) : new Role();
         $oldData = $id ? $role->toArray() : null;
 
@@ -129,6 +141,9 @@ class RoleController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete roles')) {
+            return unauthorizedRedirect();
+        }
         $role = Role::findOrFail($id);
         if (User::where('role_id', $id)->exists()) {
             return redirect('roles')->with('danger', 'Cannot delete role. It is assigned to employees.');

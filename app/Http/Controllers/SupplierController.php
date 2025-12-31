@@ -15,6 +15,9 @@ class SupplierController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view suppliers')) {
+            return unauthorizedRedirect();
+        }
 
         if ($request->ajax()) {
 
@@ -92,6 +95,15 @@ class SupplierController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit suppliers')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create suppliers')) {
+                return unauthorizedRedirect();
+            }
+        }
         $supplier = null;
         if ($id) {
             $supplier = Supplier::with(['state', 'city', 'place', 'tax','purchaseCommissionAgent'])->findOrFail($id);
@@ -226,17 +238,27 @@ class SupplierController extends Controller
             $places = Place::where('city_id', $cityId)->get();
         }
 
-        return view('suppliers.add', compact('supplier', 'states', 'cities', 'places', 'taxes', 'purchase_commission_agents'));
+        // Auto-generate next supplier code
+        $latestSupplier = Supplier::orderByRaw('CAST(code AS UNSIGNED) DESC')->first();
+        $nextCode = $latestSupplier && is_numeric($latestSupplier->code) ? ((int)$latestSupplier->code + 1) : 1000;
+
+        return view('suppliers.add', compact('supplier', 'states', 'cities', 'places', 'taxes', 'purchase_commission_agents', 'nextCode'));
     }
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details suppliers')) {
+            return unauthorizedRedirect();
+        }
         $supplier = Supplier::with(['state', 'city', 'place', 'tax'])->findOrFail($id);
         return view('suppliers.view_details', compact('supplier'));
     }
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete suppliers')) {
+            return unauthorizedRedirect();
+        }
         $supplier = Supplier::findOrFail($id);
         $oldData = $supplier->toArray();
         $supplier->delete();

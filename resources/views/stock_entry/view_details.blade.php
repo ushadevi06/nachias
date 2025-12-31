@@ -19,12 +19,8 @@
                             <label class="detail-title">Stock Date:</label>
                             <div class="text-muted">{{ $stockEntry->stock_date->format('d-m-Y') }}</div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Entry Type:</label>
-                            <div class="text-muted">{{ $stockEntry->entry_type }}</div>
-                        </div>
 
-                        @if($stockEntry->entry_type == 'Purchase Receipt' && $stockEntry->grnEntry)
+                        @if($stockEntry->grnEntry)
                         <div class="col-md-4">
                             <label class="detail-title">GRN Number:</label>
                             <div class="text-muted">{{ $stockEntry->grnEntry->grn_number }}</div>
@@ -53,6 +49,10 @@
                         <div class="col-md-4">
                             <label class="detail-title">UOM:</label>
                             <div class="text-muted">{{ $item->uom->uom_code ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Unit Price:</label>
+                            <div class="text-muted">{{ $item->price > 0 ? number_format($item->price, 2) : '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Quantity In:</label>

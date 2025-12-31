@@ -53,8 +53,8 @@ class GrnEntryItem extends Model
         return $this->hasMany(GrnEntryItemVariant::class);
     }
 
-    public function stockEntryItem()
+    public function stockEntryItems()
     {
-        return $this->hasOne(StockEntryItem::class);
+        return $this->hasMany(StockEntryItem::class);
     }
 }

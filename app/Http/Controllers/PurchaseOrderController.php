@@ -18,6 +18,9 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $query = PurchaseOrder::with(['salesAgent', 'supplier', 'storeType'])
                 ->orderBy('id', 'desc');
@@ -115,6 +118,15 @@ class PurchaseOrderController extends Controller
 
     public function add($id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit purchase-order')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create purchase-order')) {
+                return unauthorizedRedirect();
+            }
+        }
         $purchaseOrder = null;
         if ($id) {
             $purchaseOrder = PurchaseOrder::with(['items.storeCategory', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
@@ -257,21 +269,46 @@ class PurchaseOrderController extends Controller
         $storeCategories = StoreCategory::active()->get();
         $uoms = Uom::active()->get();
 
-        return view('purchase_orders.add', compact('purchaseOrder', 'salesAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms'));
+        $nextPoNumber = '';
+        if (!$id) {
+            $setting = \App\Models\Setting::first();
+            if ($setting && $setting->po_prefix) {
+                $prefix = $setting->po_prefix;
+                $lastPo = PurchaseOrder::where('po_number', 'like', $prefix . '%')
+                    ->orderBy('id', 'desc')
+                    ->first();
+                
+                if ($lastPo) {
+                    // Extract the numeric part after the prefix
+                    $lastNumberStr = substr($lastPo->po_number, strlen($prefix));
+                    $lastNumber = intval($lastNumberStr);
+                    $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
+                } else {
+                    $nextNumber = '0001';
+                }
+                $nextPoNumber = $prefix . $nextNumber;
+            }
+        }
+        return view('purchase_orders.add', compact('purchaseOrder', 'salesAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'nextPoNumber'));
     }
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
+            return unauthorizedRedirect();
+        }
         $purchaseOrder = PurchaseOrder::with(['salesAgent', 'supplier', 'storeType', 'items.storeCategory', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
         return view('purchase_orders.view_details', compact('purchaseOrder'));
     }
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete purchase-order')) {
+            return unauthorizedRedirect();
+        }
         $purchaseOrder = PurchaseOrder::findOrFail($id);
         $oldData = $purchaseOrder->toArray();
 
-        // Delete associated files
         foreach ($purchaseOrder->items as $item) {
             if ($item->attached_file) {
                 $filePath = public_path('uploads/purchase_orders/' . $item->attached_file);

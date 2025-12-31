@@ -17,6 +17,10 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view employee')) {
+            return unauthorizedRedirect();
+        }
+
         if ($request->ajax()) {
 
             $query = User::with(['department', 'role'])->orderBy('id', 'desc');
@@ -105,6 +109,15 @@ class EmployeeController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit employee')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create employee')) {
+                return unauthorizedRedirect();
+            }
+        }
         $employee = $id ? User::findOrFail($id) : null;
         $departments = Department::active()->get();
         $roles = Role::where('status','Active')->get();
@@ -325,6 +338,9 @@ class EmployeeController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete employee')) {
+            return unauthorizedRedirect();
+        }
         $employee = User::findOrFail($id);
 
         $uploadPath = public_path('uploads/employee/' . $id);

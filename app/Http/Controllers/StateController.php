@@ -10,6 +10,9 @@ class StateController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view states')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
 
             $states = State::orderBy('id','desc')->get();
@@ -71,6 +74,15 @@ class StateController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit states')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create states')) {
+                return unauthorizedRedirect();
+            }
+        }
         $state = $id ? State::findOrFail($id) : new State();
         $oldData = $id ? $state->toArray() : null;
 
@@ -127,6 +139,9 @@ class StateController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete states')) {
+            return unauthorizedRedirect();
+        }
         $state = State::findOrFail($id);
         $tables = [
             'cities' => 'Cities',

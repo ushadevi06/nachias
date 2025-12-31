@@ -14,6 +14,9 @@ class CityController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view cities')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $query = City::with('state')->orderBy('id','desc');
             if (!empty($request->state)) {
@@ -77,6 +80,15 @@ class CityController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit cities')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create cities')) {
+                return unauthorizedRedirect();
+            }
+        }
         $city = $id ? City::findOrFail($id) : new City();
         $oldData = $id ? $city->toArray() : null;
         if ($request->isMethod('post')) {
@@ -138,6 +150,9 @@ class CityController extends Controller
     }
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete cities')) {
+            return unauthorizedRedirect();
+        }
         $city = City::findOrFail($id);
         $tables = [
             'suppliers' => 'Suppliers',

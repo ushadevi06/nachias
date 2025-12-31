@@ -10,6 +10,9 @@ class StorelocationController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view store-location')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
 
             $locations = StoreLocation::orderBy('id','desc')->get();
@@ -62,6 +65,15 @@ class StorelocationController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit store-location')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create store-location')) {
+                return unauthorizedRedirect();
+            }
+        }
         $storeLocation = $id ? StoreLocation::findOrFail($id) : null;
         $oldData = $storeLocation ? $storeLocation->toArray() : null;
 
@@ -104,6 +116,9 @@ class StorelocationController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete store-location')) {
+            return unauthorizedRedirect();
+        }
         $storeLocation = StoreLocation::findOrFail($id);
 
         $checks = [

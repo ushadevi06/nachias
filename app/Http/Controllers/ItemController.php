@@ -22,6 +22,9 @@ class ItemController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view items')) {
+            return unauthorizedRedirect();
+        }
 
         if ($request->ajax()) {
 
@@ -114,7 +117,15 @@ class ItemController extends Controller
 
     public function add($id = null)
     {
-        
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit items')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create items')) {
+                return unauthorizedRedirect();
+            }
+        }
         $item = $id ? Item::findOrFail($id) : null;
 
         if (request()->isMethod('post')) {
@@ -230,6 +241,9 @@ class ItemController extends Controller
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details items')) {
+            return unauthorizedRedirect();
+        }
         $item = Item::with([
             'brand',
             'brandCategory',
@@ -263,6 +277,9 @@ class ItemController extends Controller
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete items')) {
+            return unauthorizedRedirect();
+        }
         $item = Item::findOrFail($id);
         $oldData = $item->toArray();
         $item->delete();

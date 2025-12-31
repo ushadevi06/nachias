@@ -32,9 +32,10 @@ class SettingController extends Controller
 
         $rules = [
             'company_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => 'required|string|max:500', 
             'logo' => 'nullable|image|mimes:jpeg,jpg,png,gif,svg|min:1024|max:5120',
             'phone_number' => 'required|string|max:15|regex:/^[0-9+\-\s()]+$/',
+            'toll_free_no' => 'nullable|string|max:500',
             'state_id' => 'required|exists:states,id',
             'city_id' => 'required|exists:cities,id',
             'address' => 'required|string|max:1000',
@@ -53,6 +54,11 @@ class SettingController extends Controller
                 'nullable',
                 'regex:/^[A-Z]{1}[0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/',
             ],
+            'working_days' => 'nullable|string|max:255',
+            'opening_time' => 'nullable|string|max:255',
+            'closing_time' => 'nullable|string|max:255',
+            'po_prefix' => 'nullable|string|max:10',
+            'purchase_invoice_prefix' => 'nullable|string|max:10',
         ];
 
         $messages = [
@@ -67,6 +73,7 @@ class SettingController extends Controller
             'company_name' => $request->company_name,
             'email' => $request->email,
             'phone_number' => $request->phone_number,
+            'toll_free_no' => $request->toll_free_no,
             'state_id' => $request->state_id,
             'city_id' => $request->city_id,
             'address' => $request->address,
@@ -76,6 +83,11 @@ class SettingController extends Controller
             'pan_no' => $request->pan_no,
             'gst_no' => $request->gst_no,
             'cin_no' => $request->cin_no,
+            'working_days' => $request->working_days,
+            'opening_time' => $request->opening_time,
+            'closing_time' => $request->closing_time,
+            'po_prefix' => $request->po_prefix,
+            'purchase_invoice_prefix' => $request->purchase_invoice_prefix,
         ];
 
         if ($request->hasFile('logo')) {

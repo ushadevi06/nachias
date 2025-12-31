@@ -94,12 +94,12 @@ class GrnEntryController extends Controller
         // dd($request->all());
         if ($id) {
             if (auth()->id() != 1 && !auth()->user()->can('edit grn-entry')) {
-                abort(403, 'Unauthorized action.');
+                 return unauthorizedRedirect();
             }
             $grn = GrnEntry::with(['grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'purchaseInvoice'])->findOrFail($id);
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create grn-entry')) {
-                abort(403, 'Unauthorized action.');
+                 return unauthorizedRedirect();
             }
         }
         $grn = $grn ?? null;
@@ -268,7 +268,7 @@ class GrnEntryController extends Controller
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view grn-entry')) {
-            abort(403, 'Unauthorized action.');
+             return unauthorizedRedirect();
         }
         $grn = GrnEntry::with([
             'purchaseInvoice',
@@ -286,7 +286,7 @@ class GrnEntryController extends Controller
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete grn-entry')) {
-            abort(403, 'Unauthorized action.');
+             return unauthorizedRedirect();
         }
 
         $grn = GrnEntry::findOrFail($id);

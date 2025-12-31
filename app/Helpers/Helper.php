@@ -34,3 +34,10 @@ if (!function_exists('addLog')) {
         ]);
     }
 }
+
+if (!function_exists('unauthorizedRedirect')) {
+    function unauthorizedRedirect($message = 'Unauthorized action.')
+    {
+        return redirect(url(''))->with('danger', $message);
+    }
+}

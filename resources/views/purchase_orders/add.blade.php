@@ -12,16 +12,15 @@
                             <h4>{{ $purchaseOrder ? 'Edit' : 'Add' }} Purchase Order</h4>
                         </div>
                         <div class="row g-4">
-                            <div class="col-md-6 col-xl-4">
+                           <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? '') }}">
+                                    <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? $nextPoNumber ?? '') }}">
                                     <label for="po_number">PO Number <span class="text-danger">*</span></label>
                                 </div>
                                 @error('po_number')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control po_date @error('po_date') is-invalid @enderror" id="po_date" name="po_date" autocomplete="off" placeholder="Enter PO Date" value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
@@ -241,7 +240,7 @@
                                     @foreach(old('items') as $index => $item)
                                     <tr class="item-row">
                                         <td>
-                                            <select class="select2 form-select store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror"
+                                            <select class="select2 form-select po_store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror"
                                                 name="items[{{ $index }}][store_category_id]"
                                                 data-placeholder="Select Category">
                                                 <option value="">Select Category</option>
@@ -353,7 +352,7 @@
                                     @foreach($purchaseOrder->items as $index => $item)
                                     <tr class="item-row">
                                         <td>
-                                            <select class="select2 form-select store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror"
+                                            <select class="select2 form-select po_store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror"
                                                 name="items[{{ $index }}][store_category_id]"
                                                 data-placeholder="Select Category">
                                                 <option value="">Select Category</option>
@@ -461,7 +460,7 @@
                                     @else
                                     <tr class="item-row">
                                         <td>
-                                            <select class="select2 form-select store_category" name="items[0][store_category_id]"
+                                            <select class="select2 form-select po_store_category" name="items[0][store_category_id]"
                                                 data-placeholder="Select Category">
                                                 <option value="">Select Category</option>
                                                 @foreach($storeCategories as $category)
@@ -692,7 +691,7 @@
             let rowHtml = `
             <tr class="item-row">
                 <td>
-                    <select class="select2 form-select store_category" 
+                    <select class="select2 form-select po_store_category" 
                             name="items[${itemIndex}][store_category_id]" 
                             data-placeholder="Select Category">
                         <option value="">Select Category</option>
@@ -797,7 +796,7 @@
         updateDisabledMaterials();
 
         // Load materials based on category
-        $(document).on('change', '.store_category', function () {
+        $(document).on('change', '.po_store_category', function () {
     let category_id = $(this).val();
     let row = $(this).closest('tr');
     let materialSelect = row.find('.material');
@@ -827,9 +826,14 @@
 
             if (response.materials?.length) {
                 response.materials.forEach(material => {
+                    let materialName = material.name;
+                    if (typeof materialName === 'object' && materialName !== null) {
+                        // Attempt to find a suitable property like 'en', 'value', or just first value
+                        materialName = materialName.en || materialName.value || Object.values(materialName)[0] || JSON.stringify(materialName);
+                    }
                     materialsHtml += `
                         <option value="${material.id}" data-uom-id="${material.uom_id}">
-                            ${material.name} (${material.code})
+                            ${materialName} (${material.code})
                         </option>`;
                 });
             } else {

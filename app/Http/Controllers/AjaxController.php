@@ -25,7 +25,7 @@ class AjaxController extends Controller
 
     public function getRawMaterialsByCategory($categoryId)
     {
-        $rawMaterials = RawMaterial::where('store_category_id', $categoryId)->where('status', 'Active')->get(['id', 'name', 'code']);
+        $rawMaterials = RawMaterial::where('store_category_id', $categoryId)->where('status', 'Active')->get(['id', 'name', 'code', 'uom_id']);
         return response()->json($rawMaterials);
     }
 
