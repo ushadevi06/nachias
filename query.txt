@@ -1,14 +1,70 @@
-ALTER TABLE settings 
-MODIFY COLUMN email TEXT,
-ADD COLUMN toll_free_no TEXT NULL AFTER phone_number,
-ADD COLUMN working_days VARCHAR(255) NULL AFTER cin_no,
-ADD COLUMN opening_time VARCHAR(255) NULL AFTER working_days,
-ADD COLUMN closing_time VARCHAR(255) NULL AFTER opening_time;
+ALTER TABLE `colors`
+ADD COLUMN `description` TEXT NULL AFTER `color_name`,
+ADD COLUMN `created_by` BIGINT UNSIGNED NULL AFTER `status`,
+ADD COLUMN `updated_by` BIGINT UNSIGNED NULL AFTER `created_by`;
+ALTER TABLE raw_materials
+DROP COLUMN color_id;
+ALTER TABLE raw_materials
+ADD COLUMN width VARCHAR(100) NULL
+AFTER size_width;
+ALTER TABLE purchase_orders
+ADD COLUMN additional_attachments VARCHAR(255) NULL
+AFTER status,
+ADD COLUMN round_off_type ENUM('Add', 'Less') NULL
+AFTER tax_amount,
+ADD COLUMN round_off DECIMAL(10,2) NOT NULL DEFAULT 0
+AFTER round_off_type;
+ALTER TABLE purchase_order_items
+ADD COLUMN color_id BIGINT UNSIGNED NULL
+AFTER uom_id;
 
-ALTER TABLE `stock_entries` DROP INDEX `stock_entries_stock_entry_no_unique`;
-ALTER TABLE `stock_entries` DROP INDEX `unique_grn_stock_entry`;
-ALTER TABLE `stock_entries` DROP `entry_type`;
-ALTER TABLE `stock_entry_items` ADD COLUMN `price` DECIMAL(15,2) NULL DEFAULT 0;
-ALTER TABLE purchase_invoices ADD COLUMN round_off DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER other_charges;
-ALTER TABLE purchase_invoices ADD COLUMN round_off_type ENUM('Add','Less') NOT NULL DEFAULT 'Add' AFTER other_charges;
-ALTER TABLE settings ADD COLUMN po_prefix VARCHAR(255) NULL AFTER closing_time, ADD COLUMN purchase_invoice_prefix VARCHAR(255) NULL AFTER po_prefix;
+CREATE TABLE styles (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    style_name VARCHAR(255) NOT NULL,
+    status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
+    created_by BIGINT UNSIGNED NULL,
+    updated_by BIGINT UNSIGNED NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+CREATE TABLE debit_notes (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    debit_note_no VARCHAR(255) NOT NULL UNIQUE,
+    debit_note_date DATE NOT NULL,
+
+    purchase_invoice_id BIGINT UNSIGNED NOT NULL,
+    supplier_id BIGINT UNSIGNED NOT NULL,
+
+    reason VARCHAR(255) NULL,
+
+    sub_total DECIMAL(15,2) NOT NULL DEFAULT 0,
+    tax_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+    other_charges DECIMAL(15,2) NOT NULL DEFAULT 0,
+
+    round_off_type ENUM('Add', 'Less') NOT NULL DEFAULT 'Add',
+    round_off DECIMAL(15,2) NOT NULL DEFAULT 0,
+    grand_total DECIMAL(15,2) NOT NULL DEFAULT 0,
+
+    remarks TEXT NULL,
+    reference_document VARCHAR(255) NULL,
+
+    status VARCHAR(255) NOT NULL DEFAULT 'Active',
+
+    created_by BIGINT UNSIGNED NULL,
+    updated_by BIGINT UNSIGNED NULL,
+
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+ALTER TABLE debit_notes
+ADD COLUMN other_state ENUM('Y','N') NOT NULL DEFAULT 'N'
+AFTER supplier_id,
+ADD COLUMN igst_percent DECIMAL(5,2) NOT NULL DEFAULT 0
+AFTER sub_total,
+ADD COLUMN cgst_percent DECIMAL(5,2) NOT NULL DEFAULT 0
+AFTER igst_percent,
+ADD COLUMN sgst_percent DECIMAL(5,2) NOT NULL DEFAULT 0
+AFTER cgst_percent;

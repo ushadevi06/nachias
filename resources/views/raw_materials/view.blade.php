@@ -64,9 +64,9 @@
                                     <th>#</th>
                                     <th>Store Category</th>
                                     <th>Name</th>
-                                    <th>Color</th>
                                     <th>UOM</th>
                                     <th>Fabric Type</th>
+                                    <th>Width</th>
                                     <th>Min Stock</th>
                                     <th>Created By</th>
                                     <th>Status</th>
@@ -109,13 +109,13 @@
                     data: 'name'
                 },
                 {
-                    data: 'color'
-                },
-                {
                     data: 'uom'
                 },
                 {
                     data: 'fabric_type'
+                },
+                {
+                    data: 'size_width'
                 },
                 {
                     data: 'min_stock'

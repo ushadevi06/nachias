@@ -164,51 +164,10 @@
                                 @enderror
                             </div>
 
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control h-px-100 @error('payment_terms') is-invalid @enderror"
-                                        id="payment_terms"
-                                        name="payment_terms"
-                                        placeholder="Enter Payment Terms">{{ old('payment_terms', $purchaseOrder->payment_terms ?? '') }}</textarea>
-                                    <label for="payment_terms">Payment Terms</label>
-                                </div>
-                                @error('payment_terms')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            @php
-                            $currentStatus = old('status', $purchaseOrder->status ?? 'Draft');
-
-                            $disabledStatuses = match ($currentStatus) {
-                            'Approved' => ['Draft'],
-                            'Dispatched' => ['Draft', 'Approved'],
-                            'Received' => ['Draft', 'Approved', 'Dispatched'],
-                            default => [],
-                            };
-                            @endphp
-
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="status" name="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
-                                        <option value="">Select Status</option>
-                                        @foreach(['Draft', 'Approved', 'Dispatched', 'Received'] as $status)
-                                        <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ in_array($status, $disabledStatuses) ? 'disabled' : '' }}>
-                                            {{ $status }}
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                    <label for="status">Status <span class="text-danger">*</span></label>
-                                </div>
-                                @error('status')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
 
                         </div>
                     </div>
                 </div>
-
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -221,13 +180,15 @@
                         <div id="item-rows">
                             <input type="hidden" id="itemIndex" value="{{ $purchaseOrder?->items?->count() ?? 1 }}">
                             <table class="table align-middle">
-                                <thead>
+                                <thead class="table-primary">
                                     <tr>
                                         <th>Category *</th>
                                         <th>Material *</th>
+                                        <th>Style</th>
                                         <th>UOM *</th>
                                         <th>Qty *</th>
                                         <th>Art No</th>
+                                        <th>Color</th>
                                         <th>Rate *</th>
                                         <th>Amount</th>
                                         <th>Remarks</th>
@@ -274,6 +235,21 @@
                                             @enderror
                                         </td>
                                         <td>
+                                            <select class="select2 form-select style @error('items.'.$index.'.style_id') is-invalid @enderror"
+                                                name="items[{{ $index }}][style_id]"
+                                                data-placeholder="Select Style">
+                                                <option value="">Select Style</option>
+                                                @foreach($styles as $style)
+                                                <option value="{{ $style->id }}" {{ ($item['style_id'] ?? '') == $style->id ? 'selected' : '' }}>
+                                                    {{ $style->style_name }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+                                            @error('items.'.$index.'.style_id')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                        </td>
+                                        <td>
                                             <select class="select2 form-select uom @error('items.'.$index.'.uom_id') is-invalid @enderror"
                                                 disabled
                                                 data-placeholder="Select UOM">
@@ -303,6 +279,21 @@
                                                 name="items[{{ $index }}][art_no]"
                                                 value="{{ $item['art_no'] ?? '' }}">
                                             @error('items.'.$index.'.art_no')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                        </td>
+                                        <td>
+                                            <select class="select2 form-select color @error('items.'.$index.'.color_id') is-invalid @enderror"
+                                                name="items[{{ $index }}][color_id]"
+                                                data-placeholder="Select Color">
+                                                <option value="">Select Color</option>
+                                                @foreach($colors as $color)
+                                                <option value="{{ $color->id }}" {{ ($item['color_id'] ?? '') == $color->id ? 'selected' : '' }}>
+                                                    {{ $color->color_name }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+                                            @error('items.'.$index.'.color_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
                                         </td>
@@ -379,6 +370,21 @@
                                             @enderror
                                         </td>
                                         <td>
+                                            <select class="select2 form-select style @error('items.'.$index.'.style_id') is-invalid @enderror"
+                                                name="items[{{ $index }}][style_id]"
+                                                data-placeholder="Select Style">
+                                                <option value="">Select Style</option>
+                                                @foreach($styles as $style)
+                                                <option value="{{ $style->id }}" {{ $item->style_id == $style->id ? 'selected' : '' }}>
+                                                    {{ $style->style_name }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+                                            @error('items.'.$index.'.style_id')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                        </td>
+                                        <td>
                                             <select class="select2 form-select uom @error('items.'.$index.'.uom_id') is-invalid @enderror"
                                                 disabled
                                                 data-placeholder="Select UOM">
@@ -407,6 +413,21 @@
                                                 name="items[{{ $index }}][art_no]"
                                                 value="{{ $item->art_no }}">
                                             @error('items.'.$index.'.art_no')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
+                                        </td>
+                                        <td>
+                                            <select class="select2 form-select color @error('items.'.$index.'.color_id') is-invalid @enderror"
+                                                name="items[{{ $index }}][color_id]"
+                                                data-placeholder="Select Color">
+                                                <option value="">Select Color</option>
+                                                @foreach($colors as $color)
+                                                <option value="{{ $color->id }}" {{ $item->color_id == $color->id ? 'selected' : '' }}>
+                                                    {{ $color->color_name }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+                                            @error('items.'.$index.'.color_id')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
                                         </td>
@@ -476,6 +497,16 @@
                                             </select>
                                         </td>
                                         <td>
+                                            <select class="select2 form-select style"
+                                                name="items[0][style_id]"
+                                                data-placeholder="Select Style">
+                                                <option value="">Select Style</option>
+                                                @foreach($styles as $style)
+                                                <option value="{{ $style->id }}">{{ $style->style_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        <td>
                                             <select class="select2 form-select uom"
                                                 disabled
                                                 data-placeholder="Select UOM">
@@ -494,6 +525,16 @@
                                         <td>
                                             <input type="text" class="form-control art_no"
                                                 name="items[0][art_no]">
+                                        </td>
+                                        <td>
+                                            <select class="select2 form-select color"
+                                                name="items[0][color_id]"
+                                                data-placeholder="Select Color">
+                                                <option value="">Select Color</option>
+                                                @foreach($colors as $color)
+                                                <option value="{{ $color->id }}">{{ $color->color_name }}</option>
+                                                @endforeach
+                                            </select>
                                         </td>
                                         <td>
                                             <input type="number" class="form-control rate"
@@ -525,137 +566,179 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row g-4">
-                            <div class="col-md-3 col-xl-2">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('total_qty') is-invalid @enderror" id="total_qty" name="total_qty" placeholder="Enter Quantity"
-                                        value="{{ old('total_qty', $purchaseOrder->total_qty ?? '') }}" readonly>
-                                    <label for="total_qty">Total Qty</label>
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="card-header-box">
+                                    <h4>Additional Information</h4>
                                 </div>
-                                @error('total_qty')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3 col-xl-2">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('sub_total') is-invalid @enderror" id="sub_total" name="sub_total"
-                                        value="{{ old('sub_total', $purchaseOrder->sub_total ?? '') }}" readonly>
-                                    <label for="sub_total">Sub Total</label>
-                                </div>
-                                @error('sub_total')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-4 col-xl-3">
-                                <div class="form-floating form-floating-outline">
-                                    <label class="form-label d-block mb-1">Discount:</label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent"
-                                            step="0.01" min="0" max="100" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
-                                        <span class="input-group-text">%</span>
-                                        <input type="text" class="form-control text-end @error('discount_amount') is-invalid @enderror" id="discount_amount" name="discount_amount"
-                                            value="{{ old('discount_amount', $purchaseOrder->discount_amount ?? '') }}" readonly>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        @php
+                                        $currentStatus = old('status', $purchaseOrder->status ?? 'Draft');
+                                        $disabledStatuses = match ($currentStatus) {
+                                            'Approved' => ['Draft'],
+                                            'Dispatched' => ['Draft', 'Approved'],
+                                            'Received' => ['Draft', 'Approved', 'Dispatched'],
+                                            default => [],
+                                        };
+                                        @endphp
+                                        <div class="form-floating form-floating-outline">
+                                            <select id="status" name="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
+                                                <option value="">Select Status</option>
+                                                @foreach(['Draft', 'Approved', 'Dispatched', 'Received'] as $status)
+                                                <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ in_array($status, $disabledStatuses) ? 'disabled' : '' }}>
+                                                    {{ $status }}
+                                                </option>
+                                                @endforeach
+                                            </select>
+                                            <label for="status">Status <span class="text-danger">*</span></label>
+                                        </div>
+                                        @error('status')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
-                                    @error('discount_percent')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                    @error('discount_amount')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" id="taxable_amount" name="taxable_amount" class="form-control @error('taxable_amount') is-invalid @enderror"
-                                        value="{{ old('taxable_amount', $purchaseOrder->taxable_amount ?? '') }}" readonly>
-                                    <label>Net Amount (Before Tax)</label>
-                                </div>
-                                @error('taxable_amount')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
 
-                            <div class="col-md-6 col-xl-4">
-                                <label class="">Other State</label>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_yes" value="yes"
-                                        {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="other_state_yes">Yes</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_no" value="no"
-                                        {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="other_state_no">No</label>
-                                </div>
-                                @error('other_state')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
+                                    <div class="col-12">
+                                        <div class="form-floating form-floating-outline">
+                                            <textarea class="form-control h-px-100 @error('payment_terms') is-invalid @enderror"
+                                                id="payment_terms"
+                                                name="payment_terms"
+                                                placeholder="Enter Payment Terms">{{ old('payment_terms', $purchaseOrder->payment_terms ?? '') }}</textarea>
+                                            <label for="payment_terms">Payment Terms</label>
+                                        </div>
+                                        @error('payment_terms')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
 
-                            <div class="col-md-3 col-xl-2 igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100"
-                                        value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? $web_settings->igst) }}">
-                                    <label for="igst_percent">IGST %</label>
+                                    <div class="col-12 file-container">
+                                        <div class="form-floating form-floating-outline text-black">
+                                            <input type="file" class="form-control file-input @error('additional_attachments') is-invalid @enderror" id="additional_attachments" name="additional_attachments">
+                                            <label for="additional_attachments">Additional Attachments</label>
+                                            @if($purchaseOrder && $purchaseOrder->additional_attachments)
+                                            <div class="mt-2">
+                                                <a href="javascript:void(0)" class="view-image mt-1 d-block"
+                                                        data-image="{{ asset('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments) }}">
+                                                        <i class="ri ri-image-line"></i> View
+                                                    </a>
+                                            </div>
+                                            @endif
+                                        </div>
+                                        @error('additional_attachments')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
                                 </div>
-                                @error('igst_percent')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3 col-xl-2 cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100"
-                                        value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? $web_settings->cgst) }}">
-                                    <label for="cgst_percent">CGST %</label>
-                                </div>
-                                @error('cgst_percent')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3 col-xl-2 sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100"
-                                        value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? $web_settings->sgst) }}">
-                                    <label for="sgst_percent">SGST %</label>
-                                </div>
-                                @error('sgst_percent')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3 col-xl-2">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('tax_amount') is-invalid @enderror" id="tax_amount" name="tax_amount"
-                                        value="{{ old('tax_amount', $purchaseOrder->tax_amount ?? '') }}" readonly>
-                                    <label for="tax_amount">Tax Amount</label>
-                                </div>
-                                @error('tax_amount')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="col-md-3 col-xl-2">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('total_amount') is-invalid @enderror" id="total_amount" name="total_amount"
-                                        value="{{ old('total_amount', $purchaseOrder->total_amount ?? '') }}" readonly>
-                                    <label for="total_amount">Total Amount</label>
-                                </div>
-                                @error('total_amount')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
                             </div>
                         </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="card-header-box">
+                                    <h4>Tax Summary</h4>
+                                </div>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="total_qty" class="fw-medium">Total Qty:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="total_qty" name="total_qty"
+                                                value="{{ old('total_qty', $purchaseOrder->total_qty ?? '') }}" readonly>
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="sub_total" class="fw-medium">Sub Total:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="sub_total" name="sub_total"
+                                                value="{{ old('sub_total', $purchaseOrder->sub_total ?? '') }}" readonly>
+                                        </div>
 
-                        <div class="col-lg-12 text-end mt-5">
-                            <button type="submit" class="btn btn-primary">Submit</button>
-                            <a href="{{ url('purchase_orders') }}" class="btn btn-secondary">Cancel</a>
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="fw-medium">Discount:</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent"
+                                                        step="0.01" min="0" max="100" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-1">
+                                                <input type="text" class="form-control-plaintext form-control-sm text-end py-0" id="discount_amount" name="discount_amount"
+                                                    value="{{ old('discount_amount', $purchaseOrder->discount_amount ?? '') }}" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                                            <label for="taxable_amount" class="fw-medium">Net Amount (Before Tax):</label>
+                                            <input type="text" id="taxable_amount" name="taxable_amount" class="form-control-plaintext text-end w-50 fw-bold"
+                                                value="{{ old('taxable_amount', $purchaseOrder->taxable_amount ?? '') }}" readonly>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Other State:</label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_yes" value="yes"
+                                                        {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="other_state_yes">Yes</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_no" value="no"
+                                                        {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="other_state_no">No</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') }}">
+                                        <!-- Tax Fields -->
+                                        <div class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label for="igst_percent" class="fw-medium">IGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? $web_settings->igst) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label for="cgst_percent" class="fw-medium">CGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100"
+                                                        value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? $web_settings->cgst) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label for="sgst_percent" class="fw-medium">SGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100"  value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? $web_settings->sgst) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="tax_amount" class="fw-medium">Tax Amount:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50" id="tax_amount" name="tax_amount" value="{{ old('tax_amount',$purchaseOrder->tax_amount ?? '') }}" readonly>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                                            <label for="total_amount" class="fw-bold fs-5">Total Amount:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold fs-5 text-primary" id="total_amount" name="total_amount" value="{{ old('total_amount', $purchaseOrder->total_amount ?? '') }}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-12 text-end mt-4">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                    <a href="{{ url('purchase_orders') }}" class="btn btn-secondary">Cancel</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -708,6 +791,16 @@
                     </select>
                 </td>
                 <td>
+                    <select class="select2 form-select style" 
+                            name="items[${itemIndex}][style_id]" 
+                            data-placeholder="Select Style">
+                        <option value="">Select Style</option>
+                        @foreach($styles as $style)
+                        <option value="{{ $style->id }}">{{ $style->style_name }}</option>
+                        @endforeach
+                    </select>
+                </td>
+                <td>
                     <select class="select2 form-select uom" 
                             disabled
                             data-placeholder="Select UOM">
@@ -726,6 +819,16 @@
                 <td>
                     <input type="text" class="form-control art_no" 
                         name="items[${itemIndex}][art_no]">
+                </td>
+                <td>
+                    <select class="select2 form-select color" 
+                            name="items[${itemIndex}][color_id]" 
+                            data-placeholder="Select Color">
+                        <option value="">Select Color</option>
+                        @foreach($colors as $color)
+                        <option value="{{ $color->id }}">{{ $color->color_name }}</option>
+                        @endforeach
+                    </select>
                 </td>
                 <td>
                     <input type="number" class="form-control rate" 
@@ -797,68 +900,67 @@
 
         // Load materials based on category
         $(document).on('change', '.po_store_category', function () {
-    let category_id = $(this).val();
-    let row = $(this).closest('tr');
-    let materialSelect = row.find('.material');
+            let category_id = $(this).val();
+            let row = $(this).closest('tr');
+            let materialSelect = row.find('.material');
 
-    // Fully destroy Select2 safely
-    if (materialSelect.hasClass("select2-hidden-accessible")) {
-        materialSelect.select2('destroy');
-    }
-
-    materialSelect.empty().append('<option value="">Select Material</option>');
-
-    if (!category_id) {
-        materialSelect.select2({
-            dropdownParent: materialSelect.parent(),
-            placeholder: materialSelect.data('placeholder'),
-            width: '100%'
-        });
-        return;
-    }
-
-    $.ajax({
-        url: APP_URL + '/get-materials-by-category/' + category_id,
-        type: 'GET',
-        success: function (response) {
-
-            let materialsHtml = '<option value="">Select Material</option>';
-
-            if (response.materials?.length) {
-                response.materials.forEach(material => {
-                    let materialName = material.name;
-                    if (typeof materialName === 'object' && materialName !== null) {
-                        // Attempt to find a suitable property like 'en', 'value', or just first value
-                        materialName = materialName.en || materialName.value || Object.values(materialName)[0] || JSON.stringify(materialName);
-                    }
-                    materialsHtml += `
-                        <option value="${material.id}" data-uom-id="${material.uom_id}">
-                            ${materialName} (${material.code})
-                        </option>`;
-                });
-            } else {
-                materialsHtml += '<option value="">No materials found</option>';
+            // Fully destroy Select2 safely
+            if (materialSelect.hasClass("select2-hidden-accessible")) {
+                materialSelect.select2('destroy');
             }
 
-            materialSelect.html(materialsHtml);
+            materialSelect.empty().append('<option value="">Select Material</option>');
 
-            // Re-init Select2 AFTER HTML update
-            materialSelect.select2({
-                dropdownParent: materialSelect.parent(),
-                placeholder: materialSelect.data('placeholder'),
-                width: '100%'
-            });
+            if (!category_id) {
+                materialSelect.select2({
+                    dropdownParent: materialSelect.parent(),
+                    placeholder: materialSelect.data('placeholder'),
+                    width: '100%'
+                });
+                return;
+            }
 
-            updateDisabledMaterials();
-        },
-        error: function () {
-            materialSelect.html('<option value="">Select Material</option>').select2({
-                dropdownParent: materialSelect.parent(),
-                width: '100%'
+            $.ajax({
+                url: APP_URL + '/get-materials-by-category/' + category_id,
+                type: 'GET',
+                success: function (response) {
+
+                    let materialsHtml = '<option value="">Select Material</option>';
+
+                    if (response.materials?.length) {
+                        response.materials.forEach(material => {
+                            let materialName = material.name;
+                            if (typeof materialName === 'object' && materialName !== null) {
+                                materialName = materialName.en || materialName.value || Object.values(materialName)[0] || JSON.stringify(materialName);
+                            }
+                            materialsHtml += `
+                                <option value="${material.id}" data-uom-id="${material.uom_id}">
+                                    ${materialName} (${material.code})
+                                </option>`;
+                        });
+                    } else {
+                        materialsHtml += '<option value="">No materials found</option>';
+                    }
+
+                    materialSelect.html(materialsHtml);
+
+                    // Re-init Select2 AFTER HTML update
+                    materialSelect.select2({
+                        dropdownParent: materialSelect.parent(),
+                        placeholder: materialSelect.data('placeholder'),
+                        width: '100%'
+                    });
+
+                    updateDisabledMaterials();
+                },
+                error: function () {
+                    materialSelect.html('<option value="">Select Material</option>').select2({
+                        dropdownParent: materialSelect.parent(),
+                        width: '100%'
+                    });
+                }
             });
-        }
-    });
-});
+        });
 
 
         // Set UOM based on material
@@ -901,50 +1003,43 @@
             calculateTotals();
         });
 
-        // Toggle tax fields based on other_state
-        $('input[name="other_state"]').on('change', function() {
-            if ($(this).val() === 'yes') {
-                $('.igst-field').removeClass('d-none');
-                $('.cgst-field, .sgst-field').addClass('d-none');
-            } else {
-                $('.igst-field').addClass('d-none');
-                $('.cgst-field, .sgst-field').removeClass('d-none');
-            }
+
+        $(document).on('input', '#discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off', function() {
             calculateTotals();
         });
 
-        // Recalculate on tax percentage change
-        $('#igst_percent, #cgst_percent, #sgst_percent').on('input', function() {
+        $(document).on('change', 'input[name="other_state"]', function() {
+            toggleTaxDivs();
             calculateTotals();
         });
 
-        // Calculate totals
         function calculateTotals() {
-            let totalQty = 0;
             let subTotal = 0;
+            let totalQty = 0;
 
-            $('#item-rows tbody tr').each(function() {
+            $('.item-row').each(function() {
                 let qty = parseFloat($(this).find('.quantity').val()) || 0;
-                let amount = parseFloat($(this).find('.amount').val()) || 0;
-                totalQty += qty;
+                let rate = parseFloat($(this).find('.rate').val()) || 0;
+                let amount = qty * rate;
+                $(this).find('.amount').val(amount.toFixed(2));
                 subTotal += amount;
+                totalQty += qty;
             });
 
             $('#total_qty').val(totalQty.toFixed(2));
             $('#sub_total').val(subTotal.toFixed(2));
 
-            // Calculate discount
             let discountPercent = parseFloat($('#discount_percent').val()) || 0;
             let discountAmount = (subTotal * discountPercent) / 100;
             $('#discount_amount').val(discountAmount.toFixed(2));
 
-            // Calculate taxable amount
             let taxableAmount = subTotal - discountAmount;
             $('#taxable_amount').val(taxableAmount.toFixed(2));
 
-            // Calculate tax
+            let otherState = $('input[name="other_state"]:checked').val();
             let taxAmount = 0;
-            if ($('input[name="other_state"]:checked').val() === 'yes') {
+
+            if (otherState === 'yes') {
                 let igstPercent = parseFloat($('#igst_percent').val()) || 0;
                 taxAmount = (taxableAmount * igstPercent) / 100;
             } else {
@@ -952,39 +1047,74 @@
                 let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
                 taxAmount = (taxableAmount * (cgstPercent + sgstPercent)) / 100;
             }
+
             $('#tax_amount').val(taxAmount.toFixed(2));
 
-            // Calculate total amount
-            let totalAmount = taxableAmount + taxAmount;
-            $('#total_amount').val(totalAmount.toFixed(2));
+            let totalBeforeRoundOff = taxableAmount + taxAmount;
+            
+            // Dynamic Round Off Logic
+            let finalTotal = Math.round(totalBeforeRoundOff);
+            let roundOffDifference = finalTotal - totalBeforeRoundOff;
+            let roundOffAmount = Math.abs(roundOffDifference);
+            
+            let roundOffType = '';
+            if (roundOffDifference > 0) {
+                roundOffType = 'Add';
+            } else if (roundOffDifference < 0) {
+                roundOffType = 'Less';
+            } else {
+                // If exact match
+                roundOffType = 'Add';
+                $('#round_off_type').val('Add');
+            }
+
+            $('#round_off').val(roundOffAmount.toFixed(2));
+            $('#total_amount').val(finalTotal.toFixed(2));
         }
 
-        // Image preview
-        $(document).on('click', '.view-image', function() {
-            let imageSrc = $(this).data('image');
-            $('#modalImage').attr('src', imageSrc);
-            $('#imageModal').modal('show');
-        });
-
-        // File input change - show thumbnail
-        $(document).on('change', '.file-input', function() {
-            let file = this.files[0];
-            if (file) {
-                let reader = new FileReader();
-                let $td = $(this).closest('td');
-
-                reader.onload = function(e) {
-                    $td.find('.view-image').remove();
-                    $td.append(`<a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="${e.target.result}">
-                    <i class="ri ri-image-line"></i> View
-                </a>`);
-                }
-                reader.readAsDataURL(file);
+        function toggleTaxDivs() {
+            let otherState = $('input[name="other_state"]:checked').val();
+            if (otherState === 'yes') {
+                $('.igst-field').removeClass('d-none');
+                $('.cgst-field, .sgst-field').addClass('d-none');
+            } else {
+                $('.igst-field').addClass('d-none');
+                $('.cgst-field, .sgst-field').removeClass('d-none');
             }
-        });
+        }
 
-        // Initial calculation
-        calculateTotals();
+       $(document).on('click', '.view-image', function () {
+        let imagePath = $(this).data('image');
+
+        // If already absolute URL or base64, use as is
+        let imageSrc = imagePath.startsWith('http') || imagePath.startsWith('data:')
+            ? imagePath
+            : APP_URL + imagePath;
+
+        $('#modalImage').attr('src', imageSrc);
+        $('#imageModal').modal('show');
     });
+
+    $(document).on('change', '.file-input', function () {
+        let file = this.files[0];
+        if (file) {
+            let reader = new FileReader();
+            let $container = $(this).closest('td, .file-container');
+
+            reader.onload = function (e) {
+                $container.find('.view-image').remove();
+                $container.append(`
+                    <a href="javascript:void(0)" 
+                       class="view-image mt-1 d-block" 
+                       data-image="${e.target.result}">
+                       <i class="ri ri-image-line"></i> View
+                    </a>
+                `);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    calculateTotals();
+});
 </script>
 @endsection

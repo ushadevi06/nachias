@@ -69,33 +69,14 @@
                                 @enderror
                             </div>
 
-                            <!-- Color -->
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select name="color_id" id="color_id" class="select2 form-select @error('color_id') is-invalid @enderror"
-                                        data-placeholder="Select Color">
-                                        <option value="">Select Color</option>
-                                        @foreach($colors as $color)
-                                        <option value="{{ $color->id }}"
-                                            {{ old('color_id', $rawMaterial->color_id ?? '') == $color->id ? 'selected' : '' }}>
-                                            {{ $color->color_name }}
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                    <label for="color_id">Color <span class="text-danger">*</span></label>
-                                </div>
-                                @error('color_id')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
 
                             <!-- Size / Width -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('size_width') is-invalid @enderror" id="size_width"
-                                        placeholder="Enter Size / Width" name="size_width"
+                                        placeholder="Enter Width" name="size_width"
                                         value="{{ old('size_width', $rawMaterial->size_width ?? '') }}">
-                                    <label for="size_width">Size / Width</label>
+                                    <label for="size_width">Width</label>
                                 </div>
                                 @error('size_width')
                                 <div class="text-danger mt-1">{{ $message }}</div>

@@ -121,9 +121,9 @@ $isSuper = $user->id == 1;
                                 @endif
 
                                 <!-- Master -->
-                                @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service providers') ||
+                                @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view colors') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service providers') ||
                                 $user->can('view sales-agents') || $user->can('view purchase-commission-agent') || $user->can('view store categories') || $user->can('view raw materials') || $user->can('view brand categories') || $user->can('view brands') || $user->can('view items')))
-                                <li class="menu-item {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*')) ? 'active' : '' }}">
+                                <li class="menu-item {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('colors*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('styles*') || request()->is('fit*') || request()->is('patti_type*') || request()->is('collar_type*') || request()->is('cuff_type*') || request()->is('pocket_type*') || request()->is('bottom_cut*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-layout-2-line"></i>
                                         <div>Master</div>
@@ -159,6 +159,14 @@ $isSuper = $user->id == 1;
                                         <li class="menu-item {{ request()->is('uoms*') ? 'active' : '' }}">
                                             <a href="{{ url('uoms') }}" class="menu-link">
                                                 <div>UOM</div>
+                                            </a>
+                                        </li>
+                                        @endif
+
+                                        @if($isSuper || $user->can('view colors'))
+                                        <li class="menu-item {{ request()->is('colors*') ? 'active' : '' }}">
+                                            <a href="{{ url('colors') }}" class="menu-link">
+                                                <div>Colors</div>
                                             </a>
                                         </li>
                                         @endif
@@ -226,6 +234,58 @@ $isSuper = $user->id == 1;
                                             </a>
                                         </li>
                                         @endif
+
+                                        @if($isSuper || $user->can('view styles'))
+                                        <li class="menu-item {{ request()->is('styles*') ? 'active' : '' }}">
+                                            <a href="{{ url('styles') }}" class="menu-link">
+                                                <div>Styles</div>
+                                            </a>
+                                        </li>
+                                        @endif
+
+                                        <!-- Tailoring Specification -->
+                                        <li class="menu-item {{ (request()->is('fit*') || request()->is('patti_type*') || request()->is('collar_type*') || request()->is('cuff_type*') || request()->is('pocket_type*') || request()->is('bottom_cut*')) ? 'active' : '' }}">
+                                            <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                                <div>Tailoring Specification</div>
+                                            </a>
+                                            <ul class="menu-sub">
+                                                <li class="menu-item {{ request()->is('fit*') ? 'active' : '' }}">
+                                                    <a href="{{ url('fit') }}" class="menu-link">
+                                                        <div>Fit</div>
+                                                    </a>
+                                                </li>
+
+                                                <li class="menu-item {{ request()->is('patti_type*') ? 'active' : '' }}">
+                                                    <a href="{{ url('patti_type') }}" class="menu-link">
+                                                        <div>Patti Type</div>
+                                                    </a>
+                                                </li>
+
+                                                <li class="menu-item {{ request()->is('collar_type*') ? 'active' : '' }}">
+                                                    <a href="{{ url('collar_type') }}" class="menu-link">
+                                                        <div>Collar Type</div>
+                                                    </a>
+                                                </li>
+
+                                                <li class="menu-item {{ request()->is('cuff_type*') ? 'active' : '' }}">
+                                                    <a href="{{ url('cuff_type') }}" class="menu-link">
+                                                        <div>Cuff Type</div>
+                                                    </a>
+                                                </li>
+
+                                                <li class="menu-item {{ request()->is('pocket_type*') ? 'active' : '' }}">
+                                                    <a href="{{ url('pocket_type') }}" class="menu-link">
+                                                        <div>Pocket Type</div>
+                                                    </a>
+                                                </li>
+
+                                                <li class="menu-item {{ request()->is('bottom_cut*') ? 'active' : '' }}">
+                                                    <a href="{{ url('bottom_cut') }}" class="menu-link">
+                                                        <div>Bottom Cut</div>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </li>
 
                                         <!-- Parties -->
                                         @if($isSuper || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales agents') || $user->can('view purchase commission agents'))
@@ -337,7 +397,7 @@ $isSuper = $user->id == 1;
                                 @endif
 
                                 <!-- Purchase -->
-                                @if($user && ($isSuper || $user->can('view purchase-order') || $user->can('view purchase-invoice') || $user->can('view debit-notes')))
+                                @if($user && ($isSuper || $user->can('view purchase-order') || $user->can('view purchase-invoice') || $user->can('view debit-note')))
                                 <li class="menu-item {{ (request()->is('purchase_orders*') || request()->is('purchase_invoices*') || request()->is('debit_notes*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-file-list-3-line"></i>
@@ -360,7 +420,7 @@ $isSuper = $user->id == 1;
                                         </li>
                                         @endif
 
-                                        @if($isSuper || $user->can('view debit-notes'))
+                                        @if($isSuper || $user->can('view debit-note'))
                                         <li class="menu-item {{ request()->is('debit_notes*') ? 'active' : '' }}">
                                             <a href="{{ url('debit_notes') }}" class="menu-link">
                                                 <div>Debit Notes</div>
@@ -408,8 +468,8 @@ $isSuper = $user->id == 1;
                                 @endif
 
                                 {{-- Production --}}
-                                @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card')))
-                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*')) ? 'active' : '' }}">
+                                @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card') || $user->can('view task-creation') || $user->can('view task-assignment') || $user->can('view task-tracking-monitoring') || $user->can('view task-status-updates')))
+                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('task_management*') || request()->is('add_task_management*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-inbox-line"></i>
                                         <div>Production</div>
@@ -430,47 +490,11 @@ $isSuper = $user->id == 1;
                                             </a>
                                         </li>
                                         @endif
-                                    </ul>
-                                </li>
-                                @endif
-                                @if($isSuper || $user->can('view task-creation') || $user->can('view task-assignment') || $user->can('view task-tracking-monitoring') || $user->can('view task-status-updates'))
-                                <li class="menu-item {{ (request()->is('task_creation') || request()->is('add_task_creation') || request()->is('view_task_creation') || request()->is('task_assignment') || request()->is('view_task_assignment') || request()->is('task_management')) ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-task-line"></i>
-                                        <div>Task Management</div>
-                                    </a>
 
-                                    <ul class="menu-sub">
-
-                                        @if($isSuper || $user->can('view task-creation'))
-                                        <li class="menu-item {{ request()->is('task_creation') || request()->is('add_task_creation') ? 'active' : '' }}">
-                                            <a href="{{ url('task_creation') }}" class="menu-link">
-                                                <div>Task Creation</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view task-assignment'))
-                                        <li class="menu-item {{ request()->is('task_assignment') ? 'active' : '' }}">
-                                            <a href="{{ url('task_assignment') }}" class="menu-link">
-                                                <div>Task Assignment</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view task-tracking-monitoring'))
-                                        <li
-                                            class="menu-item {{ request()->is('task_tracking_monitoring') || request()->is('add_task_tracking_monitoring') || request()->is('view_task_tracking_monitoring') ? 'active' : '' }}">
-                                            <a href="{{ url('task_tracking_monitoring') }}" class="menu-link">
-                                                <div>Task Tracking & Monitoring</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isSuper || $user->can('view task-status-updates'))
-                                        <li
-                                            class="menu-item {{ request()->is('task_status_updates') || request()->is('add_task_status_update') || request()->is('view_task_status_update') ? 'active' : '' }}">
-                                            <a href="{{ url('task_status_updates') }}" class="menu-link">
-                                                <div>Task Status Updates</div>
+                                        @if($isSuper || $user->can('view task-assignment') || $user->can('view task-tracking-monitoring') || $user->can('view task-status-updates'))
+                                        <li class="menu-item {{ request()->is('task_management*') ? 'active' : '' }}">
+                                            <a href="{{ url('task_management') }}" class="menu-link">
+                                                <div>Task Management</div>
                                             </a>
                                         </li>
                                         @endif

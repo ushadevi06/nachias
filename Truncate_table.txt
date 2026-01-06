@@ -23,9 +23,6 @@ TRUNCATE `zones`;
 TRUNCATE `operation_stages`;
 
 
-TRUNCATE `grn_entries`;
-TRUNCATE `grn_entry_item_variants`;
-TRUNCATE `grn_entry_items`;
 TRUNCATE `logs`;
 TRUNCATE `purchase_orders`;
 TRUNCATE `purchase_order_items`;

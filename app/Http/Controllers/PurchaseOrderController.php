@@ -10,6 +10,8 @@ use App\Models\StoreType;
 use App\Models\StoreCategory;
 use App\Models\RawMaterial;
 use App\Models\Uom;
+use App\Models\Color;
+use App\Models\Style;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -102,7 +104,7 @@ class PurchaseOrderController extends Controller
                     'reference_no' => $po->reference_no ?? '-',
                     'due_date' => $po->due_date->format('d-m-Y'),
                     'delivery_location' => $po->storeType->store_type_name ?? '-',
-                    'total_qty' => number_format($po->total_qty, 2) . ' ' . ($po->items->first()->uom->uom_code ?? ''),
+                    'total_qty' => number_format($po->total_qty, 2),
                     'order_date' => $po->order_date->format('d-m-Y'),
                     'status' => $statusDropdown,
                     'total_amount' => '₹' . number_format($po->total_amount, 2),
@@ -158,7 +160,12 @@ class PurchaseOrderController extends Controller
                 'items.*.rate' => 'required|numeric|min:0',
                 'items.*.remarks' => 'nullable|string|max:500',
                 'items.*.attached_file' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
-                'discount_percent' => 'nullable'
+                'items.*.color_id' => 'nullable|exists:colors,id',
+                'items.*.style_id' => 'nullable|exists:styles,id',
+                'discount_percent' => 'nullable',
+                'additional_attachments' => 'nullable|file|max:5120',
+                'round_off_type' => 'nullable|in:Add,Less',
+                'round_off' => 'nullable|numeric|min:0',
             ];
 
             $messages = [
@@ -204,6 +211,8 @@ class PurchaseOrderController extends Controller
                     'cgst_percent' => $request->cgst_percent ?? 0,
                     'sgst_percent' => $request->sgst_percent ?? 0,
                     'tax_amount' => $request->tax_amount ?? 0,
+                    'round_off_type' => $request->round_off_type,
+                    'round_off' => $request->round_off ?? 0,
                     'total_amount' => $request->total_amount ?? 0,
                 ];
 
@@ -226,6 +235,17 @@ class PurchaseOrderController extends Controller
                     $message = 'Purchase Order created successfully';
                 }
 
+                if ($request->hasFile('additional_attachments')) {
+                    $file = $request->file('additional_attachments');
+                    $fileName = 'additional_' . time() . '.' . $file->getClientOriginalExtension();
+                    $uploadPath = public_path('uploads/po/' . $purchaseOrder->id);
+                    if (!file_exists($uploadPath)) {
+                        mkdir($uploadPath, 0755, true);
+                    }
+                    $file->move($uploadPath, $fileName);
+                    $purchaseOrder->update(['additional_attachments' => $fileName]);
+                }
+
                 foreach ($request->items as $index => $item) {
                     $itemData = [
                         'purchase_order_id' => $purchaseOrder->id,
@@ -237,6 +257,8 @@ class PurchaseOrderController extends Controller
                         'rate' => $item['rate'],
                         'amount' => $item['quantity'] * $item['rate'],
                         'remarks' => $item['remarks'],
+                        'color_id' => $item['color_id'] ?? null,
+                        'style_id' => $item['style_id'] ?? null,
                     ];
 
                     if (isset($item['attached_file']) && $request->hasFile("items.{$index}.attached_file")) {
@@ -268,6 +290,8 @@ class PurchaseOrderController extends Controller
         $storeTypes = StoreType::get();
         $storeCategories = StoreCategory::active()->get();
         $uoms = Uom::active()->get();
+        $colors = Color::where('status', 'Active')->get();
+        $styles = Style::active()->get();
 
         $nextPoNumber = '';
         if (!$id) {
@@ -279,7 +303,6 @@ class PurchaseOrderController extends Controller
                     ->first();
                 
                 if ($lastPo) {
-                    // Extract the numeric part after the prefix
                     $lastNumberStr = substr($lastPo->po_number, strlen($prefix));
                     $lastNumber = intval($lastNumberStr);
                     $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
@@ -289,7 +312,7 @@ class PurchaseOrderController extends Controller
                 $nextPoNumber = $prefix . $nextNumber;
             }
         }
-        return view('purchase_orders.add', compact('purchaseOrder', 'salesAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'nextPoNumber'));
+        return view('purchase_orders.add', compact('purchaseOrder', 'salesAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'nextPoNumber'));
     }
 
     public function view($id)
@@ -315,6 +338,17 @@ class PurchaseOrderController extends Controller
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }
+            }
+        }
+
+        if ($purchaseOrder->additional_attachments) {
+            $filePath = public_path('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments);
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+            $folderPath = public_path('uploads/po/' . $purchaseOrder->id);
+            if (is_dir($folderPath)) {
+                rmdir($folderPath);
             }
         }
 

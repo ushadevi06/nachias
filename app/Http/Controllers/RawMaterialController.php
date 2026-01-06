@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\RawMaterial;
 use App\Models\StoreCategory;
-use App\Models\Color;
 use App\Models\Uom;
 use App\Models\FabricType;
 use Illuminate\Http\Request;
@@ -22,7 +21,7 @@ class RawMaterialController extends Controller
 
         if ($request->ajax()) {
 
-            $query = RawMaterial::with('storeCategory', 'color', 'uom', 'fabricType');
+            $query = RawMaterial::with('storeCategory', 'uom', 'fabricType');
 
             if ($request->category_id) {
                 $query->where('store_category_id', $request->category_id);
@@ -73,9 +72,9 @@ class RawMaterialController extends Controller
                     'category'    => '<span class="badge bg-light-primary">' .
                         ($material->storeCategory->category_name ?? '-') . '</span>',
                     'name'        => $material->name,
-                    'color'       => $material->color->color_name ?? '-',
                     'uom'         => $material->uom->uom_code ?? '-',
                     'fabric_type' => $material->fabricType->fabric_type ?? '-',
+                    'size_width'  => $material->size_width ?? '-',
                     'min_stock'   => $material->min_stock,
                     'created_by'  => createdByName($material->created_by),
                     'status'      => $status,
@@ -114,8 +113,7 @@ class RawMaterialController extends Controller
                 'code' => 'required|string|max:50|unique:raw_materials,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'name' => 'required|string|max:150',
                 'supplier_design_name' => 'nullable|string|max:150',
-                'color_id' => 'required|exists:colors,id',
-                'size_width' => 'nullable|string|max:100',
+                'size_width' => 'nullable|numeric|min:0',
                 'uom_id' => 'required|exists:uoms,id',
                 'fabric_type_id' => 'required|exists:fabric_types,id',
                 'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -127,6 +125,7 @@ class RawMaterialController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'size_width' => 'Width must be a number.',
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -136,7 +135,6 @@ class RawMaterialController extends Controller
                 'code' => $request->code,
                 'name' => $request->name,
                 'supplier_design_name' => $request->supplier_design_name,
-                'color_id' => $request->color_id,
                 'size_width' => $request->size_width,
                 'uom_id' => $request->uom_id,
                 'fabric_type_id' => $request->fabric_type_id,
@@ -185,11 +183,10 @@ class RawMaterialController extends Controller
         }
 
         $storeCategories = StoreCategory::where('status', 'Active')->get();
-        $colors = Color::get();
         $uoms = Uom::where('status', 'Active')->get();
         $fabricTypes = FabricType::where('status', 'Active')->get();
 
-        return view('raw_materials.add', compact('rawMaterial', 'storeCategories', 'colors', 'uoms', 'fabricTypes'));
+        return view('raw_materials.add', compact('rawMaterial', 'storeCategories', 'uoms', 'fabricTypes'));
     }
 
     public function destroy($id)

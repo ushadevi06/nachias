@@ -33,7 +33,10 @@ class PurchaseOrder extends Model
         'cgst_percent',
         'sgst_percent',
         'tax_amount',
+        'round_off_type',
+        'round_off',
         'total_amount',
+        'additional_attachments',
     ];
 
     protected $casts = [
@@ -52,6 +55,7 @@ class PurchaseOrder extends Model
         'cgst_percent' => 'decimal:2',
         'sgst_percent' => 'decimal:2',
         'tax_amount' => 'decimal:2',
+        'round_off' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];
 

@@ -70,9 +70,10 @@ class PurchaseInvoiceController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view purchase-invoice')) {
                     $action .= '<a href="' . url('purchase_invoices/view/' . $invoice->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if (auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) {
+                if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status === 'Draft') {
                     $action .= '<a href="' . url('purchase_invoices/add/' . $invoice->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
+
                 // if (auth()->id() == 1 || auth()->user()->can('delete purchase-invoice')) {
                 //     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('purchase_invoices/delete/' . $invoice->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 // }
@@ -231,7 +232,6 @@ class PurchaseInvoiceController extends Controller
                     'notes' => $request->notes,
                 ];
 
-                // Handle file uploads
                 $uploadPath = public_path('uploads/purchase_invoices');
 
                 if (!file_exists($uploadPath)) {
@@ -269,7 +269,6 @@ class PurchaseInvoiceController extends Controller
                     addLog('update','Purchase Invoice','purchase_invoices',$id,$oldData,$newData);
                     $message = 'Purchase Invoice updated successfully';
 
-                    // Log new payment if provided
                     $newPayment = $request->received_amount ?? 0;
                     if ($newPayment > 0) {
                         \App\Models\PurchaseInvoicePayment::create([
@@ -282,7 +281,6 @@ class PurchaseInvoiceController extends Controller
                         ]);
                     }
 
-                    // Recalculate totals from all payments
                     $totalReceived = \App\Models\PurchaseInvoicePayment::where('purchase_invoice_id', $invoice->id)->sum('amount');
                     $invoice->update([
                         'received_amount' => $totalReceived,
@@ -292,7 +290,6 @@ class PurchaseInvoiceController extends Controller
                     $invoiceData['created_by'] = auth()->id();
                     $invoice = PurchaseInvoice::create($invoiceData);
                     
-                    // Log initial payment if positive
                     if ($request->received_amount > 0) {
                         \App\Models\PurchaseInvoicePayment::create([
                             'purchase_invoice_id' => $invoice->id,
@@ -308,8 +305,6 @@ class PurchaseInvoiceController extends Controller
                     addLog('create','Purchase Invoice','purchase_invoices',$invoice->id,null,$newData);
                     $message = 'Purchase Invoice created successfully';
                 }
-
-                // Final sync of totals happens inside the if/else blocks now
 
 
                 if ($request->has('items')) {
@@ -423,7 +418,6 @@ class PurchaseInvoiceController extends Controller
         }
         $invoice = PurchaseInvoice::findOrFail($id);
 
-        // Delete uploaded files
         if ($invoice->auth_sign) {
             $filePath = public_path('uploads/invoices/' . $invoice->auth_sign);
             if (file_exists($filePath)) {
@@ -482,7 +476,7 @@ class PurchaseInvoiceController extends Controller
                 'hsn_code' => $item->rawMaterial->hsn_code ?? '',
                 'quantity' => $balanceQty,
                 'qty_ordered' => $item->quantity,
-                'qty_invoiced' => $alreadyInvoicedQty,  // ← ADD THIS LINE
+                'qty_invoiced' => $alreadyInvoicedQty, 
                 'balance_qty' => $balanceQty,
                 'uom_id' => $item->uom_id,
                 'uom_code' => $item->uom->uom_code,
@@ -508,7 +502,8 @@ class PurchaseInvoiceController extends Controller
         $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
         $pdf = Pdf::loadView('purchase_invoice.purchase_invoice_pdf', compact('invoice'));
         $pdf->setPaper('A4', 'portrait');
-        return $pdf->stream('Purchase_Invoice_' . $invoice->invoice_no . '.pdf');
+        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->invoice_no);
+        return $pdf->stream('Purchase_Invoice_' . $safeInvoiceNo . '.pdf');
     }
     public function deleteCharge($id)
     {

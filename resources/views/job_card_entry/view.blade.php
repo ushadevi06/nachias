@@ -17,23 +17,26 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Job Card Number</th>
-                                    <th>Sales Order </th>
-                                    <th>Customer / Buyer Name</th>
-                                    <th>Delivery Date </th>
+                                    <th>Job Card No</th>
+                                    <th>Issue Date</th>
+                                    <th>Delivery Date</th>
+                                    <th>Total Meters</th>
+                                    <th>Total Items</th>
+                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td>1</td>
-                                    <td>JC20250924-001-K</td>
-                                    <td>S0-1001</td>
-                                    <td>Hero Mens Wear <span class="mini-title">(CUS001)</span></td>
+                                    <td class="fw-bold">JC20250924-001-K</td>
+                                    <td>16-12-2023</td>
                                     <td>24-09-2025</td>
+                                    <td>103.5</td>
+                                    <td>246</td>
+                                    <td><span class="badge rounded-pill bg-label-primary">Created</span></td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="#" class="btn btn-item"><i class="icon-base ri ri-box-3-line"></i></i></a>
                                             <a href="{{ url('view_job_card_entry') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
                                             <a href="{{ url('add_job_card_entry') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
@@ -42,13 +45,14 @@
                                 </tr>
                                 <tr>
                                     <td>2</td>
-                                    <td>JC20250924-002-K</td>
-                                    <td>SO-1002</td>
-                                    <td>Unlimited Fashion Store <span class="mini-title">(CUS002)</span></td>
+                                    <td class="fw-bold">JC20250924-002-K</td>
+                                    <td>17-12-2023</td>
                                     <td>21-09-2025</td>
+                                    <td>91.0</td>
+                                    <td>111</td>
+                                    <td><span class="badge rounded-pill bg-label-warning">Fabric Issued</span></td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="#" class="btn btn-item"><i class="icon-base ri ri-box-3-line"></i></i></a>
                                             <a href="{{ url('view_job_card_entry') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
                                             <a href="{{ url('add_job_card_entry') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
@@ -57,13 +61,14 @@
                                 </tr>
                                 <tr>
                                     <td>3</td>
-                                    <td>JC20250924-003-K</td>
-                                    <td>SO-1002</td>
-                                    <td>Unlimited Fashion Store <span class="mini-title">(CUS002)</span></td>
+                                    <td class="fw-bold">JC20250924-003-K</td>
+                                    <td>18-12-2023</td>
                                     <td>21-09-2025</td>
+                                    <td>112.0</td>
+                                    <td>135</td>
+                                    <td><span class="badge rounded-pill bg-label-info">In Cutting</span></td>
                                     <td>
                                         <div class="button-box">
-                                            <a href="#" class="btn btn-item"><i class="icon-base ri ri-box-3-line"></i></i></a>
                                             <a href="{{ url('view_job_card_entry') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
                                             <a href="{{ url('add_job_card_entry') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                                             <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>

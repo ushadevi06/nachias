@@ -15,6 +15,8 @@ class PurchaseOrderItem extends Model
         'store_category_id',
         'raw_material_id',
         'uom_id',
+        'color_id',
+        'style_id',
         'quantity',
         'art_no',
         'rate',
@@ -47,5 +49,15 @@ class PurchaseOrderItem extends Model
     public function uom()
     {
         return $this->belongsTo(Uom::class);
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(Color::class);
+    }
+
+    public function style()
+    {
+        return $this->belongsTo(Style::class);
     }
 }

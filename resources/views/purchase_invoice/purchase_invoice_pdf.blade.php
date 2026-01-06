@@ -1,494 +1,374 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="utf-8">
-    <title>Tax Invoice</title>
-    <style>
-        @page { 
-            margin: 15px 20px; 
-            size: A4;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'DejaVu Sans', Arial, sans-serif;
-            font-size: 9px;
-            color: #000;
-            line-height: 1.2;
-        }
-        
-        /* Main Wrapper Margin */
-        .pdf-section {
-            margin: 10px;
-        }
-        
-        /* Consistent spacing between sections */
-        .pdf-section > div, 
-        .pdf-section > table {
-            margin: 0;
-            width: 100%; /* Ensure full width */
-        }
-        
-        /* Header Section */
-        .header-container {
-            border: 1px solid #000;
-        }
-        .header-row {
-            display: table;
-            width: 100%;
-            border-bottom: 1px solid #000;
-        }
-        .header-left {
-            display: table-cell;
-            width: 70%;
-            padding: 5px;
-            vertical-align: top;
-            border-right: 1px solid #000;
-        }
-        .header-right {
-            display: table-cell;
-            width: 30%;
-            padding: 5px;
-            vertical-align: top;
-            text-align: center;
-        }
-        .company-name {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-        .company-details {
-            font-size: 8px;
-            line-height: 1.3;
-        }
-        .tax-invoice-title {
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .qr-placeholder {
-            width: 80px;
-            height: 80px;
-            border: 1px solid #000;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 7px;
-        }
-        
-        /* Invoice Details Section */
-        .details-section {
-            border: 1px solid #000;
-            border-top: none;
-        }
-        .details-row {
-            display: table;
-            width: 100%;
-        }
-        .details-left {
-            display: table-cell;
-            width: 50%;
-            padding: 4px;
-            vertical-align: top;
-            border-right: 1px solid #000;
-        }
-        .details-right {
-            display: table-cell;
-            width: 50%;
-            padding: 4px;
-            vertical-align: top;
-        }
-        .detail-line {
-            margin-bottom: 2px;
-            font-size: 8px;
-        }
-        .detail-label {
-            font-weight: bold;
-            display: inline-block;
-            width: 80px;
-        }
-        
-        /* Supplier/Delivery Section */
-        .party-section {
-            border: 1px solid #000;
-            border-top: none;
-        }
-        .party-row {
-            display: table;
-            width: 100%;
-            border-bottom: 1px solid #000;
-        }
-        .party-row:last-child {
-            border-bottom: none;
-        }
-        .party-cell {
-            display: table-cell;
-            width: 50%;
-            padding: 4px;
-            vertical-align: top;
-        }
-        .party-cell:first-child {
-            border-right: 1px solid #000;
-        }
-        .party-title {
-            font-weight: bold;
-            font-size: 9px;
-            margin-bottom: 3px;
-            text-decoration: underline;
-        }
-        
-        /* Items Table */
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 8px;
-        }
-        .items-table th {
-            background: #f0f0f0;
-            border: 1px solid #000;
-            padding: 3px 2px;
-            font-weight: bold;
-            text-align: center;
-            font-size: 8px;
-        }
-        .items-table td {
-            border: 1px solid #000;
-            padding: 3px 2px;
-            text-align: center;
-        }
-        .items-table td.left {
-            text-align: left;
-        }
-        .items-table td.right {
-            text-align: right;
-        }
-        
-        /* Summary Section */
-        .summary-section {
-            border: 1px solid #000;
-            border-top: none;
-        }
-        .summary-row {
-            display: table;
-            width: 100%;
-        }
-        .summary-left {
-            display: table-cell;
-            width: 60%;
-            padding: 4px;
-            vertical-align: top;
-            border-right: 1px solid #000;
-        }
-        .summary-right {
-            display: table-cell;
-            width: 40%;
-            padding: 4px;
-            vertical-align: top;
-        }
-        .summary-line {
-            display: table;
-            width: 100%;
-            margin-bottom: 1px;
-            font-size: 8px;
-        }
-        .summary-label {
-            display: table-cell;
-            text-align: right;
-            padding-right: 10px;
-            width: 70%;
-        }
-        .summary-value {
-            display: table-cell;
-            text-align: right;
-            width: 30%;
-        }
-        .total-words {
-            font-size: 8px;
-            font-weight: bold;
-            margin-top: 3px;
-        }
-        
-        /* Bank Details */
-        .bank-section {
-            border: 1px solid #000;
-            border-top: none;
-            padding: 4px;
-        }
-        .bank-title {
-            font-weight: bold;
-            font-size: 9px;
-            margin-bottom: 3px;
-        }
-        .bank-details {
-            font-size: 8px;
-            line-height: 1.4;
-        }
-        
-        /* Footer */
-        .footer-section {
-            border: 1px solid #000;
-            border-top: none;
-        }
-        .footer-row {
-            display: table;
-            width: 100%;
-        }
-        .footer-left {
-            display: table-cell;
-            width: 60%;
-            padding: 4px;
-            vertical-align: top;
-            border-right: 1px solid #000;
-        }
-        .footer-right {
-            display: table-cell;
-            width: 40%;
-            padding: 4px;
-            vertical-align: bottom;
-            text-align: center;
-        }
-        .terms-title {
-            font-weight: bold;
-            font-size: 8px;
-            margin-bottom: 2px;
-        }
-        .terms-list {
-            font-size: 7px;
-            padding-left: 12px;
-            line-height: 1.3;
-        }
-        .signature-line {
-            border-top: 1px solid #000;
-            margin-top: 30px;
-            padding-top: 2px;
-            font-size: 8px;
-            font-weight: bold;
-        }
-    </style>
+<meta charset="utf-8">
+<title>Tax Invoice</title>
+
+<style>
+@page {
+    size: A4;
+    margin: 15px 20px;
+}
+
+body {
+    font-family: DejaVu Sans, Arial, sans-serif;
+    font-size: 9px;
+    color: #000;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td {
+    vertical-align: top;
+}
+
+/* Header */
+.company-name {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.company-details {
+    font-size: 8.8px;
+    line-height: 1.4;
+}
+
+.double-bottom {
+    border-bottom: 4px double #000;
+}
+
+.table-wrapper {
+    width: 100%;
+    max-width: 900px;
+    border: 1px solid #000;
+    background-color: #fff;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .invoice-items {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .invoice-items th {
+    background-color: #f2f2f2;
+    border-bottom: 1px solid #000;
+    border-right: 1px solid #000;
+    padding: 6px 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .invoice-items td {
+    border-right: 1px solid #000;
+    padding: 4px 8px;
+    font-size: 12px;
+    vertical-align: top;
+    height: 20px;
+  }
+
+  .invoice-items th:last-child,
+  .invoice-items td:last-child {
+    border-right: none;
+  }
+
+  /* Column Widths */
+  .col-sn { width: 3%; padding-left: 0; padding-right: 0; }
+  .col-desc { width: 44%; }
+  .col-bale { width: 10%; }
+  .col-pcs { width: 7%; }
+  .col-meters { width: 7%; }
+  .col-uom { width: 5%; }
+  .col-rate { width: 10%; }
+  .col-amount { width: 14%; }
+
+  /* Alignment Helpers */
+  .center { text-align: center; }
+  .left { text-align: left; }
+  .right { text-align: right; }
+  .bold { font-weight: bold; }
+
+  /* Filler row to create the long vertical lines effect */
+  .filler-row td {
+    height: 300px; 
+  }
+
+  .gross-total-row td {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    background-color: #fff;
+    padding: 6px 8px;
+  }
+</style>
 </head>
+
 <body>
-    <section class="pdf-section">
-        <!-- Header Section -->
-        <div class="header-container">
-            <div class="header-row">
-                <div class="header-left">
-                    <div class="company-name">INDRAPUJA POLYCOT (INDIA)</div>
-                    <div class="company-details">
-                        <strong>Sales-Off :</strong> 1, Postal Addr.:Shop No. 6,7, Ground Floor, Ring Rd, 150, Dr. Viegas Street,Saudathi Khatari Bldg.,<br>
-                        Opp.Bata Showroom, Kalbadevi Road, Mumbai - 400 002 | <strong>Tel: 022-22015066/67</strong><br>
-                        <strong>Email:</strong> indrapujapolycot@gmail.com | <strong>Website:</strong> www.indrapujapolycot.com<br>
-                        <strong>GSTIN:</strong> 27AACFI6271F1ZT | <strong>PAN:</strong> AACFI6271F | <strong>State:</strong> Maharashtra (27)
-                    </div>
-                </div>
-                <div class="header-right">
-                    <div class="tax-invoice-title">TAX INVOICE</div>
-                    <div class="qr-placeholder">
-                        QR CODE
-                    </div>
-                    <div style="font-size: 7px; margin-top: 3px;">IRN: 24 hrs Valid</div>
-                </div>
-            </div>
-        </div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #000; border-collapse: collapse;">
+    <tr style="border-bottom:4px double #000;">
+        <!-- LEFT -->
+        <td width="75%" style="border-right:1px solid #000; vertical-align:top;">
 
-        <!-- Invoice Details -->
-        <div class="details-section">
-            <div class="details-row">
-                <div class="details-left">
-                    <div class="detail-line"><span class="detail-label">Invoice No:</span> FSI/23/24/002211</div>
-                    <div class="detail-line"><span class="detail-label">Invoice Date:</span> 02/12/2023</div>
-                    <div class="detail-line"><span class="detail-label">Transport:</span> Uttam Road Ways Pvt Ltd</div>
-                    <div class="detail-line"><span class="detail-label">LR No:</span> 23062138</div>
-                    <div class="detail-line"><span class="detail-label">Broker:</span> BHAGWAN TEXTILES AGENCY</div>
-                </div>
-                <div class="details-right">
-                    <div class="detail-line"><span class="detail-label">Destination:</span> MADURAI</div>
-                    <div class="detail-line"><span class="detail-label">LR Date:</span> 02/12/2023</div>
-                    <div class="detail-line"><span class="detail-label">Vehicle No:</span> MH12AB1234</div>
-                    <div class="detail-line"><span class="detail-label">E-Way Bill No:</span> 123456789012</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Supplier and Delivery Details -->
-        <div class="party-section">
-            <div class="party-row">
-                <div class="party-cell">
-                    <div class="party-title">BILLED TO</div>
-                    <div style="font-size: 8px;">
-                        <strong>NACHIAS FASHION PVT LTD.</strong><br>
-                        155, MUNIYANDI KOVIL STREET<br>
-                        MADURAI - 625016<br>
-                        State: <strong>TAMIL NADU (33)</strong><br>
-                        GSTIN: <strong>33AADCN9342A1ZU</strong>
-                    </div>
-                </div>
-                <div class="party-cell">
-                    <div class="party-title">DELIVERY AT</div>
-                    <div style="font-size: 8px;">
-                        <strong>NACHIAS FASHION PVT LTD.</strong><br>
-                        155, MUNIYANDI KOVIL STREET<br>
-                        MADURAI (PERIYAR)<br>
-                        State: <strong>TAMIL NADU (33)</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Items Table -->
-        <table class="items-table">
-            <thead>
+            <!-- Supplier -->
+            <table width="100%" cellpadding="6" cellspacing="0" style="border-bottom:4px double #000; line-height:1.4;">
                 <tr>
-                    <th style="width: 4%;">S.N</th>
-                    <th style="width: 30%;">DESCRIPTION OF GOODS</th>
-                    <th style="width: 10%;">BALE No.</th>
-                    <th style="width: 6%;">PCS</th>
-                    <th style="width: 10%;">METERS</th>
-                    <th style="width: 6%;">UOM</th>
-                    <th style="width: 10%;">RATE</th>
-                    <th style="width: 12%;">AMOUNT(Rs.)</th>
+                    <td>
+                        <strong style="font-size:20px;">
+                        {{ strtoupper($invoice->supplier->name)}} (INDIA)
+                        </strong><br>
+                        <strong>Sales Off / Postal Add:</strong> Shop No. C2, Ground Floor, Bldg No. 156,
+                        Dr. Viegas Street, Swadeshi Market Bldg., Kalbadevi Road, Mumbai - 400 002.<br>
+                        <strong>GST No:27AAHFI4075L1Z2 </strong> State : <strong>Maharashtra (27)</strong>
+                        Tel : <strong>(022)22010101 / 08433992250</strong><br>
+                        Email : <strong>indrapujapolycot@gmail.com</strong> | Website : <strong>www.indrapujapolycot.com</strong>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
+            </table>
+
+            <!-- Invoice Meta -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; line-height:1.4;">
                 <tr>
-                    <td>1</td>
-                    <td class="left">60/60 X 90/130 [58/60 21021101]</td>
-                    <td>002211</td>
-                    <td>5</td>
-                    <td>227.00</td>
-                    <td>Mtr</td>
-                    <td class="right">160.00</td>
-                    <td class="right">36320.62</td>
+                    <td width="50%">
+                        Invoice No : <strong>{{ $invoice->invoice_no }}</strong><br>
+                        Challan No : <strong>002211 x 3</strong><br>
+                        Transport : <strong>Uttam Road Ways Pvt Ltd</strong><br>
+                        LR No : <strong>23062138</strong><br>
+                        Indent No : <strong>6737</strong><br>
+                        Broker: <strong>BHAGWAN TEXTILES AGENCY</strong>
+                    </td>
+                    <td width="50%" style="padding:6px; line-height:1.4;">
+                        Date : <strong>02/12/2023</strong><br><br>
+                        Destination : <strong>MADURAI</strong><br>
+                        LR Dt : <strong>04-12-2023</strong><br>
+                        Indent Dt : 01/12/2023<br>
+                      
+                    </td>
+                </tr>
+            </table>
+        </td>
+
+        <!-- RIGHT EWAY -->
+        <td width="25%" valign="top" align="center">
+            <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">
+                <tr>
+                    <td align="center" style="font-size:12px;">
+                        <strong>TAX INVOICE</strong>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="padding-bottom:10px;">
+                        <img src="{{ public_path('assets/images/qr_code.png') }}" width="100" height="100">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center" style="border-top:1px solid #000;">
+                        <strong>EWAY BILL NO</strong><br>
+                        <strong style="font-size:14px;">271684527828</strong><br>
+                        <span style="font-size:10px;">2023-12-02 20:10:00</span>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #000; border-collapse:collapse;">
+    <tr>
+        <!-- INVOICE TO -->
+        <td width="50%" style="border-right:1px solid #000; vertical-align:top;">
+            <table width="100%" cellpadding="6" cellspacing="0">
+                <tr style="background-color:#cccccc">
+                    <td style="text-align:center; font-weight:bold; border-bottom:1px solid #000;">
+                        INVOICE TO
+                    </td>
                 </tr>
                 <tr>
-                    <td>2</td>
-                    <td class="left">NOVA COTTON 58" [HSN 52081901]</td>
-                    <td>002211</td>
-                    <td>6</td>
-                    <td>303.15</td>
-                    <td>Mtr</td>
-                    <td class="right">115.00</td>
-                    <td class="right">34856.55</td>
+                    <td style="line-height:1.5; letter-spacing:0px;">
+                        <strong style="font-size:12px;">NACHIAS FASHION PVT.LTD.</strong><br>
+                        <span style="font-size:10px;">157, MUNIYANDI KVL STREET</span><br>
+                        <span style="font-size:10px;">MADURAI - 625016</span><br>
+                        <span style="font-size:10px;">GSTIN: <strong>33AADCN9342A1ZU</strong> &nbsp;&nbsp; State: <strong>TAMIL NADU (33)</strong></span><br>
+                        <span style="font-size:10px;">MOB: 919443330774</span>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td width="50%" style="vertical-align:top;">
+            <table width="100%" cellpadding="6" cellspacing="0">
+                <tr style="background-color:#cccccc">
+                    <td style="text-align:center; font-weight:bold; border-bottom:1px solid #000;">
+                        DELIVERY AT
+                    </td>
                 </tr>
                 <tr>
-                    <td>3</td>
-                    <td class="left">CHENILLE 58" [HSN 52082100]</td>
-                    <td>002211</td>
-                    <td>4</td>
-                    <td>219.08</td>
-                    <td>Mtr</td>
-                    <td class="right">130.65</td>
-                    <td class="right">28350.00</td>
+                    <td style="line-height:1.5; letter-spacing:0px;">
+                        <strong style="font-size:12px;">NACHIAS FASHION PVT.LTD.</strong><br>
+                        <span style="font-size:10px;">157, MUNIYANDI KVL STREET</span><br>
+                        <span style="font-size:10px;">MADURAI - 625016</span><br>
+                        <span style="font-size:10px;">GSTIN: <strong>33AADCN9342A1ZU</strong> &nbsp;&nbsp; State: <strong>TAMIL NADU (33)</strong></span><br>
+                        <span style="font-size:10px;">MOB: 919443330774</span>
+                    </td>
                 </tr>
-                <!-- Empty rows for spacing -->
-                <tr style="height: 30px;">
-                    <td colspan="8"></td>
+            </table>
+        </td>
+    </tr>
+</table>
+<div class="table-wrapper" style="border-top: 2px solid #000;">
+  <table class="invoice-items" width="100%" cellpadding="6" cellspacing="0">
+    <thead>
+      <tr>
+        <th class="col-sn">S.N</th>
+        <th class="col-desc">DESCRIPTION OF GOODS</th>
+        <th class="col-bale">BALE No.</th>
+        <th class="col-pcs">PCS</th>
+        <th class="col-meters">METERS</th>
+        <th class="col-uom">UOM</th>
+        <th class="col-rate">RATE</th>
+        <th class="col-amount">AMOUNT(Rs.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="left">1</td>
+        <td>90/10/10 X 90/10/10 [HSN:52102110]</td>
+        <td class="center">002211</td>
+        <td class="center">2</td>
+        <td class="right">227.00</td>
+        <td class="center">Mtr</td>
+        <td class="right">160.00</td>
+        <td class="right">36320.00</td>
+      </tr>
+      <tr>
+        <td class="left">2</td>
+        <td>NOVA COTTON 58" [HSN:52081990]</td>
+        <td class="center">002211</td>
+        <td class="center">5</td>
+        <td class="right">303.10</td>
+        <td class="center">Mtr</td>
+        <td class="right">115.00</td>
+        <td class="right">34856.50</td>
+      </tr>
+      <tr>
+        <td class="left">3</td>
+        <td>ORIENTAL 58" [HSN:52083310]</td>
+        <td class="center">002211</td>
+        <td class="center">4</td>
+        <td class="right">210.00</td>
+        <td class="center">Mtr</td>
+        <td class="right">135.00</td>
+        <td class="right">28350.00</td>
+      </tr>
+      <tr class="filler-row">
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="gross-total-row">
+        <td colspan="2" class="right bold">Gross Total</td>
+        <td></td>
+        <td class="center bold">11</td>
+        <td class="right bold">740.10</td>
+        <td></td>
+        <td></td>
+        <td class="right bold">99526.50</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #000; border-collapse: collapse; margin-top: -1px; border-top: none;">
+    <tr>
+        <td width="25%" style="border-right: 1px solid #000; padding: 6px;">
+            Payment Due Date : <strong style="background-color: #cccccc;">01-03-2024</strong><br>
+            Remark: 
+        </td>
+        <td width="75%">
+            <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse: collapse; ">
+                <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center; ">
+                    <td width="31%" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">Discount / Tax</td>
+                    <td width="15%" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">Add / Less</td>
+                    <td width="25%" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">On Amount</td>
+                    <td width="15%" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">Rate</td>
+                    <td width="20%" style="border-bottom: 1px solid #000;">Amount (Rs.)</td>
                 </tr>
-                <tr style="height: 30px;">
-                    <td colspan="8"></td>
+                <tr>
+                    <td style="border-bottom: 1px solid #000; border-right: 1px solid #000;">Cash Discount (Agn)</td>
+                    <td align="center" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">LESS</td>
+                    <td align="right" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">99526.50</td>
+                    <td align="right" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">2.00 %</td>
+                    <td align="right" style="border-bottom: 1px solid #000;">-1990.53</td>
                 </tr>
-            </tbody>
-        </table>
+                <tr>
+                    <td style="border-bottom: 1px solid #000; border-right: 1px solid #000;">IGST</td>
+                    <td align="center" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">ADD</td>
+                    <td align="right" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">97535.97</td>
+                    <td align="right" style="border-bottom: 1px solid #000; border-right: 1px solid #000;">5.00 %</td>
+                    <td align="right" style="border-bottom: 1px solid #000;">4876.80</td>
+                </tr>
+                <tr>
+                    <td style="border-right: 1px solid #000;">Round Off</td>
+                    <td align="center" style="border-right: 1px solid #000;">ADD</td>
+                    <td align="right" style="border-right: 1px solid #000;">0.00</td>
+                    <td align="right" style="border-right: 1px solid #000;">0.00 %</td>
+                    <td align="right;">0.23</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 
-        <!-- Summary Section -->
-        <div class="summary-section">
-            <div class="summary-row">
-                <div class="summary-left">
-                    <div class="total-words">
-                        <strong>Total Amount (in Words):</strong><br>
-                        RUPEES ONE LAKH TWO THOUSAND FOUR HUNDRED THIRTEEN AND EIGHT PAISE ONLY
-                    </div>
-                </div>
-                <div class="summary-right">
-                    <div class="summary-line">
-                        <div class="summary-label">Gross Total</div>
-                        <div class="summary-value">{{ number_format($invoice->sub_total, 2) }}</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label"><strong>Discount ({{ $invoice->discount_percent }}%)</strong></div>
-                        <div class="summary-value">{{ number_format($invoice->discount_amount, 2) }}</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">Round Off ({{ $invoice->round_off_type }})</div>
-                        <div class="summary-value">{{ number_format($invoice->round_off, 2) }}</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">CGST ({{ $invoice->cgst_percent }}%)</div>
-                        <div class="summary-value">{{ number_format($invoice->cgst_amount, 2) }}</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">SGST ({{ $invoice->sgst_percent }}%)</div>
-                        <div class="summary-value">{{ number_format($invoice->sgst_amount, 2) }}</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">IGST ({{ $invoice->igst_percent }}%)</div>
-                        <div class="summary-value">{{ number_format($invoice->igst_amount, 2) }}</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">Other Charges</div>
-                        <div class="summary-value">{{ number_format($invoice->other_charges, 2) }}</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label"><strong>Rate</strong></div>
-                        <div class="summary-value"><strong>Amount</strong></div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">9.00 %</div>
-                        <div class="summary-value">4870.87</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">9.00 %</div>
-                        <div class="summary-value">4870.87</div>
-                    </div>
-                    <div class="summary-line">
-                        <div class="summary-label">0.00 %</div>
-                        <div class="summary-value">0.00</div>
-                    </div>
-                    <div class="summary-line" style="border-top: 1px solid #000; padding-top: 2px; margin-top: 2px;">
-                        <div class="summary-label" style="font-size: 14px;"><strong>Total Invoice Amount</strong></div>
-                        <div class="summary-value" style="font-size: 14px;"><strong>{{ number_format($invoice->grand_total, 2) }}</strong></div>
-                    </div>
-                </div>
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #000; border-collapse: collapse;">
+    <tr>
+        <td width="44%" style="border-right: 1px solid #000; padding: 6px;">
+            <strong>Total Amount (In Words) :</strong> RUPEES ONE LAKHS TWO THOUSAND FOUR HUNDRED THIRTEEN ONLY
+        </td>
+        <td width="13%" align="center" style="border-right: 1px solid #000; padding: 6px;">
+            <strong>Total Amount (In Figure)</strong>
+        </td>
+        <td width="11%" align="right" style="padding: 6px; font-size: 14px; font-weight: bold;">
+            102413.00
+        </td>
+    </tr>
+</table>
+
+<table width="100%" cellpadding="4" cellspacing="0" style="border: 1px solid #000; border-collapse: collapse; margin-top: -1px; border-top: none;">
+    <tr>
+        <td style="font-size: 10px;">
+            <strong>Bank Name: HDFC BANK</strong> &nbsp;&nbsp;&nbsp;&nbsp; 
+            <strong>BRANCH: Khar</strong> &nbsp;&nbsp;&nbsp;&nbsp; 
+            <strong>IFSC NO.: HDFC0000002</strong> &nbsp;&nbsp;&nbsp;&nbsp; 
+            <strong style="letter-spacing: 1px;">RTGS NO. : 50200059463252</strong><br>
+            <strong>IRN :</strong> d4fed8264d1bbad1f2ccb4535d8b71a3a78fc031d603946549b6c384d201ada9 &nbsp;&nbsp;&nbsp;&nbsp; <strong>Ack:</strong> 122319209010901
+        </td>
+    </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #000; border-collapse: collapse; margin-top: -1px; border-top: none;">
+    <tr>
+        <td width="70%" style="border-right: 1px solid #000; padding: 4px; vertical-align: top;">
+            <div style="font-size: 8px; font-weight: bold; margin-bottom: 2px;">TERMS AND CONDITION:</div>
+            <div style="font-size: 7.5px; line-height: 1.3;">
+                1. Interest 24% p.a. after allowing 5 days of grace. 2. We take no responsibility for damages & losses on routes.<br>
+                3. Any discount etc. will not be allowed in this Invoice. 4. Any Taxes levied upon by Provincial Government shall be borne by you. 5. Any dispute pertaining to this transaction will be disposed of according to the arbitration rules of Hindustan Chamber of Commerce, Mumbai. 6. SUBJECT TO MUMBAI JURISDICTION.
             </div>
-        </div>
-
-        <!-- Bank Details -->
-        <div class="bank-section">
-            <div class="bank-title">Bank Details:</div>
-            <div class="bank-details">
-                <strong>Bank Name: HDFC BANK</strong> &nbsp;&nbsp;&nbsp; 
-                <strong>BRANCH: KHAR</strong> &nbsp;&nbsp;&nbsp; 
-                <strong>IFSC NO: HDFC0000502</strong> &nbsp;&nbsp;&nbsp; 
-                <strong>RTGS NO: 5 0 2 0 1 0 0 1 2 4 1 3 7 1</strong><br>
-                <strong>A/C NO: 50200001241371</strong>
-            </div>
-        </div>
-
-        <!-- Terms and Signature -->
-        <div class="footer-section">
-            <div class="footer-row">
-                <div class="footer-left">
-                    <div class="terms-title">TERMS AND CONDITIONS:</div>
-                    <ol class="terms-list">
-                        <li>Interest @24% p.a. after 3 days of sale of goods or services.</li>
-                        <li>Shortage claim, if any, should be made within 3 days of receipt of goods & services.</li>
-                        <li>Our risk & responsibility ceases as soon as the goods leave our premises.</li>
-                        <li>Goods once sold will not be taken back or exchanged.</li>
-                        <li>All disputes are subject to Mumbai Jurisdiction only.</li>
-                        <li>E. & O.E.</li>
-                        <li>Subject to realization of Cheque or Draft or any mode of payment.</li>
-                    </ol>
-                </div>
-                <div class="footer-right">
-                    <div style="font-size: 8px; margin-bottom: 5px;">For <strong>INDRAPUJA POLYCOT (INDIA)</strong></div>
-                    <div class="signature-line">Authorised Signatory</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
+            <table width="100%" style="margin-top: 15px; font-size: 8px; font-weight: bold;">
+                <tr>
+                    <td width="30%">PREPARED BY:</td>
+                    <td width="40%" align="center">CHECKED BY:</td>
+                    <td width="30%" align="right" style="font-style: italic;">E. & O. E</td>
+                </tr>
+            </table>
+        </td>
+        <td width="30%" align="center" style="vertical-align: top; padding: 4px;">
+            <div style="font-size: 10px; font-weight: bold;">For INDRAPUJA POLYCOT</div>
+            <div style="font-size: 10px; font-weight: bold;">(INDIA)</div>
+            <br><br>
+            <div style="margin-top: 20px; font-size: 9px; font-weight: bold;">Authorised Signature</div>
+        </td>
+    </tr>
+</table>
 </body>
 </html>

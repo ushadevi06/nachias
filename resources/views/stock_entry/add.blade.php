@@ -16,7 +16,7 @@
                         <div class="row mb-4">
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="stock_entry_no" class="form-control" placeholder="Enter Stock Entry No" value="{{ $stockEntry->stock_entry_no ?? $nextStockNo }}" readonly required />
+                                    <input type="text" name="stock_entry_no" class="form-control" placeholder="Enter Stock Entry No" value="{{ $stockEntry->stock_entry_no ?? $nextStockNo }}" readonly />
                                     <label for="code">Stock Entry No <span class="text-danger">*</span></label>
                                     @error('stock_entry_no')
                                         <div class="text-danger small">{{ $message }}</div>
@@ -26,7 +26,7 @@
 
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="stock_date" class="form-control stock_date" placeholder="Enter Stock Date" value="{{ old('stock_date', $stockEntry ? $stockEntry->stock_date->format('d-m-Y') : date('d-m-Y')) }}" {{ $stockEntry ? 'readonly' : '' }} required />
+                                    <input type="text" name="stock_date" class="form-control stock_date" placeholder="Enter Stock Date" value="{{ old('stock_date', $stockEntry ? $stockEntry->stock_date->format('d-m-Y') : date('d-m-Y')) }}" {{ $stockEntry ? 'readonly' : '' }} />
                                     <label for="stock_date">Stock Date <span class="text-danger">*</span></label>
                                     @error('stock_date')
                                         <div class="text-danger small">{{ $message }}</div>
@@ -37,7 +37,7 @@
                             <input type="hidden" name="entry_type" value="Purchase Receipt">
                             <div class="col-lg-4 mb-4" id="grn_section">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="grn_entry_id" name="grn_entry_id" class="select2 form-select" data-placeholder="Select GRN Entry" {{ $stockEntry ? 'disabled' : '' }} required>
+                                    <select id="grn_entry_id" name="grn_entry_id" class="select2 form-select" data-placeholder="Select GRN Entry" {{ $stockEntry ? 'disabled' : '' }}>
                                         <option value="">Select GRN Entry No</option>
                                         @foreach($grnEntries as $grn)
                                             <option value="{{ $grn->id }}" {{ old('grn_entry_id', $stockEntry->grn_entry_id ?? '') == $grn->id ? 'selected' : '' }}>{{ $grn->grn_number }}</option>
@@ -55,7 +55,7 @@
 
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="grn_entry_item_id" name="grn_entry_item_id" class="select2 form-select" data-placeholder="Select GRN Item" required>
+                                    <select id="grn_entry_item_id" name="grn_entry_item_id" class="select2 form-select" data-placeholder="Select GRN Item">
                                         <option value="">Select GRN Item</option>
                                     </select>
                                     <label for="grn_entry_item_id">Select GRN Item <span class="text-danger">*</span></label>
@@ -101,7 +101,6 @@
                             </div>
                         </div>
 
-                        <!-- SINGLE ITEM FIELDS (Hidden when GRN Items Table is shown) -->
                         <div class="row mb-4" id="single_item_fields">
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
@@ -120,7 +119,7 @@
 
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->qty_in : 1) }}" step="1" min="1" required />
+                                    <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', $stockEntry ? $stockEntry->stockEntryItems->count() : 1) }}" step="1" min="1" />
                                     <label for="qty_in">Quantity In <span class="text-danger">*</span></label>
                                     @error('qty_in')
                                         <div class="text-danger small">{{ $message }}</div>
@@ -128,7 +127,6 @@
                                 </div>
                                 <div class="text-muted small">Total quantity available from GRN item will be split into individual entries.</div>
                             </div>
-
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" name="price" id="price" class="form-control" placeholder="Enter Unit Price" value="{{ old('price', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->price : '') }}" step="0.01" min="0" />
@@ -279,10 +277,27 @@
                     }, 100);
 
                     $('#uom').val(item.uom_id).trigger('change');
-                    $('#qty_in').val(item.qty_accepted);
+                    
+                    // ONLY auto-fill quantity if it's empty OR if we are NOT in edit mode initialization
+                    // Check if we are in edit mode but the field hasn't been "touched" or already populated by PHP
+                    if (!$('#qty_in').val() || !stockEntry) {
+                        $('#qty_in').val(item.qty_accepted);
+                    }
+                    $('#qty_in').attr('max', item.qty_accepted);
+
                     $('#price').val(item.rate);
                     $('#store_location').val(item.store_location_id).trigger('change');
                 }
+            }
+        });
+
+        // Prevention of entering more than available
+        $('#qty_in').on('input', function() {
+            let max = parseFloat($(this).attr('max'));
+            let current = parseFloat($(this).val());
+            if (current > max) {
+                $(this).val(max);
+                alert('Quantity cannot be greater than available quantity (' + max + ')');
             }
         });
 

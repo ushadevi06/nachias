@@ -17,11 +17,13 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Job Card Number</th>
-                                    <th>Production Stage </th>
+                                    <th>Production Date</th>
+                                    <th>Job Card No</th>
+                                    <th>Production Stage</th>
                                     <th>Service Provider</th>
-                                    <th>Planned Quantity</th>
-                                    <th>Completed Quantity</th>
+                                    <th>Shift</th>
+                                    <th>Planned Qty</th>
+                                    <th>Completed Qty</th>
                                     <th>WIP</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -30,14 +32,16 @@
                             <tbody>
                                 <tr>
                                     <td>1</td>
-                                    <td>JC20250924-001-K</td>
+                                    <td>16-12-2023</td>
+                                    <td class="fw-bold">JC20250924-001-K</td>
                                     <td>Cutting</td>
-                                    <td>In-House Cutting <span class="mini-title">(SP003)</span></td>
-                                    <td>5</td>
-                                    <td>3</td>
-                                    <td>1</td>
+                                    <td>In-House Cutting</td>
+                                    <td>Day</td>
+                                    <td>100</td>
+                                    <td>80</td>
+                                    <td>15</td>
                                     <td>
-                                        <select class="form-select" data-placeholder="Select Status">
+                                        <select class="form-select form-select-sm" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started">Not Started</option>
                                             <option value="In Progress" selected>In Progress</option>
@@ -54,14 +58,16 @@
                                 </tr>
                                 <tr>
                                     <td>2</td>
-                                    <td>JC20250924-001-K</td>
+                                    <td>17-12-2023</td>
+                                    <td class="fw-bold">JC20250924-001-K</td>
                                     <td>Stitching</td>
-                                    <td>Vendor A Stitching <span class="mini-title">(SP004)</span></td>
-                                    <td>5</td>
+                                    <td>Vendor A Stitching</td>
+                                    <td>Night</td>
+                                    <td>100</td>
                                     <td>0</td>
                                     <td>0</td>
                                     <td>
-                                        <select class="form-select" data-placeholder="Select Status">
+                                        <select class="form-select form-select-sm" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started" selected>Not Started</option>
                                             <option value="In Progress">In Progress</option>
@@ -78,14 +84,16 @@
                                 </tr>
                                 <tr>
                                     <td>3</td>
-                                    <td>JC20250924-002-K</td>
+                                    <td>18-12-2023</td>
+                                    <td class="fw-bold">JC20250924-002-K</td>
                                     <td>Cutting</td>
-                                    <td>In-House Cutting <span class="mini-title">(SP003)</span></td>
-                                    <td>10</td>
-                                    <td>10</td>
+                                    <td>In-House Cutting</td>
+                                    <td>Day</td>
+                                    <td>150</td>
+                                    <td>150</td>
                                     <td>0</td>
                                     <td>
-                                        <select class="form-select" data-placeholder="Select Status">
+                                        <select class="form-select form-select-sm" data-placeholder="Select Status">
                                             <option value="">Select Status</option>
                                             <option value="Not Started">Not Started</option>
                                             <option value="In Progress">In Progress</option>

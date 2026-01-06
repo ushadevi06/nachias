@@ -54,7 +54,7 @@
                     <!-- Data Table -->
                     <div class="card-datatable">
                         <table class="stock-entry-table table">
-                            <thead class="table-light">
+                            <thead class="table">
                                 <tr>
                                     <th>#</th>
                                     <th>Stock Entry No.</th>

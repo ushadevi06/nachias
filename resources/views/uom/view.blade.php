@@ -66,7 +66,9 @@
                     data: 'uom_name'
                 },
                 {
-                    data: 'status'
+                    data: 'status',
+                    orderable: false,
+                    searchable: false
                 },
                 {
                     data: 'action',

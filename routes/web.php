@@ -38,6 +38,7 @@ use App\Http\Controllers\TaskCreationController;
 use App\Http\Controllers\TaskAssignmentController;
 use App\Http\Controllers\TaskTrackingMonitoringController;
 use App\Http\Controllers\TaskStatusUpdateController;
+use App\Http\Controllers\TaskManagementController;
 use App\Http\Controllers\DocumentRepositoryController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\BackupController;
@@ -60,6 +61,14 @@ use App\Http\Controllers\TaxTypeController;
 use App\Http\Controllers\TaxController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\AjaxController;
+use App\Http\Controllers\FitController;
+use App\Http\Controllers\PattiTypeController;
+use App\Http\Controllers\CollarTypeController;
+use App\Http\Controllers\CuffTypeController;
+use App\Http\Controllers\PocketTypeController;
+use App\Http\Controllers\BottomCutController;
+use App\Http\Controllers\ColorController;
+use App\Http\Controllers\StyleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -128,6 +137,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/uoms/delete/{id}', [UomController::class, 'destroy']);
     Route::post('/uoms/status/{id}', [UomController::class, 'updateStatus']);
 
+    /* Colors */
+    Route::get('/colors', [ColorController::class, 'index']);
+    Route::match(['get','post'], '/colors/add/{id?}', [ColorController::class, 'add']);
+    Route::get('/colors/delete/{id}', [ColorController::class, 'destroy']);
+    Route::post('/colors/status/{id}', [ColorController::class, 'updateStatus']);
+
     /* Operation Stages */
     Route::get('/operation_stages', [OperationStageController::class, 'index']);
     Route::get('/operation_stages/add/{id?}', [OperationStageController::class, 'add']);
@@ -162,10 +177,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('/store_location/status/{id}', [StorelocationController::class, 'updateStatus']);
 
     /* Departments */
-    Route::get('/departments', [DepartmentController::class, 'index']);
-    Route::match(['GET', 'POST'], '/departments/add/{id?}', [DepartmentController::class, 'add']);
-    Route::get('/department/delete/{id}', [DepartmentController::class, 'destroy']);
     Route::post('/department/status/{id}', [DepartmentController::class, 'updateStatus']);
+
+    /* Styles */
+    Route::get('/styles', [StyleController::class, 'index']);
+    Route::match(['GET', 'POST'], '/styles/add/{id?}', [StyleController::class, 'add']);
+    Route::get('/styles/delete/{id}', [StyleController::class, 'destroy']);
+    Route::post('/styles/status/{id}', [StyleController::class, 'updateStatus']);
 
     /* Tax Types */
     Route::get('tax_types', [TaxTypeController::class, 'index']);
@@ -176,6 +194,30 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['GET', 'POST'], '/taxes/add/{id?}', [TaxController::class, 'add']);
     Route::get('/tax/delete/{id}', [TaxController::class, 'destroy']);
     Route::post('/tax/status/{id}', [TaxController::class, 'updateStatus']);
+
+    /* Fit */
+    Route::get('fit', [FitController::class, 'index']);
+    Route::get('fit/add', [FitController::class, 'add']);
+
+    /* Patti Type */
+    Route::get('patti_type', [PattiTypeController::class, 'index']);
+    Route::get('patti_type/add', [PattiTypeController::class, 'add']);
+
+    /* Collar Type */
+    Route::get('collar_type', [CollarTypeController::class, 'index']);
+    Route::get('collar_type/add', [CollarTypeController::class, 'add']);
+
+    /* Cuff Type */
+    Route::get('cuff_type', [CuffTypeController::class, 'index']);
+    Route::get('cuff_type/add', [CuffTypeController::class, 'add']);
+
+    /* Pocket Type */
+    Route::get('pocket_type', [PocketTypeController::class, 'index']);
+    Route::get('pocket_type/add', [PocketTypeController::class, 'add']);
+
+    /* Bottom Cut */
+    Route::get('bottom_cut', [BottomCutController::class, 'index']);
+    Route::get('bottom_cut/add', [BottomCutController::class, 'add']);
 
     /* Brands */
     Route::get('brands', [BrandController::class, 'index']);
@@ -319,6 +361,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('add_credit_note', [CreditNoteController::class, 'add']);
     Route::get('view_credit_note', [CreditNoteController::class, 'view']);
 
+    /* Debit Notes */
+    Route::get('debit_notes', [DebitNoteController::class, 'index']);
+    Route::match(['GET', 'POST'], 'debit_notes/add/{id?}', [DebitNoteController::class, 'add']);
+    Route::get('debit_notes/view/{id}', [DebitNoteController::class, 'view']);
+    Route::get('debit_notes/delete/{id}', [DebitNoteController::class, 'destroy']);
+    Route::get('debit_notes/get-invoice-details/{id}', [DebitNoteController::class, 'getInvoiceDetails']);
+
     /* Job Card Entry */
     Route::get('job_card_entries', [JobCardEntryController::class, 'index']);
     Route::get('add_job_card_entry', [JobCardEntryController::class, 'add']);
@@ -329,6 +378,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('productions', [ProductionController::class, 'index']);
     Route::get('add_production', [ProductionController::class, 'add']);
     Route::get('view_production', [ProductionController::class, 'view']);
+    Route::get('task_management', [TaskManagementController::class, 'index']);
+    Route::get('add_task_management', [TaskManagementController::class, 'add']);
 
     /* Billing */
     Route::get('billing', [BillingController::class, 'index']);

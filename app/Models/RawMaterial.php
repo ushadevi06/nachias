@@ -16,7 +16,7 @@ class RawMaterial extends Model
         'code',
         'name',
         'supplier_design_name',
-        'color_id',
+        'supplier_design_name',
         'size_width',
         'uom_id',
         'fabric_type_id',
@@ -34,10 +34,6 @@ class RawMaterial extends Model
         return $this->belongsTo(StoreCategory::class, 'store_category_id');
     }
 
-    public function color()
-    {
-        return $this->belongsTo(Color::class, 'color_id');
-    }
 
     public function uom()
     {

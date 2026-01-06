@@ -107,16 +107,24 @@ class StockEntryController extends Controller
             }
         }
         $stockEntry = $id ? StockEntry::with(['stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.storeLocation', 'grnEntry'])->findOrFail($id) : null;
-        
         $grnEntries = GrnEntry::where('status', 'Received')
-            ->whereHas('grnEntryItems', function($query) use ($id) {
-                $query->whereDoesntHave('stockEntryItems', function($q) use ($id) {
-                    if ($id) {
-                        $q->where('stock_entry_id', '!=', $id);
-                    }
+            ->where(function($query) use ($id, $stockEntry) {
+                // Show GRN if it has at least one item with remaining balance
+                $query->whereHas('grnEntryItems', function($q) use ($id) {
+                    $q->whereRaw('qty_accepted > (
+                        select COALESCE(sum(qty_in), 0) 
+                        from stock_entry_items 
+                        where grn_entry_item_id = grn_entry_items.id 
+                        ' . ($id ? "AND stock_entry_id != $id" : "") . '
+                    )');
                 });
+                
+                // Always show the current GRN if in edit mode
+                if ($id && $stockEntry) {
+                    $query->orWhere('id', $stockEntry->grn_entry_id);
+                }
             })
-            ->orderBy('grn_number')
+            ->orderBy('grn_number', 'desc')
             ->get();
         $storeCategories = StoreCategory::where('status', 'Active')->orderBy('category_name')->get();
         $rawMaterials = RawMaterial::where('status', 'Active')->orderBy('name')->get();
@@ -146,11 +154,25 @@ class StockEntryController extends Controller
 
             $request->validate($rules, $messages);
 
+            $grnItem = GrnEntryItem::findOrFail($request->grn_entry_item_id);
+            $totalStocked = StockEntryItem::where('grn_entry_item_id', $request->grn_entry_item_id)
+                ->when($id, function($q) use ($id) {
+                    $q->where('stock_entry_id', '!=', $id);
+                })
+                ->sum('qty_in');
+            $availableBalance = $grnItem->qty_accepted - $totalStocked;
+
+            if ($request->qty_in > $availableBalance) {
+                return back()->withInput()->withErrors(['qty_in' => "The quantity entered ($request->qty_in) exceeds the available balance ($availableBalance) for this GRN item."]);
+            }
+
             DB::beginTransaction();
             try {
                 $headerData = [
                     'stock_date' => Carbon::createFromFormat('d-m-Y', $request->stock_date)->format('Y-m-d'),
                     'grn_entry_id' => $request->grn_entry_id,
+                    'from_store_location_id' => $request->from_store_location_id ?? null,
+                    'to_store_location_id' => $request->store_location_id,
                     'remarks' => $request->remarks,
                     'status' => $request->status ?? 'Draft',
                 ];
@@ -176,13 +198,14 @@ class StockEntryController extends Controller
                     $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                     $headerData['created_by'] = auth()->id();
                     $stockEntry = StockEntry::create($headerData);
-                    
+
                     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
                 }
 
-                if ($id) {
-                    // Split logic not applicable for existing edit
-                    $itemData = [
+                $totalQty = (int)($request->qty_in ?? 1);
+                
+                for ($i = 0; $i < $totalQty; $i++) {
+                    StockEntryItem::create([
                         'stock_entry_id' => $stockEntry->id,
                         'stock_type' => 'raw_material',
                         'grn_entry_item_id' => $request->grn_entry_item_id ?? null,
@@ -190,37 +213,10 @@ class StockEntryController extends Controller
                         'store_category_id' => $request->store_category_id ?? null,
                         'store_location_id' => $request->store_location_id,
                         'uom_id' => $request->uom_id ?? null,
-                        'qty_in' => $request->qty_in ?? 1,
+                        'qty_in' => 1,
                         'qty_out' => 0,
                         'price' => $request->price ?? 0,
-                    ];
-                    StockEntryItem::create($itemData);
-                } else {
-                    $totalQty = (int)$request->qty_in;
-                    
-                    for ($i = 0; $i < $totalQty; $i++) {
-                        $lastEntry = StockEntry::latest('id')->first();
-                        $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
-                        $iterHeaderData = $headerData;
-                        $iterHeaderData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-                        $iterHeaderData['created_by'] = auth()->id();
-                        
-                        $newStockEntry = StockEntry::create($iterHeaderData);
-                        addLog('create', 'Stock Entry', 'stock_entries', $newStockEntry->id, null, $iterHeaderData);
-                        
-                        StockEntryItem::create([
-                            'stock_entry_id' => $newStockEntry->id,
-                            'stock_type' => 'raw_material',
-                            'grn_entry_item_id' => $request->grn_entry_item_id ?? null,
-                            'raw_material_id' => $request->raw_material_id ?? null,
-                            'store_category_id' => $request->store_category_id ?? null,
-                            'store_location_id' => $request->store_location_id,
-                            'uom_id' => $request->uom_id ?? null,
-                            'qty_in' => 1,
-                            'qty_out' => 0,
-                            'price' => $request->price ?? 0,
-                        ]);
-                    }
+                    ]);
                 }
 
                 DB::commit();

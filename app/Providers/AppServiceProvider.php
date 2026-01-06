@@ -23,16 +23,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-
-        // 🔹 Your existing code (UNCHANGED)
-        View::composer('*', function ($view) {
-
-            $webSettings = Cache::rememberForever('web_settings', function () {
-                return Setting::first();
-            });
-
-            $view->with('web_settings', $webSettings);
-        });
+        $web_settings = Setting::first();
+        View::share('web_settings', $web_settings);
+        if (!defined('WEB_SETTINGS')) {
+            define('WEB_SETTINGS', $web_settings);
+        }
     }
 
 }

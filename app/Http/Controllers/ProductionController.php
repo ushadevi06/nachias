@@ -14,5 +14,5 @@ class ProductionController extends Controller
     }
     public function view(){
         return view('productions/view_details');
-    } 
+    }
 }

@@ -65,6 +65,18 @@
                             <div class="text-muted">{{ $purchaseOrder->commission ? number_format($purchaseOrder->commission, 2) . '%' : '-' }}</div>
                         </div>
                         <div class="col-md-4">
+                            <label class="detail-title">Additional Attachments:</label>
+                            <div class="text-muted">
+                                @if($purchaseOrder->additional_attachments)
+                                <a href="javascript:void(0)" class="view-image" data-image="{{ asset('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments) }}">
+                                    <i class="ri ri-image-line"></i> View
+                                </a>
+                                @else
+                                -
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <label class="detail-title">Status:</label>
                             <div>
                                 @php
@@ -217,12 +229,18 @@
 
 @section('scripts')
 <script>
-    $(document).ready(function() {
-        $(document).on('click', '.view-image', function() {
-            let imageSrc = $(this).data('image');
-            $('#modalImage').attr('src', imageSrc);
-            $('#imageModal').modal('show');
-        });
+$(document).ready(function () {
+    $(document).on('click', '.view-image', function () {
+        let imagePath = $(this).data('image');
+
+        let imageSrc = imagePath.startsWith('http') || imagePath.startsWith('data:')
+            ? imagePath
+            : APP_URL + imagePath;
+
+        $('#modalImage').attr('src', imageSrc);
+        $('#imageModal').modal('show');
     });
+});
+
 </script>
 @endsection

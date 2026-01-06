@@ -57,10 +57,14 @@
                     data: 'department'
                 },
                 {
-                    data: 'status'
+                    data: 'status',
+                    orderable: false,
+                    searchable: false
                 },
                 {
-                    data: 'action'
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
                 },
             ]
         });

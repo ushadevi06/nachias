@@ -179,7 +179,7 @@
                                                 step="0.01"
                                                 data-max-qty="{{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}"
                                                 {{ isset($item['selected']) ? '' : 'readonly' }}>
-                                            <small class="text-danger">
+                                            <small class="text-secondary">
                                                 Note: Received quantity should not exceed 50% of ordered quantity.
                                             </small>
 
@@ -241,7 +241,7 @@
                                                 value="{{ $invItem->quantity }}"
                                                 step="0.01"
                                                 data-max-qty="{{ $balancedQty }}">
-                                                <small class="text-danger">
+                                                <small class="text-secondary">
                                                     Note: Received quantity should not exceed 50% of ordered quantity.
                                                 </small>
                                             @error('items.'.$index.'.quantity')
@@ -314,7 +314,7 @@
                             </div>
 
                         </div>
-                        <div class="table-responsive mt-4 {{ $charges->count() ? '' : 'd-none' }}" id="charges_table">
+                        <div class="table-responsive mt-4 {{ ($charges->count() || (old('charges') && isset(old('charges')['charge_id']))) ? '' : 'd-none' }}" id="charges_table">
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
@@ -325,12 +325,30 @@
                                 </thead>
 
                                 <tbody id="added_charges_list">
-                                    @foreach($charges as $charge)
                                     @php
-                                    $chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
-                                    $chargeName = is_array($charge) ? $charge['name'] : $charge->charge_name;
-                                    $chargeAmount = is_array($charge) ? $charge['amount'] : $charge->charge_amount;
-                                    $invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : $charge->id;
+                                        $oldCharges = old('charges');
+                                        $chargesToLoop = [];
+                                        
+                                        if ($oldCharges && isset($oldCharges['charge_id'])) {
+                                            foreach ($oldCharges['charge_id'] as $index => $id) {
+                                                $chargesToLoop[] = (object)[
+                                                    'charge_id' => $id,
+                                                    'charge_name' => $oldCharges['name'][$index] ?? '',
+                                                    'charge_amount' => $oldCharges['amount'][$index] ?? 0,
+                                                    'id' => null // We don't necessarily track the invoice_charge_id in old input
+                                                ];
+                                            }
+                                        } else {
+                                            $chargesToLoop = $charges;
+                                        }
+                                    @endphp
+
+                                    @foreach($chargesToLoop as $charge)
+                                    @php
+                                        $chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
+                                        $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
+                                        $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+                                        $invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ?? null);
                                     @endphp
 
                                     <tr class="charge-row"
@@ -365,39 +383,28 @@
                                         <h5 class="mb-3 fw-semibold">Invoice Details</h5>
                                         <div class="form-floating form-floating-outline mb-3">
                                             @php
-                                            $currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
+                                                $currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
                                             @endphp
+
                                             <select id="invoice_status" name="invoice_status" class="select2 form-select @error('invoice_status') is-invalid @enderror" data-placeholder="Select Invoice Status">
                                                 <option value="">Select Invoice Status</option>
-                                                @foreach(['Draft', 'Unpaid/Credit', 'Paid', 'Partially Paid'] as $status)
-
-                                                @php
-                                                $disabled = false;
-                                                $selected = false;
-
-                                                if ($currentStatus === 'Paid') {
-                                                $disabled = true;
-                                                $selected = ($status === 'Paid');
-                                                } elseif ($currentStatus === 'Partially Paid') {
-                                                $disabled = true;
-                                                $selected = ($status === 'Unpaid/Credit');
-                                                } elseif ($currentStatus === 'Unpaid/Credit') {
-                                                $disabled = ($status !== 'Unpaid/Credit');
-                                                $selected = ($status === 'Unpaid/Credit');
-                                                } elseif ($currentStatus === 'Draft') {
-                                                $disabled = ($status !== 'Draft');
-                                                $selected = ($status === 'Draft');
-                                                }
-                                                @endphp
-
-                                                <option value="{{ $status }}" {{ $selected ? 'selected' : '' }} {{ $disabled ? 'disabled' : '' }}>
-                                                    {{ $status }}
-                                                </option>
+                                                @foreach (['Draft', 'Unpaid/Credit', 'Partially Paid', 'Paid'] as $status)
+                                                    @php
+                                                        $disabled = false;
+                                                        if ($currentStatus === 'Unpaid/Credit') {
+                                                            $disabled = ($status === 'Draft');
+                                                        }
+                                                        if ($currentStatus === 'Partially Paid') {
+                                                            $disabled = in_array($status, ['Draft', 'Unpaid/Credit']);
+                                                        }
+                                                        if ($currentStatus === 'Paid') {
+                                                            $disabled = ($status !== 'Paid');
+                                                        }
+                                                    @endphp
+                                                    <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ $disabled ? 'disabled' : '' }}>
+                                                        {{ $status }}
+                                                    </option>
                                                 @endforeach
-                                                @if(isset($invoice))
-                                                <input type="hidden" name="invoice_status" value="{{ $currentStatus }}">
-                                                @endif
-
                                             </select>
                                             <label for="invoice_status">Invoice Status <span class="text-danger">*</span></label>
                                         </div>
@@ -548,7 +555,6 @@
                                     @error('discount_percent')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
-
                                     {{-- Taxable --}}
                                     <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Total:</span>
@@ -574,7 +580,6 @@
                                     @error('other_state')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
-
                                     {{-- IGST --}}
                                     <div id="igst_div" class="py-2 border-bottom" style="{{ $otherState === 'Y' ? '' : 'display:none;' }}">
                                         <div class="d-flex justify-content-between align-items-center">
@@ -592,7 +597,7 @@
                                     </div>
 
                                     {{-- CGST / SGST --}}
-                                    <div id="cgst_sgst_div" class="py-2 border-bottom" style="{{ $otherState === 'N' ? '' : 'display:none;' }}">
+                                    <div id="cgst_sgst_div" class="py-2 border-bottom" style="{{ $otherState === 'N' ? '' : 'display:none;' }}">    
                                         <div class="d-flex justify-content-between mb-2">
                                             <span>CGST</span>
                                             <div class="d-flex gap-2 align-items-center">
@@ -637,29 +642,14 @@
                                     @error('other_charges')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
+
                                     {{-- Round Off --}}
-                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Round Off:</span>
-                                        <div class="d-flex flex-column align-items-end gap-2">
-                                            <div class="d-flex gap-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ $roundOffType === 'Add' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="round_off_add">Add</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ $roundOffType === 'Less' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="round_off_less">Less</label>
-                                                </div>
-                                            </div>
-                                            <input type="number" name="round_off" id="round_off_input" class="form-control form-control-sm text-end @error('round_off') is-invalid @enderror" style="width:120px;" value="{{ $roundOff }}" step="0.01" min="0">
-                                        </div>
+                                        <strong id="round_off_display">{{ number_format($roundOff, 2) }}</strong>
+                                        <input type="hidden" name="round_off" id="round_off_input" value="{{ $roundOff }}">
+                                        <input type="hidden" name="round_off_type" id="round_off_type" value="{{ $roundOffType }}">
                                     </div>
-                                    @error('round_off')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                    @error('round_off_type')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
 
                                     {{-- Grand Total --}}
                                     <div class="d-flex justify-content-between py-2 border-top fw-semibold">
@@ -686,7 +676,7 @@
                                     @endif
 
                                     {{-- Received --}}
-                                    @if(!isset($invoice) || $dueAmount > 0)
+                                    @if(!isset($invoice) || (isset($invoice) && $paid_so_far < $grandTotal))
                                     <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
                                         <span>{{ isset($invoice) ? 'Add New Payment:' : 'Initial Payment:' }}</span>
                                         <div class="d-flex flex-column align-items-end">
@@ -699,7 +689,7 @@
                                     @endif
 
                                     {{-- Due --}}
-                                    <div class="d-flex justify-content-between py-2 fw-semibold text-danger">
+                                    <div class="d-flex justify-content-between py-2 fw-semibold text-secondary">
                                         <span>Due Amount:</span>
                                         <strong id="due_amount">{{ number_format($dueAmount, 2) }}</strong>
                                         <input type="hidden" name="due_amount" id="due_amount_input" value="{{ $dueAmount }}">
@@ -856,7 +846,7 @@
                                                 placeholder="0.00"
                                                 data-max-qty="${balancedQty}"
                                                 data-ordered-qty="${item.qty_ordered}">
-                                                <small class="text-danger">
+                                                <small class="text-secondary">
                                                 Note: Received quantity should not exceed 50% of ordered quantity.
                                             </small>
                                         </td>
@@ -937,11 +927,9 @@
             const invoicedQty = parseFloat($row.find('.qty-invoiced-val').val()) || 0;
             const rate = parseFloat($row.find('.item-rate').val()) || 0;
 
-            // Calculate balanced qty: Ordered - Invoiced - Received. Ensure it doesn't go below 0.
             const balancedQty = Math.max(0, orderedQty - invoicedQty - receivedQty);
             $row.find('.balanced-qty-display').text(balancedQty.toFixed(2));
 
-            // Validate received qty doesn't exceed available balance (Ordered + 50% Tolerance)
             const maxTotalQty = orderedQty * 1.5;
             const maxQty = maxTotalQty - invoicedQty;
             
@@ -955,11 +943,9 @@
                 $(this).next('.invalid-feedback').remove();
             }
 
-            // Update amount column
             const amount = receivedQty * rate;
             $row.find('.item-amount').text(amount.toFixed(2));
 
-            // Recalculate totals if function exists
             if (typeof calculateTotals === 'function') {
                 calculateTotals();
             }
@@ -1010,8 +996,6 @@
                 return;
             }
 
-            // Check against Ordered + 50% tolerance. 
-            // Note: Ideally getting invoicedQty here for exact check, but using simple tolerance checking as fallback or just 1.5x ordered for consistency
             if (qty > (orderedQty * 1.5)) {
                 $input.addClass('is-invalid');
                 $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ordered quantity + 50% (${(orderedQty * 1.5).toFixed(2)})</div>`);
@@ -1071,14 +1055,7 @@
         });
 
         function calculateGrandTotalOnly() {
-            let taxableAmount = parseFloat($('#taxable_amount_input').val()) || 0;
-            let taxAmount = parseFloat($('#tax_amount_input').val()) || 0;
-            let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
-            let roundOff = parseFloat($('#round_off_input').val()) || 0;
-            let roundOffType = $('input[name="round_off_type"]:checked').val();
-            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
-            $('#grand_total').text(grandTotal.toFixed(2));
-            $('#grand_total_input').val(grandTotal.toFixed(2));
+            let grandTotal = parseFloat($('#grand_total_input').val()) || 0;
 
             let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
             let newPayment = parseFloat($('#received_amount_input').val()) || 0;
@@ -1153,7 +1130,6 @@
             $('#tax_amount').text(taxAmount.toFixed(2));
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
-            // ✅ FIX: Calculate other charges from the table
             let otherCharges = 0;
             $('#added_charges_list tr').each(function() {
                 let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
@@ -1163,15 +1139,22 @@
             $('#other_charges').text(otherCharges.toFixed(2));
             $('#other_charges_input').val(otherCharges.toFixed(2));
 
-            // ✅ Use the calculated otherCharges value
-            let roundOff = parseFloat($('#round_off_input').val()) || 0;
-            let roundOffType = $('input[name="round_off_type"]:checked').val();
-            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
-            $('#grand_total').text(grandTotal.toFixed(2));
-            $('#grand_total_input').val(grandTotal.toFixed(2));
+            let totalBeforeRoundOff = taxableAmount + taxAmount + otherCharges;
+            let finalTotal = Math.round(totalBeforeRoundOff);
+            let roundOffDifference = finalTotal - totalBeforeRoundOff;
+            
+            let roundOffAmount = Math.abs(roundOffDifference);
+            let roundOffType = roundOffDifference >= 0 ? 'Add' : 'Less';
+
+            $('#round_off_display').text(roundOffAmount.toFixed(2));
+            $('#round_off_input').val(roundOffAmount.toFixed(2));
+            $('#round_off_type').val(roundOffType);
+
+            $('#grand_total').text(finalTotal.toFixed(2));
+            $('#grand_total_input').val(finalTotal.toFixed(2));
 
             let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
-            let dueAmount = grandTotal - receivedAmount;
+            let dueAmount = finalTotal - receivedAmount;
 
             $('#due_amount').text(dueAmount.toFixed(2));
             $('#due_amount_input').val(dueAmount.toFixed(2));
@@ -1195,8 +1178,10 @@
                 }
             });
 
-            // Trigger change to refresh Select2 UI
-            $('#charges_select').trigger('change.select2');
+            $('#charges_select').select2('destroy').select2({
+                width: '100%',
+                dropdownParent: $('body')
+            });
         }
 
         function loadCharges() {
@@ -1394,37 +1379,29 @@
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
             let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
-            let roundOff = parseFloat($('#round_off_input').val()) || 0;
-            let roundOffType = $('input[name="round_off_type"]:checked').val();
-            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
+            
+            // ✅ Automated Round Off
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
+            let finalTotal = Math.round(totalBeforeRoundOff);
+            let roundOffDifference = finalTotal - totalBeforeRoundOff;
+            
+            let roundOffAmount = Math.abs(roundOffDifference);
+            let roundOffType = roundOffDifference >= 0 ? 'Add' : 'Less';
 
-            $('#grand_total').text(grandTotal.toFixed(2));
-            $('#grand_total_input').val(grandTotal.toFixed(2));
+            $('#round_off_display').text(roundOffAmount.toFixed(2));
+            $('#round_off_input').val(roundOffAmount.toFixed(2));
+            $('#round_off_type').val(roundOffType);
+
+            $('#grand_total').text(finalTotal.toFixed(2));
+            $('#grand_total_input').val(finalTotal.toFixed(2));
 
             let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
-            let dueAmount = grandTotal - receivedAmount;
+            let dueAmount = finalTotal - receivedAmount;
 
             $('#due_amount').text(dueAmount.toFixed(2));
             $('#due_amount_input').val(dueAmount.toFixed(2));
         }
 
-        function updateGrandTotalOnly() {
-            let taxableAmount = parseFloat($('#taxable_amount_input').val()) || 0;
-            let taxAmount = parseFloat($('#tax_amount_input').val()) || 0;
-            let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
-            let roundOff = parseFloat($('#round_off_input').val()) || 0;
-            let roundOffType = $('input[name="round_off_type"]:checked').val();
-
-            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
-            $('#grand_total').text(grandTotal.toFixed(2));
-            $('#grand_total_input').val(grandTotal.toFixed(2));
-
-            let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
-            let dueAmount = grandTotal - receivedAmount;
-
-            $('#due_amount').text(dueAmount.toFixed(2));
-            $('#due_amount_input').val(dueAmount.toFixed(2));
-        }
 
         function calculateChargesOnly() {
             let otherCharges = 0;
@@ -1437,28 +1414,12 @@
                 otherCharges += amt;
             });
 
-            // Update Other Charges
             $('#other_charges').text(otherCharges.toFixed(2));
             $('#other_charges_input').val(otherCharges.toFixed(2));
 
-            // Get existing values (DO NOT recalc items)
-            let taxableAmount = parseFloat($('#taxable_amount_input').val()) || 0;
-            let taxAmount = parseFloat($('#tax_amount_input').val()) || 0;
-            let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
-
-            // Grand total
-            let roundOff = parseFloat($('#round_off_input').val()) || 0;
-            let roundOffType = $('input[name="round_off_type"]:checked').val();
-            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
-
-            $('#grand_total').text(grandTotal.toFixed(2));
-            $('#grand_total_input').val(grandTotal.toFixed(2));
-
-            // Due
-            let dueAmount = grandTotal - receivedAmount;
-            $('#due_amount').text(dueAmount.toFixed(2));
-            $('#due_amount_input').val(dueAmount.toFixed(2));
+            calculateTotals();
         }
+
 
         function calculateItemSubtotal() {
             let subTotal = 0;
@@ -1513,16 +1474,25 @@
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
             let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
-            let roundOff = parseFloat($('#round_off_input').val()) || 0;
-            let roundOffType = $('input[name="round_off_type"]:checked').val();
-            let grandTotal = taxableAmount + taxAmount + otherCharges + (roundOffType === 'Less' ? -roundOff : roundOff);
+            
+            // Automated Round Off
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
+            let finalTotal = Math.round(totalBeforeRoundOff);
+            let roundOffDifference = finalTotal - totalBeforeRoundOff;
+            
+            let roundOffAmount = Math.abs(roundOffDifference);
+            let roundOffType = roundOffDifference >= 0 ? 'Add' : 'Less';
 
-            $('#grand_total').text(grandTotal.toFixed(2));
-            $('#grand_total_input').val(grandTotal.toFixed(2));
+            $('#round_off_display').text(roundOffAmount.toFixed(2));
+            $('#round_off_input').val(roundOffAmount.toFixed(2));
+            $('#round_off_type').val(roundOffType);
+
+            $('#grand_total').text(finalTotal.toFixed(2));
+            $('#grand_total_input').val(finalTotal.toFixed(2));
 
             let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
             let newPayment = parseFloat($('#received_amount_input').val()) || 0;
-            let due = grandTotal - paidSoFar - newPayment;
+            let due = finalTotal - paidSoFar - newPayment;
 
             $('#due_amount').text(due.toFixed(2));
             $('#due_amount_input').val(due.toFixed(2));
