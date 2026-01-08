@@ -157,4 +157,9 @@ class User extends Authenticatable
             ? asset('uploads/employee/' . $this->id . '/' . $this->pan_document)
             : null;
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 }

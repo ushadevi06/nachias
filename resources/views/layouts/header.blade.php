@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="layout-navbar-fixed layout-menu-fixed layout-compact" dir="ltr" data-skin="default"
-    data-assets-path="../../assets/" data-template="horizontal-menu-template" data-bs-theme="light">
+    data-assets-path="{{ url('assets') }}/" data-template="horizontal-menu-template" data-bs-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -16,7 +16,13 @@
     <link rel="stylesheet" href="{{ url('assets/css/flatpickr.css') }}">
     <link rel="stylesheet" href="{{ url('assets/datatables/css/dataTables.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/datatables/css/responsive.bootstrap5.min.css') }}">
+    
+    <!-- Core JS -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="{{ url('assets/js/helpers.js') }}"></script>
+    <script src="{{ url('assets/js/bootstrap.js') }}"></script>
+    <script src="{{ url('assets/js/config.js') }}"></script>
+    
 	<script>
 		var APP_URL = {!! json_encode(url('/')) !!};
 	</script>

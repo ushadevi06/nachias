@@ -244,48 +244,62 @@ $isSuper = $user->id == 1;
                                         @endif
 
                                         <!-- Tailoring Specification -->
-                                        <li class="menu-item {{ (request()->is('fit*') || request()->is('patti_type*') || request()->is('collar_type*') || request()->is('cuff_type*') || request()->is('pocket_type*') || request()->is('bottom_cut*')) ? 'active' : '' }}">
+                                        @if($isSuper || $user->can('view fits') || $user->can('view patti types') || $user->can('view collar types') || $user->can('view cuff types') || $user->can('view pocket types') || $user->can('view bottom cuts'))
+                                        <li class="menu-item {{ (request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*')) ? 'active' : '' }}">
                                             <a href="javascript:void(0)" class="menu-link menu-toggle">
                                                 <div>Tailoring Specification</div>
                                             </a>
                                             <ul class="menu-sub">
-                                                <li class="menu-item {{ request()->is('fit*') ? 'active' : '' }}">
-                                                    <a href="{{ url('fit') }}" class="menu-link">
+                                                @if($isSuper || $user->can('view fits'))
+                                                <li class="menu-item {{ request()->is('fits*') ? 'active' : '' }}">
+                                                    <a href="{{ url('fits') }}" class="menu-link">
                                                         <div>Fit</div>
                                                     </a>
                                                 </li>
+                                                @endif
 
-                                                <li class="menu-item {{ request()->is('patti_type*') ? 'active' : '' }}">
-                                                    <a href="{{ url('patti_type') }}" class="menu-link">
+                                                @if($isSuper || $user->can('view patti types'))
+                                                <li class="menu-item {{ request()->is('patti_types*') ? 'active' : '' }}">
+                                                    <a href="{{ url('patti_types') }}" class="menu-link">
                                                         <div>Patti Type</div>
                                                     </a>
                                                 </li>
+                                                @endif
 
-                                                <li class="menu-item {{ request()->is('collar_type*') ? 'active' : '' }}">
-                                                    <a href="{{ url('collar_type') }}" class="menu-link">
+                                                @if($isSuper || $user->can('view collar types'))
+                                                <li class="menu-item {{ request()->is('collar_types*') ? 'active' : '' }}">
+                                                    <a href="{{ url('collar_types') }}" class="menu-link">
                                                         <div>Collar Type</div>
                                                     </a>
                                                 </li>
+                                                @endif
 
-                                                <li class="menu-item {{ request()->is('cuff_type*') ? 'active' : '' }}">
-                                                    <a href="{{ url('cuff_type') }}" class="menu-link">
+                                                @if($isSuper || $user->can('view cuff types'))
+                                                <li class="menu-item {{ request()->is('cuff_types*') ? 'active' : '' }}">
+                                                    <a href="{{ url('cuff_types') }}" class="menu-link">
                                                         <div>Cuff Type</div>
                                                     </a>
                                                 </li>
+                                                @endif
 
-                                                <li class="menu-item {{ request()->is('pocket_type*') ? 'active' : '' }}">
-                                                    <a href="{{ url('pocket_type') }}" class="menu-link">
+                                                @if($isSuper || $user->can('view pocket types'))
+                                                <li class="menu-item {{ request()->is('pocket_types*') ? 'active' : '' }}">
+                                                    <a href="{{ url('pocket_types') }}" class="menu-link">
                                                         <div>Pocket Type</div>
                                                     </a>
                                                 </li>
+                                                @endif
 
-                                                <li class="menu-item {{ request()->is('bottom_cut*') ? 'active' : '' }}">
-                                                    <a href="{{ url('bottom_cut') }}" class="menu-link">
+                                                @if($isSuper || $user->can('view bottom cuts'))
+                                                <li class="menu-item {{ request()->is('bottom_cuts*') ? 'active' : '' }}">
+                                                    <a href="{{ url('bottom_cuts') }}" class="menu-link">
                                                         <div>Bottom Cut</div>
                                                     </a>
                                                 </li>
+                                                @endif
                                             </ul>
                                         </li>
+                                        @endif
 
                                         <!-- Parties -->
                                         @if($isSuper || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales agents') || $user->can('view purchase commission agents'))

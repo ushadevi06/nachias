@@ -1,0 +1,134 @@
+[
+    {
+        "id": "in-progress",
+        "title": "In Progress",
+        "class": "info",
+        "item": [
+            {
+                "id": "task-2025-001",
+                "title": "TASK-2025-001 - Cutting (Ramesh)",
+                "badge": "info",
+                "badge-text": "Production",
+                "start-date": "2025-09-01",
+                "due-date": "2025-09-30",
+                "attachments": 4,
+                "comments": 12,
+                "assigned": "1.png,2.png,3.png,4.png",
+                "members": "Ramesh,Karthick,Sarah,Mike",
+                "progress": "80"
+            },
+            {
+                "id": "task-2025-003",
+                "title": "TASK-2025-003 - Fabric Inspection (Sarah)",
+                "badge": "info",
+                "badge-text": "Quality",
+                "start-date": "2025-09-05",
+                "due-date": "2025-09-25",
+                "attachments": 2,
+                "comments": 5,
+                "assigned": "2.png,6.png",
+                "members": "Sarah,Ramesh",
+                "progress": "60"
+            }
+        ]
+    },
+    {
+        "id": "in-review",
+        "title": "In Review",
+        "class": "warning",
+        "item": [
+            {
+                "id": "task-2025-004",
+                "title": "TASK-2025-004 - Pattern Approval (Mike)",
+                "badge": "warning",
+                "badge-text": "Review",
+                "start-date": "2025-09-10",
+                "due-date": "2025-09-20",
+                "attachments": 1,
+                "comments": 8,
+                "assigned": "7.png",
+                "members": "Mike,Sarah",
+                "progress": "90"
+            },
+            {
+                "id": "task-2025-005",
+                "title": "TASK-2025-005 - Sample Check (Ramesh)",
+                "badge": "warning",
+                "badge-text": "Review",
+                "start-date": "2025-09-12",
+                "due-date": "2025-09-22",
+                "attachments": 3,
+                "comments": 6,
+                "assigned": "8.png,9.png",
+                "members": "Ramesh,Karthick",
+                "progress": "85"
+            }
+        ]
+    },
+    {
+        "id": "done",
+        "title": "Done",
+        "class": "success",
+        "item": [
+            {
+                "id": "task-2025-006",
+                "title": "TASK-2025-006 - Trimming Completed (Sarah)",
+                "badge": "success",
+                "badge-text": "Completed",
+                "start-date": "2025-09-01",
+                "due-date": "2025-09-10",
+                "attachments": 0,
+                "comments": 2,
+                "assigned": "",
+                "members": "Sarah",
+                "progress": "100"
+            }
+        ]
+    },
+    {
+        "id": "live",
+        "title": "Live",
+        "class": "primary",
+        "item": [
+            {
+                "id": "task-2025-002",
+                "title": "TASK-2025-002 - Stitching (Karthick)",
+                "comments": "0",
+                "badge-text": "Not Started",
+                "badge": "secondary",
+                "start-date": "01 October",
+                "due-date": "15 October",
+                "attachments": "0",
+                "assigned": "5.png",
+                "members": "Karthick",
+                "progress": "0"
+            },
+            {
+                "id": "task-2025-007",
+                "title": "TASK-2025-007 - Ironing Setup (Mike)",
+                "badge": "primary",
+                "badge-text": "Live",
+                "start-date": "2025-10-01",
+                "due-date": "2025-10-05",
+                "attachments": 1,
+                "comments": 1,
+                "assigned": "10.png",
+                "members": "Mike",
+                "progress": "20"
+            },
+            {
+                "id": "task-2025-008",
+                "title": "TASK-2025-008 - Packing Preparation (Sarah)",
+                "badge": "primary",
+                "badge-text": "Live",
+                "start-date": "2025-10-02",
+                "due-date": "2025-10-08",
+                "attachments": 2,
+                "comments": 0,
+                "assigned": "11.png,12.png",
+                "members": "Sarah,Karthick",
+                "progress": "10"
+            }
+        ]
+    }
+]

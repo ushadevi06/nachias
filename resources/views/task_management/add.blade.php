@@ -142,7 +142,7 @@
                                 <div class="timeline-icon bg-label-primary"><i class="ri ri-add-line"></i></div>
                                 <div class="timeline-content">
                                     <p class="mb-1 fw-bold">Task Created</p>
-                                    <small class="text-muted d-block">10:00 AM &bull; By Sarah Admin</small>
+                                    <small class="text-muted d-block">10:00 AM &bull; By Admin</small>
                                 </div>
                             </div>
                             <div class="timeline-item">
@@ -236,7 +236,7 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" value="Sarah Admin" readonly />
+                                    <input type="text" class="form-control" value="Admin" readonly />
                                     <label>Assigned By</label>
                                 </div>
                             </div>
@@ -418,8 +418,15 @@
                                         <option value="On Hold">On Hold</option>
                                         <option value="Completed">Completed</option>
                                         <option value="Cancelled">Cancelled</option>
+                                        <option value="Other">Other (Create New)</option>
                                     </select>
                                     <label>Official Status *</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="custom_status_container" style="display: none;">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="custom_status" placeholder="Enter custom status" />
+                                    <label>Custom Status Name *</label>
                                 </div>
                             </div>
                             <div class="col-md-6" id="blocker_reason_container" style="display: none;">
@@ -500,11 +507,23 @@
 
         // 🔄 Toggle Logic: Status -> Blocker Reason
         $('#official_status').on('change', function() {
-            if ($(this).val() === 'Blocked') {
+            let val = $(this).val();
+            
+            // Toggle Blocker Reason
+            if (val === 'Blocked') {
                 $('#blocker_reason_container').fadeIn();
             } else {
                 $('#blocker_reason_container').fadeOut();
             }
+
+            // Toggle Custom Status Input
+            if (val === 'Other') {
+                $('#custom_status_container').fadeIn();
+                $('#custom_status').focus();
+            } else {
+                $('#custom_status_container').fadeOut();
+            }
+
             updateFinalizeBtn();
         });
 
@@ -620,7 +639,6 @@
     .section-card:hover { box-shadow: 0 4px 12px 0 rgba(67, 89, 113, 0.15) !important; }
     .section-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; }
     
-    .form-floating-outline .form-control:focus { border-color: var(--erp-primary); box-shadow: 0 0 0 2px rgba(var(--erp-primary-rgb), 0.1); }
     
     .bg-label-primary { background-color: #e7e7ff !important; color: #696cff !important; }
     .bg-label-success { background-color: #e8fadf !important; color: #71dd37 !important; }
@@ -633,7 +651,7 @@
     .avatar { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 
     .sticky-bottom-actions { position: sticky; bottom: 0; z-index: 10; margin-left: -1rem; margin-right: -1rem; padding-left: 2rem; padding-right: 2rem; }
-
+    
     /* Custom Input States */
     .form-control[readonly] { background-color: #fcfcfd !important; opacity: 0.85; }
     

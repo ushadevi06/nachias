@@ -18,19 +18,21 @@ class SizeRatio extends Model
         'updated_by',
     ];
 
-    // Accessor to get size array
     public function getSizeArrayAttribute()
     {
         return explode(',', $this->size);
     }
 
-    // Accessor to get ratio array
     public function getRatioArrayAttribute()
     {
         return explode(',', $this->ratio);
     }
 
-    // Validation for equal count of size and ratio
+    public function getDisplayAttribute()
+    {
+        return "({$this->size}) - ({$this->ratio})";
+    }
+
     public static function validateSizeRatio($size, $ratio)
     {
         $sizeCount = count(explode(',', $size));

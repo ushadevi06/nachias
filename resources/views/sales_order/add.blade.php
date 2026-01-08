@@ -118,8 +118,8 @@
                                 <div class="row item-row g-4">
                                     <div class="col-md-3 col-xl-2">
                                         <div class="form-floating form-floating-outline">
-                                            <select id="" class="select2 form-select" data-placeholder="Select Brand">
-                                                <option value="">Select Brand</option>
+                                            <select id="" class="select2 form-select" data-placeholder="Select Brand Category">
+                                                <option value="">Select Brand Category</option>
                                                 <option value="BlueBay">BlueBay</option>
                                                 <option value="Ethnic Edge">Ethnic Edge</option>
                                                 <option value="Royal Attire">Royal Attire</option>
@@ -221,106 +221,193 @@
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="total_quantity" placeholder="Enter Total Quantity" readonly value="">
-                                    <label for="total_quantity">Total Quantity</label>
+                <div class="row g-4">
+                    <!-- Additional Information -->
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="card-header-box">
+                                    <h4>Additional Information</h4>
                                 </div>
-                            </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="sub_total" placeholder="Enter Sub Total" readonly value="0.00">
-                                    <label for="sub_total">Sub Total</label>
-                                </div>
-                            </div>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        <div class="form-floating form-floating-outline">
+                                            <select id="status" name="status" class="select2 form-select">
+                                                <option value="">Select Status</option>
+                                                <option value="Draft" selected>Draft</option>
+                                                <option value="Approved">Approved</option>
+                                                <option value="Dispatched">Dispatched</option>
+                                                <option value="Received">Received</option>
+                                            </select>
+                                            <label for="status">Status <span class="text-danger">*</span></label>
+                                        </div>
+                                    </div>
 
-                            <div class="col-md-4">
-                                <label class="form-floating form-floating-outline">Discount:</label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" id="discount_percent" placeholder="0.00">
-                                    <span class="input-group-text">%</span>
-                                <input type="text" class="form-control text-end" id="discount_amount" readonly value="0.00">
-                                </div>
-                            </div>
+                                    <div class="col-12">
+                                        <div class="form-floating form-floating-outline">
+                                            <textarea class="form-control h-px-100"
+                                                id="payment_terms"
+                                                name="payment_terms"
+                                                placeholder="Enter Payment Terms"></textarea>
+                                            <label for="payment_terms">Payment Terms</label>
+                                        </div>
+                                    </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control text-end" id="total_after_discount" readonly value="0.00">
-                                    <label for="total_after_discount" class="fw-bold">Total After Discount</label>
+                                    <div class="col-12 file-container">
+                                        <div class="form-floating form-floating-outline text-black">
+                                            <input type="file" class="form-control file-input"
+                                                id="additional_attachments"
+                                                name="additional_attachments">
+                                            <label for="additional_attachments">Additional Attachments</label>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control h-px-100" id="additional_notes" placeholder="Enter Additional Notes"></textarea>
-                                    <label for="additional_notes">Additional Notes</label>
-                                </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold">Other State?</label><br>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="yes">
-                                    <label class="form-check-label" for="other_state_yes">Yes</label>
+                    <!-- Tax Summary -->
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="card-header-box">
+                                    <h4>Tax Summary</h4>
                                 </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="no" checked>
-                                    <label class="form-check-label" for="other_state_no">No</label>
-                                </div>
-                            </div>
 
-                            <div class="col-md-6" id="cgst_sgst_section">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control text-end" id="cgst" readonly value="0.00">
-                                    <label for="cgst" class="fw-bold">CGST (9%)</label>
-                                </div>
-                            </div>
+                                <div class="row g-4">
+                                    <div class="col-12">
 
-                            <div class="col-md-6" id="sgst_section">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control text-end" id="sgst" readonly value="0.00">
-                                    <label for="sgst" class="fw-bold">SGST (9%)</label>
-                                </div>
-                            </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Total Qty:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold"
+                                                id="total_qty" name="total_qty" value="0" readonly>
+                                        </div>
 
-                            <div class="col-md-6 d-none" id="igst_section">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control text-end" id="igst" readonly value="0.00">
-                                    <label for="igst" class="fw-bold">IGST (18%)</label>
-                                </div>
-                            </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Sub Total:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold"
+                                                id="sub_total" name="sub_total" value="0.00" readonly>
+                                        </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control text-end fw-bold" id="grand_total" readonly value="0.00">
-                                    <label for="grand_total" class="fw-bold">Grand Total</label>
-                                </div>
-                            </div>
+                                        <!-- Discount -->
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="fw-medium">Discount:</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end"
+                                                        id="discount_percent" name="discount_percent"
+                                                        step="0.01" min="0" max="100" value="0">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-1">
+                                                <input type="text"
+                                                    class="form-control-plaintext form-control-sm text-end py-0"
+                                                    id="discount_amount" name="discount_amount"
+                                                    value="0.00" readonly>
+                                            </div>
+                                        </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control text-end" id="received_amount" placeholder="0.00">
-                                    <label for="received_amount" class="fw-bold">Received Amount</label>
-                                </div>
-                            </div>
+                                        <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                                            <label class="fw-medium">Net Amount (Before Tax):</label>
+                                            <input type="text"
+                                                class="form-control-plaintext text-end w-50 fw-bold"
+                                                id="taxable_amount" name="taxable_amount"
+                                                value="0.00" readonly>
+                                        </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control text-end text-danger fw-bold" id="due_amount" readonly value="0.00">
-                                    <label for="due_amount" class="fw-bold text-danger">Due Amount</label>
+                                        <!-- Other State -->
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Other State:</label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="other_state" value="no" checked>
+                                                    <label class="form-check-label">No</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio"
+                                                        name="other_state" value="yes">
+                                                    <label class="form-check-label">Yes</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" name="round_off_type" value="Add">
+
+                                        <!-- IGST -->
+                                        <div class="igst-field d-none">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="fw-medium">IGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number"
+                                                        class="form-control form-control-sm text-end"
+                                                        id="igst_percent" name="igst_percent"
+                                                        value="0">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- CGST -->
+                                        <div class="cgst-field">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="fw-medium">CGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number"
+                                                        class="form-control form-control-sm text-end"
+                                                        id="cgst_percent" name="cgst_percent"
+                                                        value="9">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- SGST -->
+                                        <div class="sgst-field mt-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="fw-medium">SGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number"
+                                                        class="form-control form-control-sm text-end"
+                                                        id="sgst_percent" name="sgst_percent"
+                                                        value="9">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Tax Amount:</label>
+                                            <input type="text"
+                                                class="form-control-plaintext text-end w-50"
+                                                id="tax_amount" name="tax_amount"
+                                                value="0.00" readonly>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                                            <label class="fw-bold fs-5">Total Amount:</label>
+                                            <input type="text"
+                                                class="form-control-plaintext text-end w-50 fw-bold fs-5 text-primary"
+                                                id="total_amount" name="total_amount"
+                                                value="0.00" readonly>
+                                        </div>
+
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
                 </div>
+
+
                 <!-- Submit Buttons -->
                 <div class="text-end mt-4">
                     <button type="submit" class="btn btn-primary">Submit</button>
-                    <a href="{{ url('sales_invoice') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ url('sales_order') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

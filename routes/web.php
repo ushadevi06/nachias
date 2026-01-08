@@ -87,7 +87,7 @@ Route::get('/', function () {
 Route::get('/update_page', function () {
     return view('update_page');
 });
-Route::post('login', [AuthController::class, 'authentication']);
+Route::match(['get','post'],'login',[AuthController::class,'authentication']);
 Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
@@ -195,29 +195,41 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/tax/delete/{id}', [TaxController::class, 'destroy']);
     Route::post('/tax/status/{id}', [TaxController::class, 'updateStatus']);
 
-    /* Fit */
-    Route::get('fit', [FitController::class, 'index']);
-    Route::get('fit/add', [FitController::class, 'add']);
+    /* Fits */
+    Route::get('/fits', [FitController::class, 'index']);
+    Route::match(['GET', 'POST'], '/fits/add/{id?}', [FitController::class, 'add']);
+    Route::get('/fits/delete/{id}', [FitController::class, 'destroy']);
+    Route::post('/fits/status/{id}', [FitController::class, 'updateStatus']);
 
-    /* Patti Type */
-    Route::get('patti_type', [PattiTypeController::class, 'index']);
-    Route::get('patti_type/add', [PattiTypeController::class, 'add']);
+    /* Patti Types */
+    Route::get('/patti_types', [PattiTypeController::class, 'index']);
+    Route::match(['GET', 'POST'], '/patti_types/add/{id?}', [PattiTypeController::class, 'add']);
+    Route::get('/patti_types/delete/{id}', [PattiTypeController::class, 'destroy']);
+    Route::post('/patti_types/status/{id}', [PattiTypeController::class, 'updateStatus']);
 
-    /* Collar Type */
-    Route::get('collar_type', [CollarTypeController::class, 'index']);
-    Route::get('collar_type/add', [CollarTypeController::class, 'add']);
+    /* Collar Types */
+    Route::get('/collar_types', [CollarTypeController::class, 'index']);
+    Route::match(['GET', 'POST'], '/collar_types/add/{id?}', [CollarTypeController::class, 'add']);
+    Route::get('/collar_types/delete/{id}', [CollarTypeController::class, 'destroy']);
+    Route::post('/collar_types/status/{id}', [CollarTypeController::class, 'updateStatus']);
 
-    /* Cuff Type */
-    Route::get('cuff_type', [CuffTypeController::class, 'index']);
-    Route::get('cuff_type/add', [CuffTypeController::class, 'add']);
+    /* Cuff Types */
+    Route::get('/cuff_types', [CuffTypeController::class, 'index']);
+    Route::match(['GET', 'POST'], '/cuff_types/add/{id?}', [CuffTypeController::class, 'add']);
+    Route::get('/cuff_types/delete/{id}', [CuffTypeController::class, 'destroy']);
+    Route::post('/cuff_types/status/{id}', [CuffTypeController::class, 'updateStatus']);
 
-    /* Pocket Type */
-    Route::get('pocket_type', [PocketTypeController::class, 'index']);
-    Route::get('pocket_type/add', [PocketTypeController::class, 'add']);
+    /* Pocket Types */
+    Route::get('/pocket_types', [PocketTypeController::class, 'index']);
+    Route::match(['GET', 'POST'], '/pocket_types/add/{id?}', [PocketTypeController::class, 'add']);
+    Route::get('/pocket_types/delete/{id}', [PocketTypeController::class, 'destroy']);
+    Route::post('/pocket_types/status/{id}', [PocketTypeController::class, 'updateStatus']);
 
-    /* Bottom Cut */
-    Route::get('bottom_cut', [BottomCutController::class, 'index']);
-    Route::get('bottom_cut/add', [BottomCutController::class, 'add']);
+    /* Bottom Cuts */
+    Route::get('/bottom_cuts', [BottomCutController::class, 'index']);
+    Route::match(['GET', 'POST'], '/bottom_cuts/add/{id?}', [BottomCutController::class, 'add']);
+    Route::get('/bottom_cuts/delete/{id}', [BottomCutController::class, 'destroy']);
+    Route::post('/bottom_cuts/status/{id}', [BottomCutController::class, 'updateStatus']);
 
     /* Brands */
     Route::get('brands', [BrandController::class, 'index']);
@@ -370,9 +382,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Job Card Entry */
     Route::get('job_card_entries', [JobCardEntryController::class, 'index']);
-    Route::get('add_job_card_entry', [JobCardEntryController::class, 'add']);
-    Route::get('view_job_card_entry', [JobCardEntryController::class, 'view']);
-    Route::get('view_jc_item', [JobCardEntryController::class, 'view_jc_item']);
+    Route::match(['GET', 'POST'], 'job_card_entries/add/{id?}', [JobCardEntryController::class, 'add']);
+    Route::get('job_card_entries/view/{id}', [JobCardEntryController::class, 'view_details']);
+    Route::post('job_card_entries/delete/{id}', [JobCardEntryController::class, 'destroy']);
+    Route::get('job_card_entries/get-size-ratio/{id}', [JobCardEntryController::class, 'getSizeRatioDetails']);
+    Route::get('job_card_entries/get-po-details/{id}', [JobCardEntryController::class, 'getPoDetails']);
+    Route::delete('job_card_entries/delete-image/{id}', [JobCardEntryController::class, 'deleteImage']);
+    Route::get('job_card_entries/view-item/{id}', [JobCardEntryController::class, 'view_jc_item']);
 
     /* Production */
     Route::get('productions', [ProductionController::class, 'index']);
@@ -380,6 +396,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('view_production', [ProductionController::class, 'view']);
     Route::get('task_management', [TaskManagementController::class, 'index']);
     Route::get('add_task_management', [TaskManagementController::class, 'add']);
+    Route::get('view_task_management', [TaskManagementController::class, 'view1']);
+    Route::get('view_task_details', [TaskManagementController::class, 'view_details']);
 
     /* Billing */
     Route::get('billing', [BillingController::class, 'index']);

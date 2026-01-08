@@ -36,14 +36,6 @@
                             <div class="text-muted">PO-458</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Payment Terms:</label>
-                            <div class="text-muted">30 Days</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Broker / Sales Agent:</label>
-                            <div class="text-muted">Neha Sharma (SA102)</div>
-                        </div>
-                        <div class="col-md-4">
                             <label class="detail-title">Expected Delivery Date:</label>
                             <div class="text-muted">15-Sep-2025</div>
                         </div>
@@ -56,20 +48,12 @@
                             <div class="text-muted">12, Main Street</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Address Line 1:</label>
+                            <label class="detail-title">Address Line 2:</label>
                             <div class="text-muted">Delhi</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Zipcode:</label>
                             <div class="text-muted">625011</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Status:</label>
-                            <div class="text-muted"><span class="badge bg-warning">Pending</span></div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Remarks:</label>
-                            <div class="text-muted">Urgent delivery requested</div>
                         </div>
 
                         <div class="col-lg-12">
@@ -129,72 +113,108 @@
                         </div>
 
                         <!-- ========== TAX & CHARGES SECTION ========== -->
-                        <div class="col-lg-12">
-                            <h6>Tax & Charges:</h6>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="row g-3 align-items-center">
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Sub Total:</label>
-                                        <input type="text" class="form-control text-end" readonly value="₹140.00">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Discount:</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control text-end" readonly value="2%">
-                                            <span class="input-group-text">%</span>
-                                            <input type="text" class="form-control text-end" readonly value="₹2.80">
+                        <div class="row g-4 mt-2">
+                            <!-- Additional Information Card -->
+                            <div class="col-lg-6">
+                                <div class="card h-100 border shadow-none">
+                                    <div class="card-body">
+                                        <div class="card-header-box mb-4">
+                                            <h6 class="mb-0">Additional Information</h6>
+                                        </div>
+                                        <div class="row g-4">
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Status:</label>
+                                                <div class="text-muted"><span class="badge bg-label-warning">Pending</span></div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Payment Terms:</label>
+                                                <div class="text-muted h-px-100 border rounded p-2">30 Days</div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Remarks:</label>
+                                                <div class="text-muted border rounded p-2">Urgent delivery requested</div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Additional Attachments:</label>
+                                                <div class="mt-2">
+                                                    <img src="{{ asset('assets/img/illustrations/page-pricing-basic.png') }}" alt="Attachment Preview" class="img-fluid rounded border shadow-sm" style="max-height: 200px; cursor: pointer;">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Total After Discount:</label>
-                                        <input type="text" class="form-control text-end" readonly value="₹137.20">
-                                    </div>
-
-                                    <div class="col-md-12 mt-3">
-                                        <label class="form-label fw-bold">Other State?</label><br>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="yes">
-                                            <label class="form-check-label" for="other_state_yes">Yes</label>
+                            <!-- Tax Summary Card -->
+                            <div class="col-lg-6">
+                                <div class="card h-100 border shadow-none">
+                                    <div class="card-body">
+                                        <div class="card-header-box mb-4">
+                                            <h6 class="mb-0">Tax Summary</h6>
                                         </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="no" checked>
-                                            <label class="form-check-label" for="other_state_no">No</label>
+                                        <div class="d-flex flex-column gap-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fw-semibold">Total Qty:</span>
+                                                <span class="fw-bold">4.00</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fw-semibold">Sub Total:</span>
+                                                <span class="fw-bold">₹140.00</span>
+                                            </div>
+                                            <div class="row align-items-center g-2">
+                                                <div class="col-6">
+                                                    <span class="fw-semibold">Discount:</span>
+                                                </div>
+                                                <div class="col-6 text-end">
+                                                    <span class="badge bg-label-danger">2%</span>
+                                                    <div class="fw-bold mt-1">₹2.80</div>
+                                                </div>
+                                            </div>
+                                            <hr class="my-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fw-semibold">Net Amount (Before Tax):</span>
+                                                <span class="fw-bold">₹137.20</span>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                                <span class="fw-semibold">Other State:</span>
+                                                <span class="badge bg-label-secondary">No</span>
+                                            </div>
+
+                                            <!-- CGST Row -->
+                                            <div class="row align-items-center g-2">
+                                                <div class="col-6">
+                                                    <span class="fw-semibold">CGST :</span>
+                                                </div>
+                                                <div class="col-6 text-end">
+                                                    <span class="small text-muted me-2">(9%)</span>
+                                                    <span class="fw-bold">₹12.35</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- SGST Row -->
+                                            <div class="row align-items-center g-2">
+                                                <div class="col-6">
+                                                    <span class="fw-semibold">SGST :</span>
+                                                </div>
+                                                <div class="col-6 text-end">
+                                                    <span class="small text-muted me-2">(9%)</span>
+                                                    <span class="fw-bold">₹12.35</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fw-semibold">Tax Amount:</span>
+                                                <span class="fw-bold">₹24.70</span>
+                                            </div>
+
+                                            <hr class="my-1">
+
+                                            <div class="d-flex justify-content-between align-items-center text-primary">
+                                                <h5 class="m-0 fw-bold">Total Amount:</h5>
+                                                <h5 class="m-0 fw-bold">₹162.00</h5>
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    <!-- GST Sections -->
-                                    <div class="col-md-4" id="cgst_section">
-                                        <label class="form-label fw-bold">CGST (9%):</label>
-                                        <input type="text" class="form-control text-end" readonly value="₹12.35">
-                                    </div>
-                                    <div class="col-md-4" id="sgst_section">
-                                        <label class="form-label fw-bold">SGST (9%):</label>
-                                        <input type="text" class="form-control text-end" readonly value="₹12.35">
-                                    </div>
-                                    <div class="col-md-4 d-none" id="igst_section">
-                                        <label class="form-label fw-bold">IGST (18%):</label>
-                                        <input type="text" class="form-control text-end" readonly value="₹24.70">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Grand Total:</label>
-                                        <input type="text" class="form-control text-end fw-bold text-success" readonly value="₹162.00">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Received Amount:</label>
-                                        <input type="text" class="form-control text-end" readonly value="₹100.00">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold text-danger">Due Amount:</label>
-                                        <input type="text" class="form-control text-end text-danger fw-bold" readonly value="₹62.00">
                                     </div>
                                 </div>
                             </div>

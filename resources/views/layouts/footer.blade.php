@@ -11,17 +11,17 @@
 <script src="{{ url('assets/js/bs-stepper.js') }}"></script>
 <script src="{{ url('assets/js/form-wizard-numbered.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ url('assets/js/bootstrap.js') }}"></script>
 <script src="{{ url('assets/js/flatpickr.js') }}"></script>
-<script src="{{ url('assets/js/config.js') }}"></script>
-<script src="{{ url('assets/js/helpers.js') }}"></script>
 <script src="{{ url('assets/js/menu.js') }}"></script>
 <script src="{{ url('assets/js/main.js') }}"></script>
 <script src="{{ url('assets/js/common.js') }}"></script>
 @yield('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const stepper = new Stepper(document.querySelector('.bs-stepper.wizard-numbered'));
+        const stepperEl = document.querySelector('.bs-stepper.wizard-numbered');
+        if (stepperEl) {
+            const stepper = new Stepper(stepperEl);
+        }
     });
     const menuInner = document.querySelector('.menu-inner');
     const lastMenuItem = menuInner ? menuInner.lastElementChild : null;
