@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class StoreType extends Model
 {
     use HasFactory;
+
+    protected $fillable = ['store_type_name'];
 }

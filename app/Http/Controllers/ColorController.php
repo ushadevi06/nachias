@@ -89,9 +89,7 @@ class ColorController extends Controller
                     'required',
                     'string',
                     'max:255',
-                    Rule::unique('colors', 'color_name')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
+                    Rule::unique('colors', 'color_name')->ignore($id)->whereNull('deleted_at')
                 ],
                 'description' => 'nullable|string',
                 'status' => 'required|in:Active,Inactive'
@@ -139,12 +137,10 @@ class ColorController extends Controller
         }
         $color = Color::findOrFail($id);
 
-        // Refer any other functionality for dependency checks if needed. 
-        // For now, colors might be used in items, but I'll skip complex dependency check unless I find where it's used.
-        // Similar to UomController:
-        /*
         $tables = [
             'items' => 'Items',
+            'purchase_order_items' => 'Purchase Order Items',
+            'grn_entry_item_variants' => 'GRN Item Variants',
         ];
 
         foreach ($tables as $table => $label) {
@@ -156,7 +152,6 @@ class ColorController extends Controller
                 return redirect('colors')->with('danger', "This color is currently referenced in {$label} and cannot be deleted.");
             }
         }
-        */
 
         $oldData = $color->toArray();
         $color->delete();
@@ -169,14 +164,10 @@ class ColorController extends Controller
     {
         $color = Color::findOrFail($id);
         $oldData = $color->toArray();
-
         $color->status = $request->status;
         $color->save();
-
         $newData = $color->toArray();
-
         addLog('update_status', 'Color Status', 'colors', $color->id, $oldData, $newData);
-
         return response()->json([
             'success' => true,
             'status'  => $color->status

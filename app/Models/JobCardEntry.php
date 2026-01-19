@@ -6,6 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\JobCardCuttingSizeRatio;
+use App\Models\JobCardImage;
+use App\Models\JobCardOperation;
+use App\Models\PurchaseOrder;
+use App\Models\JobCardFabricDetail;
+use App\Models\Brand;
+use App\Models\Season;
+use App\Models\ProcessGroup;
+use App\Models\SizeRatio;
+use App\Models\User;
+use App\Models\JobCardIssueItem;
 
 class JobCardEntry extends Model
 {
@@ -17,8 +28,8 @@ class JobCardEntry extends Model
         'fs_qty', 'hs_qty', 'receipt_store', 'fit', 'patti_type', 'collar_type',
         'cuff_type', 'pocket_type', 'bottom_cut', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',
-        'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'remarks', 'status', 
-        'created_by', 'updated_by', 'size_ratio_id'
+        'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'average', 'remarks', 'status', 
+        'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label'
     ];
 
     public function cuttingMaster()
@@ -51,9 +62,9 @@ class JobCardEntry extends Model
         return $this->belongsTo(SizeRatio::class);
     }
 
-    public function items()
+    public function cuttingSizeRatios()
     {
-        return $this->hasMany(JobCardItem::class);
+        return $this->hasMany(JobCardCuttingSizeRatio::class);
     }
 
     public function images()
@@ -66,13 +77,18 @@ class JobCardEntry extends Model
         return $this->hasMany(JobCardOperation::class);
     }
 
-    public function articleMatrices()
+    public function fabricDetails()
     {
-        return $this->hasMany(JobCardArticleMatrix::class);
+        return $this->hasMany(JobCardFabricDetail::class);
     }
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function issueItems()
+    {
+        return $this->hasMany(JobCardIssueItem::class);
     }
 }

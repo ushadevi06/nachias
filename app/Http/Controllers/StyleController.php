@@ -50,6 +50,7 @@ class StyleController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $i++,
                     'style_name' => $row->style_name,
+                    'code'       => $row->code,
                     'status'     => $status,
                     'action'     => $action,
                 ];
@@ -78,6 +79,7 @@ class StyleController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'style_name' => 'required|string|max:255|unique:styles,style_name,' . $id . ',id,deleted_at,NULL',
+                'code'       => 'required|string|max:50|unique:styles,code,' . $id . ',id,deleted_at,NULL',
                 'status'     => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -86,7 +88,7 @@ class StyleController extends Controller
             ];
             $request->validate($rules, $messages);
 
-            $data = $request->only(['style_name', 'status']);
+            $data = $request->only(['style_name', 'code', 'status']);
 
             if ($id) {
                 $data['updated_by'] = auth()->id();

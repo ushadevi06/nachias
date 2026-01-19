@@ -23,10 +23,10 @@
                             <div class="text-muted">{{ $purchaseOrder->po_date->format('d-M-Y') }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Broker / Sales Agent:</label>
+                            <label class="detail-title">Purchase Commission Agent:</label>
                             <div class="text-muted">
-                                @if($purchaseOrder->salesAgent)
-                                {{ $purchaseOrder->salesAgent->name }}({{ $purchaseOrder->salesAgent->code }})
+                                @if($purchaseOrder->purchaseCommissionAgent)
+                                {{ $purchaseOrder->purchaseCommissionAgent->name }}({{ $purchaseOrder->purchaseCommissionAgent->code }})
                                 @else
                                 -
                                 @endif
@@ -41,7 +41,7 @@
                             <div class="text-muted">{{ $purchaseOrder->reference_no ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Reference Date:</label>
+                            <label class="detail-title">Reference / Order Date:</label>
                             <div class="text-muted">{{ $purchaseOrder->reference_date ? $purchaseOrder->reference_date->format('d-M-Y') : '-' }}</div>
                         </div>
                         <div class="col-md-4">
@@ -52,10 +52,7 @@
                             <label class="detail-title">Delivery Location:</label>
                             <div class="text-muted">{{ $purchaseOrder->storeType->store_type_name ?? '-' }}</div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Order Date:</label>
-                            <div class="text-muted">{{ $purchaseOrder->order_date->format('d-M-Y') }}</div>
-                        </div>
+
                         <div class="col-md-4">
                             <label class="detail-title">Payment Terms:</label>
                             <div class="text-muted">{{ $purchaseOrder->payment_terms ?? '-' }}</div>
@@ -103,8 +100,10 @@
                                         <tr>
                                             <th>S.No</th>
                                             <th>Category</th>
+                                            <th>Brand</th>
                                             <th>Material (Code)</th>
-                                            <th>Art No</th>
+                                            <th>Fabric Width</th>
+                                            <th>Supplier Design Name</th>
                                             <th>Quantity</th>
                                             <th>UOM</th>
                                             <th>Rate</th>
@@ -118,7 +117,15 @@
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
                                             <td>{{ $item->storeCategory->category_name ?? '-' }}</td>
+                                            <td>{{ $item->brand->brand_name ?? '-' }}</td>
                                             <td>{{ $item->rawMaterial->name ?? '-' }} <span class="mini-title">({{ $item->rawMaterial->code ?? '-' }})</span></td>
+                                            <td>
+                                                @if($item->fabricWidth)
+                                                    {{ $item->fabricWidth->size }} - ({{ $item->fabricWidth->ratio }})
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
                                             <td>{{ $item->art_no ?? '-' }}</td>
                                             <td>{{ number_format($item->quantity, 2) }}</td>
                                             <td>{{ $item->uom->uom_code ?? '-' }}</td>
@@ -137,7 +144,7 @@
                                         </tr>
                                         @endforeach
                                         <tr>
-                                            <td colspan="9" class="text-end"><strong>Subtotal</strong></td>
+                                            <td colspan="11" class="text-end"><strong>Subtotal</strong></td>
                                             <td><strong>₹{{ number_format($purchaseOrder->sub_total, 2) }}</strong></td>
                                         </tr>
                                     </tbody>
@@ -198,6 +205,22 @@
                         <div class="col-md-3 col-xl-2">
                             <label class="detail-title">Tax Amount:</label>
                             <div class="text-muted">₹{{ number_format($purchaseOrder->tax_amount, 2) }}</div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">Commission Amount:</label>
+                            @php
+                                $commissionAmount = ($purchaseOrder->taxable_amount * ($purchaseOrder->commission ?? 0)) / 100;
+                            @endphp
+                            <div class="text-muted">₹{{ number_format($commissionAmount, 2) }}</div>
+                        </div>
+
+                        <div class="col-md-3 col-xl-2">
+                            <label class="detail-title">Round Off:</label>
+                            <div class="text-muted">
+                                @if($purchaseOrder->round_off_type == 'Less') - @endif
+                                ₹{{ number_format($purchaseOrder->round_off, 2) }}
+                            </div>
                         </div>
 
                         <div class="col-md-3 col-xl-2">

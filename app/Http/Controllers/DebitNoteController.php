@@ -100,8 +100,12 @@ class DebitNoteController extends Controller
                 if ($request->hasFile('reference_document')) {
                     $file = $request->file('reference_document');
                     $filename = 'debit_note_' . time() . '.' . $file->getClientOriginalExtension();
-                    $file->move(public_path('uploads/debit_note'), $filename);
-                    $referenceDocument = 'uploads/debit_note/' . $filename;
+                    $uploadPath = public_path('uploads/debit_notes');
+                    if (!file_exists($uploadPath)) {
+                        mkdir($uploadPath, 0755, true);
+                    }
+                    $file->move($uploadPath, $filename);
+                    $referenceDocument = $filename;
                 }
 
                 $debitNoteData = [

@@ -98,8 +98,8 @@
                                                 </td>
                                                 <td>
                                                     @if($item->image)
-                                                        <a href="{{ asset($item->image) }}" target="_blank">
-                                                            <img src="{{ asset($item->image) }}" width="50" class="border rounded">
+                                                        <a href="{{ url('uploads/grn_items/' . $item->image) }}" target="_blank">
+                                                            <img src="{{ url('uploads/grn_items/' . $item->image) }}" width="50" class="border rounded">
                                                         </a>
                                                     @else
                                                         -

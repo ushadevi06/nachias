@@ -67,9 +67,9 @@ class StockEntryController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('edit stock entries')) {
                     $action .= '<a href="' . url('stock_entries/add/' . $entry->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-                if (auth()->id() == 1 || auth()->user()->can('delete stock entries')) {
+                /* if (auth()->id() == 1 || auth()->user()->can('delete stock entries')) {
                     $action .= '<button class="btn btn-delete" onclick="delete_data(`' . url('stock_entries/delete/' . $entry->id) . '`)"><i class="icon-base ri ri-delete-bin-line"></i></button>';
-                }
+                } */
                 $action .= '</div>';
 
                 $data[] = [
@@ -109,7 +109,6 @@ class StockEntryController extends Controller
         $stockEntry = $id ? StockEntry::with(['stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.storeLocation', 'grnEntry'])->findOrFail($id) : null;
         $grnEntries = GrnEntry::where('status', 'Received')
             ->where(function($query) use ($id, $stockEntry) {
-                // Show GRN if it has at least one item with remaining balance
                 $query->whereHas('grnEntryItems', function($q) use ($id) {
                     $q->whereRaw('qty_accepted > (
                         select COALESCE(sum(qty_in), 0) 
@@ -119,7 +118,6 @@ class StockEntryController extends Controller
                     )');
                 });
                 
-                // Always show the current GRN if in edit mode
                 if ($id && $stockEntry) {
                     $query->orWhere('id', $stockEntry->grn_entry_id);
                 }
@@ -175,6 +173,7 @@ class StockEntryController extends Controller
                     'to_store_location_id' => $request->store_location_id,
                     'remarks' => $request->remarks,
                     'status' => $request->status ?? 'Draft',
+                    'price' => $request->price ?? 0,
                 ];
 
                 // Handle file upload
@@ -182,7 +181,7 @@ class StockEntryController extends Controller
                     $file = $request->file('reference_document');
                     $filename = 'stock_ref_' . time() . '.' . $file->getClientOriginalExtension();
                     $file->move(public_path('uploads/stock_entries'), $filename);
-                    $headerData['reference_document'] = 'uploads/stock_entries/' . $filename;
+                    $headerData['reference_document'] = $filename;
                 }
 
                 if ($id) {
@@ -198,7 +197,6 @@ class StockEntryController extends Controller
                     $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                     $headerData['created_by'] = auth()->id();
                     $stockEntry = StockEntry::create($headerData);
-
                     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
                 }
 
@@ -245,7 +243,7 @@ class StockEntryController extends Controller
                     'store_location_id' => $item->store_location_id,
                     'store_location_name' => $item->storeLocation->store_location ?? '',
                 ];
-            });
+            })->values()->all();
         }
 
         return view('stock_entry.add', compact('stockEntry', 'grnEntries', 'storeCategories', 'rawMaterials', 'storeLocations', 'uoms', 'nextStockNo', 'savedItems'));

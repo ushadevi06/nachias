@@ -24,6 +24,7 @@ class PermissionSeeder extends Seeder
             'cities' => ['create', 'edit', 'delete', 'view'],
             'service-points' => ['create', 'edit', 'delete', 'view'],
             'uoms' => ['create', 'edit', 'delete', 'view'],
+            'colors' => ['create', 'edit', 'delete', 'view'],
             'operation-stages' => ['create', 'edit', 'delete', 'view'],
             'zones' => ['create', 'edit', 'delete', 'view'],
             'size-ratio' => ['create', 'edit', 'delete', 'view'],
@@ -33,6 +34,8 @@ class PermissionSeeder extends Seeder
 
             'departments' => ['create', 'edit', 'delete', 'view'],
             'taxes' => ['create', 'edit', 'delete', 'view'],
+            'styles' => ['create', 'edit', 'delete', 'view'],
+            'stores' => ['create', 'edit', 'delete', 'view'],
             'customers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'suppliers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'service-providers' => ['create', 'edit', 'delete', 'view', 'view_details'],
@@ -56,13 +59,9 @@ class PermissionSeeder extends Seeder
             'sales-invoice' => ['create', 'edit', 'delete', 'view'],
             'credit-notes' => ['create', 'edit', 'delete', 'view'],
 
-            'job-card' => ['create', 'edit', 'delete', 'view'],
+            'job-card' => ['create', 'edit', 'delete', 'view', 'fabric-consumption-pdf', 'work-order-pdf', 'issue-item'],
             'production' => ['create', 'edit', 'delete', 'view'],
-
-            'task-creation' => ['create', 'edit', 'delete', 'view'],
-            'task-assignment' => ['create', 'edit', 'delete', 'view'],
-            'task-tracking-monitoring' => ['create', 'edit', 'delete', 'view'],
-            'task-status-updates' => ['create', 'edit', 'delete', 'view'],
+            'task-management' => ['create', 'edit', 'delete', 'view'],
 
             'billing' => ['create', 'edit', 'delete', 'view'],
             'manage-payments' => ['create', 'edit', 'delete', 'view'],
@@ -86,13 +85,11 @@ class PermissionSeeder extends Seeder
             'order-report' => ['view'],
             'employee-report' => ['view'],
 
-
             'settings' => ['edit','view'],
         ];
 
         foreach ($modules as $module => $actions) {
             foreach ($actions as $action) {
-
                 Permission::firstOrCreate(
                     [
                         'name'       => $action . ' ' . $module,

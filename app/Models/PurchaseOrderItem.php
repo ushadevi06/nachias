@@ -17,12 +17,14 @@ class PurchaseOrderItem extends Model
         'uom_id',
         'color_id',
         'style_id',
+        'brand_id',
         'quantity',
         'art_no',
         'rate',
         'amount',
         'remarks',
         'attached_file',
+        'fabric_width_id',
     ];
 
     protected $casts = [
@@ -59,5 +61,15 @@ class PurchaseOrderItem extends Model
     public function style()
     {
         return $this->belongsTo(Style::class);
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    public function fabricWidth()
+    {
+        return $this->belongsTo(SizeRatio::class, 'fabric_width_id');
     }
 }

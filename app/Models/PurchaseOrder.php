@@ -13,14 +13,14 @@ class PurchaseOrder extends Model
     protected $fillable = [
         'po_number',
         'po_date',
-        'sales_agent_id',
+        'purchase_commission_agent_id',
         'commission',
         'supplier_id',
         'reference_no',
         'reference_date',
         'due_date',
         'store_type_id',
-        'order_date',
+
         'payment_terms',
         'status',
         'total_qty',
@@ -43,7 +43,7 @@ class PurchaseOrder extends Model
         'po_date' => 'date',
         'reference_date' => 'date',
         'due_date' => 'date',
-        'order_date' => 'date',
+
         'other_state' => 'boolean',
         'commission' => 'decimal:2',
         'total_qty' => 'decimal:2',
@@ -59,9 +59,9 @@ class PurchaseOrder extends Model
         'total_amount' => 'decimal:2',
     ];
 
-    public function salesAgent()
+    public function purchaseCommissionAgent()
     {
-        return $this->belongsTo(SalesAgent::class);
+        return $this->belongsTo(SalesAgent::class, 'purchase_commission_agent_id');
     }
 
     public function supplier()

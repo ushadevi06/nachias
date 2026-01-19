@@ -55,6 +55,7 @@ class BrandController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'brand_name' => $brand->brand_name,
+                    'code' => $brand->code,
                     'created_by' => createdByName($brand->created_by),
                     'status' => $status,
                     'action' => $action,
@@ -85,6 +86,7 @@ class BrandController extends Controller
 
             $rules = [
                 'brand_name' => 'required|string|max:255|unique:brands,brand_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|max:50|unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
@@ -96,6 +98,7 @@ class BrandController extends Controller
 
             $data = [
                 'brand_name' => $request->brand_name,
+                'code' => $request->code,
                 'status' => $request->status,
                 'created_by' => auth()->id() ?? 1,
             ];

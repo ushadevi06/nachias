@@ -28,6 +28,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Style Name</th>
+                                    <th>Code</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -52,6 +53,7 @@
             columns: [
                 { data: 'DT_RowIndex' },
                 { data: 'style_name' },
+                { data: 'code' },
                 {
                     data: 'status',
                     orderable: false,

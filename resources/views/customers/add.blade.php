@@ -139,12 +139,9 @@
                                     <select name="stores" id="stores" class="select2 form-select @error('stores') is-invalid @enderror"
                                         data-placeholder="Select Stores">
                                         <option value="">Select Stores</option>
-                                        <option value="Fabric"
-                                            {{ old('stores', $customer->stores ?? '') == 'Fabric' ? 'selected' : '' }}>
-                                            Fabric</option>
-                                        <option value="Finished Goods"
-                                            {{ old('stores', $customer->stores ?? '') == 'Finished Goods' ? 'selected' : '' }}>
-                                            Finished Goods</option>
+                                        @foreach($store_types as $st)
+                                        <option value="{{ $st->store_type_name }}" {{ old('stores', $customer->stores ?? '') == $st->store_type_name ? 'selected' : '' }}>{{ $st->store_type_name }}</option>
+                                        @endforeach
                                     </select>
                                     <label for="stores">Stores </label>
                                 </div>

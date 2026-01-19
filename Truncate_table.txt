@@ -1,7 +1,11 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
 TRUNCATE `brand_categories`;
 TRUNCATE `brands`;
 TRUNCATE `charges`;
 TRUNCATE `cities`;
+TRUNCATE `collar_types`;
+TRUNCATE `colors`;
 TRUNCATE `departments`;
 TRUNCATE `fabric_types`;
 TRUNCATE `places`;
@@ -21,23 +25,50 @@ TRUNCATE `taxes`;
 TRUNCATE `uoms`;
 TRUNCATE `zones`;
 TRUNCATE `operation_stages`;
+TRUNCATE `styles`;
 
 
 TRUNCATE `logs`;
+
+TRUNCATE `fits`;
+TRUNCATE `patti_types`;
+TRUNCATE `collar_types`;
+TRUNCATE `cuff_types`;
+TRUNCATE `pocket_types`;
+TRUNCATE `bottom_cuts`;
+
 TRUNCATE `purchase_orders`;
 TRUNCATE `purchase_order_items`;
 TRUNCATE `purchase_invoices`;
 TRUNCATE `purchase_invoice_items`;
 TRUNCATE `purchase_invoice_charges`;
-TRUNCATE `grn_entries`;
+TRUNCATE `purchase_invoice_payments`;
+
 TRUNCATE `grn_entry_item_variants`;
 TRUNCATE `grn_entry_items`;
+TRUNCATE `grn_entries`;
 TRUNCATE `stock_entries`;
 TRUNCATE `stock_entry_items`;
+
+TRUNCATE `debit_note_items`;
+TRUNCATE `debit_notes`;
+
+TRUNCATE `job_card_cutting_size_ratios`;
+TRUNCATE `job_card_operations`;
+TRUNCATE `job_card_fabric_details`;
+TRUNCATE `job_card_images`;
+TRUNCATE `job_card_issue_items`; 
+TRUNCATE `job_card_operations`; 
+TRUNCATE `job_card_entries`;
+
+SET FOREIGN_KEY_CHECKS = 1;
 
 
 TRUNCATE `roles`;
 TRUNCATE `model_has_roles`;
+TRUNCATE `role_has_permissions`;
+
+TRUNCATE `permissions`;
 
 DELETE FROM users WHERE id != 1;
 ALTER TABLE users AUTO_INCREMENT = 2;

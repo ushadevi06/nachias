@@ -87,7 +87,7 @@ Route::get('/', function () {
 Route::get('/update_page', function () {
     return view('update_page');
 });
-Route::match(['get','post'],'login',[AuthController::class,'authentication']);
+Route::match(['get','post'],'login', [AuthController::class, 'authentication'])->name('login');
 Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
     Route::match(['get', 'post'], 'profile', [AuthController::class, 'profile']);
@@ -150,7 +150,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/operation_stages/delete/{id}', [OperationStageController::class, 'destroy']);
     Route::post('/operation_stages/status/{id}', [OperationStageController::class, 'updateStatus']);
 
-
     /* Charges */
     Route::get('/charges', [ChargeController::class, 'index']);
     Route::match(['GET', 'POST'], '/charges/add/{id?}', [ChargeController::class, 'add']);
@@ -177,6 +176,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('/store_location/status/{id}', [StorelocationController::class, 'updateStatus']);
 
     /* Departments */
+    Route::get('/departments', [DepartmentController::class, 'index']);
+    Route::match(['GET', 'POST'], '/departments/add/{id?}', [DepartmentController::class, 'add']);
+    Route::get('/department/delete/{id}', [DepartmentController::class, 'destroy']);
     Route::post('/department/status/{id}', [DepartmentController::class, 'updateStatus']);
 
     /* Styles */
@@ -184,10 +186,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['GET', 'POST'], '/styles/add/{id?}', [StyleController::class, 'add']);
     Route::get('/styles/delete/{id}', [StyleController::class, 'destroy']);
     Route::post('/styles/status/{id}', [StyleController::class, 'updateStatus']);
-
-    /* Tax Types */
-    Route::get('tax_types', [TaxTypeController::class, 'index']);
-    Route::get('taxes/add_type', [TaxTypeController::class, 'add']);
 
     /* Tax */
     Route::get('/taxes', [TaxController::class, 'index']);
@@ -299,6 +297,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('purchase_invoices/get-items/{id}', [PurchaseInvoiceController::class, 'getInvoiceItems']);
     Route::get('purchase_invoices/download-pdf/{id}', [PurchaseInvoiceController::class, 'downloadPdf']);
     Route::delete('purchase_invoices/delete-charge/{id}', [PurchaseInvoiceController::class, 'deleteCharge']);
+    Route::get('purchase_invoices/payment-history/{id}', [PurchaseInvoiceController::class, 'getPaymentHistory']);
+
 
     /* Debit Notes */
     Route::get('debit_notes', [DebitNoteController::class, 'index']);
@@ -346,14 +346,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('stock_entries/view/{id}', [StockEntryController::class, 'view']);
 
     /* Store */
-    // Route::get('grn_entries', [GrnEntryController::class, 'index']);
-    // Route::get('add_grn_entry', [GrnEntryController::class, 'add']);
-    // Route::get('view_grn_entry', [GrnEntryController::class, 'view']);
-
-    // Route::get('stock_entries', [StockEntryController::class, 'index']);
-    // Route::get('add_stock_entry', [StockEntryController::class, 'add']);
-    // Route::get('view_stock_entry', [StockEntryController::class, 'view']);
-
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);
     Route::get('add_stock_consumables_return', [StockConsumableReturnController::class, 'add']);
     Route::get('view_stock_consumables_return', [StockConsumableReturnController::class, 'view']);
@@ -389,6 +381,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('job_card_entries/get-po-details/{id}', [JobCardEntryController::class, 'getPoDetails']);
     Route::delete('job_card_entries/delete-image/{id}', [JobCardEntryController::class, 'deleteImage']);
     Route::get('job_card_entries/view-item/{id}', [JobCardEntryController::class, 'view_jc_item']);
+    Route::post('job_card_entries/issue-items/{id}', [JobCardEntryController::class, 'issue_items'])->name('job_card_entries.issue_items');
+    Route::get('job_card_entries/fabric-consumption-pdf/{id}', [JobCardEntryController::class, 'fabricConsumptionPdf'])->name('job_card_entries.fabric_consumption_pdf');
+    Route::get('job_card_entries/work-order-pdf/{id}', [JobCardEntryController::class, 'workOrderPdf'])->name('job_card_entries.work_order_pdf');
+    Route::get('job_card_entries/view-details-pdf/{id}', [JobCardEntryController::class, 'viewDetailsPdf'])->name('job_card_entries.view_details_pdf');
 
     /* Production */
     Route::get('productions', [ProductionController::class, 'index']);
@@ -398,6 +394,21 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('add_task_management', [TaskManagementController::class, 'add']);
     Route::get('view_task_management', [TaskManagementController::class, 'view1']);
     Route::get('view_task_details', [TaskManagementController::class, 'view_details']);
+
+    /* Shifts */
+    Route::get('shifts', [\App\Http\Controllers\ShiftController::class, 'index']);
+    Route::get('shifts/add', [\App\Http\Controllers\ShiftController::class, 'add']);
+
+    /* Production Services */
+    Route::get('production_services', [\App\Http\Controllers\ProductionServiceController::class, 'index']);
+    Route::match(['GET', 'POST'], 'production_services/add/{id?}', [\App\Http\Controllers\ProductionServiceController::class, 'add']);
+
+
+    /* Production Stores */
+    Route::get('stores', [\App\Http\Controllers\StoreController::class, 'index']);
+    Route::match(['GET', 'POST'], 'stores/add/{id?}', [\App\Http\Controllers\StoreController::class, 'add']);
+    Route::get('stores/delete/{id}', [\App\Http\Controllers\StoreController::class, 'destroy']);
+    Route::post('stores/status/{id}', [\App\Http\Controllers\StoreController::class, 'updateStatus']);
 
     /* Billing */
     Route::get('billing', [BillingController::class, 'index']);
@@ -482,19 +493,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('settings/update', [SettingController::class, 'update']);
 
     Route::get('/run-artisan-commands', function () {
-
-        Artisan::call('vendor:publish', [
-            '--provider' => 'Spatie\Permission\PermissionServiceProvider',
-        ]);
-
         Artisan::call('optimize:clear');
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('config:cache');
-
         return "Artisan commands executed successfully";
     });
 
 });
 
-Route::group(['middleware' => ['auth']], function () { Route::get('purchase_invoices/payment-history/{id}', [\App\Http\Controllers\PurchaseInvoiceController::class, 'getPaymentHistory']); });
+

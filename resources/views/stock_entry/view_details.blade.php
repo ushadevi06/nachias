@@ -20,6 +20,12 @@
                             <div class="text-muted">{{ $stockEntry->stock_date->format('d-m-Y') }}</div>
                         </div>
 
+                        @php
+                            $firstItem = $stockEntry->stockEntryItems->first();
+                            $totalQtyIn = $stockEntry->stockEntryItems->sum('qty_in');
+                            $totalQtyOut = $stockEntry->stockEntryItems->sum('qty_out');
+                        @endphp
+
                         @if($stockEntry->grnEntry)
                         <div class="col-md-4">
                             <label class="detail-title">GRN Number:</label>
@@ -27,68 +33,66 @@
                         </div>
                         @endif
 
-                        @foreach($stockEntry->stockEntryItems as $item)
                         <div class="col-md-4">
-                            <label class="detail-title">Type:</label>
-                            <div class="text-muted">{{ ucwords(str_replace('_', ' ', $item->stock_type)) }}</div>
+                            <label class="detail-title">Entry Type:</label>
+                            <div class="text-muted">{{ $stockEntry->entry_type ?? '-' }}</div>
                         </div>
+
+
+                        @if($firstItem)
                         <div class="col-md-4">
-                            <label class="detail-title">Store Category:</label>
-                            <div class="text-muted">{{ $item->storeCategory->category_name ?? '-' }}({{ $item->storeCategory->code ?? '-' }})</div>
+                            <label class="detail-title">Category:</label>
+                            <div class="text-muted">{{ $firstItem->storeCategory->category_name ?? '-' }} ({{ $firstItem->storeCategory->code ?? '-' }})</div>
                         </div>
+
                         <div class="col-md-4">
-                            <label class="detail-title">Material:</label>
+                            <label class="detail-title">Material / Item:</label>
                             <div class="text-muted">
-                                @if($item->stock_type == 'raw_material')
-                                    {{ $item->rawMaterial->name ?? '-' }}({{ $item->rawMaterial->code ?? '-' }})
+                                @if($firstItem->stock_type == 'raw_material')
+                                    {{ $firstItem->rawMaterial->name ?? '-' }} ({{ $firstItem->rawMaterial->code ?? '-' }})
                                 @else
-                                    {{ $item->finished_item_code ?? '-' }}
+                                    {{ $firstItem->finished_item_code ?? '-' }}
                                 @endif
                             </div>
                         </div>
+
                         <div class="col-md-4">
-                            <label class="detail-title">UOM:</label>
-                            <div class="text-muted">{{ $item->uom->uom_code ?? '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Unit Price:</label>
-                            <div class="text-muted">{{ $item->price > 0 ? number_format($item->price, 2) : '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Quantity In:</label>
-                            <div class="text-muted">{{ $item->qty_in + 0 }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Quantity Out:</label>
-                            <div class="text-muted">{{ $item->qty_out > 0 ? $item->qty_out + 0 : '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Location / Store:</label>
-                            <div class="text-muted">{{ $item->storeLocation->store_location ?? '-' }}</div>
+                            <label class="detail-title">Art No:</label>
+                            <div class="text-muted">{{ $firstItem->grnEntryItem->art_no ?? '-' }}</div>
                         </div>
 
-                        @if($item->grnEntryItem)
                         <div class="col-md-4">
-                            <label class="detail-title">GRN Item (Art No):</label>
-                            <div class="text-muted">{{ $item->grnEntryItem->art_no ?? '-' }}</div>
+                            <label class="detail-title">UOM:</label>
+                            <div class="text-muted">{{ $firstItem->uom->uom_code ?? '-' }}</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="detail-title">Unit Price:</label>
+                            <div class="text-muted">{{ $firstItem->price > 0 ? '₹' . number_format($firstItem->price, 2) : '-' }}</div>
                         </div>
                         @endif
-                        @endforeach
+
+                        <div class="col-md-4">
+                            <label class="detail-title">Total Quantity In:</label>
+                            <div class="text-muted text-success fw-bold">+{{ $totalQtyIn + 0 }}</div>
+                        </div>
 
                         <div class="col-md-4">
                             <label class="detail-title">Remarks:</label>
                             <div class="text-muted">{{ $stockEntry->remarks ?? '-' }}</div>
                         </div>
+
                         <div class="col-md-4">
                             <label class="detail-title">Reference Document:</label>
                             <div class="text-muted">
                                 @if($stockEntry->reference_document)
-                                    <a href="{{ asset($stockEntry->reference_document) }}" target="_blank">View</a>
+                                    <a href="{{ url('uploads/stock_entries/' . $stockEntry->reference_document) }}" target="_blank">View Document</a>
                                 @else
                                     -
                                 @endif
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>

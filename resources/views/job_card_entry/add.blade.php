@@ -1,12 +1,51 @@
 @extends('layouts.common')
 @section('title', ($jobCard ? 'Edit Job Card' : 'Add Job Card') . ' - ' . env('WEBSITE_NAME'))
 @section('content')
+@php
+    $matrixRows = old('article_matrix', $jobCard ? $jobCard->fabricDetails->toArray() : []);
+    $matrixItems = old('matrix_items', $jobCard ? $jobCard->cuttingSizeRatios->toArray() : []);
+    
+    $dynamicSizes = [];
+    foreach($matrixItems as $item) {
+        if (!empty($item['size'])) {
+            $dynamicSizes[] = $item['size'];
+        }
+    }
+    
+    $sizes = !empty($dynamicSizes) ? array_values(array_unique($dynamicSizes)) : ['36', '38', '40', '42', '44'];
+    
+    $fabrics = old('fabrics', $jobCard ? $jobCard->fabricDetails->toArray() : []);
+    
+    $activeFs = [];
+    $activeHs = [];
+    foreach($matrixItems as $item) {
+        $s = $item['size'] ?? '';
+        if ($s) {
+            if ((float)($item['qty_fs'] ?? 0) > 0) $activeFs[] = $s;
+            if ((float)($item['qty_hs'] ?? 0) > 0) $activeHs[] = $s;
+        }
+    }
+
+    $activeFs = array_values(array_unique($activeFs));
+    sort($activeFs, SORT_NUMERIC);
+    $activeHs = array_values(array_unique($activeHs));
+    sort($activeHs, SORT_NUMERIC);
+    
+    $processGroupName = strtoupper(old('process_group_display', $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : ''));
+    $hasFS = empty($processGroupName) || str_contains($processGroupName, 'F/S') || str_contains($processGroupName, 'FULL');
+    $hasHS = empty($processGroupName) || str_contains($processGroupName, 'H/S') || str_contains($processGroupName, 'HALF');
+
+    $showMatrix = $jobCard || !empty(old('article_matrix')) || !empty($activeFs) || !empty($activeHs);
+    $hasPo = $jobCard || !empty(old('purchase_order_id'));
+    
+    $existingImages = $jobCard ? $jobCard->images : collect();
+@endphp
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <form action="{{ url('job_card_entries/add/'. ($jobCard ?  $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
-                @if ($errors->any())
+                {{-- @if ($errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -14,7 +53,7 @@
                             @endforeach
                         </ul>
                     </div>
-                @endif
+                @endif --}}
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -33,8 +72,7 @@
                                     <select id="purchase_order" name="purchase_order_id" class="form-select select2" data-placeholder="Select Purchase Order">
                                         <option value="">Select Purchase Order</option>
                                         @foreach($purchaseOrders as $po)
-                                            <option value="{{ $po->id }}" {{ (old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') == $po->id) ? 'selected' : '' }}>
-                                                {{ $po->po_number }}
+                                            <option value="{{ $po->id }}" {{ (old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') == $po->id) ? 'selected' : '' }}>{{ $po->po_number }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -119,8 +157,7 @@
                                     <select id="brand" name="brand_id" class="form-select select2" data-placeholder="Select Brand">
                                         <option value="">Select Brand</option>
                                         @foreach($brands as $brand)
-                                            <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>
-                                                {{ $brand->brand_name }}
+                                            <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -149,6 +186,7 @@
                                         <i class="ri ri-search-line"></i>
                                     </button>
                                 </div>
+                                @error('process_group_id') <span class="text-danger">{{ $message }}</span> @enderror
                                 @if($jobCard)
                                     <small class="text-muted"><i class="ri ri-information-line"></i> Process Group is read-only when editing</small>
                                 @endif
@@ -192,8 +230,7 @@
                                     <select id="fit" name="fit" class="form-select select2" data-placeholder="Select Fit">
                                         <option value="">Select Fit</option>
                                         @foreach($fits as $fit)
-                                            <option value="{{ $fit->fit_name }}" {{ (old('fit', $jobCard ? $jobCard->fit : '') == $fit->fit_name) ? 'selected' : '' }}>
-                                                {{ $fit->fit_name }}
+                                            <option value="{{ $fit->fit_name }}" {{ (old('fit', $jobCard ? $jobCard->fit : '') == $fit->fit_name) ? 'selected' : '' }}>{{ $fit->fit_name }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -303,7 +340,7 @@
                                     <label for="cutting_issue_unit">Cutting Issue Unit *</label>
                                 </div>
                                 @error('cutting_issue_unit') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
+                            </div> 
                         </div>
                     </div>
                 </div>
@@ -314,31 +351,36 @@
                             <h4>Cutting Size Ratio</h4>
                         </div>
                         <div class="row g-4 mb-3">
-                             <div class="col-md-6 col-xl-4">
-                                <div class="input-group">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" id="size_ratio_display" name="size_ratio_display" class="form-control" placeholder="Select Size Ratio" readonly value="{{ old('size_ratio_display', $jobCard && $jobCard->sizeRatio ? $jobCard->sizeRatio->display : '') }}">
-                                        <input type="hidden" id="size_ratio" name="size_ratio_id" value="{{ old('size_ratio_id', $jobCard ? $jobCard->size_ratio_id : '') }}">
-                                        <label for="size_ratio_display">Size Ratio *</label>
-                                    </div>
-                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#sizeRatioModal">
-                                        <i class="ri ri-search-line"></i>
-                                    </button>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="size_ratio_select" name="size_ratio_id" class="form-select select2" data-placeholder="Select Size Ratio">
+                                        <option value="">Select Size Ratio</option>
+                                        @foreach($sizeRatios as $sr)
+                                            <option value="{{ $sr->id }}" data-sizes="{{ $sr->size }}" data-ratios="{{ $sr->ratio }}" {{ (old('size_ratio_id', $jobCard ? $jobCard->size_ratio_id : '') == $sr->id) ? 'selected' : '' }}>({{ $sr->size }}) - ({{ $sr->ratio }})</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="size_ratio_select">Select Size Ratio</label>
                                 </div>
+                                <small class="text-muted">
+                                    Note: Size ratio will be used to calculate production quantity for each size.
+                                </small><br>
+                                @error('size_ratio_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                         </div>
 
-                        <div class="table-responsive">
+                        <div class="table-responsive" id="cutting-size-table-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
                             <table class="table table-bordered text-center align-middle" id="cutting-size-table">
                                 <thead>
                                     <tr>
                                         <th rowspan="2" class="align-middle">SIZE</th>
-                                        <th colspan="1" class="ratio-header">CUTTING SIZE RATIO</th>
+                                        <th colspan="{{ count($sizes) }}" class="ratio-header">CUTTING SIZE RATIO</th>
                                         <th colspan="2" class=""></th>
                                         <th colspan="2">CUTTING MARK AND LAY</th>
                                     </tr>
                                     <tr class="size-header-row">
-                                        {{-- Dynamically populated --}}
+                                        @foreach($sizes as $s)
+                                            <th class="dynamic-size-head">{{ $s }}</th>
+                                        @endforeach
                                         <th class="extra-col-1"></th>
                                         <th class="extra-col-2"></th>
                                         <th>SIZE</th>
@@ -346,14 +388,78 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {{-- Dynamically populated rows: RATIO, QTY-F/S, QTY-H/S --}}
+                                    @php
+                                        $fsInfoLabel = str_contains($processGroupName, 'OTHERS') ? 'QTY - F/S' : 'SIZE';
+                                        $sizeRatioDisplay = old('matrix_items_info.fs', $jobCard ? $jobCard->size_ratio_display : '');
+                                        $sizeStr = $sizeRatioDisplay ? explode(' - ', $sizeRatioDisplay)[0] : '';
+                                    @endphp
+                                    
+                                    {{-- QTY - F/S ROW --}}
+                                    <tr class="qty-fs-row" style="{{ $hasFS ? '' : 'display:none;' }}">
+                                        <td><strong>QTY - F/S</strong></td>
+                                        @foreach($sizes as $idx => $s)
+                                            @php
+                                                $val = '';
+                                                foreach($matrixItems as $item) {
+                                                    if (($item['size'] ?? '') == $s) {
+                                                        $val = $item['qty_fs'] ?? '';
+                                                        break;
+                                                    }
+                                                }
+                                            @endphp
+                                            <td>
+                                                <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int)$val : '' }}">
+                                                <input type="hidden" name="matrix_items[{{ $idx }}][size]" value="{{ $s }}">
+                                                <input type="hidden" name="matrix_items[{{ $idx }}][article_no]" value="{{ old("matrix_items.$idx.article_no", $jobCard ? $jobCard->article_no : '') }}">
+                                            </td>
+                                        @endforeach
+                                        <td class=""></td><td class=""></td>
+                                        <td><input type="text" name="mark_lay[fs][size]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.fs.size', $jobCard ? $jobCard->mark_lay_fs_size : '') }}"></td>
+                                        <td><input type="text" name="mark_lay[fs][mark]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.fs.mark', $jobCard ? $jobCard->mark_lay_fs_mark : '') }}"></td>
+                                    </tr>
+
+                                    {{-- INFO ROW (F/S) --}}
+                                    <tr class="qty-fs-info-row" style="{{ $hasFS ? '' : 'display:none;' }}">
+                                        <td><strong>{{ $fsInfoLabel }}</strong></td>
+                                        <td colspan="{{ count($sizes) }}">
+                                            <input type="text" name="matrix_items_info[fs]" class="form-control form-control-sm text-center text-muted" value="{{ $sizeStr }}">
+                                        </td>
+                                        <td class=""></td><td class=""></td><td></td><td></td>
+                                    </tr>
+
+                                    {{-- QTY - H/S ROW --}}
+                                    <tr class="qty-hs-row" style="{{ $hasHS ? '' : 'display:none;' }}">
+                                        <td><strong>QTY - H/S</strong></td>
+                                        @foreach($sizes as $idx => $s)
+                                            @php
+                                                $val = '';
+                                                foreach($matrixItems as $item) {
+                                                    if (($item['size'] ?? '') == $s) {
+                                                        $val = $item['qty_hs'] ?? '';
+                                                        break;
+                                                    }
+                                                }
+                                            @endphp
+                                            <td>
+                                                <input type="number" name="matrix_items[{{ $idx }}][qty_hs]" class="form-control form-control-sm text-center fw-bold qty-direct-input hs-summary-{{ $s }}" data-type="hs" data-size="{{ $s }}" value="{{ $val ? (int)$val : '' }}">
+                                            </td>
+                                        @endforeach
+                                        <td class=""></td><td class=""></td>
+                                        <td><input type="text" name="mark_lay[hs][size]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.hs.size', $jobCard ? $jobCard->mark_lay_hs_size : '') }}"></td>
+                                        <td><input type="text" name="mark_lay[hs][mark]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.hs.mark', $jobCard ? $jobCard->mark_lay_hs_mark : '') }}"></td>
+                                    </tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="text-end mt-3" id="trigger-sync-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
+                            <button type="button" class="btn btn-primary" id="trigger-sync">
+                                <i class="ri ri-play-circle-line me-1"></i> GO
+                            </button>
                         </div>
                     </div>
                 </div>
                 
-                <div class="card mb-4">
+                <div class="card mb-4 {{ $hasPo ? '' : 'd-none' }}" id="fabric-details-card">
                     <div class="card-body">
                         <div class="card-header-box">
                             <h4>Fabric Details</h4>
@@ -361,15 +467,71 @@
                         <div class="table-responsive">
                             <table class="table table-bordered text-center align-middle">
                                 <thead id="fabric-details-head">
+                                    @if(!empty($fabrics))
+                                        <tr>
+                                            @foreach($fabrics as $index => $fabric)
+                                                <th colspan="2" class="bg-light">
+                                                    <div class="p-2">
+                                                        <label class="small text-primary fw-bold">Image</label>
+                                                        <div class="d-flex flex-wrap gap-2 mb-2">
+                                                            @foreach($existingImages as $img)
+                                                                @if($img->art_no == ($fabric['art_no'] ?? ''))
+                                                                    <div class="position-relative" style="width: 80px; height: 80px;">
+                                                                        <img src="{{ url('/') }}/{{ $img->image }}" class="img-thumbnail" style="width: 100%; height: 100%; object-fit: cover;">
+                                                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" style="padding: 2px 6px; font-size: 10px;" onclick="deleteImage({{ $img->id }})">
+                                                                            <i class="ri ri-close-line"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                        <input type="file" class="form-control form-control-sm" name="fabric_images[{{ $index }}][]" multiple accept="image/*">
+                                                    </div>
+                                                </th>
+                                            @endforeach
+                                        </tr>
+                                    @endif
                                 </thead>
                                 <tbody id="fabric-details-body">
+                                    @if(!empty($fabrics))
+                                        <tr>
+                                            @foreach($fabrics as $index => $fabric)
+                                                <td class="fw-bold">ART NO</td>
+                                                <td><input type="text" name="fabrics[{{ $index }}][art_no]" class="form-control form-control-sm text-center" value="{{ $fabric['art_no'] ?? '' }}" readonly></td>
+                                            @endforeach
+                                        </tr>
+                                        <tr>
+                                            @foreach($fabrics as $index => $fabric)
+                                                <td class="fw-bold">WIDTH</td>
+                                                <td><input type="text" name="fabrics[{{ $index }}][width]" class="form-control form-control-sm text-center" value="{{ $fabric['width'] ?? '' }}"></td>
+                                            @endforeach
+                                        </tr>
+                                        <tr>
+                                            @foreach($fabrics as $index => $fabric)
+                                                <td class="fw-bold">Mtr/B.M</td>
+                                                <td><input type="text" name="fabrics[{{ $index }}][mtr]" class="form-control form-control-sm text-center" value="{{ $fabric['mtr'] ?? '' }}"></td>
+                                            @endforeach
+                                        </tr>
+                                        <tr>
+                                            @foreach($fabrics as $index => $fabric)
+                                                <td class="fw-bold">IN/OUT</td>
+                                                <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center" value="{{ $fabric['in_out'] ?? 'NO' }}"></td>
+                                            @endforeach
+                                        </tr>
+                                        <tr>
+                                            @foreach($fabrics as $index => $fabric)
+                                                <td class="fw-bold">N.PATTI</td>
+                                                <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}"></td>
+                                            @endforeach
+                                        </tr>
+                                    @endif
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mb-4">
+                <div class="card mb-4 {{ $showMatrix ? '' : 'd-none' }}" id="article-matrix-card">
                     <div class="card-body">
                         <div class="card-header-box">
                             <h4>Article Quantity Matrix</h4>
@@ -379,50 +541,56 @@
                                 <thead>
                                     <tr>
                                         <th rowspan="2" class="align-middle" style="min-width: 120px;">ART NO</th>
-                                        <th colspan="5">F/S</th>
-                                        <th colspan="5">H/S</th>
-                                        <th colspan="2">EX</th>
+                                        @if(count($activeFs) > 0)
+                                            <th colspan="{{ count($activeFs) }}">F/S</th>
+                                        @endif
+                                        @if(count($activeHs) > 0)
+                                            <th colspan="{{ count($activeHs) }}">H/S</th>
+                                        @endif
+                                        {{-- <th colspan="2">EX</th> --}}
                                         <th rowspan="2" class="align-middle">TOTAL</th>
                                     </tr>
                                     <tr class="size-headers">
                                         <!-- F/S Sizes -->
-                                        <th class="mat-fs-head" data-idx="0">36</th>
-                                        <th class="mat-fs-head" data-idx="1">38</th>
-                                        <th class="mat-fs-head" data-idx="2">40</th>
-                                        <th class="mat-fs-head" data-idx="3">42</th>
-                                        <th class="mat-fs-head" data-idx="4"></th>
+                                        @foreach($activeFs as $s)
+                                            <th class="mat-fs-head">{{ $s }}</th>
+                                        @endforeach
                                         <!-- H/S Sizes -->
-                                        <th class="mat-hs-head" data-idx="0">38</th>
-                                        <th class="mat-hs-head" data-idx="1">40</th>
-                                        <th class="mat-hs-head" data-idx="2">42</th>
-                                        <th class="mat-hs-head" data-idx="3">44</th>
-                                        <th class="mat-hs-head" data-idx="4">46</th>
+                                        @foreach($activeHs as $s)
+                                            <th class="mat-hs-head">{{ $s }}</th>
+                                        @endforeach
                                         <!-- EX -->
-                                        <th>40 H/S</th>
-                                        <th>38 F/S</th>
+                                        {{-- <th>EX 1</th>
+                                        <th>EX 2</th> --}}
                                     </tr>
                                 </thead>
                                 <tbody id="article-qty-matrix-body">
+                                    @foreach($matrixRows as $index => $row)
+                                        <tr>
+                                            <td><input type="text" name="article_matrix[{{ $index }}][art_no]" class="form-control form-control-sm text-center" value="{{ $row['art_no'] ?? '' }}" readonly></td>
+                                            @foreach($activeFs as $s)
+                                                <td><input type="number" name="article_matrix[{{ $index }}][fs_{{ $s }}]" class="form-control form-control-sm qty-input text-center" data-col="fs-{{ $s }}" value="{{ !empty($row['fs_'.$s]) ? (float)$row['fs_'.$s] : '' }}"></td>
+                                            @endforeach
+                                            @foreach($activeHs as $s)
+                                                <td><input type="number" name="article_matrix[{{ $index }}][hs_{{ $s }}]" class="form-control form-control-sm qty-input text-center" data-col="hs-{{ $s }}" value="{{ !empty($row['hs_'.$s]) ? (float)$row['hs_'.$s] : '' }}"></td>
+                                            @endforeach
+                                            {{-- <td><input type="number" name="article_matrix[{{ $index }}][ex_1]" class="form-control form-control-sm qty-input text-center" data-col="ex-1" value="{{ !empty($row['ex_1']) ? (float)$row['ex_1'] : '' }}"></td>
+                                            <td><input type="number" name="article_matrix[{{ $index }}][ex_2]" class="form-control form-control-sm qty-input text-center" data-col="ex-2" value="{{ !empty($row['ex_2']) ? (float)$row['ex_2'] : '' }}"></td> --}}
+                                            <td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td>
+                                        </tr>
+                                    @endforeach
                                 </tbody>
                                 <tfoot>
                                     <tr>
                                         <td class="fw-bold text-center">TOTAL</td>
-                                        <!-- F/S Totals -->
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-36" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-38" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-40" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-42" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-44" readonly tabindex="-1"></td>
-                                        <!-- H/S Totals -->
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-38" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-40" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-42" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-44" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-46" readonly tabindex="-1"></td>
-                                        <!-- EX Totals -->
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-1" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-2" readonly tabindex="-1"></td>
-                                        <!-- Grand Total -->
+                                        @foreach($activeFs as $s)
+                                            <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-{{ $s }}" readonly tabindex="-1"></td>
+                                        @endforeach
+                                        @foreach($activeHs as $s)
+                                            <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-{{ $s }}" readonly tabindex="-1"></td>
+                                        @endforeach
+                                        {{-- <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-1" readonly tabindex="-1"></td>
+                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-2" readonly tabindex="-1"></td> --}}
                                         <td><input type="text" id="grand-total" class="form-control form-control-sm text-center fw-bold bg-light" readonly tabindex="-1"></td>
                                     </tr>
                                 </tfoot>
@@ -431,7 +599,7 @@
                     </div>
                 </div>
 
-                <div class="card mb-4">
+                {{-- <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
                             <h4>Production Stages</h4>
@@ -444,9 +612,7 @@
                                     <select id="production_stage_select" class="form-select select2" data-placeholder="Select Production Stage">
                                         <option value="">Select Production Stage</option>
                                         @foreach($operationStages as $stage)
-                                            <option value="{{ $stage->id }}" data-name="{{ $stage->operation_stage_name }}">
-                                                {{ $stage->operation_stage_name }}
-                                            </option>
+                                            <option value="{{ $stage->id }}" data-name="{{ $stage->operation_stage_name }}">{{ $stage->operation_stage_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="production_stage_select">Select Production Stage *</label>
@@ -519,11 +685,11 @@
                             </table>
                         </div>
                         @error('stages') <div class="text-danger mt-1">{{ $message }}</div> @enderror
-                        <div class="col-lg-12 text-end mt-5">
-                            <button type="submit" class="btn btn-primary">Submit</button>
-                            <a href="{{ url('job_card_entries') }}" class="btn btn-secondary">Cancel</a>
-                        </div>
                     </div>
+                </div> --}}
+                <div class="col-lg-12 text-end mt-5">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <a href="{{ url('job_card_entries') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>
@@ -566,54 +732,20 @@
     </div>
 </div>
 
-<div class="modal fade" id="sizeRatioModal" tabindex="-1" aria-labelledby="sizeRatioModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary">
-                <h5 class="modal-title text-white" id="sizeRatioModalLabel">Select Size Ratio</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <table class="table table-bordered align-middle text-center" id="sizeRatioTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Select</th>
-                            <th>Size</th>
-                            <th>Ratio</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($sizeRatios as $ratio)
-                        <tr>
-                            <td><input type="radio" name="size_ratio_option" value="{{ $ratio->id }}" data-size="{{ $ratio->size }}" data-ratio="{{ $ratio->ratio }}" data-display="({{ $ratio->size }}) - ({{ $ratio->ratio }})"></td>
-                            <td>{{ $ratio->size }}</td>
-                            <td>{{ $ratio->ratio }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmSizeRatio">Select</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
     $(document).ready(function() {
         const oldFabrics = @json(old('fabrics', []));
         const existingImages = @json($jobCard && $jobCard->images ? $jobCard->images : []);
-        const existingMatrix = @json($jobCard && $jobCard->articleMatrices ? $jobCard->articleMatrices : []);
+        const existingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails : []);
+        const existingCuttingRatios = @json(old('matrix_items', $jobCard && $jobCard->cuttingSizeRatios ? $jobCard->cuttingSizeRatios : []));
         const isEditMode = {{ $jobCard ? 'true' : 'false' }};
         let isSyncing = false;
-        let currentArtNumbers = existingMatrix.length > 0 ? existingMatrix.map(m => m.art_no) : [];
+        let currentArtNumbers = @json(array_values(array_unique(array_column($fabrics, 'art_no'))));
         let currentArtData = []; 
-        let currentSizes = [];
-        let currentRatios = [];
-        let currentProcessGroupId = '';
-        let currentProcessGroup = '';
+        let currentSizes = ['36', '38', '40', '42', '44'];
+        let currentRatios = ['', '', '', '', ''];
+        let currentProcessGroupId = '{{ old("process_group_id", $jobCard ? $jobCard->process_group_id : "") }}';
+        let currentProcessGroup = '{{ old("process_group_display", $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : "") }}';
         let addedStages = [];
 
         function syncReferenceNo() {
@@ -639,97 +771,97 @@
             $.get(`{{ url('job_card_entries/get-po-details') }}/${poId}`, function(data) {
                 currentArtNumbers = data.art_numbers;
                 currentArtData = data.art_data; 
+                $('#fabric-details-card').removeClass('d-none');
+                
                 renderFabricDetails();
                 renderArticleQtyMatrix(data.art_numbers);
+                renderCuttingSizeTable(currentSizes, currentRatios);
+                updateQuantityRowVisibility();
             });
         });
 
-        // Trigger initial fetch if PO is already selected (Edit Mode)
         const initialPoId = $('#purchase_order').val();
         if (initialPoId) {
             $.get(`{{ url('job_card_entries/get-po-details') }}/${initialPoId}`, function(data) {
                 currentArtNumbers = data.art_numbers;
                 currentArtData = data.art_data;
-                // Note: renderFabricDetails will pick up mtr from currentArtData if existingMatrix mtr is empty
+                
+                if (!isEditMode && $('#fabric-details-body tr').length === 0) {
+                    $('#fabric-details-card').removeClass('d-none');
+                    renderFabricDetails();
+                    renderCuttingSizeTable(currentSizes, currentRatios);
+                    updateQuantityRowVisibility();
+                } else {
+                    syncMatrixWithMasterTable(true);
+                    updateQuantityRowVisibility();
+                }
             });
         }
 
-        function updateMatrixHeaders() {
-            const fsCols = ['fs-36', 'fs-38', 'fs-40', 'fs-42', 'fs-44'];
-            const hsCols = ['hs-38', 'hs-40', 'hs-42', 'hs-44', 'hs-46'];
 
-            $('.mat-fs-head').each(function(i) {
-                const s = (currentSizes && currentSizes[i]) ? currentSizes[i] : '';
-                $(this).text(s);
-                const $foot = $(`.col-total[data-col="${fsCols[i]}"]`);
-                if (!s) $foot.css('background', '#f1f1f1');
-                else $foot.css('background', '');
-            });
-            $('.mat-hs-head').each(function(i) {
-                const s = (currentSizes && currentSizes[i]) ? currentSizes[i] : '';
-                $(this).text(s);
-                const $foot = $(`.col-total[data-col="${hsCols[i]}"]`);
-                if (!s) $foot.css('background', '#f1f1f1');
-                else $foot.css('background', '');
-            });
-        }
 
-        function renderArticleQtyMatrix(artNumbers) {
-            const currentUIData = [];
-            $('#article-qty-matrix-body tr').each(function() {
-                const row = {};
-                $(this).find('input').each(function() {
-                    const name = $(this).attr('name');
-                    if (name) {
-                        const match = name.match(/\[(\w+)\]$/);
-                        if (match) {
-                            row[match[1]] = $(this).val();
-                        }
-                    }
-                });
-                if (row.art_no) currentUIData.push(row);
-            });
+        function renderArticleQtyMatrix(artNumbers, activeFsSizes = [], activeHsSizes = []) {
+            const $table = $('#article-qty-matrix');
+            const $thead = $table.find('thead');
+            const $tbody = $table.find('tbody');
+            const $tfoot = $table.find('tfoot');
+            $thead.empty();
+            $thead.empty();
+            const headHtml = `
+                <tr>
+                    <th rowspan="2" class="align-middle" style="min-width: 120px;">ART NO</th>
+                    ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
+                    ${activeHsSizes.length > 0 ? `<th colspan="${activeHsSizes.length}">H/S</th>` : ''}
+                    <!-- <th colspan="2">EX</th> -->
+                    <th rowspan="2" class="align-middle">TOTAL</th>
+                </tr>
+                <tr class="size-headers">
+                    ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
+                    ${activeHsSizes.map(s => `<th class="mat-hs-head">${s}</th>`).join('')}
+                    <!-- <th>EX 1</th>
+                    <th>EX 2</th> -->
+                </tr>`;
+            $thead.append(headHtml);
 
-            const $tbody = $('#article-qty-matrix-body');
             $tbody.empty();
-            
             if (!artNumbers || artNumbers.length === 0) return;
 
-            updateMatrixHeaders();
-
             artNumbers.forEach((art, index) => {
-                const matrixRow = currentUIData.find(m => m.art_no === art) || (existingMatrix ? existingMatrix.find(m => m.art_no === art) : null);
-                const getVal = (col) => {
-                    if (!matrixRow) return '';
-                    return matrixRow[col] || '';
-                };
+                const existingRow = isEditMode && existingMatrix.length > 0  ? existingMatrix.find(r => String(r.art_no).trim() == String(art).trim()) : null;
+                    
+                let rowHtml = `<tr>
+                                <td><input type="text" name="article_matrix[${index}][art_no]" class="form-control form-control-sm text-center" value="${art}" readonly></td>`;
+                
+                activeFsSizes.forEach(s => {
+                    const fsVal = existingRow && existingRow['fs_' + s] != null ? existingRow['fs_' + s] : '';
+                    rowHtml += `<td><input type="number" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" value="${fsVal}"></td>`;
+                });
 
-                const isFsDisabled = (idx) => !(currentSizes && currentSizes[idx]) ? 'readonly tabindex="-1" style="background:#f1f1f1"' : '';
-                const isHsDisabled = (idx) => !(currentSizes && currentSizes[idx]) ? 'readonly tabindex="-1" style="background:#f1f1f1"' : '';
+                activeHsSizes.forEach(s => {
+                    const hsVal = existingRow && existingRow['hs_' + s] != null ? existingRow['hs_' + s] : '';
+                    rowHtml += `<td><input type="number" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" value="${hsVal}"></td>`;
+                });
 
-                const rowHtml = `
-                    <tr>
-                        <td><input type="text" name="article_matrix[${index}][art_no]" class="form-control form-control-sm text-center" value="${art}" readonly></td>
-                        <!-- F/S Inputs -->
-                        <td><input type="number" name="article_matrix[${index}][fs_36]" class="form-control form-control-sm qty-input text-center" data-col="fs-36" value="${getVal('fs_36')}" ${isFsDisabled(0)}></td>
-                        <td><input type="number" name="article_matrix[${index}][fs_38]" class="form-control form-control-sm qty-input text-center" data-col="fs-38" value="${getVal('fs_38')}" ${isFsDisabled(1)}></td>
-                        <td><input type="number" name="article_matrix[${index}][fs_40]" class="form-control form-control-sm qty-input text-center" data-col="fs-40" value="${getVal('fs_40')}" ${isFsDisabled(2)}></td>
-                        <td><input type="number" name="article_matrix[${index}][fs_42]" class="form-control form-control-sm qty-input text-center" data-col="fs-42" value="${getVal('fs_42')}" ${isFsDisabled(3)}></td>
-                        <td><input type="number" name="article_matrix[${index}][fs_44]" class="form-control form-control-sm qty-input text-center" data-col="fs-44" value="${getVal('fs_44')}" ${isFsDisabled(4)}></td>
-                        <!-- H/S Inputs -->
-                        <td><input type="number" name="article_matrix[${index}][hs_38]" class="form-control form-control-sm qty-input text-center" data-col="hs-38" value="${getVal('hs_38')}" ${isHsDisabled(0)}></td>
-                        <td><input type="number" name="article_matrix[${index}][hs_40]" class="form-control form-control-sm qty-input text-center" data-col="hs-40" value="${getVal('hs_40')}" ${isHsDisabled(1)}></td>
-                        <td><input type="number" name="article_matrix[${index}][hs_42]" class="form-control form-control-sm qty-input text-center" data-col="hs-42" value="${getVal('hs_42')}" ${isHsDisabled(2)}></td>
-                        <td><input type="number" name="article_matrix[${index}][hs_44]" class="form-control form-control-sm qty-input text-center" data-col="hs-44" value="${getVal('hs_44')}" ${isHsDisabled(3)}></td>
-                        <td><input type="number" name="article_matrix[${index}][hs_46]" class="form-control form-control-sm qty-input text-center" data-col="hs-46" value="${getVal('hs_46')}" ${isHsDisabled(4)}></td>
-                        <!-- EX Inputs -->
-                        <td><input type="number" name="article_matrix[${index}][ex_1]" class="form-control form-control-sm qty-input text-center" data-col="ex-1" value="${getVal('ex_1')}"></td>
-                        <td><input type="number" name="article_matrix[${index}][ex_2]" class="form-control form-control-sm qty-input text-center" data-col="ex-2" value="${getVal('ex_2')}"></td>
-                        <!-- Row Total -->
-                        <td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td>
-                    </tr>`;
+                rowHtml += `
+                    <!-- <td><input type="number" name="article_matrix[${index}][ex_1]" class="form-control form-control-sm qty-input text-center" data-col="ex-1" value=""></td>
+                    <td><input type="number" name="article_matrix[${index}][ex_2]" class="form-control form-control-sm qty-input text-center" data-col="ex-2" value=""></td> -->
+                    <td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td>
+                </tr>`;
                 $tbody.append(rowHtml);
             });
+
+            $tfoot.empty();
+            const footHtml = `
+                <tr>
+                    <td class="fw-bold text-center">TOTAL</td>
+                    ${activeFsSizes.map(s => `<td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-${s}" readonly tabindex="-1"></td>`).join('')}
+                    ${activeHsSizes.map(s => `<td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-${s}" readonly tabindex="-1"></td>`).join('')}
+                    <!-- <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-1" readonly tabindex="-1"></td>
+                    <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-2" readonly tabindex="-1"></td> -->
+                    <td><input type="text" id="grand-total" class="form-control form-control-sm text-center fw-bold bg-light" readonly tabindex="-1"></td>
+                </tr>`;
+            $tfoot.append(footHtml);
+
             calculateMatrixTotals();
         }
 
@@ -763,14 +895,13 @@
                         totalFS += val;
                     } else if (col.startsWith('hs')) {
                         totalHS += val;
-                    } else if (col === 'ex-1') { 
+                    /* } else if (col === 'ex-1') { 
                         totalHS += val;
                     } else if (col === 'ex-2') {
                         totalFS += val;
+                    } */
                     }
                 });
-
-                const hasMatrixRows = $('#article-qty-matrix-body tr').length > 0;
 
                 let grandTotal = 0;
                 $('.col-total').each(function() {
@@ -778,32 +909,19 @@
                     const sum = colSums[col] || 0;
                     $(this).val(sum || '');
                     grandTotal += sum;
-
-                    const fsCols = ['fs-36', 'fs-38', 'fs-40', 'fs-42', 'fs-44'];
-                    const hsCols = ['hs-38', 'hs-40', 'hs-42', 'hs-44', 'hs-46'];
-
-                    if (hasMatrixRows) {
-                        if (fsCols.includes(col)) {
-                            const idx = fsCols.indexOf(col);
-                            const s = currentSizes[idx];
-                            if (s) $(`.fs-summary-${s}`).val(sum || '');
-                        } else if (hsCols.includes(col)) {
-                            const idx = hsCols.indexOf(col);
-                            const s = currentSizes[idx];
-                            if (s) $(`.hs-summary-${s}`).val(sum || '');
-                        }
-                    }
                 });
 
                 $('#grand-total').val(grandTotal || '');
 
                 $('#total_qty_fs').val(totalFS || '');
                 $('#total_qty_hs').val(totalHS || '');
+                
+                $('.total-summary-fs').text(totalFS || '0');
+                $('.total-summary-hs').text(totalHS || '0');
             } finally {
                 isSyncing = false;
             }
         }
-
 
         function getArtNumbers() {
             const artNos = [];
@@ -816,71 +934,14 @@
             return artNos;
         }
 
-        // --- Size Ratio Handling --
-        $('#sizeRatioTable tbody tr').on('click', function() {
-            $(this).find('input[type="radio"]').prop('checked', true);
-        });
-
-        function triggerSizeRatioUpdate() {
-             const selected = $('input[name="size_ratio_option"]:checked');
-            if (selected.length) {
-                const ratioId = selected.val();
-                const size = selected.data('size');
-                const ratio = selected.data('ratio');
-                const display = selected.data('display');
-                currentSizes = size.split(',').map(s => s.trim());
-                currentRatios = ratio.split(',').map(r => r.trim());
-                
-                const ratioSum = currentRatios.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-                if (ratioSum > 0) {
-                    if (!$('#total_qty_fs').val() || $('#total_qty_fs').val() == 0) $('#total_qty_fs').val(ratioSum);
-                    if (!$('#total_qty_hs').val() || $('#total_qty_hs').val() == 0) $('#total_qty_hs').val(ratioSum);
-                }
-
-                $('#size_ratio_display').val(display);
-                $('#size_ratio').val(ratioId);
-                
-                renderCuttingSizeTable(currentSizes, currentRatios);
-                updateMatrixHeaders();
-                renderArticleQtyMatrix(getArtNumbers());
-                distributeQuantitiesByRatio();
-                
-                const modalEl = document.getElementById('sizeRatioModal');
-                if(modalEl && bootstrap.Modal.getInstance(modalEl)) {
-                    bootstrap.Modal.getInstance(modalEl).hide();
-                }
-            }
+        if ($('#article-qty-matrix-body tr').length > 0) {
+            calculateMatrixTotals();
         }
 
-        $('#confirmSizeRatio').click(function() {
-            triggerSizeRatioUpdate();
-        });
+        renderCuttingSizeTable(currentSizes, currentRatios);
+        syncMatrixWithMasterTable(false); 
+        updateQuantityRowVisibility();
 
-        // Initialize Size Ratio from old value
-        const initialSizeRatioId = $('#size_ratio').val();
-        if(initialSizeRatioId) {
-            const $option = $(`input[name="size_ratio_option"][value="${initialSizeRatioId}"]`);
-            if ($option.length) {
-                $option.prop('checked', true);
-                const size = $option.data('size');
-                const ratio = $option.data('ratio');
-                currentSizes = size.split(',').map(s => s.trim());
-                currentRatios = ratio.split(',').map(r => r.trim());
-
-                const ratioSum = currentRatios.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-                if (ratioSum > 0) {
-                    if (!$('#total_qty_fs').val() || $('#total_qty_fs').val() == 0) $('#total_qty_fs').val(ratioSum);
-                    if (!$('#total_qty_hs').val() || $('#total_qty_hs').val() == 0) $('#total_qty_hs').val(ratioSum);
-                }
-
-                renderCuttingSizeTable(currentSizes, currentRatios);
-                updateMatrixHeaders();
-                renderArticleQtyMatrix(getArtNumbers());
-                distributeQuantitiesByRatio();
-            }
-        }
-
-        // --- Process Group Handling ---
         $('#processGroupTable tbody tr').on('click', function() {
             $(this).find('input[type="radio"]').prop('checked', true);
         });
@@ -899,6 +960,46 @@
                 bootstrap.Modal.getInstance(document.getElementById('processGroupModal')).hide();
             }
         });
+
+        $('#size_ratio_select').on('change', function() {
+            const $selected = $(this).find(':selected');
+            const sizesStr = $selected.data('sizes') || '';
+            const ratiosStr = $selected.data('ratios') || '';
+            
+            if (sizesStr) {
+                currentSizes = sizesStr.toString().split(',').map(s => s.trim());
+                currentRatios = ratiosStr.toString().split(',').map(r => r.trim());
+                $('#cutting-size-table-wrapper').show();
+                $('#trigger-sync-wrapper').show();
+                
+                $('#article-matrix-card').removeClass('d-none');
+            } else {
+                currentSizes = ['36', '38', '40', '42', '44'];
+                currentRatios = ['', '', '', '', ''];
+                
+                $('#cutting-size-table-wrapper').hide();
+                $('#trigger-sync-wrapper').hide();
+            }
+            
+            renderCuttingSizeTable(currentSizes, currentRatios);
+            
+            syncMatrixWithMasterTable(true);
+            
+            updateQuantityRowVisibility();
+        });
+        const $initialSizeRatio = $('#size_ratio_select').find(':selected');
+        if ($initialSizeRatio.val()) {
+            const sizesStr = $initialSizeRatio.data('sizes') || '';
+            const ratiosStr = $initialSizeRatio.data('ratios') || '';
+            if (sizesStr) {
+                currentSizes = sizesStr.toString().split(',').map(s => s.trim());
+                currentRatios = ratiosStr.toString().split(',').map(r => r.trim());
+                
+                renderCuttingSizeTable(currentSizes, currentRatios);
+                
+                syncMatrixWithMasterTable(false);
+            }
+        }
 
         function renderFabricDetails() {
             const $tbody = $('#fabric-details-body');
@@ -957,6 +1058,9 @@
                     }
                 }
 
+                if (!vInOut) vInOut = 'NO';
+                if (!vNPatti) vNPatti = 'WHITE';
+
                 if (!vMtr && currentArtData && currentArtData.length > 0) {
                     const d = currentArtData.find(d => d.art_no == art);
                     if (d) {
@@ -1001,22 +1105,30 @@
             const hasHS = !currentProcessGroup || name.includes('H/S') || name.includes('HALF');
             const hasSpecial = name.includes('SPECIAL');
 
-            // --- RATIO Val Row (Editable 1, 2, 3...) ---
 
             const selectedRatioDisplay = $('#size_ratio_display').val() || '';
             const sizeStr = selectedRatioDisplay ? selectedRatioDisplay.split(' - ')[0] : '';
 
-            // Helper to add value + info rows
-            const addTypeRows = (type, label, isVisible, showInfo = true) => {
+            const addTypeRows = (type, label, isVisible, showInfo = true, infoLabel = 'SIZE') => {
                 const style = isVisible ? '' : 'display:none;';
                 
                 let vRow = `<tr class="qty-${type}-row" style="${style}"><td><strong>${label}</strong></td>`;
                 sizes.forEach((s, idx) => {
-                    const defaultVal = ratios[idx] || '';
+                    let savedVal = '';
+                    if (isEditMode && existingCuttingRatios.length > 0) {
+                        const savedRecord = existingCuttingRatios.find(r => String(r.size) === String(s));
+                        if (savedRecord) {
+                            const fsVal = savedRecord.qty_fs != null ? savedRecord.qty_fs : '';
+                            const hsVal = savedRecord.qty_hs != null ? savedRecord.qty_hs : '';
+                            savedVal = type === 'fs' ? fsVal : hsVal;
+                        }
+                    }
+                    const ratioVal = (ratios[idx] && !savedVal) ? ratios[idx] : '';
+                    const finalVal = savedVal || ratioVal;
+                    
                     vRow += `<td>
-                        <input type="number" name="matrix_items[${idx}][qty_${type}]" class="form-control form-control-sm text-center fw-bold qty-direct-input ${type}-summary-${s}" data-type="${type}" data-size="${s}" value="${defaultVal}">
+                        <input type="number" name="matrix_items[${idx}][qty_${type}]" class="form-control form-control-sm text-center fw-bold qty-direct-input ${type}-summary-${s}" data-type="${type}" data-size="${s}" value="${finalVal}">
                         ${type === 'fs' ? `<input type="hidden" name="matrix_items[${idx}][size]" value="${s}">
-                        <input type="hidden" name="matrix_items[${idx}][ratio]" class="ratio-val-input" value="${defaultVal}">
                         <input type="hidden" name="matrix_items[${idx}][article_no]" value="${currentArtNumbers[0] || ''}">` : ''} 
                     </td>`;
                 });
@@ -1027,14 +1139,15 @@
                 $tbody.append(vRow);
 
                 if (showInfo) {
-                    let iRow = `<tr class="qty-${type}-info-row" style="${style}"><td><strong>SIZE</strong></td>`;
-                    iRow += `<td colspan="${sizes.length}"><input type="text" class="form-control form-control-sm text-center text-muted" value="${sizeStr}" readonly></td>`;
+                    let iRow = `<tr class="qty-${type}-info-row" style="${style}"><td><strong>${infoLabel}</strong></td>`;
+                    iRow += `<td colspan="${sizes.length}"><input type="text" name="matrix_items_info[${type}]" class="form-control form-control-sm text-center text-muted" value="${infoLabel === 'SIZE' ? sizeStr : ''}"></td>`;
                     iRow += `<td class=""></td><td class=""></td><td></td><td></td></tr>`;
                     $tbody.append(iRow);
                 }
             };
 
-            addTypeRows('fs', 'QTY - F/S', hasFS);
+            const fsInfoLabel = name.includes('OTHERS') ? 'QTY - F/S' : 'SIZE';
+            addTypeRows('fs', 'QTY - F/S', hasFS, true, fsInfoLabel);
             addTypeRows('hs', 'QTY - H/S', hasHS, false);
 
             syncSummaryToHeader(); 
@@ -1051,7 +1164,6 @@
         }
 
 
-        // --- Production Stage Handling ---
         $('#production_stage_select').on('change', function() {
             const stageId = $(this).val();
             const stageName = $(this).find(':selected').data('name');
@@ -1088,26 +1200,70 @@
         });
 
         function syncSummaryToHeader() {
-            if (isSyncing) return;
-            isSyncing = true;
-            try {
-                let totalFS = 0, totalHS = 0;
-                $('.qty-direct-input[data-type="fs"]').each(function() {
-                    totalFS += parseFloat($(this).val()) || 0;
-                });
-                $('.qty-direct-input[data-type="hs"]').each(function() {
-                    totalHS += parseFloat($(this).val()) || 0;
-                });
-                $('#total_qty_fs').val(totalFS || '');
-                $('#total_qty_hs').val(totalHS || '');
-            } finally {
-                isSyncing = false;
-            }
+            calculateMatrixTotals();
         }
 
 
         $(document).on('input', '.qty-direct-input', function() {
-            syncSummaryToHeader();
+            const type = $(this).data('type');
+            const size = $(this).data('size');
+            const val = $(this).val();
+            
+            $(`#article-qty-matrix tbody .qty-input[data-col="${type}-${size}"]`).val(val);
+            
+            calculateMatrixTotals();
+        });
+
+        function syncMatrixWithMasterTable(populateValues = true) {
+            const activeFsSizes = [];
+            const activeHsSizes = [];
+            $('.qty-direct-input[data-type="fs"]').each(function() {
+                if (parseFloat($(this).val()) > 0) {
+                    activeFsSizes.push($(this).data('size'));
+                }
+            } );
+            $('.qty-direct-input[data-type="hs"]').each(function() {
+                if (parseFloat($(this).val()) > 0) {
+                    activeHsSizes.push($(this).data('size'));
+                }
+            });
+            activeFsSizes.sort((a, b) => a - b);
+            activeHsSizes.sort((a, b) => a - b);
+
+            if (activeFsSizes.length > 0 || activeHsSizes.length > 0) {
+                renderArticleQtyMatrix(getArtNumbers(), activeFsSizes, activeHsSizes);
+                $('#article-matrix-card').removeClass('d-none');
+                
+                if (populateValues) {
+                    $('.qty-direct-input').each(function() {
+                        const type = $(this).data('type');
+                        const size = $(this).data('size');
+                        const val = $(this).val();
+                        $(`#article-qty-matrix tbody .qty-input[data-col="${type}-${size}"]`).val(val);
+                    });
+                }
+                
+                calculateMatrixTotals();
+            } else {
+            }
+            return { fs: activeFsSizes, hs: activeHsSizes };
+        }
+
+        $('#trigger-sync').on('click', function() {
+            if (!$('#purchase_order').val()) {
+                alert('Please select a Purchase Order first.');
+                return;
+            }
+            const result = syncMatrixWithMasterTable(true);
+            
+            if (result.fs.length === 0 && result.hs.length === 0) {
+                alert('Please enter at least one quantity in the Master Table (Cutting Size Ratio).');
+                return;
+            }
+
+            $('html, body').animate({
+                scrollTop: $("#article-qty-matrix").offset().top - 100
+            }, 500);
         });
 
         $(document).on('input', '#total_qty_fs, #total_qty_hs', function() {
@@ -1115,52 +1271,8 @@
         });
 
         function distributeQuantitiesByRatio() {
-            if (isSyncing) return;
-            isSyncing = true;
-
-            try {
-                const totalFS = parseFloat($('#total_qty_fs').val()) || 0;
-                const totalHS = parseFloat($('#total_qty_hs').val()) || 0;
-                
-                const ratios = [];
-                $('.ratio-val-input').each(function() {
-                    ratios.push(parseFloat($(this).val()) || 0);
-                });
-                
-                const ratioSum = ratios.reduce((a, b) => a + b, 0);
-                if (ratioSum <= 0) return;
-
-                const fsCols = ['fs-36', 'fs-38', 'fs-40', 'fs-42', 'fs-44'];
-                const hsCols = ['hs-38', 'hs-40', 'hs-42', 'hs-44', 'hs-46'];
-
-                currentSizes.forEach((size, idx) => {
-                    const ratio = ratios[idx] || 0;
-                    const distributedFS = totalFS > 0 ? Math.round((totalFS / ratioSum) * ratio) : 0;
-                    const distributedHS = totalHS > 0 ? Math.round((totalHS / ratioSum) * ratio) : 0;
-
-                    $(`.fs-summary-${size}`).val(distributedFS || '');
-                    $(`.hs-summary-${size}`).val(distributedHS || '');
-
-                    if (distributedFS > 0) {
-                        $('#article-qty-matrix-body tr').each(function() {
-                            $(this).find(`input[data-col="${fsCols[idx]}"]`).val(distributedFS);
-                        });
-                    }
-                    if (distributedHS > 0) {
-                        $('#article-qty-matrix-body tr').each(function() {
-                            $(this).find(`input[data-col="${hsCols[idx]}"]`).val(distributedHS);
-                        });
-                    }
-                });
-            } finally {
-                isSyncing = false;
-                calculateMatrixTotals();
-            }
         }
 
-        if ($('#purchase_order').val()) $('#purchase_order').trigger('change');
-
-        // --- Persist Production Stages ---
         const oldStages = @json(old('stages', []));
         if (oldStages.length) {
             const $stageBody = $('#production_stages_body');
@@ -1197,7 +1309,12 @@
             $('.dynamic-stage-date').flatpickr(flatpickrConfig);
         }
 
-        // Delete image function
+        if ($('#size_ratio_select').val()) {
+             $('#size_ratio_select').trigger('change');
+        } else if (matrixItems.length > 0 || @json(old('matrix_items') ? true : false)) {
+             renderCuttingSizeTable(currentSizes, currentRatios);
+        }
+
         window.deleteImage = function(imageId) {
             if (!confirm('Are you sure you want to delete this image?')) return;
             

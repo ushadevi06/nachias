@@ -30,6 +30,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Brand Name</th>
+                                    <th>Code</th>
                                     <th>Created By</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -58,6 +59,9 @@
                 },
                 {
                     data: 'brand_name'
+                },
+                {
+                    data: 'code'
                 },
                 {
                     data: 'created_by'

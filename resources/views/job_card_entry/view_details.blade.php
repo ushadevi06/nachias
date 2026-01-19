@@ -1,239 +1,406 @@
 @extends('layouts.common')
-@section('title', 'Job Card Details - ' . env('WEBSITE_NAME'))
+@section('title', 'View Job Card Entry - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
+    @php
+        $allSizes = ['36', '38', '40', '42', '44'];
+        if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
+            $allSizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
+        }
+
+        $activeFs = [];
+        $activeHs = [];
+        foreach($jobCard->cuttingSizeRatios as $ratio) {
+             if ($ratio->qty_fs > 0) $activeFs[] = $ratio->size;
+             if ($ratio->qty_hs > 0) $activeHs[] = $ratio->size;
+        }
+        $activeFs = array_values(array_unique($activeFs));
+        sort($activeFs, SORT_NUMERIC);
+        $activeHs = array_values(array_unique($activeHs));
+        sort($activeHs, SORT_NUMERIC);
+
+        if (empty($activeFs) && empty($activeHs)) {
+             $activeFs = $allSizes;
+        }
+    @endphp
     <div class="row">
-        <div class="col-lg-12">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="card-header-box d-flex justify-content-between align-items-center">
-                        <h4>Job Card Details: {{ $jobCard->job_card_no }}</h4>
-                        <div>
-                            <a href="{{ url('job_card_entries/add/' . $jobCard->id) }}" class="btn btn-primary btn-sm">Edit</a>
-                            <a href="{{ url('job_card_entries/view-item/' . $jobCard->id) }}" class="btn btn-info btn-sm">Issue Item</a>
-                            <a href="{{ url('job_card_entries') }}" class="btn btn-secondary btn-sm">Back</a>
-                        </div>
-                    </div>
-                    <div class="row g-4 mt-2">
-                        <div class="col-md-3"><strong>Date:</strong> {{ date('d-m-Y', strtotime($jobCard->job_card_date)) }}</div>
-                        <div class="col-md-3"><strong>PO Reference:</strong> {{ $jobCard->purchaseOrder->po_number ?? '-' }}</div>
-                        <div class="col-md-3"><strong>MRP:</strong> {{ $jobCard->mrp ?: '-' }}</div>
-                        <div class="col-md-3"><strong>Price F/S:</strong> {{ $jobCard->price_fs ?: '-' }}</div>
-                        <div class="col-md-3"><strong>Price H/S:</strong> {{ $jobCard->price_hs ?: '-' }}</div>
-                        <div class="col-md-3"><strong>Brand:</strong> {{ $jobCard->brand->brand_name ?? '-' }}</div>
-                        <div class="col-md-3"><strong>Season:</strong> {{ $jobCard->season->name ?? '-' }}</div>
-                        <div class="col-md-3"><strong>Process Group:</strong> {{ $jobCard->processGroup->name ?? '-' }}</div>
-                        <div class="col-md-3"><strong>Status:</strong> {{ $jobCard->status }}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="card-header-box">
-                        <h4>Quantity Matrix</h4>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered text-center">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Type</th>
-                                    @php $sizes = $jobCard->items->pluck('size')->unique(); @endphp
-                                    @foreach($sizes as $size)
-                                        <th>{{ $size }}</th>
-                                    @endforeach
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @if($jobCard->items->sum('qty_fs') > 0)
-                                    <tr>
-                                        <td><strong>QTY - F/S</strong></td>
-                                        @foreach($sizes as $size)
-                                            <td>{{ $jobCard->items->where('size', $size)->sum('qty_fs') ?: '-' }}</td>
-                                        @endforeach
-                                        <td>{{ $jobCard->total_qty_fs }}</td>
-                                    </tr>
-                                @endif
-                                @if($jobCard->items->sum('qty_hs') > 0)
-                                    <tr>
-                                        <td><strong>QTY - H/S</strong></td>
-                                        @foreach($sizes as $size)
-                                            <td>{{ $jobCard->items->where('size', $size)->sum('qty_hs') ?: '-' }}</td>
-                                        @endforeach
-                                        <td>{{ $jobCard->total_qty_hs }}</td>
-                                    </tr>
-                                @endif
-                            </tbody>
-                            <tfoot>
-                                <tr class="table-light">
-                                    <th>Total</th>
-                                    @foreach($sizes as $size)
-                                        <th>{{ $jobCard->items->where('size', $size)->sum('total_qty') }}</th>
-                                    @endforeach
-                                    <th>{{ $jobCard->grand_total_qty }}</th>
-                                </tr>
-                            </tfoot>
+        <div class="col-lg-12 text-end">
+            <a href="{{ route('job_card_entries.view_details_pdf', $jobCard->id) }}" class="btn btn-primary" target="_blank"><i class="ri ri-file-pdf-line me-1"></i> PDF</a>
+            <a href="{{ url('job_card_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line me-1"></i> Back to List</a>
+        </div>
+        <div class="col-lg-12 mt-4">
+            <style>
+                .job-card-table {
+                    table-layout: fixed !important;
+                    width: 100% !important;
+                }
+                .job-card-table td {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                @media (max-width: 991px) {
+                    .job-card-table {
+                        font-size: 0.55rem !important; /* Scaled down further */
+                    }
+                    .job-card-table .fw-bold {
+                        font-size: 0.55rem !important;
+                    }
+                    .job-card-table td {
+                        padding: 1px 2px !important; /* Minimal padding */
+                    }
+                }
+                @media (max-width: 575px) {
+                    .job-card-table {
+                        font-size: 0.45rem !important; /* Ultra-compact for small phones */
+                    }
+                    .job-card-table .fw-bold {
+                        font-size: 0.45rem !important;
+                    }
+                    .job-card-table td {
+                        padding: 0.5px 1px !important;
+                    }
+                }
+            </style>
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="text-center py-2 border-bottom" style="border-color: #eeeeee !important;">
+                        <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
+                            <tr>
+                                <td class="fw-bold" style="font-size: 0.9rem; letter-spacing: 1px;">NACHIAS FASHION PVT LTD</td>
+                            </tr>
+                        </table>
+                        <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
+                            <tr>
+                                <td style="width:20%;" class="fw-bold">JOB CARD</td>
+                                <td style="width:60%;" class="fw-bold text-center">{{ strtoupper($jobCard->brand->brand_name ?? '') }}</td>
+                                <td style="width:10%;"></td>
+                                <td style="width:10%;">MARK CHECKER</td>
+                            </tr>
                         </table>
                     </div>
-                </div>
-            </div>
 
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="card-header-box">
-                        <h4>Fabric Details</h4>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th class="fw-bold">ART NO</th>
-                                    @foreach($jobCard->articleMatrices as $matrix)
-                                        <th>{{ $matrix->art_no }}</th>
-                                    @endforeach
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="fw-bold">WIDTH</td>
-                                    @foreach($jobCard->articleMatrices as $matrix)
-                                        <td>{{ $matrix->width ?: '-' }}</td>
-                                    @endforeach
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">Mtr/B.M</td>
-                                    @foreach($jobCard->articleMatrices as $matrix)
-                                        <td>{{ $matrix->mtr ?: '-' }}</td>
-                                    @endforeach
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">IN/OUT</td>
-                                    @foreach($jobCard->articleMatrices as $matrix)
-                                        <td>{{ $matrix->in_out ?: '-' }}</td>
-                                    @endforeach
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">N.PATTI</td>
-                                    @foreach($jobCard->articleMatrices as $matrix)
-                                        <td>{{ $matrix->n_patti ?: '-' }}</td>
-                                    @endforeach
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                    <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
+                        <tbody>
+                            {{-- Row 1 --}}
+                            <tr>
+                                <td class="fw-bold py-1" style="width: 9%;">CUTTING NO</td>
+                                <td class="py-1" style="width: 11%;">{{ $jobCard->job_card_no }}</td>
+                                <td class="fw-bold py-1" style="width: 6%;">FIT</td>
+                                <td class="py-1 text-center" style="width: 18%;">{{ strtoupper($jobCard->fit) ?: '-' }}</td>
+                                <td class="fw-bold py-1" style="width: 6%;">CUFF</td>
+                                <td class="py-1 text-center" style="width: 10%;">{{ strtoupper($jobCard->cuff_type) ?: '-' }}</td>
+                                <td class="fw-bold py-1" style="width: 12%;">CUTTING MASTER</td>
+                                <td class="py-1" style="width: 18%;">{{ $jobCard->cuttingMaster->name ?? '' }}</td>
+                                <td class="fw-bold py-1" style="width: 10%;"></td>
+                            </tr>
 
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="card-header-box">
-                        <h4>Article Quantity Matrix</h4>
-                    </div>
-                    @php
-                        $sr = $jobCard->sizeRatio;
-                        $srSizes = $sr ? explode(',', $sr->size) : [];
-                    @endphp
-                    <div class="table-responsive">
-                        <table class="table table-bordered text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th rowspan="2" class="align-middle">ART NO</th>
-                                    <th colspan="5">F/S</th>
-                                    <th colspan="5">H/S</th>
-                                    <th colspan="2">EX</th>
-                                    <th rowspan="2" class="align-middle">TOTAL</th>
-                                </tr>
-                                <tr>
-                                    @for($i=0; $i<5; $i++) <th>{{ $srSizes[$i] ?? '' }}</th> @endfor
-                                    @for($i=0; $i<5; $i++) <th>{{ $srSizes[$i] ?? '' }}</th> @endfor
-                                    <th>40 H/S</th><th>38 F/S</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($jobCard->articleMatrices as $matrix)
-                                    <tr>
-                                        <td>{{ $matrix->art_no }}</td>
-                                        <td>{{ $matrix->fs_36 ?: '-' }}</td>
-                                        <td>{{ $matrix->fs_38 ?: '-' }}</td>
-                                        <td>{{ $matrix->fs_40 ?: '-' }}</td>
-                                        <td>{{ $matrix->fs_42 ?: '-' }}</td>
-                                        <td>{{ $matrix->fs_44 ?: '-' }}</td>
-                                        <td>{{ $matrix->hs_38 ?: '-' }}</td>
-                                        <td>{{ $matrix->hs_40 ?: '-' }}</td>
-                                        <td>{{ $matrix->hs_42 ?: '-' }}</td>
-                                        <td>{{ $matrix->hs_44 ?: '-' }}</td>
-                                        <td>{{ $matrix->hs_46 ?: '-' }}</td>
-                                        <td>{{ $matrix->ex_1 ?: '-' }}</td>
-                                        <td>{{ $matrix->ex_2 ?: '-' }}</td>
-                                        <td class="fw-bold">{{ $matrix->row_total }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                            {{-- Row 2 --}}
+                            <tr>
+                                <td class="fw-bold py-1">F.ISSUE DATE</td>
+                                <td class="py-1">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
+                                <td class="fw-bold py-1">N.PATTI</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->patti_type) ?: '-' }}</td>
+                                <td class="fw-bold py-1">POCKET</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->pocket_type) ?: '-' }}</td>
+                                <td class="fw-bold py-1">CUTTING DATE</td>
+                                <td class="py-1">{{ $jobCard->cutting_date ? date('d-m-Y', strtotime($jobCard->cutting_date)) : '' }}</td>
+                                <td class="">H.O.D.C NO</td>
+                            </tr>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="card-header-box">
-                                <h4>Production Stages</h4>
-                            </div>
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Stage</th>
-                                        <th>Employee</th>
-                                        <th>Assigned Date</th>
-                                        <th>Received By</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($jobCard->operations as $op)
-                                        <tr>
-                                            <td>{{ $op->operationStage->operation_stage_name }}</td>
-                                            <td>{{ $op->employee->name ?? '-' }}</td>
-                                            <td>{{ $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '-' }}</td>
-                                            <td>{{ $op->received_by ?? '-' }}</td>
+                            {{-- Row 3 --}}
+                            <tr>
+                                <td class="fw-bold py-1">DELIVERY DATE</td>
+                                <td class="py-1">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
+                                <td class="fw-bold py-1">COLLAR</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->collar_type) ?: '-' }}</td>
+                                <td class="fw-bold py-1">BOT.CUT</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->bottom_cut) ?: '-' }}</td>
+                                <td class="fw-bold py-1">CUTTING ISSUE UNIT</td>
+                                <td class="py-1">{{ $jobCard->cutting_issue_unit ?: '' }}</td>
+                                <td class="fw-bold py-1"></td>
+                            </tr>
+
+                            {{-- Row 4 --}}
+                            <tr>
+                                <td class="fw-bold py-1">WASHING</td>
+                                <td class="py-1">{{ $jobCard->washing ?: 'NO' }}</td>
+                                <td colspan="4" class="text-center fw-bold py-1" style="font-size: 0.75rem; border-bottom: 2px solid #eeeeee;">CUTTING SIZE RATIO</td>
+                                <td colspan="2" class="text-center fw-bold py-1" style="font-size: 0.75rem; border-bottom: 2px solid #eeeeee;">CUTTING MARK AND LAY</td>  
+                                <td colspan="2" class="text-center fw-bold py-1" style="font-size: 0.75rem; border-bottom: 2px solid #eeeeee;">H.O.D.C DATE</td>
+                            </tr>
+
+                            {{-- Row 5 --}}
+                            <tr>
+                                <td class="fw-bold py-1">WIDTH</td>
+                                <td class="py-1">{{ $jobCard->width ?: '-' }}</td>
+                                <td class="fw-bold py-1 text-center">SIZE</td>
+                                <td colspan="3" class="p-0">
+                                    <table class="table table-bordered mb-0 job-card-table" style="border: 1px solid #eeeeee;">
+                                        <tr class="text-center fw-bold" style="font-size: 0.8rem;">
+                                            @php $sizes = $allSizes; @endphp
+                                            @foreach($sizes as $size)
+                                                <td class="py-1" style="width: 14.28%; border: 1px solid #eeeeee;">{{ $size }}</td>
+                                            @endforeach
                                         </tr>
+                                    </table>
+                                </td>
+                                <td class="p-0" colspan="2">
+                                    <div class="row g-0">
+                                        <div class="col-6 fw-bold text-center py-1 border-end" style="font-size: 0.7rem;">SIZE</div>
+                                        <div class="col-6 fw-bold text-center py-1" style="font-size: 0.7rem;">MARK</div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            {{-- Row 6 --}}
+                            <tr>
+                                <td class="fw-bold py-1">MRP</td>
+                                <td class="py-1">{{ $jobCard->mrp ?: '' }}</td>
+                                <td class="fw-bold py-1 text-center">QTY - F/S</td>
+                                <td colspan="3" class="p-0">
+                                    <table class="table table-bordered mb-0 job-card-table" style="border: none;">
+                                        <tr class="text-center" style="font-size: 0.8rem;">
+                                            @foreach($sizes as $size)
+                                                @php $ratio = $jobCard->cuttingSizeRatios->where('size', $size)->first(); @endphp
+                                                <td class="py-1" style="width: 14.28%; border: 1px solid #eeeeee;">
+                                                    {{ ($ratio && $ratio->qty_fs > 0) ? (int)$ratio->qty_fs : '-' }}
+                                                </td>
+                                            @endforeach
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td class="py-1" colspan="2"></td>
+                                <td class="py-1"></td>
+                            </tr>
+
+                            {{-- Row 7 --}}
+                            <tr>
+                                <td class="fw-bold py-1">F/S</td>
+                                <td class="py-1">{{ $jobCard->price_fs ?: '' }}</td>
+                                <td class="fw-bold py-1 text-center">QTY - H/S</td>
+                                <td colspan="3" class="p-0">
+                                    <table class="table table-bordered mb-0 job-card-table" style="border: none;">
+                                        <tr class="text-center" style="font-size: 0.8rem;">
+                                            @foreach($sizes as $size)
+                                                @php $ratio = $jobCard->cuttingSizeRatios->where('size', $size)->first(); @endphp
+                                                <td class="py-1" style="width: 14.28%; border: 1px solid #eeeeee;">
+                                                    {{ ($ratio && $ratio->qty_hs > 0) ? (int)$ratio->qty_hs : '-' }}
+                                                </td>
+                                            @endforeach
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td class="py-1" colspan="2"></td>
+                                <td class="py-1"></td>
+                            </tr>
+
+                            {{-- Row 8 --}}
+                            <tr>
+                                <td class="fw-bold py-1">H/S</td>
+                                <td class="py-1">{{ $jobCard->price_hs ?: '' }}</td>
+                                <td class="p-0" colspan="2"></td>
+                                <td class="py-1"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    @if($jobCard->images->count() > 0)
+                    <div class="row g-0 border-bottom" style="border-color: #eeeeee !important;">
+                        @foreach($jobCard->images as $image)
+                            <div class="col text-center p-3 border-end">
+                                <div class="border rounded p-2" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                                    <img src="{{ asset($image->image) }}" alt="Swatch" style="max-width: 100%; max-height: 100px; object-fit: contain;">
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    @endif
+
+                    <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
+                        <thead>
+                            <tr class="text-center">
+                                @foreach($jobCard->fabricDetails as $detail)
+                                    <th class="fw-bold">ART NO</th>
+                                    <th>{{ $detail->art_no }}</th>
+                                @endforeach
+                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
+                                    <th class="fw-bold">ART NO</th>
+                                    <th></th>
+                                @endfor
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="text-center">
+                                @foreach($jobCard->fabricDetails as $detail)
+                                    <td class="fw-bold">WIDTH</td>
+                                    <td>{{ $detail->width ?: '-' }}</td>
+                                @endforeach
+                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
+                                    <td class="fw-bold">WIDTH</td>
+                                    <td></td>
+                                @endfor
+                            </tr>
+                            <tr class="text-center">
+                                @foreach($jobCard->fabricDetails as $detail)
+                                    <td class="fw-bold">M/B.M</td>
+                                    <td>{{ $detail->mtr ?: '-' }}</td>
+                                @endforeach
+                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
+                                    <td class="fw-bold">M/B.M</td>
+                                    <td></td>
+                                @endfor
+                            </tr>
+                            <tr class="text-center">
+                                @foreach($jobCard->fabricDetails as $detail)
+                                    <td class="fw-bold">IN/OUT</td>
+                                    <td>{{ $detail->in_out ?: '-' }}</td>
+                                @endforeach
+                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
+                                    <td class="fw-bold">IN/OUT</td>
+                                    <td></td>
+                                @endfor
+                            <tr class="text-center">
+                                @foreach($jobCard->fabricDetails as $detail)
+                                    <td class="fw-bold">N.PATTI</td>
+                                    <td>{{ $detail->n_patti ?: '-' }}</td>
+                                @endforeach
+                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
+                                    <td class="fw-bold">N.PATTI</td>
+                                    <td></td>
+                                @endfor
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
+                        <thead>
+                            <tr class="text-center">
+                                <th rowspan="2">ART NO</th>
+                                @if(count($activeFs) > 0)
+                                    <th colspan="{{ count($activeFs) }}">F/S</th>
+                                @endif
+                                @if(count($activeHs) > 0)
+                                    <th colspan="{{ count($activeHs) }}">H/S</th>
+                                @endif
+                                <th rowspan="2">TOTAL</th>
+                            </tr>
+                            <tr class="text-center">
+                                @foreach($activeFs as $s)
+                                    <th>{{ $s }}</th>
+                                @endforeach
+                                @foreach($activeHs as $s)
+                                    <th>{{ $s }}</th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $fs_summary = array_fill_keys($activeFs, 0);
+                                $hs_summary = array_fill_keys($activeHs, 0);
+                                $grand_total = 0;
+                            @endphp
+                            @foreach($jobCard->fabricDetails as $detail)
+                                @php
+                                    $fs_row_total = 0;
+                                    foreach($activeFs as $s) {
+                                        $val = (int)($detail->{'fs_' . $s} ?? 0);
+                                        $fs_row_total += $val;
+                                        $fs_summary[$s] += $val;
+                                    }
+                                    
+                                    $hs_row_total = 0;
+                                    foreach($activeHs as $s) {
+                                        $val = (int)($detail->{'hs_' . $s} ?? 0);
+                                        $hs_row_total += $val;
+                                        $hs_summary[$s] += $val;
+                                    }
+
+                                    $row_total = $fs_row_total + $hs_row_total;
+                                    $grand_total += $row_total;
+                                @endphp
+                                <tr class="text-center">
+                                    <td>{{ $detail->art_no }}</td>
+                                    @foreach($activeFs as $s)
+                                        <td>{{ $detail->{'fs_' . $s} ?: '-' }}</td>
                                     @endforeach
+                                    @foreach($activeHs as $s)
+                                        <td>{{ $detail->{'hs_' . $s} ?: '-' }}</td>
+                                    @endforeach
+                                    <td class="fw-bold">{{ $row_total ?: '-' }}</td>
+                                </tr>
+                            @endforeach
+                            {{-- Fill empty rows if needed to maintain layout --}}
+                            @for($i = count($jobCard->fabricDetails); $i < 6; $i++)
+                                <tr class="text-center">
+                                    <td>&nbsp;</td>
+                                    @foreach($activeFs as $s) <td>-</td> @endforeach
+                                    @foreach($activeHs as $s) <td>-</td> @endforeach
+                                    <td>-</td>
+                                </tr>
+                            @endfor
+                        </tbody>
+                        <tfoot>
+                            <tr class="text-center fw-bold">
+                                <td>TOTAL</td>
+                                @foreach($activeFs as $s)
+                                    <td>{{ $fs_summary[$s] ?: '-' }}</td>
+                                @endforeach
+                                @foreach($activeHs as $s)
+                                    <td>{{ $hs_summary[$s] ?: '-' }}</td>
+                                @endforeach
+                                <td class="fw-bold">{{ $grand_total ?: '-' }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="row g-0 border border-top-0" style="border-color: #eeeeee !important;">
+                        <div class="col-10">
+                            <div class="bg-light text-center fw-bold py-1 border-bottom" style="font-size: 0.8rem; border-color: #eeeeee !important;">AUTHORISED SIGNATURES</div>
+                            <table class="table mb-0 job-card-table" style="border: none;">
+                                <tbody>
+                                    @php
+                                        $allOps = $jobCard->operations->values();
+                                        $totalRows = 4;
+                                        $colsPerRow = 3;
+                                    @endphp
+                                    @for($i = 0; $i < $totalRows; $i++)
+                                        <tr style="border-bottom: 1px solid #eeeeee;">
+                                            @for($j = 0; $j < $colsPerRow; $j++)
+                                                @php 
+                                                    $idx = ($i * $colsPerRow) + $j;
+                                                    $op = $allOps[$idx] ?? null;
+                                                @endphp
+                                                <td class="fw-bold py-1" style="width: 6%; font-size: 0.65rem; border-right: 1px solid #eeeeee; @if($j == 0) border-left: none; @endif">
+                                                    @if($op)
+                                                        DATE
+                                                        <div class="fw-normal" style="font-size: 0.65rem;">
+                                                            {{ $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '' }}
+                                                        </div>
+                                                    @endif
+                                                </td>
+                                                <td class="py-1" style="width: 19%; font-size: 0.75rem; vertical-align: top; height: 50px; border-right: 1px solid #eeeeee; @if($j == $colsPerRow - 1) border-right: none; @endif">
+                                                    @if($op)
+                                                        <div class="fw-bold text-center mb-1" style="font-size: 0.7rem; border-bottom: 1px solid #eeeeee;">
+                                                            {{ $op->operationStage->operation_stage_name ?? '' }}
+                                                        </div>
+                                                        <div class="text-center" style="font-size: 0.65rem;">
+                                                            {{ $op->employee->name ?? '' }}
+                                                        </div>
+                                                    @endif
+                                                </td>
+                                            @endfor
+                                        </tr>
+                                    @endfor
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="card-header-box">
-                                <h4>Uploaded Images</h4>
-                            </div>
-                            <div class="row g-2">
-                                @foreach($jobCard->images as $img)
-                                    <div class="col-4">
-                                        <div class="border p-1 text-center">
-                                            <img src="{{ asset($img->image) }}" class="img-fluid mb-1" style="max-height: 100px;">
-                                            <div class="small text-muted">{{ $img->art_no }}</div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
+                        <div class="col-2 border-start" style="border-color: #eeeeee !important;">
+                            <div class="bg-light text-center fw-bold py-1 border-bottom" style="font-size: 0.8rem; border-color: #eeeeee !important;">REMARKS</div>
+                            <div class="p-2" style="font-size: 0.75rem; min-height: 200px; white-space: pre-wrap;">{{ $jobCard->remarks }}</div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            @if($jobCard->remarks)
-                <div class="card">
-                    <div class="card-body">
-                        <strong>Remarks:</strong>
-                        <p>{{ $jobCard->remarks }}</p>
-                    </div>
-                </div>
-            @endif
         </div>
     </div>
 </div>

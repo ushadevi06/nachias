@@ -52,9 +52,9 @@ class GrnEntryController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('edit grn-entry')) {
                     $action .= '<a href="' . url('grn_entries/add/' . $grn->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-                if (auth()->id() == 1 || auth()->user()->can('delete grn-entry')) {
-                    $action .= '<button class="btn btn-delete" onclick="delete_data(`' . url('grn_entries/delete/' . $grn->id) . '`)"><i class="icon-base ri ri-delete-bin-line"></i></button>';
-                }
+                // if (auth()->id() == 1 || auth()->user()->can('delete grn-entry')) {
+                //     $action .= '<button class="btn btn-delete" onclick="delete_data(`' . url('grn_entries/delete/' . $grn->id) . '`)"><i class="icon-base ri ri-delete-bin-line"></i></button>';
+                // }
                 $action .= '</div>';
 
                 $qcStatuses = $grn->grnEntryItems->pluck('quality_check_status')->unique();
@@ -91,7 +91,6 @@ class GrnEntryController extends Controller
 
     public function add(Request $request, $id = null)
     {
-        // dd($request->all());
         if ($id) {
             if (auth()->id() != 1 && !auth()->user()->can('edit grn-entry')) {
                  return unauthorizedRedirect();
@@ -110,7 +109,6 @@ class GrnEntryController extends Controller
         $colors = Color::orderBy('color_name')->get();
 
         if ($request->isMethod('post')) {
-            // Custom validation to only validate selected rows
             $selectedItems = collect($request->items)->filter(function($item) {
                 return ($item['row_selected'] ?? 0) == 1;
             });
@@ -189,7 +187,7 @@ class GrnEntryController extends Controller
                         $file = $request->file("items.$idx.item_image");
                         $filename = 'grn_item_' . time() . '_' . $idx . '.' . $file->getClientOriginalExtension();
                         $file->move(public_path('uploads/grn_items'), $filename);
-                        $imagePath = 'uploads/grn_items/' . $filename;
+                        $imagePath = $filename;
                     }
 
                     $item = GrnEntryItem::create([
@@ -247,13 +245,13 @@ class GrnEntryController extends Controller
                 'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
                 'art_no' => $item->purchaseOrderItem->art_no ?? '',
                 'uom' => $item->uom->uom_name ?? 'MTR',
-                'qty_ordered' => $item->quantity - $already_received,
+                'qty_ordered' => $item->quantity,
                 'qty_already_received' => $already_received,
                 'rate' => $item->rate,
                 'amount' => $item->amount,
             ];
         })->filter(function($item) {
-            return $item['qty_ordered'] > 0;
+            return ($item['qty_ordered'] - $item['qty_already_received']) > 0;
         })->values();
 
         return response()->json([
@@ -291,14 +289,9 @@ class GrnEntryController extends Controller
 
         $grn = GrnEntry::findOrFail($id);
         $oldData = $grn->toArray();
-        
-        // Delete related items and variants if necessary? 
-        // Typically cascade deletes handle this in DB, but if soft/hard delete logic exists...
-        // Assuming standard delete is fine or model events handle it. 
-        // However, explicit deletion of items might be safer if constraints aren't perfect.
         $grn->grnEntryItems()->each(function($item) {
-            $item->variants()->delete(); // delete variants
-            $item->delete(); // delete item
+            $item->variants()->delete();
+            $item->delete(); 
         });
 
         $grn->delete();

@@ -12,6 +12,8 @@ use App\Models\RawMaterial;
 use App\Models\Uom;
 use App\Models\Color;
 use App\Models\Style;
+use App\Models\Brand;
+use App\Models\SizeRatio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -24,7 +26,7 @@ class PurchaseOrderController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = PurchaseOrder::with(['salesAgent', 'supplier', 'storeType'])
+            $query = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType'])
                 ->orderBy('id', 'desc');
 
             if (!empty($request->status)) {
@@ -105,7 +107,7 @@ class PurchaseOrderController extends Controller
                     'due_date' => $po->due_date->format('d-m-Y'),
                     'delivery_location' => $po->storeType->store_type_name ?? '-',
                     'total_qty' => number_format($po->total_qty, 2),
-                    'order_date' => $po->order_date->format('d-m-Y'),
+
                     'status' => $statusDropdown,
                     'total_amount' => '₹' . number_format($po->total_amount, 2),
                     'action' => $action,
@@ -141,14 +143,14 @@ class PurchaseOrderController extends Controller
             $rules = [
                 'po_number' => 'required|string|max:50|unique:purchase_orders,po_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'po_date' => 'required|date',
-                'sales_agent_id' => 'nullable|exists:sales_agents,id',
+                'purchase_commission_agent_id' => 'nullable|exists:sales_agents,id',
                 'commission' => 'nullable|numeric|min:0|max:100',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'reference_no' => 'required|string|max:100', 
                 'reference_date' => 'required|date',
                 'due_date' => 'required|date|after_or_equal:po_date',
                 'store_type_id' => 'required|exists:store_types,id',
-                'order_date' => 'required|date',
+
                 'payment_terms' => 'nullable|string|max:1000',
                 'status' => 'required|in:Draft,Approved,Dispatched,Received',
                 'items' => 'required|array|min:1',
@@ -162,6 +164,8 @@ class PurchaseOrderController extends Controller
                 'items.*.attached_file' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
                 'items.*.color_id' => 'nullable|exists:colors,id',
                 'items.*.style_id' => 'nullable|exists:styles,id',
+                'items.*.brand_id' => 'nullable|exists:brands,id',
+                'items.*.fabric_width_id' => 'nullable|exists:size_ratios,id',
                 'discount_percent' => 'nullable',
                 'additional_attachments' => 'nullable|file|max:5120',
                 'round_off_type' => 'nullable|in:Add,Less',
@@ -188,32 +192,49 @@ class PurchaseOrderController extends Controller
 
             DB::beginTransaction();
             try {
+                $taxableAmount = $request->taxable_amount ?? 0;
+                $taxAmount = $request->tax_amount ?? 0;
+                
+                $totalBeforeRoundOff = round($taxableAmount + $taxAmount, 2);
+                $decimalPart = $totalBeforeRoundOff - floor($totalBeforeRoundOff);
+                $decimalPart = round($decimalPart, 2);
+    
+                $finalTotal = $totalBeforeRoundOff;
+                if ($decimalPart > 0.5) {
+                    $finalTotal = ceil($totalBeforeRoundOff);
+                }
+    
+                $roundOffDifference = $finalTotal - $totalBeforeRoundOff;
+                $roundOffAmount = abs($roundOffDifference);
+                
+                $roundOffType = ($roundOffDifference > 0) ? 'Add' : (($roundOffDifference < 0) ? 'Less' : 'Add');
+
                 $poData = [
                     'po_number' => $request->po_number,
                     'po_date'        => Carbon::createFromFormat('d-m-Y', $request->po_date)->format('Y-m-d'),
-                    'sales_agent_id' => $request->sales_agent_id,
+                    'purchase_commission_agent_id' => $request->purchase_commission_agent_id,
                     'commission' => $request->commission ?? 0,
                     'supplier_id' => $request->supplier_id,
                     'reference_no' => $request->reference_no,
                     'reference_date' => Carbon::createFromFormat('d-m-Y', $request->reference_date)->format('Y-m-d'),
                     'due_date'       => Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d'),
                     'store_type_id' => $request->store_type_id,
-                    'order_date'     => Carbon::createFromFormat('d-m-Y', $request->order_date)->format('Y-m-d'),
+    
                     'payment_terms' => $request->payment_terms,
                     'status' => $request->status,
                     'total_qty' => $request->total_qty ?? 0,
                     'sub_total' => $request->sub_total ?? 0,
                     'discount_percent' => $request->discount_percent ?? 0,
                     'discount_amount' => $request->discount_amount ?? 0,
-                    'taxable_amount' => $request->taxable_amount ?? 0,
+                    'taxable_amount' => $taxableAmount,
                     'other_state' => $request->other_state === 'yes',
                     'igst_percent' => $request->igst_percent ?? 0,
                     'cgst_percent' => $request->cgst_percent ?? 0,
                     'sgst_percent' => $request->sgst_percent ?? 0,
-                    'tax_amount' => $request->tax_amount ?? 0,
-                    'round_off_type' => $request->round_off_type,
-                    'round_off' => $request->round_off ?? 0,
-                    'total_amount' => $request->total_amount ?? 0,
+                    'tax_amount' => $taxAmount,
+                    'round_off_type' => $roundOffType,
+                    'round_off' => $roundOffAmount,
+                    'total_amount' => $finalTotal,
                 ];
 
                 if ($id) {
@@ -221,9 +242,7 @@ class PurchaseOrderController extends Controller
                     $purchaseOrder = PurchaseOrder::findOrFail($id);
                     $poData['updated_by'] = auth()->id();
                     $purchaseOrder->update($poData);
-
                     PurchaseOrderItem::where('purchase_order_id', $id)->forceDelete();
-
                     $newData = $purchaseOrder->fresh()->toArray();
                     addLog('update', 'Purchase Order', 'purchase_orders', $id, $oldData, $newData);
                     $message = 'Purchase Order updated successfully';
@@ -259,6 +278,8 @@ class PurchaseOrderController extends Controller
                         'remarks' => $item['remarks'],
                         'color_id' => $item['color_id'] ?? null,
                         'style_id' => $item['style_id'] ?? null,
+                        'brand_id' => $item['brand_id'] ?? null,
+                        'fabric_width_id' => $item['fabric_width_id'] ?? null,
                     ];
 
                     if (isset($item['attached_file']) && $request->hasFile("items.{$index}.attached_file")) {
@@ -292,6 +313,8 @@ class PurchaseOrderController extends Controller
         $uoms = Uom::active()->get();
         $colors = Color::where('status', 'Active')->get();
         $styles = Style::active()->get();
+        $brands = Brand::where('status', 'Active')->get();
+        $sizeRatios = SizeRatio::where('status', 'Active')->get();
 
         $nextPoNumber = '';
         if (!$id) {
@@ -312,7 +335,7 @@ class PurchaseOrderController extends Controller
                 $nextPoNumber = $prefix . $nextNumber;
             }
         }
-        return view('purchase_orders.add', compact('purchaseOrder', 'salesAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'nextPoNumber'));
+        return view('purchase_orders.add', compact('purchaseOrder', 'salesAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'brands', 'sizeRatios', 'nextPoNumber'));
     }
 
     public function view($id)
@@ -320,7 +343,7 @@ class PurchaseOrderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
             return unauthorizedRedirect();
         }
-        $purchaseOrder = PurchaseOrder::with(['salesAgent', 'supplier', 'storeType', 'items.storeCategory', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $purchaseOrder = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType', 'items.storeCategory', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
         return view('purchase_orders.view_details', compact('purchaseOrder'));
     }
 

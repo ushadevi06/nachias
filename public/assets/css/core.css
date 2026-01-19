@@ -34989,3 +34989,20 @@ Responsive
 .jc-item-row a.item-link:hover {
     text-decoration: underline;
 }
+
+.table-fixed-header {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.table-fixed-header table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table-fixed-header thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f9fafb !important;
+}

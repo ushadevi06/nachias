@@ -127,7 +127,7 @@
                                             <input type="file" id="reference_document" name="reference_document" class="form-control">
                                             @if(isset($debitNote) && $debitNote->reference_document)
                                                 <div class="mt-1">
-                                                    <a href="{{ asset($debitNote->reference_document) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri-eye-line me-1"></i> View Attachment</a>
+                                                    <a href="{{ url('uploads/debit_notes/' . $debitNote->reference_document) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri-eye-line me-1"></i> View Attachment</a>
                                                 </div>
                                             @endif
                                         </div>

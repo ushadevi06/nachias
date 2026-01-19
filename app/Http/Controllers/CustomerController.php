@@ -8,6 +8,7 @@ use App\Models\State;
 use App\Models\City;
 use App\Models\Place;
 use App\Models\Tax;
+use App\Models\StoreType;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -236,6 +237,7 @@ class CustomerController extends Controller
         $cities = [];
         $places = [];
         $taxes = Tax::active()->get();
+        $store_types = StoreType::where('status', 'Active')->get();
 
         $stateId = old('state_id') ?? ($customer->state_id ?? null);
         $cityId  = old('city_id')  ?? ($customer->city_id ?? null);
@@ -247,7 +249,7 @@ class CustomerController extends Controller
         if ($cityId) {
             $places = Place::where('city_id', $cityId)->get();
         }
-        return view('customers.add', compact('customer', 'zones', 'states', 'cities', 'places', 'taxes'));
+        return view('customers.add', compact('customer', 'zones', 'states', 'cities', 'places', 'taxes', 'store_types'));
     }
 
     public function view($id)

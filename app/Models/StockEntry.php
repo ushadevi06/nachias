@@ -22,6 +22,7 @@ class StockEntry extends Model
         'status',
         'created_by',
         'updated_by',
+        'price',
     ];
 
     protected $casts = [

@@ -123,7 +123,7 @@
                         <div class="col-md-4">
                             <label class="detail-title">Reference Document:</label>
                             <div class="text-muted">
-                                <a href="{{ asset($debitNote->reference_document) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri-eye-line me-1"></i> View Attachment</a>
+                                <a href="{{ url('uploads/debit_notes/' . $debitNote->reference_document) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri-eye-line me-1"></i> View Attachment</a>
                             </div>
                         </div>
                         @endif

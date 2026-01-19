@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\JobCardEntry;
-use App\Models\JobCardItem;
+use App\Models\JobCardCuttingSizeRatio;
 use App\Models\JobCardImage;
+use App\Models\JobCardFabricDetail;
+use App\Models\StockEntryItem;
 use App\Models\JobCardOperation;
 use App\Models\PurchaseOrder;
 use App\Models\Brand;
@@ -26,22 +28,33 @@ use App\Models\BottomCut;
 use App\Models\GrnEntry;
 use App\Models\GrnEntryItem;
 use App\Models\PurchaseInvoice;
+use App\Models\JobCardIssueItem;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class JobCardEntryController extends Controller
 {
     public function index(Request $request) {
         if ($request->ajax()) {
-            $jobCards = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup'])
-                ->orderBy('id', 'desc')
-                ->get();
+            $jobCards = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup'])->orderBy('id', 'desc')->get();
             
             $data = [];
             foreach ($jobCards as $index => $jc) {
-                $action = '<div class="button-box">
-                    <a href="' . url('job_card_entries/view/' . $jc->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                    <a href="' . url('job_card_entries/view-item/' . $jc->id) . '" class="btn btn-item" title="Issue Item"><i class="icon-base ri ri-list-check-2"></i></a>
-                    <a href="' . url('job_card_entries/add/' . $jc->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                </div>';
+                $status = ($jc->status == 'Urgent')
+                    ? '<span class="badge bg-label-danger">' . $jc->status . '</span>'
+                    : '<span class="badge bg-label-warning">' . $jc->status . '</span>';
+                $action = '<div class="button-box">';
+                if (auth()->id() == 1 || auth()->user()->can('view job-card')) {
+                    $action .= '<a href="' . url('job_card_entries/view/' . $jc->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                }
+                if (auth()->id() == 1 || auth()->user()->can('issue-item job-card')) {
+                    $action .= '<a href="' . url('job_card_entries/view-item/' . $jc->id) . '" class="btn btn-item" title="Issue Item"><i class="icon-base ri ri-list-check-2"></i></a>';
+                }
+                if (auth()->id() == 1 || auth()->user()->can('edit job-card')) {
+                    $action .= '<a href="' . url('job_card_entries/add/' . $jc->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                }
+                $action .= '</div>';
                 
                 $data[] = [
                     'DT_RowIndex' => $index + 1,
@@ -52,7 +65,7 @@ class JobCardEntryController extends Controller
                     'season' => $jc->season->name ?? '-',
                     'process_group' => $jc->processGroup->name ?? '-',
                     'total_qty' => $jc->grand_total_qty,
-                    'status' => '<span class="badge bg-label-primary">' . $jc->status . '</span>',
+                    'status' => $status,
                     'action' => $action
                 ];
             }
@@ -89,13 +102,13 @@ class JobCardEntryController extends Controller
                 'cutting_master_id' => 'required|exists:users,id',
                 'cutting_date' => 'required|date_format:d-m-Y',
                 'cutting_issue_unit' => 'required|string',
+                'stages' => 'nullable|array|min:1',
                 'size_ratio_id' => 'required|exists:size_ratios,id',
-                'stages' => 'required|array|min:1',
             ];
 
             $messages = [
                 '*.required' => 'This field is required',
-                'job_card_no.unique' => 'This Job Card Number already exists.',
+                'job_card_no.unique' => 'This field already exists.',
             ];
 
             $validator = Validator::make($request->all(), $rules, $messages);
@@ -137,6 +150,8 @@ class JobCardEntryController extends Controller
                     'brand_id' => $request->brand_id,
                     'process_group_id' => $request->process_group_id,
                     'size_ratio_id' => $request->size_ratio_id,
+                    'ex_1_label' => $request->ex_1_label,
+                    'ex_2_label' => $request->ex_2_label,
                 ];
 
                 if ($request->season) {
@@ -154,19 +169,43 @@ class JobCardEntryController extends Controller
                 }
 
                 if ($id) {
-                    $jobCard = JobCardEntry::findOrFail($id);
+                    $jobCard = JobCardEntry::with('issueItems.fabricDetail')->findOrFail($id);
+                    $oldData = $jobCard->toArray();
+                    $issueBackup = [];
+                    foreach ($jobCard->issueItems as $issue) {
+                        $artNo = $issue->fabricDetail->art_no ?? null;
+                        if ($artNo) {
+                            $issueBackup[$artNo] = [
+                                'qty_issue' => $issue->qty_issue,
+                                'qty_adjusted' => $issue->qty_adjusted,
+                                'qty_wastage' => $issue->qty_wastage,
+                                'qty_used' => $issue->qty_used,
+                                'bit' => $issue->bit,
+                                'balance' => $issue->balance,
+                                'average' => $issue->average,
+                                'produced_qty' => $issue->produced_qty,
+                            ];
+                        }
+                    }
+
                     $jobCard->update($data);
-                    $jobCard->items()->forceDelete();
-                    $jobCard->articleMatrices()->forceDelete();
+                    $jobCard->cuttingSizeRatios()->forceDelete();
+                    $jobCard->fabricDetails()->forceDelete();
                     $jobCard->operations()->delete();
+                    
+                    $newData = $jobCard->fresh()->toArray();
+                    addLog('update', 'Job Card Entry', 'job_card_entries', $id, $oldData, $newData);
                 } else {
                     $data['created_by'] = auth()->id();
                     $jobCard = JobCardEntry::create($data);
+                    $newData = $jobCard->toArray();
+                    addLog('create', 'Job Card Entry', 'job_card_entries', $jobCard->id, null, $newData);
+                    $issueBackup = [];
                 }
 
                 if ($request->matrix_items) {
                     foreach ($request->matrix_items as $item) {
-                        $jobCard->items()->create([
+                        $jobCard->cuttingSizeRatios()->create([
                             'article_no' => $item['article_no'],
                             'size' => $item['size'],
                             'ratio' => $item['ratio'] ?? 0,
@@ -181,7 +220,7 @@ class JobCardEntryController extends Controller
                     foreach ($request->article_matrix as $index => $matrix) {
                         $fabric = collect($request->fabrics)->where('art_no', $matrix['art_no'])->first() ?? ($request->fabrics[$index] ?? null);
                         
-                        $jobCard->articleMatrices()->create([
+                        $newMatrix = $jobCard->fabricDetails()->create([
                             'art_no'  => $matrix['art_no'],
                             'width'   => $fabric['width'] ?? null,
                             'mtr'     => $fabric['mtr'] ?? null,
@@ -192,6 +231,7 @@ class JobCardEntryController extends Controller
                             'fs_40'   => $matrix['fs_40'] ?? 0,
                             'fs_42'   => $matrix['fs_42'] ?? 0,
                             'fs_44'   => $matrix['fs_44'] ?? 0,
+                            'hs_36'   => $matrix['hs_36'] ?? 0,
                             'hs_38'   => $matrix['hs_38'] ?? 0,
                             'hs_40'   => $matrix['hs_40'] ?? 0,
                             'hs_42'   => $matrix['hs_42'] ?? 0,
@@ -201,45 +241,73 @@ class JobCardEntryController extends Controller
                             'ex_2'    => $matrix['ex_2'] ?? 0,
                             'row_total' => array_sum([
                                 $matrix['fs_36'] ?? 0, $matrix['fs_38'] ?? 0, $matrix['fs_40'] ?? 0, $matrix['fs_42'] ?? 0, $matrix['fs_44'] ?? 0,
-                                $matrix['hs_38'] ?? 0, $matrix['hs_40'] ?? 0, $matrix['hs_42'] ?? 0, $matrix['hs_44'] ?? 0, $matrix['hs_46'] ?? 0,
-                                $matrix['ex_1'] ?? 0, $matrix['ex_2'] ?? 0
+                                $matrix['hs_36'] ?? 0, $matrix['hs_38'] ?? 0, $matrix['hs_40'] ?? 0, $matrix['hs_42'] ?? 0, $matrix['hs_44'] ?? 0,
+                                $matrix['hs_46'] ?? 0, $matrix['ex_1'] ?? 0, $matrix['ex_2'] ?? 0
                             ])
                         ]);
+
+                        if (isset($issueBackup[$matrix['art_no']])) {
+                            JobCardIssueItem::create(array_merge($issueBackup[$matrix['art_no']], [
+                                'job_card_entry_id' => $jobCard->id,
+                                'job_card_article_matrix_id' => $newMatrix->id,
+                                'created_by' => auth()->id(),
+                                'updated_by' => auth()->id(),
+                            ]));
+                        }
                     }
                 }
 
-                if ($request->stages) {
-                    foreach ($request->stages as $stage) {
-                        $jobCard->operations()->create([
-                            'operation_stage_id' => $stage['stage_id'] ?? null,
-                            'employee_id' => $stage['employee_id'] ?? null,
-                            'assigned_date' => $stage['issue_date'] ? date('Y-m-d', strtotime($stage['issue_date'])) : date('Y-m-d'),
-                            'received_by' => $stage['received_by'] ?? null,
-                        ]);
-                    }
-                }
+                // if ($request->stages) {
+                //     foreach ($request->stages as $stage) {
+                //         $jobCard->operations()->create([
+                //             'operation_stage_id' => $stage['stage_id'] ?? null,
+                //             'employee_id' => $stage['employee_id'] ?? null,
+                //             'assigned_date' => $stage['issue_date'] ? date('Y-m-d', strtotime($stage['issue_date'])) : date('Y-m-d'),
+                //             'received_by' => $stage['received_by'] ?? null,
+                //         ]);
+                //     }
+                // }
 
                 if ($request->has('fabric_images')) {
-                    $uploadPath = public_path('uploads/job_cards');
+                    $uploadPath = public_path('uploads/job_card');
                     if (!file_exists($uploadPath)) {
                         mkdir($uploadPath, 0755, true);
                     }
 
                     foreach ($request->fabric_images as $index => $files) {
-                        if (is_array($files)) {
+                        if (is_array($files) && count(array_filter($files)) > 0) {
+                            $currentArtNo = $request->fabrics[$index]['art_no'] ?? null;
+                            
+                            // Delete old images for ONLY this art_no when editing
+                            if ($id && $currentArtNo) {
+                                $oldArtImages = $jobCard->images()->where('art_no', $currentArtNo)->get();
+                                foreach ($oldArtImages as $oldImage) {
+                                    $oldImagePath = public_path($oldImage->image);
+                                    if (file_exists($oldImagePath)) {
+                                        unlink($oldImagePath);
+                                    }
+                                    $oldImage->delete();
+                                }
+                            }
+
                             foreach ($files as $file) {
                                 if ($file && $file->isValid()) {
                                     $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
                                     $file->move($uploadPath, $fileName);
                                     $jobCard->images()->create([
-                                        'image' => 'uploads/job_cards/' . $fileName,
-                                        'art_no' => $request->fabrics[$index]['art_no'] ?? null
+                                        'image' => 'uploads/job_card/' . $fileName,
+                                        'art_no' => $currentArtNo
                                     ]);
                                 }
                             }
                         }
                     }
                 }
+
+                $totalFabricMtr = $jobCard->fabricDetails()->sum('mtr');
+                $grandTotalQty = $jobCard->grand_total_qty ?? 0;
+                $overallAverage = ($grandTotalQty > 0) ? ($totalFabricMtr / $grandTotalQty) : 0;
+                $jobCard->update(['average' => $overallAverage]);
 
                 DB::commit();
                 return redirect('job_card_entries')->with('success', 'Job Card saved successfully');
@@ -249,7 +317,7 @@ class JobCardEntryController extends Controller
             }
         }
 
-        $jobCard = $id ? JobCardEntry::with(['items', 'images', 'operations.operationStage', 'sizeRatio'])->findOrFail($id) : null;
+        $jobCard = $id ? JobCardEntry::with(['cuttingSizeRatios', 'images', 'operations.operationStage', 'sizeRatio', 'fabricDetails', 'issueItems'])->findOrFail($id) : null;
         
         $allPurchaseOrders = PurchaseOrder::with(['items'])->orderBy('id', 'desc')->get();
         
@@ -264,8 +332,8 @@ class JobCardEntryController extends Controller
         $seasons = Season::where('status', 'Active')->orderBy('name')->get();
         $processGroups = ProcessGroup::where('status', 'Active')->orderBy('name')->get();
         $sizeRatios = SizeRatio::where('status', 'Active')->orderBy('id')->get();
-        $operationStages = OperationStage::where('status', 'Active')->orderBy('operation_stage_name')->get();
-        $employees = User::where('status', 'Active')->orderBy('name')->get();
+        $operationStages = OperationStage::where('status', 'Active')->get();
+        $employees = User::where('status', 'Active')->where('id', '!=', 1)->orderBy('name')->get();
         
         $fits = Fit::active()->orderBy('fit_name')->get();
         $pattiTypes = PattiType::active()->orderBy('patti_type_name')->get();
@@ -273,7 +341,7 @@ class JobCardEntryController extends Controller
         $cuffTypes = CuffType::active()->orderBy('cuff_type_name')->get();
         $pocketTypes = PocketType::active()->orderBy('pocket_type_name')->get();
         $bottomCuts = BottomCut::active()->orderBy('bottom_cut_name')->get();
-        $cuttingMasters = User::active()->orderBy('name')->get();
+        $cuttingMasters = User::active()->where('id', '!=', 1)->orderBy('name')->get();
 
         return view('job_card_entry/add', compact(
             'jobCard', 'purchaseOrders', 'brands', 'seasons', 
@@ -284,7 +352,7 @@ class JobCardEntryController extends Controller
     }
 
     public function view_details($id) {
-        $jobCard = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup', 'items', 'images', 'operations.operationStage', 'operations.employee'])->findOrFail($id);
+        $jobCard = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup', 'cuttingSizeRatios', 'fabricDetails', 'images', 'operations.operationStage', 'operations.employee'])->findOrFail($id);
         return view('job_card_entry/view_details', compact('jobCard'));
     }
 
@@ -295,16 +363,18 @@ class JobCardEntryController extends Controller
     }
 
     public function view_jc_item($id) {
-        $jobCard = JobCardEntry::with(['articleMatrices', 'purchaseOrder.items.rawMaterial', 'purchaseOrder.supplier', 'purchaseOrder.items.uom'])->findOrFail($id);
-        
-        // Fetch GRN material names and locations for each article number
+        $jobCard = JobCardEntry::with(['brand', 'fabricDetails', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems'])->findOrFail($id);
+        $issueItemMap = $jobCard->issueItems->keyBy(function($item) {
+            return $item->job_card_article_matrix_id . '_' . $item->sleeve_type;
+        });
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
         $grnItems = GrnEntryItem::whereIn('grn_entry_id', function($query) use ($invoiceIds) {
             $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
-        })->with(['purchaseInvoiceItem.rawMaterial', 'fabricType', 'storeLocation'])->get();
+        })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'fabricType', 'storeLocation'])->get();
 
         $artMaterialMap = [];
         $artLocationMap = [];
+        $artUomMap = [];
         foreach ($grnItems as $item) {
             $name = $item->purchaseInvoiceItem->rawMaterial->name ?? ($item->fabricType->name ?? null);
             if ($name && !isset($artMaterialMap[$item->art_no])) {
@@ -313,10 +383,133 @@ class JobCardEntryController extends Controller
             if ($item->storeLocation && !isset($artLocationMap[$item->art_no])) {
                 $artLocationMap[$item->art_no] = $item->storeLocation->store_location;
             }
+            $uom = $item->purchaseInvoiceItem->uom->uom_code ?? ($item->purchaseInvoiceItem->rawMaterial->uom->uom_code ?? null);
+            if ($uom && !isset($artUomMap[$item->art_no])) {
+                $artUomMap[$item->art_no] = $uom;
+            }
         }
 
-        return view('job_card_entry/view_jc_item', compact('jobCard', 'artMaterialMap', 'artLocationMap'));
+        return view('job_card_entry/view_jc_item', compact('jobCard', 'artMaterialMap', 'artLocationMap', 'artUomMap', 'issueItemMap'));
     } 
+
+    public function issue_items(Request $request, $id) {
+        $jobCard = JobCardEntry::with(['purchaseOrder.items'])->findOrFail($id);
+        $oldData = $jobCard->load('issueItems')->toArray();
+        
+        if ($request->isMethod('post')) {
+            DB::beginTransaction();
+            try {
+                if ($request->items) {
+                    $totalIssuedFabric = 0;
+                    if ($request->ajax()) {
+                        foreach ($request->items as $matrixId => $typesData) {
+                            foreach ($typesData as $sleeveType => $itemData) {
+                                JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->where('job_card_article_matrix_id', $matrixId)->where('sleeve_type', $sleeveType)->forceDelete();
+                            }
+                        }
+                    } else {
+                        JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->forceDelete();
+                    }
+
+                    $updatedItems = [];
+                    foreach ($request->items as $matrixId => $typesData) {
+                        foreach ($typesData as $sleeveType => $itemData) {
+                            $qtyIssue = floatval($itemData['qty_issue'] ?? 0);
+                            $totalIssuedFabric += $qtyIssue;
+                            $matrix = JobCardFabricDetail::find($matrixId);
+                            $artNo = $matrix->art_no ?? '';
+                            
+                            $unitPrice = 0; 
+                            
+                            if (isset($itemData['unit_price']) && floatval($itemData['unit_price']) > 0) {
+                                $unitPrice = floatval($itemData['unit_price']);
+                            }
+                            
+                            if ($unitPrice == 0 && $artNo) {
+                                $poItem = null;
+                                if ($jobCard->purchaseOrder) {
+                                    $poItem = $jobCard->purchaseOrder->items->where('art_no', $artNo)->first();
+                                    if ($poItem && $poItem->raw_material_id) {
+                                        $stockItem = StockEntryItem::where('raw_material_id', $poItem->raw_material_id)
+                                            ->where('price', '>', 0)
+                                            ->orderBy('id', 'desc')
+                                            ->first();
+                                        
+                                        if ($stockItem) {
+                                            $unitPrice = $stockItem->price;
+                                        }
+                                    }
+                                }
+
+                                if ($unitPrice == 0) {
+                                    $stockItem = StockEntryItem::whereHas('grnEntryItem', function($query) use ($artNo) {
+                                            $query->where('art_no', $artNo);
+                                        })
+                                        ->where('price', '>', 0)
+                                        ->orderBy('id', 'desc')
+                                        ->first();
+
+                                    if ($stockItem) {
+                                        $unitPrice = $stockItem->price;
+                                    }
+                                }
+                            }
+
+                            $qtyUsed = floatval($itemData['qty_used'] ?? 0);
+                            $producedQty = floatval($itemData['produced_qty'] ?? 0);
+                            $totalCost = $qtyUsed * $unitPrice;
+                            $costPerPc = ($producedQty > 0) ? ($totalCost / $producedQty) : 0;
+                            
+                            JobCardIssueItem::create([
+                                'job_card_entry_id' => $jobCard->id,
+                                'job_card_article_matrix_id' => $matrixId,
+                                'sleeve_type' => $sleeveType,
+                                'qty_issue' => $qtyIssue,
+                                'qty_adjusted' => $itemData['qty_adjusted'] ?? 0,
+                                'qty_wastage' => $itemData['qty_wastage'] ?? 0,
+                                'qty_used' => $qtyUsed,
+                                'bit' => $itemData['bit'] ?? 0,
+                                'balance' => $itemData['balance'] ?? 0,
+                                'average' => $itemData['average'] ?? 0,
+                                'produced_qty' => $producedQty,
+                                'unit_price' => $unitPrice,
+                                'total_cost' => $totalCost,
+                                'cost_per_pc' => $costPerPc,
+                                'created_by' => auth()->id(),
+                                'updated_by' => auth()->id(),
+                            ]);
+
+                            $updatedItems[$matrixId][$sleeveType] = [
+                                'unit_price' => $unitPrice,
+                                'total_cost' => $totalCost,
+                            ];
+                        }
+                    }
+                    $totalFabricMtr = $jobCard->fabricDetails()->sum('mtr');
+                    $grandTotalQty = $jobCard->grand_total_qty ?? 0;
+                    $overallAverage = ($grandTotalQty > 0) ? ($totalFabricMtr / $grandTotalQty) : 0;
+                    $jobCard->update(['average' => $overallAverage]);
+                }
+                $newData = $jobCard->fresh(['issueItems'])->toArray();
+                addLog('update', 'Job Card Issue Items', 'job_card_entries', $id, $oldData, $newData);
+                DB::commit();
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true, 
+                        'message' => 'Item updated successfully',
+                        'updated_items' => $updatedItems ?? []
+                    ]);
+                }
+                return redirect('job_card_entries')->with('success', 'Issue Items saved successfully');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                if ($request->ajax()) {
+                    return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+                }
+                return back()->with('danger', 'Error: ' . $e->getMessage());
+            }
+        }
+    }
 
     public function getSizeRatioDetails($id) {
         $sizeRatio = SizeRatio::find($id);
@@ -331,10 +524,7 @@ class JobCardEntryController extends Controller
         $grns = GrnEntry::whereIn('purchase_invoice_id', $invoiceIds)->get();
         $grnIds = $grns->pluck('id');
 
-        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)
-            ->select('art_no', DB::raw('SUM(qty_accepted) as mtr'))
-            ->groupBy('art_no')
-            ->get();
+        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)->select('art_no', DB::raw('SUM(qty_accepted) as mtr'))->groupBy('art_no')->get();
 
         if ($artData->isEmpty()) {
             $artData = $po->items->map(function($item) {
@@ -361,5 +551,125 @@ class JobCardEntryController extends Controller
         }
         $image->delete();
         return response()->json(['success' => true, 'message' => 'Image deleted successfully']);
+    }
+    
+    public function fabricConsumptionPdf($id)
+    {
+        $jobCard = JobCardEntry::with([
+            'brand', 
+            'fabricDetails', 
+            'purchaseOrder.items.rawMaterial.uom', 
+            'purchaseOrder.supplier', 
+            'purchaseOrder.items.uom', 
+            'purchaseOrder.items.brand', 
+            'issueItems.fabricDetail'
+        ])->findOrFail($id);
+
+        // Calculate Matrix Totals per Art No
+        $artTotalMap = [];
+        foreach ($jobCard->fabricDetails as $detail) {
+            $fsRows = [$detail->fs_36, $detail->fs_38, $detail->fs_40, $detail->fs_42, $detail->fs_44, $detail->fs_46, $detail->fs_48];
+            $hsRows = [$detail->hs_36, $detail->hs_38, $detail->hs_40, $detail->hs_42, $detail->hs_44, $detail->hs_46, $detail->hs_48];
+            $total = array_sum(array_map('floatval', $fsRows)) + array_sum(array_map('floatval', $hsRows));
+            
+            if (!isset($artTotalMap[$detail->art_no])) {
+                $artTotalMap[$detail->art_no] = 0;
+            }
+            $artTotalMap[$detail->art_no] += $total;
+        }
+
+        $issueItems = $jobCard->issueItems->groupBy(function($item) {
+            return $item->fabricDetail->art_no ?? 'N/A';
+        })->map(function($items, $artNo) use ($artTotalMap) {
+            return (object)[
+                'art_no' => $artNo,
+                'produced_qty' => $artTotalMap[$artNo] ?? $items->max('produced_qty'),
+                'qty_issue' => $items->sum('qty_issue'),
+                'qty_wastage' => $items->sum('qty_wastage'),
+                'qty_used' => $items->sum('qty_used'),
+                'qty_adjusted' => $items->sum('qty_adjusted'),
+                'balance' => $items->sum('balance'),
+                'unit_price' => $items->average('unit_price'), // Using average price for the article
+                'total_cost' => $items->sum('total_cost'),
+            ];
+        })->values();
+
+        $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
+        $grnItems = GrnEntryItem::whereIn('grn_entry_id', function($query) use ($invoiceIds) {
+            $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
+        })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'fabricType'])->get();
+
+        $artMaterialMap = [];
+        $artUomMap = [];
+        foreach ($grnItems as $item) {
+            $name = $item->purchaseInvoiceItem->rawMaterial->name ?? ($item->fabricType->name ?? null);
+            if ($name && !isset($artMaterialMap[$item->art_no])) {
+                $artMaterialMap[$item->art_no] = $name;
+            }
+            $uom = $item->purchaseInvoiceItem->uom->uom_code ?? ($item->purchaseInvoiceItem->rawMaterial->uom->uom_code ?? null);
+            if ($uom && !isset($artUomMap[$item->art_no])) {
+                $artUomMap[$item->art_no] = $uom;
+            }
+        }
+
+        $pdf = Pdf::loadView('job_card_entry.fabric_consumption_pdf', compact('jobCard', 'issueItems', 'artMaterialMap', 'artUomMap'));
+        $pdf->setPaper('A4', 'landscape');
+        
+        $filename = 'Fabric_Consumption_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';
+        return $pdf->stream($filename);
+    }
+    public function workOrderPdf($id)
+    {
+        $jobCard = JobCardEntry::with([
+            'brand',
+            'fabricDetails',
+            'purchaseOrder.items.brand',
+            'purchaseOrder.items.uom',
+            'purchaseOrder.items.style',
+            'season',
+            'processGroup'
+        ])->findOrFail($id);
+
+        $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
+        $grnItems = GrnEntryItem::whereIn('grn_entry_id', function($query) use ($invoiceIds) {
+            $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
+        })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'fabricType'])->get();
+
+        $artUomMap = [];
+        foreach ($grnItems as $item) {
+            $uom = $item->purchaseInvoiceItem->uom->uom_code ?? ($item->purchaseInvoiceItem->rawMaterial->uom->uom_code ?? null);
+            if ($uom && !isset($artUomMap[$item->art_no])) {
+                $artUomMap[$item->art_no] = $uom;
+            }
+        }
+
+        $pdf = Pdf::loadView('job_card_entry.work_order_pdf', compact('jobCard', 'artUomMap'));
+        $pdf->setPaper('A4', 'landscape');
+        
+        $filename = 'Work_Order_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';
+        return $pdf->stream($filename);
+    }
+
+    public function viewDetailsPdf($id)
+    {
+        $jobCard = JobCardEntry::with([
+            'purchaseOrder', 
+            'brand', 
+            'season', 
+            'processGroup', 
+            'cuttingSizeRatios', 
+            'fabricDetails', 
+            'images', 
+            'operations.operationStage', 
+            'operations.employee',
+            'cuttingMaster',
+            'sizeRatio'
+        ])->findOrFail($id);
+
+        $pdf = Pdf::loadView('job_card_entry.view_details_pdf', compact('jobCard'));
+        $pdf->setPaper('A4', 'portrait');
+        
+        $filename = 'Job_Card_Details_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';
+        return $pdf->stream($filename);
     }
 }

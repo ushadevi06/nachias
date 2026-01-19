@@ -1,5 +1,4 @@
 @extends('layouts.common')
-@section('title', 'Add Stock Entry - ' . env('WEBSITE_NAME'))
 @section('title', ($stockEntry ? 'Edit' : 'Add') . ' Stock Entry - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-fluid">
@@ -171,7 +170,7 @@
                                 <label for="formFile" class="form-label">Reference Document</label>
                                 <input type="file" class="form-control" id="formFile" name="reference_document">
                                 @if($stockEntry && $stockEntry->reference_document)
-                                    <a href="{{ asset($stockEntry->reference_document) }}" target="_blank" class="small">View current document</a>
+                                    <a href="{{ url('uploads/stock_entries/' . $stockEntry->reference_document) }}" target="_blank" class="small">View current document</a>
                                 @endif
                                 @error('reference_document')
                                     <div class="text-danger small">{{ $message }}</div>
@@ -195,7 +194,6 @@
 <script>
     $(document).ready(function() {
 
-        // Initialize date picker
         $('.stock_date').flatpickr({
             dateFormat: 'd-m-Y',
             defaultDate: 'today',
@@ -205,7 +203,6 @@
         const savedItems = @json($savedItems);
         const stockEntry = @json($stockEntry);
 
-        // GRN Entry change - populate GRN Item dropdown
         let grnItemsData = [];
         $('#grn_entry_id').on('change', function() {
             let grnId = $(this).val();
@@ -224,13 +221,10 @@
                         let hasSelection = false;
                         res.items.forEach((item) => {
                             let isSelected = '';
-                            // Auto-select if in Edit mode and this is the saved item
                             if (savedItems && savedItems.length > 0 && savedItems[0].grn_entry_item_id == item.id) {
                                 isSelected = 'selected';
                                 hasSelection = true;
-                            }
-                            // Auto-select single item for new entries
-                            else if ((!savedItems || savedItems.length === 0) && res.items.length === 1) {
+                            } else if ((!savedItems || savedItems.length === 0) && res.items.length === 1) {
                                 isSelected = 'selected';
                                 hasSelection = true;
                             }
@@ -258,18 +252,15 @@
             }
         });
 
-        // When a GRN Item is selected - Auto populate fields and DISABLE others
         $('#grn_entry_item_id').on('change', function() {
             let itemId = $(this).val();
             
             if (itemId) {
                 let item = grnItemsData.find(i => i.id == itemId);
                 if (item) {
-                    // Update Category
                     $('#store_category').val(item.store_category_id).trigger('change');
                     $('#store_category_val').val(item.store_category_id);
                     
-                    // Trigger material update
                     setTimeout(() => {
                         $('#material').val(item.raw_material_id).trigger('change');
                         $('#material_val').val(item.raw_material_id);
@@ -278,8 +269,6 @@
 
                     $('#uom').val(item.uom_id).trigger('change');
                     
-                    // ONLY auto-fill quantity if it's empty OR if we are NOT in edit mode initialization
-                    // Check if we are in edit mode but the field hasn't been "touched" or already populated by PHP
                     if (!$('#qty_in').val() || !stockEntry) {
                         $('#qty_in').val(item.qty_accepted);
                     }
@@ -291,7 +280,6 @@
             }
         });
 
-        // Prevention of entering more than available
         $('#qty_in').on('input', function() {
             let max = parseFloat($(this).attr('max'));
             let current = parseFloat($(this).val());
@@ -300,8 +288,7 @@
                 alert('Quantity cannot be greater than available quantity (' + max + ')');
             }
         });
-
-        // Helper to toggle manual fields requirements
+        
         function toggleManualRequired(enable) {
             $('#uom, #qty_in, #store_location, #price').prop('required', enable);
         }

@@ -56,7 +56,7 @@
                                     <th>Due Date</th>
                                     <th>Store Type</th>
                                     <th>Total Order Qty</th>
-                                    <th>Order Date</th>
+
                                     <th>Status</th>
                                     <th>Total Amount</th>
                                     <th>Actions</th>
@@ -115,9 +115,7 @@
                 {
                     data: 'total_qty'
                 },
-                {
-                    data: 'order_date'
-                },
+
                 {
                     data: 'status',
                     orderable: false,

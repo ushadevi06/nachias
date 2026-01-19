@@ -17,7 +17,6 @@ class AuthController extends Controller
             'email.required' => 'This field is required.',
             'email.email' => 'Please enter a valid email address',
             'password.required' => 'This field is required.',
-            'password.required' => 'This field is required.',
             'password.min' => 'Password must be at least 8 characters.',
             'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one special character, and one symbol.',
         ]);
@@ -57,9 +56,9 @@ class AuthController extends Controller
             $request->validate([
                 'name' => 'required|min:3|max:50|regex:/^[a-zA-Z\s,:]+$/',
                 'email' => 'required|email',
-                'phn_no' => 'required|digits:10|not_in:0|unique:users,phn_no,'.$request->id,
+                'phone' => 'required|digits:10|not_in:0|unique:users,phone,'.$request->id,
                 'password' => 'nullable|min:8|max:15|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
-                'address' => 'required|min:8|max:150|regex:/^(?!.*<script\b)[\s\S]*$/i'
+                'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
             ],[
                 'name.required' => 'This field is required',
                 'name.min' => 'Name must be at least 3 characters.',
@@ -67,28 +66,46 @@ class AuthController extends Controller
                 'name.regex' => 'This field is an invalid format.',
                 'email.required' => 'This field is required',
                 'email.regex' => 'Enter a valid email address (e.g., example@domain.com).', 
-                'phn_no.required' => 'This field is required',
-                'phn_no.regex' => 'Phone Number is an invalid format.',
-                'phn_no.unique' => 'Phone Number already exists',
+                'phone.required' => 'This field is required',
+                'phone.regex' => 'Phone Number is an invalid format.',
+                'phone.unique' => 'Phone Number already exists',
                 'password.required' => 'This field is required.',
                 'password.min' => 'Password must be at least 8 characters.',
                 'password.max' => 'Password cannot exceed 15 characters.',
                 'password.regex' => 'This field is invalid format.',
-                'address.required' => 'This field is required.',
-                'address.min' => 'Address must be atleast 8 characters.',
-                'address.max' => 'Address cannot be exceed 150 characters.',
-                'address.regex' => 'Address is an invalid format'
+                'profile_image.image' => 'File must be an image.',
+                'profile_image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
+                'profile_image.max' => 'Image size cannot exceed 2MB.'
             ]);
+            
             $user = Auth::user();
             $user->name = $request->name;
             $user->email = $request->email;
-            $user->phn_no = $request->phn_no;
+            $user->phone = $request->phone;
+            
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             } else {
                 $user->password = $request->password_old;
             }
-            $user->address = $request->address;
+            
+            if ($request->hasFile('profile_image')) {
+                $uploadPath = public_path('uploads/profile/' . $user->id);
+                if ($user->profile_image) {
+                    $oldImagePath = $uploadPath . '/' . $user->profile_image;
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+                if (!file_exists($uploadPath)) {
+                    mkdir($uploadPath, 0755, true);
+                }
+                $file = $request->file('profile_image');
+                $filename = 'profile.' . $file->getClientOriginalExtension();
+                $file->move($uploadPath, $filename);
+                $user->profile_image = $filename;
+            }
+            
             $user->save();
             session()->flash('success','Profile updated successfully');
         }

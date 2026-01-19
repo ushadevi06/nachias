@@ -11,6 +11,7 @@
                     </div>
                     <form action="{{ url('grn_entries/add' . ($grn ? '/' . $grn->id : '')) }}" method="POST" id="grn-form" class="common-form" enctype="multipart/form-data">
                         @csrf
+                        
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -109,20 +110,19 @@
                                                                  $dbItem = \App\Models\PurchaseInvoiceItem::with('uom')->find($item['purchase_invoice_item_id'] ?? 0);
                                                                 $designName = ($dbItem && $dbItem->rawMaterial) ? ($dbItem->rawMaterial->name . ' (' . $dbItem->rawMaterial->code . ')') : 'Item ' . ($idx + 1);
                                                                 $uomName = ($dbItem && $dbItem->uom) ? $dbItem->uom->uom_code : 'MTR';
-                                                                $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'] ?? 0)->sum('qty_received');
-                                                                if ($grn) {
-                                                                    // This is slightly complex for old input, but let's keep it simple for now
-                                                                }
-                                                                $qtyOrdered = ($dbItem->quantity ?? 0) - $alreadyReceived;
+                                                                $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'] ?? 0)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
+                                                                $qtyOrdered = ($dbItem->quantity ?? 0);
+                                                                $initialBalance = ($qtyOrdered - $alreadyReceived - ($item['qty_received'] ?? 0));
                                                             } else {
                                                                 $designName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial) ? ($item->purchaseInvoiceItem->rawMaterial->name . ' (' . $item->purchaseInvoiceItem->rawMaterial->code . ')') : 'Unknown';
                                                                 $uomName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->uom) ? $item->purchaseInvoiceItem->uom->uom_code : 'MTR';
                                                                 $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
-                                                                $qtyOrdered = ($item->purchaseInvoiceItem->quantity ?? 0) - $alreadyReceived;
+                                                                $qtyOrdered = ($item->purchaseInvoiceItem->quantity ?? 0);
+                                                                $initialBalance = ($qtyOrdered - $alreadyReceived - ($item->qty_received ?? 0));
                                                             }
                                                         @endphp
                                                         @php 
-                                                            if ($qtyOrdered <= 0) continue;
+                                                            if (($qtyOrdered - $alreadyReceived) <= 0) continue;
                                                         @endphp
                                                         <tr class="item-row" data-index="{{ $idx }}">
                                                             <td>
@@ -147,8 +147,8 @@
                                                                 <input type="file" name="items[{{$idx}}][item_image]" class="form-control" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
                                                                 @if(isset($itemObj->image) && $itemObj->image)
                                                                     <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
-                                                                    <a href="{{ asset($itemObj->image) }}" target="_blank">
-                                                                        <img src="{{ asset($itemObj->image) }}" width="40" class="mt-1 border rounded">
+                                                                    <a href="{{ url('uploads/grn_items/' . $itemObj->image) }}" target="_blank">
+                                                                        <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded">
                                                                     </a>
                                                                 @endif
                                                                 @error("items.$idx.item_image") <div class="text-danger small">{{ $message }}</div> @enderror
@@ -169,45 +169,45 @@
                                                                 @error("items.$idx.fabric_type_id") <div class="text-danger small">{{ $message }}</div> @enderror
                                                             </td>
                                                             <td>
-                                                                <div class="mb-2">
+                                                                 <div class="mb-2">
                                                                     <label class="small d-block fw-bold">Ordered:</label>
-                                                                    <input type="number" name="items[{{$idx}}][qty_ordered]" value="{{ $qtyOrdered }}" class="qty-ordered form-control" readonly>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_ordered]" value="{{ $qtyOrdered }}" class="qty-ordered form-control" readonly>
                                                                 </div>
                                                                 <div class="mb-2">
                                                                     <label class="small d-block fw-bold">Invoiced:</label>
-                                                                    <input type="number" value="{{ $alreadyReceived }}" class="form-control" readonly disabled>
+                                                                    <input type="number" step="0.01" value="{{ $alreadyReceived }}" class="qty-already-received form-control" readonly disabled>
                                                                 </div>
                                                                 <div>
                                                                     <label class="small d-block fw-bold">Received *:</label>
-                                                                    <input type="number" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error("items.$idx.qty_received") is-invalid @enderror" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && count($variants) == 0) ? '' : 'readonly' }}>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error("items.$idx.qty_received") is-invalid @enderror" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && count($variants) == 0) ? '' : 'readonly' }}>
                                                                     <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
                                                                     @error("items.$idx.qty_received") <div class="text-danger small">{{ $message }}</div> @enderror
                                                                 </div>
                                                             </td>
                                                             <td>
-                                                                <div class="mb-2">
+                                                                 <div class="mb-2">
                                                                     <label class="small d-block fw-bold">Accepted *:</label>
-                                                                    <input type="number" name="items[{{$idx}}][qty_accepted]" value="{{ $itemObj->qty_accepted }}" class="qty-accepted form-control @error("items.$idx.qty_accepted") is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_accepted]" value="{{ $itemObj->qty_accepted }}" class="qty-accepted form-control @error("items.$idx.qty_accepted") is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
                                                                     <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
                                                                     @error("items.$idx.qty_accepted") <div class="text-danger small">{{ $message }}</div> @enderror
                                                                 </div>
                                                                 <div class="mb-2">
                                                                     <label class="small d-block fw-bold">Rejected:</label>
-                                                                    <input type="number" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control" readonly>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control" readonly>
                                                                 </div>
                                                                 <div>
                                                                     <label class="small d-block fw-bold">Balanced:</label>
-                                                                    <input type="number" name="items[{{$idx}}][qty_balanced]" value="{{ $itemObj->qty_balanced }}" class="qty-balanced form-control" readonly>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_balanced]" value="{{ $initialBalance }}" class="qty-balanced form-control" readonly>
                                                                 </div>
                                                             </td>
                                                             <td>
                                                                 <div class="mb-2">
                                                                     <label class="small d-block fw-bold">Rate:</label>
-                                                                    <input type="number" name="items[{{$idx}}][rate]" value="{{ $itemObj->rate }}" class="rate-input form-control @error("items.$idx.rate") is-invalid @enderror" readonly>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][rate]" value="{{ $itemObj->rate }}" class="rate-input form-control @error("items.$idx.rate") is-invalid @enderror" readonly>
                                                                 </div>
                                                                 <div>
                                                                     <label class="small d-block fw-bold">Amount:</label>
-                                                                    <input type="number" name="items[{{$idx}}][amount]" value="{{ $itemObj->amount }}" class="amount-input form-control" readonly>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][amount]" value="{{ $itemObj->amount }}" class="amount-input form-control" readonly>
                                                                 </div>
                                                             </td>
                                                             <td>
@@ -345,44 +345,44 @@
                                 </td>
                                 <td>${item.uom}</td>
                                 <td><select class="form-control select2" name="items[${idx}][fabric_type_id]"><option value="">Select Fabric</option>${fabrics_options}</select></td>
-                                <td>
+                                 <td>
                                     <div class="mb-2">
                                         <label class="small d-block fw-bold">Ordered:</label>
-                                        <input type="number" name="items[${idx}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered form-control" readonly>
+                                        <input type="number" step="0.01" name="items[${idx}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered form-control" readonly>
                                     </div>
                                     <div class="mb-2">
                                         <label class="small d-block fw-bold">Invoiced:</label>
-                                        <input type="number" value="${item.qty_already_received}" class="form-control" readonly disabled>
+                                        <input type="number" step="0.01" value="${item.qty_already_received}" class="qty-already-received form-control" readonly disabled>
                                     </div>
                                     <div>
                                         <label class="small d-block fw-bold">Received *:</label>
-                                        <input type="number" name="items[${idx}][qty_received]" value="0" class="qty-received form-control">
+                                        <input type="number" step="0.01" name="items[${idx}][qty_received]" value="0" class="qty-received form-control">
                                         <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="mb-2">
                                         <label class="small d-block fw-bold">Accepted *:</label>
-                                        <input type="number" name="items[${idx}][qty_accepted]" value="0" class="qty-accepted form-control">
+                                        <input type="number" step="0.01" name="items[${idx}][qty_accepted]" value="0" class="qty-accepted form-control">
                                         <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
                                     </div>
                                     <div class="mb-2">
                                         <label class="small d-block fw-bold">Rejected:</label>
-                                        <input type="number" name="items[${idx}][qty_rejected]" value="0" class="qty-rejected form-control" readonly>
+                                        <input type="number" step="0.01" name="items[${idx}][qty_rejected]" value="0" class="qty-rejected form-control" readonly>
                                     </div>
                                     <div>
                                         <label class="small d-block fw-bold">Balanced:</label>
-                                        <input type="number" name="items[${idx}][qty_balanced]" value="${item.qty_ordered}" class="qty-balanced form-control" readonly>
+                                        <input type="number" step="0.01" name="items[${idx}][qty_balanced]" value="${(item.qty_ordered - item.qty_already_received).toFixed(2)}" class="qty-balanced form-control" readonly>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="mb-2">
                                         <label class="small d-block fw-bold">Rate:</label>
-                                        <input type="number" name="items[${idx}][rate]" value="${item.rate}" class="rate-input form-control" readonly>
+                                        <input type="number" step="0.01" name="items[${idx}][rate]" value="${item.rate}" class="rate-input form-control" readonly>
                                     </div>
                                     <div>
                                         <label class="small d-block fw-bold">Amount:</label>
-                                        <input type="number" name="items[${idx}][amount]" value="0" class="amount-input form-control" readonly>
+                                        <input type="number" step="0.01" name="items[${idx}][amount]" value="0" class="amount-input form-control" readonly>
                                     </div>
                                 </td>
                                 <td>
@@ -426,7 +426,7 @@
                 selectedColors.push(color_id);
                 // Get name from option directly using ID
                 let colorName = $(`#variantColors option[value="${color_id}"]`).data('name') || 'Unknown';
-                tbody.append(`<tr data-color-id="${color_id}"><td>${colorName}</td><td><input type="number" class="form-control var-qty" value="${qty}" min="0"></td></tr>`);
+                tbody.append(`<tr data-color-id="${color_id}"><td>${colorName}</td><td><input type="number" step="0.01" class="form-control var-qty" value="${qty}" min="0"></td></tr>`);
             });
             
             $('#variantColors').val(selectedColors).trigger('change');
@@ -447,7 +447,7 @@
                 let color_id = item.id;
                 let colorName = item.text;
                 let existingQty = existingData[color_id] || '';
-                tbody.append(`<tr data-color-id="${color_id}"><td>${colorName}</td><td><input type="number" class="form-control var-qty" value="${existingQty}" min="0"></td></tr>`);
+                tbody.append(`<tr data-color-id="${color_id}"><td>${colorName}</td><td><input type="number" step="0.01" class="form-control var-qty" value="${existingQty}" min="0"></td></tr>`);
             });
         });
 
@@ -535,7 +535,8 @@
                 
                 let accepted = parseFloat($(this).find('.qty-accepted').val()) || 0;
                 
-                if (received > ordered) {
+                let alreadyReceived = parseFloat($(this).find('.qty-already-received').val()) || 0;
+                if (received > (ordered - alreadyReceived)) {
                     $(this).find('.qty-received').addClass('is-invalid');
                     $(this).find('.qty-error').show();
                     hasError = true;
@@ -563,8 +564,9 @@
             let rejected = received - accepted;
             let rate = parseFloat(row.find('.rate-input').val()) || 0;
             
+            let alreadyReceived = parseFloat(row.find('.qty-already-received').val()) || 0;
             row.find('.qty-rejected').val(rejected.toFixed(2));
-            row.find('.qty-balanced').val((ordered - received).toFixed(2));
+            row.find('.qty-balanced').val((ordered - alreadyReceived - received).toFixed(2));
             row.find('.amount-input').val((accepted * rate).toFixed(2));
         }
 
@@ -596,7 +598,7 @@
                 row.find('.qty-received').val(0).prop('readonly', true);
                 row.find('.qty-accepted').val(0).prop('readonly', true);
                 row.find('.qty-rejected').val(0);
-                row.find('.qty-balanced').val(parseFloat(row.find('.qty-ordered').val()) || 0);
+                row.find('.qty-balanced').val((parseFloat(row.find('.qty-ordered').val()) - parseFloat(row.find('.qty-already-received').val())).toFixed(2));
                 row.find('.amount-input').val(0);
                 row.find('select').val('').trigger('change').prop('disabled', true); 
                 row.find('input[type="file"]').val('').prop('disabled', true); 

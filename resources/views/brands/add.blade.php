@@ -17,9 +17,19 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('brand_name') is-invalid @enderror" id="brand_name" placeholder="Enter Brand"
                                         name="brand_name" value="{{ old('brand_name', $brand->brand_name ?? '') }}">
-                                    <label for="brand_name">Brand <span class="text-danger">*</span></label>
+                                    <label for="brand_name">Brand Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('brand_name')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-12">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('code') is-invalid @enderror" id="code" placeholder="Enter Brand Code"
+                                        name="code" value="{{ old('code', $brand->code ?? '') }}">
+                                    <label for="code">Brand Code <span class="text-danger">*</span></label>
+                                </div>
+                                @error('code')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
