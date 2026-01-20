@@ -6,11 +6,11 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Production Services</h4>
-                 {{-- @if(auth()->id() == 1 || auth()->user()->can('create services')) --}}
+                @if(auth()->id() == 1 || auth()->user()->can('create services'))
                 <a class="btn btn-primary" href="{{ url('production_services/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
-                 {{-- @endif --}}
+                @endif
             </div>
 
             @if(session('success'))
@@ -29,6 +29,7 @@
                                     <th>#</th>
                                     <th>Service Name</th>
                                     <th>Service Code</th>
+                                    <th>Production Stage</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -54,6 +55,7 @@
                 { data: 'DT_RowIndex' },
                 { data: 'service_name' },
                 { data: 'service_code' },
+                { data: 'operation_stage' },
                 {
                     data: 'status',
                     orderable: false,
@@ -67,7 +69,26 @@
             ]
         });
 
-        // Status Toggle Placeholder - Functionality not requested
+        $(document).on('change', '.service-status-toggle', function() {
+            let id = $(this).data('id');
+            let status = $(this).is(':checked') ? 'Active' : 'Inactive';
+
+            $.ajax({
+                url: "{{ url('production_services/status') }}/" + id,
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function() {
+                    let msg = status === 'Active' ?
+                        '<span class="text-success">Activated</span>' :
+                        '<span class="text-danger">Deactivated</span>';
+
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                }
+            });
+        });
     });
 </script>
 @endsection

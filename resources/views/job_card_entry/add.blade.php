@@ -82,6 +82,34 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="plant" name="service_provider_id" class="form-select select2" data-placeholder="Select Plant">
+                                        <option value="">Select Plant</option>
+                                        @foreach($plants as $plant)
+                                            <option value="{{ $plant->id }}" {{ (old('service_provider_id', $jobCard ? $jobCard->service_provider_id : '') == $plant->id) ? 'selected' : '' }}>
+                                                {{ $plant->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="plant">Plant *</label>
+                                </div>
+                                @error('service_provider_id') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="issue_store" name="issue_store_id" class="form-select select2" data-placeholder="Select Issue Store">
+                                        <option value="">Select Issue Store</option>
+                                        @foreach($storeTypes as $st)
+                                            <option value="{{ $st->id }}" {{ (old('issue_store_id', $jobCard ? $jobCard->issue_store_id : '') == $st->id) ? 'selected' : '' }}>
+                                                {{ $st->store_type_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="issue_store">Issue Store *</label>
+                                </div>
+                                @error('issue_store_id') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control form-control issue_date" placeholder="Enter Issue Date" name="issue_date" value="{{ old('issue_date', $jobCard ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '') }}" />
                                     <label for="issue_date">Issue Date * </label>
                                 </div>
@@ -167,13 +195,17 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="receipt_store" name="receipt_store" class="form-select select2" data-placeholder="Select Receipt Store">
+                                    <select id="receipt_store_id" name="receipt_store_id" class="form-select select2" data-placeholder="Select Receipt Store">
                                         <option value="">Select Receipt Store</option>
-                                        <option value="Finished Goods" {{ (old('receipt_store', $jobCard ? $jobCard->receipt_store : '') == 'Finished Goods') ? 'selected' : '' }}>Finished Goods</option>
+                                        @foreach($storeTypes as $st)
+                                            <option value="{{ $st->id }}" {{ (old('receipt_store_id', $jobCard ? $jobCard->receipt_store_id : '') == $st->id) ? 'selected' : '' }}>
+                                                {{ $st->store_type_name }}
+                                            </option>
+                                        @endforeach
                                     </select>
-                                    <label for="receipt_store">Receipt Store </label>
+                                    <label for="receipt_store_id">Receipt Store *</label>
                                 </div>
-                                @error('receipt_store') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('receipt_store_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="input-group">
@@ -598,95 +630,6 @@
                         </div>
                     </div>
                 </div>
-
-                {{-- <div class="card mb-4">
-                    <div class="card-body">
-                        <div class="card-header-box">
-                            <h4>Production Stages</h4>
-                        </div>
-                        
-                        <!-- Stage Selection -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-12">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="production_stage_select" class="form-select select2" data-placeholder="Select Production Stage">
-                                        <option value="">Select Production Stage</option>
-                                        @foreach($operationStages as $stage)
-                                            <option value="{{ $stage->id }}" data-name="{{ $stage->operation_stage_name }}">{{ $stage->operation_stage_name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="production_stage_select">Select Production Stage *</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle" id="production_stages_table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 20%;">Stage Name</th>
-                                        <th style="width: 20%;">Issue Date</th>
-                                        <th style="width: 25%;">Employee</th>
-                                        <th style="width: 25%;">Received By</th>
-                                        <th style="width: 10%;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="production_stages_body">
-                                    @php
-                                        $stagesToDisplay = old('stages', []);
-                                        if (empty($stagesToDisplay) && $jobCard && $jobCard->operations && $jobCard->operations->count() > 0) {
-                                            $stagesToDisplay = $jobCard->operations->map(function($op) {
-                                                return [
-                                                    'stage_id' => $op->operation_stage_id,
-                                                    'stage_name' => $op->operationStage->operation_stage_name ?? '',
-                                                    'issue_date' => $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '',
-                                                    'employee_id' => $op->employee_id,
-                                                    'received_by' => $op->received_by
-                                                ];
-                                            })->toArray();
-                                        }
-                                    @endphp
-                                    
-                                    @if(!empty($stagesToDisplay))
-                                        @foreach($stagesToDisplay as $index => $stage)
-                                        <tr data-stage="{{ $stage['stage_id'] ?? '' }}">
-                                            <td>
-                                                @php
-                                                    $stageName = $stage['stage_name'] ?? '';
-                                                    if (empty($stageName) && isset($stage['stage_id'])) {
-                                                        $stageObj = $operationStages->firstWhere('id', $stage['stage_id']);
-                                                        $stageName = $stageObj->operation_stage_name ?? '';
-                                                    }
-                                                @endphp
-                                                <input type="text" class="form-control form-control-sm" value="{{ $stageName }}" readonly>
-                                                <input type="hidden" name="stages[{{ $index }}][stage_id]" value="{{ $stage['stage_id'] ?? '' }}">
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control form-control-sm dynamic-stage-date" name="stages[{{ $index }}][issue_date]" placeholder="Date" value="{{ $stage['issue_date'] ?? '' }}">
-                                            </td>
-                                            <td>
-                                                <select class="form-select form-select-sm select2-dynamic" name="stages[{{ $index }}][employee_id]">
-                                                    <option value="">Select Employee</option>
-                                                    @foreach($employees as $emp)
-                                                        <option value="{{ $emp->id }}" {{ ($stage['employee_id'] ?? '') == $emp->id ? 'selected' : '' }}>{{ $emp->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control form-control-sm" name="stages[{{ $index }}][received_by]" placeholder="Received By" value="{{ $stage['received_by'] ?? '' }}">
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-danger remove-stage"><i class="ri ri-delete-bin-line"></i></button>
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    @endif
-                                </tbody>
-                            </table>
-                        </div>
-                        @error('stages') <div class="text-danger mt-1">{{ $message }}</div> @enderror
-                    </div>
-                </div> --}}
                 <div class="col-lg-12 text-end mt-5">
                     <button type="submit" class="btn btn-primary">Submit</button>
                     <a href="{{ url('job_card_entries') }}" class="btn btn-secondary">Cancel</a>
@@ -792,7 +735,7 @@
                     renderCuttingSizeTable(currentSizes, currentRatios);
                     updateQuantityRowVisibility();
                 } else {
-                    syncMatrixWithMasterTable(true);
+                    syncMatrixWithMasterTable(false);
                     updateQuantityRowVisibility();
                 }
             });
@@ -833,12 +776,20 @@
                                 <td><input type="text" name="article_matrix[${index}][art_no]" class="form-control form-control-sm text-center" value="${art}" readonly></td>`;
                 
                 activeFsSizes.forEach(s => {
-                    const fsVal = existingRow && existingRow['fs_' + s] != null ? existingRow['fs_' + s] : '';
+                    let fsVal = '';
+                    if (existingRow && existingRow.quantities) {
+                        const q = existingRow.quantities.find(q => String(q.size) === String(s));
+                        fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
+                    }
                     rowHtml += `<td><input type="number" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" value="${fsVal}"></td>`;
                 });
 
                 activeHsSizes.forEach(s => {
-                    const hsVal = existingRow && existingRow['hs_' + s] != null ? existingRow['hs_' + s] : '';
+                    let hsVal = '';
+                    if (existingRow && existingRow.quantities) {
+                        const q = existingRow.quantities.find(q => String(q.size) === String(s));
+                        hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
+                    }
                     rowHtml += `<td><input type="number" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" value="${hsVal}"></td>`;
                 });
 
@@ -953,7 +904,6 @@
                 currentProcessGroup = selected.data('name');
                 $('#process_group_display').val(currentProcessGroup);
                 $('#process_group_id').val(currentProcessGroupId);
-                
                 renderCuttingSizeTable(currentSizes, currentRatios);
                 updateQuantityRowVisibility();
                 $('.qty-input').first().trigger('input'); 
@@ -971,20 +921,15 @@
                 currentRatios = ratiosStr.toString().split(',').map(r => r.trim());
                 $('#cutting-size-table-wrapper').show();
                 $('#trigger-sync-wrapper').show();
-                
                 $('#article-matrix-card').removeClass('d-none');
             } else {
                 currentSizes = ['36', '38', '40', '42', '44'];
                 currentRatios = ['', '', '', '', ''];
-                
                 $('#cutting-size-table-wrapper').hide();
                 $('#trigger-sync-wrapper').hide();
             }
-            
             renderCuttingSizeTable(currentSizes, currentRatios);
-            
-            syncMatrixWithMasterTable(true);
-            
+            syncMatrixWithMasterTable(false);
             updateQuantityRowVisibility();
         });
         const $initialSizeRatio = $('#size_ratio_select').find(':selected');
@@ -994,9 +939,7 @@
             if (sizesStr) {
                 currentSizes = sizesStr.toString().split(',').map(s => s.trim());
                 currentRatios = ratiosStr.toString().split(',').map(r => r.trim());
-                
                 renderCuttingSizeTable(currentSizes, currentRatios);
-                
                 syncMatrixWithMasterTable(false);
             }
         }
@@ -1128,8 +1071,7 @@
                     
                     vRow += `<td>
                         <input type="number" name="matrix_items[${idx}][qty_${type}]" class="form-control form-control-sm text-center fw-bold qty-direct-input ${type}-summary-${s}" data-type="${type}" data-size="${s}" value="${finalVal}">
-                        ${type === 'fs' ? `<input type="hidden" name="matrix_items[${idx}][size]" value="${s}">
-                        <input type="hidden" name="matrix_items[${idx}][article_no]" value="${currentArtNumbers[0] || ''}">` : ''} 
+                        ${type === 'fs' ? `<input type="hidden" name="matrix_items[${idx}][size]" value="${s}">` : ''} 
                     </td>`;
                 });
                 
@@ -1204,6 +1146,8 @@
         }
 
 
+        // Removed Live Sync as requested to prevent auto-filling as user types in Master Table
+        /*
         $(document).on('input', '.qty-direct-input', function() {
             const type = $(this).data('type');
             const size = $(this).data('size');
@@ -1213,25 +1157,39 @@
             
             calculateMatrixTotals();
         });
+        */
 
         function syncMatrixWithMasterTable(populateValues = true) {
             const activeFsSizes = [];
             const activeHsSizes = [];
             $('.qty-direct-input[data-type="fs"]').each(function() {
-                if (parseFloat($(this).val()) > 0) {
-                    activeFsSizes.push($(this).data('size'));
-                }
-            } );
-            $('.qty-direct-input[data-type="hs"]').each(function() {
-                if (parseFloat($(this).val()) > 0) {
-                    activeHsSizes.push($(this).data('size'));
+                const val = parseFloat($(this).val()) || 0;
+                const size = $(this).data('size');
+                if (val > 0 && !activeFsSizes.includes(size)) {
+                    activeFsSizes.push(size);
                 }
             });
-            activeFsSizes.sort((a, b) => a - b);
-            activeHsSizes.sort((a, b) => a - b);
+            $('.qty-direct-input[data-type="hs"]').each(function() {
+                const val = parseFloat($(this).val()) || 0;
+                const size = $(this).data('size');
+                if (val > 0 && !activeHsSizes.includes(size)) {
+                    activeHsSizes.push(size);
+                }
+            });
 
-            if (activeFsSizes.length > 0 || activeHsSizes.length > 0) {
-                renderArticleQtyMatrix(getArtNumbers(), activeFsSizes, activeHsSizes);
+            const sizeSort = (a, b) => {
+                const numA = parseFloat(a);
+                const numB = parseFloat(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return String(a).localeCompare(String(b));
+            };
+            activeFsSizes.sort(sizeSort);
+            activeHsSizes.sort(sizeSort);
+
+            const artNumbers = getArtNumbers();
+
+            if (artNumbers.length > 0 && (activeFsSizes.length > 0 || activeHsSizes.length > 0)) {
+                renderArticleQtyMatrix(artNumbers, activeFsSizes, activeHsSizes);
                 $('#article-matrix-card').removeClass('d-none');
                 
                 if (populateValues) {
@@ -1239,12 +1197,18 @@
                         const type = $(this).data('type');
                         const size = $(this).data('size');
                         const val = $(this).val();
-                        $(`#article-qty-matrix tbody .qty-input[data-col="${type}-${size}"]`).val(val);
+                        if (val !== '') {
+                            $(`#article-qty-matrix tbody .qty-input[data-col="${type}-${size}"]`).each(function() {
+                                $(this).val(val);
+                            });
+                        }
                     });
                 }
-                
                 calculateMatrixTotals();
             } else {
+                if (artNumbers.length > 0) {
+                    renderArticleQtyMatrix(artNumbers, [], []);
+                }
             }
             return { fs: activeFsSizes, hs: activeHsSizes };
         }
@@ -1254,7 +1218,7 @@
                 alert('Please select a Purchase Order first.');
                 return;
             }
-            const result = syncMatrixWithMasterTable(true);
+            const result = syncMatrixWithMasterTable(false);
             
             if (result.fs.length === 0 && result.hs.length === 0) {
                 alert('Please enter at least one quantity in the Master Table (Cutting Size Ratio).');
@@ -1310,9 +1274,9 @@
         }
 
         if ($('#size_ratio_select').val()) {
-             $('#size_ratio_select').trigger('change');
+            $('#size_ratio_select').trigger('change');
         } else if (matrixItems.length > 0 || @json(old('matrix_items') ? true : false)) {
-             renderCuttingSizeTable(currentSizes, currentRatios);
+            renderCuttingSizeTable(currentSizes, currentRatios);
         }
 
         window.deleteImage = function(imageId) {
@@ -1338,7 +1302,6 @@
                 }
             });
         };
-
     });
 </script>
 @endsection

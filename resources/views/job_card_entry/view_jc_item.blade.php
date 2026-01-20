@@ -99,15 +99,13 @@
                                     $styleName = $poItem->style->style_name ?? ($jobCard->purchaseOrder->items->whereNotNull('style_id')->first()->style->style_name ?? '-');
                                     $styleCode = $poItem->style->code ?? ($jobCard->purchaseOrder->items->whereNotNull('style_id')->first()->style->code ?? '-');
                                     $brandName = $poItem->brand->brand_name ?? ($jobCard->brand->brand_name ?? ($jobCard->purchaseOrder->items->first()->brand->brand_name ?? '-'));
-                                    
-                                    $fs_total = array_sum([$item->fs_36 ?? 0, $item->fs_38 ?? 0, $item->fs_40 ?? 0, $item->fs_42 ?? 0, $item->fs_44 ?? 0, $item->fs_46 ?? 0, $item->fs_48 ?? 0]);
-                                    $hs_total = array_sum([$item->hs_36 ?? 0, $item->hs_38 ?? 0, $item->hs_40 ?? 0, $item->hs_42 ?? 0, $item->hs_44 ?? 0, $item->hs_46 ?? 0, $item->hs_48 ?? 0]);
-                                    $row_article_total = $fs_total + $hs_total;
-                                    
+                                    $fs_total = $item->quantities->sum('qty_fs');
+                                    $hs_total = $item->quantities->sum('qty_hs');
+                                    $produced_qty_for_issue = $item->quantities->sum('total_qty') ?: ($fs_total + $hs_total);
                                     $sleeveTypes = [];
-                                    if($fs_total > 0) $sleeveTypes['Full Sleeve'] = $row_article_total;
-                                    if($hs_total > 0) $sleeveTypes['Half Sleeve'] = $row_article_total;
-                                    if(empty($sleeveTypes)) $sleeveTypes['Full Sleeve'] = $row_article_total ?: ($item->row_total ?? 0);
+                                    if($fs_total > 0) $sleeveTypes['Full Sleeve'] = $produced_qty_for_issue;
+                                    if($hs_total > 0) $sleeveTypes['Half Sleeve'] = $produced_qty_for_issue;
+                                    if(empty($sleeveTypes)) $sleeveTypes['Full Sleeve'] = $produced_qty_for_issue;
                                 @endphp
                                 
                                 @foreach($sleeveTypes as $sleeveType => $pieces)
@@ -136,7 +134,7 @@
                                                 data-bit="{{ $savedItem->bit ?? '0.00' }}"
                                                 data-balance="{{ $savedItem->balance ?? '0.00' }}"
                                                 data-average="{{ $savedItem->average ?? '0.00' }}"
-                                                data-produced-qty="{{ $savedItem->produced_qty ?? '0.00' }}"
+                                                data-produced-qty="{{ $pieces }}"
                                                 data-row-qty="{{ $pieces }}"
                                                 title="Edit">
                                                 <i class="ri ri-edit-line"></i>
@@ -402,7 +400,6 @@ $(document).ready(function() {
             const pro = $('#modal_produced_qty').val();
             const sleeveType = $('#modal_sleeve_type').val();
             
-            // Prepare AJAX data
             let formData = {};
             formData['_token'] = '{{ csrf_token() }}';
             formData['items'] = {};
@@ -430,7 +427,6 @@ $(document).ready(function() {
                 data: formData,
                 success: function(response) {
                     if(response.success) {
-                        // Update Table Row UI
                         currentRow.find('.col-qty-adjusted').val(adj);
                         currentRow.find('.col-qty-wastage').val(was);
                         currentRow.find('.col-qty-used').val(use);
@@ -439,7 +435,6 @@ $(document).ready(function() {
                         currentRow.find('.col-average').val(avg);
                         currentRow.find('.col-produced-qty').val(pro);
 
-                        // Update Price and Cost if available in response
                         if (response.updated_items && response.updated_items[matrixId] && response.updated_items[matrixId][sleeveType]) {
                             var itemData = response.updated_items[matrixId][sleeveType];
                             currentRow.find('.col-unit-price').val(parseFloat(itemData.unit_price).toFixed(2));
@@ -460,7 +455,6 @@ $(document).ready(function() {
                         setTimeout(() => currentRow.removeClass('table-success'), 1000);
 
                         $('#editItemModal').modal('hide');
-                        // alert(response.message);
                     } else {
                         alert('Error: ' + response.message);
                     }

@@ -32,7 +32,7 @@ class GrnEntryController extends Controller
                 });
             }
 
-            $grnEntries = $query->latest()->get();
+            $grnEntries = $query->with(['purchaseInvoice.purchaseOrder', 'supplier', 'grnEntryItems'])->latest()->get();
             $data = [];
             $count = 1;
 
@@ -73,7 +73,7 @@ class GrnEntryController extends Controller
                     'DT_RowIndex' => $count++,
                     'grn_number' => $grn->grn_number,
                     'grn_date' => $grn->grn_date->format('d-m-Y'),
-                    'po_invoice_no' => $grn->purchaseInvoice->invoice_no ?? 'N/A',
+                    'po_invoice_no' => ($grn->purchaseInvoice->invoice_no ?? 'N/A') . (isset($grn->purchaseInvoice->purchaseOrder) ? ' <br><small class="text-primary fw-bold">PO: ' . $grn->purchaseInvoice->purchaseOrder->po_number . '</small>' : ''),
                     'supplier_name' => ($grn->supplier->name ?? 'N/A') . ' <span class="mini-title">(' . ($grn->supplier->code ?? '') . ')</span>',
                     'supplier_invoice_no' => $grn->purchaseInvoice->po_reference ?? 'N/A',
                     'total_items' => $grn->grnEntryItems->count(),
@@ -95,15 +95,22 @@ class GrnEntryController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit grn-entry')) {
                  return unauthorizedRedirect();
             }
-            $grn = GrnEntry::with(['grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'purchaseInvoice'])->findOrFail($id);
+            $grn = GrnEntry::with(['grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'purchaseInvoice.purchaseOrder'])->findOrFail($id);
+            // Filter: Show if any item has balance, OR it's the current invoice of this GRN
+            $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) use ($id) {
+                $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.grn_entry_id != ? AND grn_entry_items.deleted_at IS NULL)', [$id]);
+            })->orWhere('id', $grn->purchase_invoice_id)->orderBy('invoice_no')->get();
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create grn-entry')) {
                  return unauthorizedRedirect();
             }
+            // Filter: Show only if any item has balance (Ordered > Total Received)
+            $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) {
+                $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.deleted_at IS NULL)');
+            })->orderBy('invoice_no')->get();
         }
         $grn = $grn ?? null;
 
-        $purchaseInvoices = PurchaseInvoice::orderBy('invoice_no')->get();
         $fabricTypes = FabricType::where('status', 'Active')->orderBy('fabric_type')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('store_location')->get();
         $colors = Color::orderBy('color_name')->get();
@@ -134,6 +141,18 @@ class GrnEntryController extends Controller
                     $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     $rules["items.$index.fabric_type_id"] = 'nullable|exists:fabric_types,id';
                     $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048';
+                    
+                    // Business Rule: Received Quantity cannot exceed Balance Quantity
+                    $pi_item = PurchaseInvoiceItem::find($item['purchase_invoice_item_id']);
+                    if ($pi_item) {
+                        $alreadyReceived = GrnEntryItem::where('purchase_invoice_item_id', $pi_item->id)
+                            ->where('grn_entry_id', '!=', $id ?? 0)
+                            ->sum('qty_received');
+                        $balance = $pi_item->quantity - $alreadyReceived;
+                        if ($item['qty_received'] > $balance) {
+                            return back()->withInput()->withErrors(["items.$index.qty_received" => "Received quantity cannot exceed balance quantity ($balance)."]);
+                        }
+                    }
                 }
             }
             $messages = [
@@ -221,6 +240,31 @@ class GrnEntryController extends Controller
                 }
 
                 DB::commit();
+
+                // Check and update PO status if fully received
+                if (isset($invoice->purchase_order_id)) {
+                    $poId = $invoice->purchase_order_id;
+                    $po = \App\Models\PurchaseOrder::with('items')->find($poId);
+                    if ($po) {
+                        $isFullyReceived = true;
+                        foreach ($po->items as $poItem) {
+                            $totalReceived = \App\Models\GrnEntryItem::whereHas('purchaseInvoiceItem', function($q) use ($poItem) {
+                                $q->where('purchase_order_item_id', $poItem->id);
+                            })->sum('qty_received');
+                            
+                            if ($totalReceived < $poItem->quantity) {
+                                $isFullyReceived = false;
+                                break;
+                            }
+                        }
+                        
+                        if ($isFullyReceived && $po->status != 'Received') {
+                            $po->update(['status' => 'Received']);
+                            addLog('update', 'Purchase Order Status (Auto)', 'purchase_orders', $po->id, ['status' => 'Approved'], ['status' => 'Received']);
+                        }
+                    }
+                }
+
                 return redirect('grn_entries')->with('success', 'GRN Entry saved successfully');
             } catch (\Exception $e) {
                 DB::rollBack();

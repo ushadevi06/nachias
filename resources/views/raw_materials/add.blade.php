@@ -62,7 +62,7 @@
                                     <input type="text" class="form-control @error('supplier_design_name') is-invalid @enderror" id="supplier_design_name"
                                         placeholder="Enter Supplier Design Name" name="supplier_design_name"
                                         value="{{ old('supplier_design_name', $rawMaterial->supplier_design_name ?? '') }}">
-                                    <label for="supplier_design_name">Supplier Design Name <span class="text-danger">*</span></label>
+                                    <label for="supplier_design_name">Supplier Design Name</label>
                                 </div>
                                 @error('supplier_design_name')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -86,14 +86,10 @@
                             <!-- UOM -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="uom_id" id="uom_id" class="select2 form-select @error('uom_id') is-invalid @enderror"
-                                        data-placeholder="Select UOM">
+                                    <select name="uom_id" id="uom_id" class="select2 form-select @error('uom_id') is-invalid @enderror" data-placeholder="Select UOM">
                                         <option value="">Select UOM</option>
                                         @foreach($uoms as $uom)
-                                        <option value="{{ $uom->id }}"
-                                            {{ old('uom_id', $rawMaterial->uom_id ?? '') == $uom->id ? 'selected' : '' }}>
-                                            {{ $uom->uom_code }}
-                                        </option>
+                                        <option value="{{ $uom->id }}" {{ old('uom_id', $rawMaterial->uom_id ?? '') == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
                                         @endforeach
                                     </select>
                                     <label for="uom_id">UOM <span class="text-danger">*</span></label>
@@ -106,17 +102,13 @@
                             <!-- Fabric Type -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="fabric_type_id" id="fabric_type_id" class="select2 form-select @error('fabric_type_id') is-invalid @enderror"
-                                        data-placeholder="Select Fabric Type">
+                                    <select name="fabric_type_id" id="fabric_type_id" class="select2 form-select @error('fabric_type_id') is-invalid @enderror" data-placeholder="Select Fabric Type">
                                         <option value="">Select Fabric Type</option>
                                         @foreach($fabricTypes as $fabricType)
-                                        <option value="{{ $fabricType->id }}"
-                                            {{ old('fabric_type_id', $rawMaterial->fabric_type_id ?? '') == $fabricType->id ? 'selected' : '' }}>
-                                            {{ $fabricType->fabric_type }}
-                                        </option>
+                                        <option value="{{ $fabricType->id }}" {{ old('fabric_type_id', $rawMaterial->fabric_type_id ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="fabric_type_id">Fabric Type <span class="text-danger">*</span></label>
+                                    <label for="fabric_type_id">Fabric Type</label>
                                 </div>
                                 @error('fabric_type_id')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -126,14 +118,12 @@
                             <!-- Reference Image -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input class="form-control @error('reference_image') is-invalid @enderror" type="file" id="reference_image" name="reference_image"
-                                        accept="image/*">
+                                    <input class="form-control @error('reference_image') is-invalid @enderror" type="file" id="reference_image" name="reference_image" accept="image/*">
                                     <label for="reference_image">Reference Images</label>
                                 </div>
                                 @if($rawMaterial && $rawMaterial->reference_image)
                                 <div class="mt-2">
-                                    <img src="{{ asset($rawMaterial->reference_image) }}" alt="Reference Image"
-                                        style="max-width: 100px; max-height: 100px;">
+                                    <img src="{{ asset($rawMaterial->reference_image) }}" alt="Reference Image" style="max-width: 100px; max-height: 100px;">
                                 </div>
                                 @endif
                                 @error('reference_image')
@@ -144,9 +134,7 @@
                             <!-- Specifications -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control h-px-100 @error('specification') is-invalid @enderror" id="specification"
-                                        placeholder="Enter Specifications / Quality Notes"
-                                        name="specification">{{ old('specification', $rawMaterial->specification ?? '') }}</textarea>
+                                    <textarea class="form-control h-px-100 @error('specification') is-invalid @enderror" id="specification" placeholder="Enter Specifications / Quality Notes" name="specification">{{ old('specification', $rawMaterial->specification ?? '') }}</textarea>
                                     <label for="specification">Specifications / Quality Notes</label>
                                 </div>
                                 @error('specification')
@@ -157,9 +145,7 @@
                             <!-- Minimum Stock Level -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control @error('min_stock') is-invalid @enderror" id="min_stock"
-                                        placeholder="Enter Minimum Stock Level" name="min_stock" min="0"
-                                        value="{{ old('min_stock', $rawMaterial->min_stock ?? 0) }}">
+                                    <input type="number" class="form-control @error('min_stock') is-invalid @enderror" id="min_stock" placeholder="Enter Minimum Stock Level" name="min_stock" min="0" value="{{ old('min_stock', $rawMaterial->min_stock ?? 0) }}">
                                     <label for="min_stock">Minimum Stock Level</label>
                                 </div>
                                 @error('min_stock')
@@ -170,15 +156,10 @@
                             <!-- Status -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $rawMaterial->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $rawMaterial->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $rawMaterial->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $rawMaterial->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

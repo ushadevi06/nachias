@@ -7,15 +7,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class StoreType extends Model
+class ProductionService extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'store_type_name',
+        'service_name',
+        'service_code',
+        'operation_stage_id',
         'status',
         'created_by',
         'updated_by',
     ];
+
+    public function operationStage()
+    {
+        return $this->belongsTo(OperationStage::class, 'operation_stage_id');
+    }
 }
 

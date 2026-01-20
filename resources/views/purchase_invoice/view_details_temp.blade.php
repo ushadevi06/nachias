@@ -1,4 +1,4 @@
-@extends('layouts.common')
+﻿@extends('layouts.common')
 @section('title', 'View Purchase Invoice - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
@@ -183,6 +183,12 @@
                             <label class="detail-title">Payment Mode:</label>
                             <div class="text-muted">{{ $invoice->payment_mode ?? '-' }}</div>
                         </div>
+                        @if($invoice->transaction_id)
+                        <div class="col-md-3">
+                            <label class="detail-title">{{ $invoice->payment_mode == 'Cheque' ? 'Cheque No' : 'Transaction ID' }}:</label>
+                            <div class="text-muted">{{ $invoice->transaction_id }}</div>
+                        </div>
+                        @endif
                         <div class="col-md-3">
                             <label class="detail-title">Due Date:</label>
                             <div class="text-muted">
@@ -192,8 +198,16 @@
                         <div class="col-md-3">
                             <label class="detail-title">Attachments:</label>
                             <div class="text-muted">
-                                @if($invoice->attachments != '')
-                                <img src="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}" alt="document" class="detail-img">
+                                @if(!empty($invoice->attachments))
+                                <div class="mt-1">
+                                    <a href="javascript:void(0)" class="view-image" data-image="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}">
+                                        <img src="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}" alt="document" class="detail-img">
+                                    </a>
+                                    <br>
+                                    <a href="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}" target="_blank" class="small">
+                                        <i class="ri ri-external-link-line"></i> Open Original
+                                    </a>
+                                </div>
                                 @else
                                 -
                                 @endif
@@ -202,8 +216,16 @@
                         <div class="col-md-3">
                             <label class="detail-title">Authorized Signature:</label>
                             <div class="text-muted">
-                                @if($invoice->auth_signature != '')
-                                <img src="{{ url('uploads/purchase_invoices/' . $invoice->auth_signature) }}" alt="signature" class="detail-img">
+                                @if(!empty($invoice->auth_signature))
+                                <div class="mt-1">
+                                    <a href="javascript:void(0)" class="view-image" data-image="{{ url('uploads/purchase_invoices/' . $invoice->auth_signature) }}">
+                                        <img src="{{ url('uploads/purchase_invoices/' . $invoice->auth_signature) }}" alt="signature" class="detail-img">
+                                    </a>
+                                    <br>
+                                    <a href="{{ url('uploads/purchase_invoices/' . $invoice->auth_signature) }}" target="_blank" class="small">
+                                        <i class="ri ri-external-link-line"></i> Open Original
+                                    </a>
+                                </div>
                                 @else
                                 -
                                 @endif

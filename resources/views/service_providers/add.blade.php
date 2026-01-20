@@ -31,14 +31,14 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="services[]" id="services" class="select2 form-select @error('services') is-invalid @enderror" multiple
-                                        data-placeholder="Select Services">
+                                    <select name="services[]" id="services" class="select2 form-select @error('services') is-invalid @enderror" multiple data-placeholder="Select Services">
                                         @php
-                                            $servicesOptions = ['BUT-OPR', 'KAJA-OPR', 'SLV-TOP', 'KAJA'];
-                                            $selectedServices = old('services', isset($serviceProvider->services) ? explode(',', $serviceProvider->services) : []);
+                                            $selectedServiceIds = old('services', isset($serviceProvider) ? $serviceProvider->productionServices->pluck('id')->toArray() : []);
                                         @endphp
-                                        @foreach($servicesOptions as $service)
-                                        <option value="{{ $service }}" {{ in_array($service, $selectedServices) ? 'selected' : '' }}>{{ $service }}</option>
+                                        @foreach($production_services as $service)
+                                        <option value="{{ $service->id }}" {{ in_array($service->id, $selectedServiceIds) ? 'selected' : '' }}>
+                                            {{ $service->service_name }} ({{ $service->service_code }})
+                                        </option>
                                         @endforeach
                                     </select>
                                     <label for="services">Services <span class="text-danger">*</span></label>
@@ -71,6 +71,18 @@
                                     <label for="email">Email</label>
                                 </div>
                                 @error('email')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input @error('is_plant') is-invalid @enderror" 
+                                        id="is_plant" name="is_plant" value="1" {{ old('is_plant', $serviceProvider->is_plant ?? 0) == 1 ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="is_plant">
+                                        Is Plant? <small class="text-muted">(Acts as production unit/plant)</small>
+                                    </label>
+                                </div>
+                                @error('is_plant')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>

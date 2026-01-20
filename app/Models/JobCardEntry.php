@@ -23,8 +23,8 @@ class JobCardEntry extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_no', 'reference_no', 'purchase_order_id', 'brand_id', 'season_id',
-        'process_group_id', 'job_card_date', 'delivery_date', 'washing', 'width', 'mrp',
+        'job_card_no', 'reference_no', 'purchase_order_id', 'service_provider_id', 'issue_store_id', 'receipt_store_id',
+        'brand_id', 'season_id', 'process_group_id', 'job_card_date', 'delivery_date', 'washing', 'width', 'mrp',
         'fs_qty', 'hs_qty', 'receipt_store', 'fit', 'patti_type', 'collar_type',
         'cuff_type', 'pocket_type', 'bottom_cut', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',
@@ -40,6 +40,21 @@ class JobCardEntry extends Model
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    public function serviceProvider()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'service_provider_id');
+    }
+
+    public function issueStore()
+    {
+        return $this->belongsTo(StoreType::class, 'issue_store_id');
+    }
+
+    public function receiptStoreMapping()
+    {
+        return $this->belongsTo(StoreType::class, 'receipt_store_id');
     }
 
     public function brand()

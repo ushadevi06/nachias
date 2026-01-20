@@ -1,13 +1,13 @@
 @extends('layouts.common')
-@section('title', 'Shifts - ' . env('WEBSITE_NAME'))
+@section('title', 'Resources - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Shifts</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create shifts'))
-                <a class="btn btn-primary" href="{{ url('shifts/add') }}">
+                <h4>Resource</h4>
+                @if(auth()->id() == 1 || auth()->user()->can('create resources'))
+                <a class="btn btn-primary" href="{{ url('resources/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
                 @endif
@@ -23,13 +23,13 @@
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="table" id="shiftTable">
+                        <table class="table" id="resourceTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Shift Name</th>
-                                    <th>Start Time</th>
-                                    <th>End Time</th>
+                                    <th>Resource Code</th>
+                                    <th>Resource Name</th>
+                                    <th>Service Provider</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -48,15 +48,15 @@
 @section('scripts')
 <script>
     $(function() {
-        $('#shiftTable').DataTable({
+        $('#resourceTable').DataTable({
             processing: true,
             serverSide: false,
-            ajax: "{{ url('shifts') }}",
+            ajax: "{{ url('resources') }}",
             columns: [
                 { data: 'DT_RowIndex' },
-                { data: 'shift_name' },
-                { data: 'start_time' },
-                { data: 'end_time' },
+                { data: 'resource_code' },
+                { data: 'resource_name' },
+                { data: 'service_provider' },
                 {
                     data: 'status',
                     orderable: false,
@@ -70,12 +70,12 @@
             ]
         });
 
-        $(document).on('change', '.shift-status-toggle', function() {
+        $(document).on('change', '.resource-status-toggle', function() {
             let id = $(this).data('id');
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
 
             $.ajax({
-                url: "{{ url('shifts/status') }}/" + id,
+                url: "{{ url('resources/status') }}/" + id,
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",

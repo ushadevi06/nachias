@@ -94,6 +94,16 @@
                                 <td class="fw-bold py-1" style="width: 10%;"></td>
                             </tr>
 
+                            {{-- Row 1.5 (Plant & Stores) --}}
+                            <tr>
+                                <td class="fw-bold py-1">PLANT</td>
+                                <td class="py-1" colspan="3">{{ $jobCard->serviceProvider->name ?? '-' }}</td>
+                                <td class="fw-bold py-1">ISSUE STORE</td>
+                                <td class="py-1" colspan="2">{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
+                                <td class="fw-bold py-1">RECEIPT STORE</td>
+                                <td class="py-1">{{ $jobCard->receiptStoreMapping->store_type_name ?? ($jobCard->receipt_store ?: '-') }}</td>
+                            </tr>
+
                             {{-- Row 2 --}}
                             <tr>
                                 <td class="fw-bold py-1">F.ISSUE DATE</td>
@@ -301,30 +311,27 @@
                             @endphp
                             @foreach($jobCard->fabricDetails as $detail)
                                 @php
-                                    $fs_row_total = 0;
-                                    foreach($activeFs as $s) {
-                                        $val = (int)($detail->{'fs_' . $s} ?? 0);
-                                        $fs_row_total += $val;
-                                        $fs_summary[$s] += $val;
-                                    }
-                                    
-                                    $hs_row_total = 0;
-                                    foreach($activeHs as $s) {
-                                        $val = (int)($detail->{'hs_' . $s} ?? 0);
-                                        $hs_row_total += $val;
-                                        $hs_summary[$s] += $val;
-                                    }
-
-                                    $row_total = $fs_row_total + $hs_row_total;
+                                    $row_total = $detail->row_total ?: $detail->quantities->sum('total_qty');
                                     $grand_total += $row_total;
+                                    
+                                    foreach($activeFs as $s) {
+                                        $q = $detail->quantities->where('size', $s)->first();
+                                        $fs_summary[$s] += $q ? $q->qty_fs : 0;
+                                    }
+                                    foreach($activeHs as $s) {
+                                        $q = $detail->quantities->where('size', $s)->first();
+                                        $hs_summary[$s] += $q ? $q->qty_hs : 0;
+                                    }
                                 @endphp
                                 <tr class="text-center">
                                     <td>{{ $detail->art_no }}</td>
                                     @foreach($activeFs as $s)
-                                        <td>{{ $detail->{'fs_' . $s} ?: '-' }}</td>
+                                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
+                                        <td>{{ ($q && $q->qty_fs > 0) ? (int)$q->qty_fs : '-' }}</td>
                                     @endforeach
                                     @foreach($activeHs as $s)
-                                        <td>{{ $detail->{'hs_' . $s} ?: '-' }}</td>
+                                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
+                                        <td>{{ ($q && $q->qty_hs > 0) ? (int)$q->qty_hs : '-' }}</td>
                                     @endforeach
                                     <td class="fw-bold">{{ $row_total ?: '-' }}</td>
                                 </tr>
@@ -333,9 +340,9 @@
                             @for($i = count($jobCard->fabricDetails); $i < 6; $i++)
                                 <tr class="text-center">
                                     <td>&nbsp;</td>
-                                    @foreach($activeFs as $s) <td>-</td> @endforeach
-                                    @foreach($activeHs as $s) <td>-</td> @endforeach
-                                    <td>-</td>
+                                    @foreach($activeFs as $s) <td></td> @endforeach
+                                    @foreach($activeHs as $s) <td></td> @endforeach
+                                    <td></td>
                                 </tr>
                             @endfor
                         </tbody>
@@ -357,40 +364,50 @@
                         <div class="col-10">
                             <div class="bg-light text-center fw-bold py-1 border-bottom" style="font-size: 0.8rem; border-color: #eeeeee !important;">AUTHORISED SIGNATURES</div>
                             <table class="table mb-0 job-card-table" style="border: none;">
+                                <thead>
+                                    <tr class="text-center fw-bold" style="font-size: 0.7rem; border-bottom: 1px solid #eeeeee;">
+                                        <td colspan="2" style="border-right: 1px solid #eeeeee;">AUTHORISED SIGNATURES</td>
+                                        <td colspan="2" style="border-right: 1px solid #eeeeee;">CUTTING RECEIVED BY</td>
+                                        <td colspan="2" style="border-right: 1px solid #eeeeee;">ASSAMBILE</td>
+                                        <td colspan="2">TRIMMING & CHECKING</td>
+                                    </tr>
+                                </thead>
                                 <tbody>
-                                    @php
-                                        $allOps = $jobCard->operations->values();
-                                        $totalRows = 4;
-                                        $colsPerRow = 3;
-                                    @endphp
-                                    @for($i = 0; $i < $totalRows; $i++)
-                                        <tr style="border-bottom: 1px solid #eeeeee;">
-                                            @for($j = 0; $j < $colsPerRow; $j++)
-                                                @php 
-                                                    $idx = ($i * $colsPerRow) + $j;
-                                                    $op = $allOps[$idx] ?? null;
-                                                @endphp
-                                                <td class="fw-bold py-1" style="width: 6%; font-size: 0.65rem; border-right: 1px solid #eeeeee; @if($j == 0) border-left: none; @endif">
-                                                    @if($op)
-                                                        DATE
-                                                        <div class="fw-normal" style="font-size: 0.65rem;">
-                                                            {{ $op->assigned_date ? date('d-m-Y', strtotime($op->assigned_date)) : '' }}
-                                                        </div>
-                                                    @endif
-                                                </td>
-                                                <td class="py-1" style="width: 19%; font-size: 0.75rem; vertical-align: top; height: 50px; border-right: 1px solid #eeeeee; @if($j == $colsPerRow - 1) border-right: none; @endif">
-                                                    @if($op)
-                                                        <div class="fw-bold text-center mb-1" style="font-size: 0.7rem; border-bottom: 1px solid #eeeeee;">
-                                                            {{ $op->operationStage->operation_stage_name ?? '' }}
-                                                        </div>
-                                                        <div class="text-center" style="font-size: 0.65rem;">
-                                                            {{ $op->employee->name ?? '' }}
-                                                        </div>
-                                                    @endif
-                                                </td>
-                                            @endfor
-                                        </tr>
-                                    @endfor
+                                    <tr style="border-bottom: 1px solid #eeeeee;">
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">FABRIC INCHARGE</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">UNIT INCHARGE</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">PRODUCTION UNIT SEND BY</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem;">IRONING</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #eeeeee;">
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">FABRIC ISSUED BY</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">READY SECTION</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">H.O RECEIVED BY</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem;">PACKING & DELIVERY</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #eeeeee;">
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">CUTTING SUPERVISOR</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">READY STORE</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">KAJA & BUTTON</td>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem;">F.G STORE</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
+                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">CUTTING SEND BY</td>
+                                        <td colspan="6"></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>

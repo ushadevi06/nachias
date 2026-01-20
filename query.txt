@@ -11,3 +11,4 @@ ALTER TABLE store_types
 ADD COLUMN status ENUM('Active','Inactive')
 DEFAULT 'Active'
 AFTER store_type_name;
+ALTER TABLE raw_materials MODIFY fabric_type_id BIGINT UNSIGNED NULL;

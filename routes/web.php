@@ -69,6 +69,10 @@ use App\Http\Controllers\PocketTypeController;
 use App\Http\Controllers\BottomCutController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\StyleController;
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\ProductionServiceController;
+use App\Http\Controllers\StoreController;
+use App\Http\Controllers\ResourceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -396,19 +400,29 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('view_task_details', [TaskManagementController::class, 'view_details']);
 
     /* Shifts */
-    Route::get('shifts', [\App\Http\Controllers\ShiftController::class, 'index']);
-    Route::get('shifts/add', [\App\Http\Controllers\ShiftController::class, 'add']);
+    Route::get('shifts', [ShiftController::class, 'index']);
+    Route::match(['GET', 'POST'], 'shifts/add/{id?}', [ShiftController::class, 'add']);
+    Route::get('shifts/delete/{id}', [ShiftController::class, 'destroy']);
+    Route::post('shifts/status/{id}', [ShiftController::class, 'updateStatus']);
 
     /* Production Services */
-    Route::get('production_services', [\App\Http\Controllers\ProductionServiceController::class, 'index']);
-    Route::match(['GET', 'POST'], 'production_services/add/{id?}', [\App\Http\Controllers\ProductionServiceController::class, 'add']);
+    Route::get('production_services', [ProductionServiceController::class, 'index']);
+    Route::match(['GET', 'POST'], 'production_services/add/{id?}', [ProductionServiceController::class, 'add']);
+    Route::get('production_services/delete/{id}', [ProductionServiceController::class, 'destroy']);
+    Route::post('production_services/status/{id}', [ProductionServiceController::class, 'updateStatus']);
+
+    /* Resources */
+    Route::get('resources', [ResourceController::class, 'index']);
+    Route::match(['GET', 'POST'], 'resources/add/{id?}', [ResourceController::class, 'add']);
+    Route::get('resources/delete/{id}', [ResourceController::class, 'destroy']);
+    Route::post('resources/status/{id}', [ResourceController::class, 'updateStatus']);
 
 
     /* Production Stores */
-    Route::get('stores', [\App\Http\Controllers\StoreController::class, 'index']);
-    Route::match(['GET', 'POST'], 'stores/add/{id?}', [\App\Http\Controllers\StoreController::class, 'add']);
-    Route::get('stores/delete/{id}', [\App\Http\Controllers\StoreController::class, 'destroy']);
-    Route::post('stores/status/{id}', [\App\Http\Controllers\StoreController::class, 'updateStatus']);
+    Route::get('stores', [StoreController::class, 'index']);
+    Route::match(['GET', 'POST'], 'stores/add/{id?}', [StoreController::class, 'add']);
+    Route::get('stores/delete/{id}', [StoreController::class, 'destroy']);
+    Route::post('stores/status/{id}', [StoreController::class, 'updateStatus']);
 
     /* Billing */
     Route::get('billing', [BillingController::class, 'index']);

@@ -100,7 +100,6 @@
             <td colspan="6"></td>
             <td colspan="2" class="text-center fw-bold">MARK CHECKER</td>
         </tr>
-        {{-- Row 1 --}}
         <tr>
             <td class="fw-bold" style="width: 10%;">CUTTING NO</td>
             <td style="width: 12%;">{{ $jobCard->job_card_no }}</td>
@@ -112,6 +111,15 @@
             <td class="text-center" style="width: 10%;"></td>
             <td class="fw-bold" style="width: 10%;">CUTTING MASTER</td>
             <td style="width: 10%;">{{ $jobCard->cuttingMaster->name ?? '' }}</td>
+        </tr>
+        {{-- Row 1.5 (Plant & Stores) --}}
+        <tr>
+            <td class="fw-bold">PLANT</td>
+            <td colspan="3">{{ $jobCard->serviceProvider->name ?? '-' }}</td>
+            <td class="fw-bold">ISSUE STORE</td>
+            <td colspan="2">{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
+            <td class="fw-bold">RECEIPT STORE</td>
+            <td colspan="2">{{ $jobCard->receiptStoreMapping->store_type_name ?? ($jobCard->receipt_store ?: '-') }}</td>
         </tr>
         {{-- Row 2 --}}
         <tr>
@@ -218,16 +226,15 @@
         </tr>
     </table>
 
-    {{-- Material Details (Vertical Columns) --}}
     <table class="table" style="margin-top: 5px;">
         <tr>
-            @foreach($jobCard->fabricDetails as $index => $detail)
+            @foreach($jobCard->fabricDetails->take(7) as $index => $detail)
                 @php $image = $jobCard->images->where('art_no', $detail->art_no)->first(); @endphp
                 <td style="vertical-align: top; padding: 2px; width: 14.2%;">
                     <table class="table table-bordered">
                         <tr>
                             <td class="fw-bold bg-light" style="width: 40%;">ART NO</td>
-                            <td class="text-center fw-bold" style="font-size: 7px;">{{ $detail->art_no }}</td>
+                            <td class="text-center fw-bold" style="font-size: 7px; overflow: hidden; white-space: nowrap;">{{ $detail->art_no }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" class="text-center" style="height: 50px; padding: 1px;">
@@ -255,7 +262,7 @@
                     </table>
                 </td>
             @endforeach
-            @for($i = count($jobCard->fabricDetails); $i < 7; $i++)
+            @for($i = count($jobCard->fabricDetails->take(7)); $i < 7; $i++)
                 <td style="width: 14.2%;"></td>
             @endfor
         </tr>
@@ -286,15 +293,19 @@
             @php $grand_total = 0; @endphp
             @foreach($jobCard->fabricDetails as $detail)
                 @php
-                    $row_total = 0;
-                    foreach($activeFs as $s) { $row_total += (int)($detail->{'fs_' . $s} ?? 0); }
-                    foreach($activeHs as $s) { $row_total += (int)($detail->{'hs_' . $s} ?? 0); }
+                    $row_total = $detail->row_total ?: $detail->quantities->sum('total_qty');
                     $grand_total += $row_total;
                 @endphp
                 <tr class="text-center">
                     <td class="fw-bold">{{ $detail->art_no }}</td>
-                    @foreach($activeFs as $s) <td>{{ $detail->{'fs_' . $s} ?: '-' }}</td> @endforeach
-                    @foreach($activeHs as $s) <td>{{ $detail->{'hs_' . $s} ?: '-' }}</td> @endforeach
+                    @foreach($activeFs as $s) 
+                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
+                        <td>{{ ($q && $q->qty_fs > 0) ? $q->qty_fs : '-' }}</td> 
+                    @endforeach
+                    @foreach($activeHs as $s) 
+                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
+                        <td>{{ ($q && $q->qty_hs > 0) ? $q->qty_hs : '-' }}</td> 
+                    @endforeach
                     <td>-</td>
                     <td>-</td>
                     <td class="fw-bold">{{ $row_total ?: '-' }}</td>
@@ -304,8 +315,12 @@
         <tfoot>
             <tr class="text-center fw-bold bg-light">
                 <td>TOTAL</td>
-                @foreach($activeFs as $s) <td>{{ $jobCard->fabricDetails->sum('fs_'.$s) ?: '-' }}</td> @endforeach
-                @foreach($activeHs as $s) <td>{{ $jobCard->fabricDetails->sum('hs_'.$s) ?: '-' }}</td> @endforeach
+                @foreach($activeFs as $s) 
+                    <td>{{ $jobCard->fabricDetails->map->quantities->flatten()->where('size', $s)->sum('qty_fs') ?: '-' }}</td> 
+                @endforeach
+                @foreach($activeHs as $s) 
+                    <td>{{ $jobCard->fabricDetails->map->quantities->flatten()->where('size', $s)->sum('qty_hs') ?: '-' }}</td> 
+                @endforeach
                 <td>-</td>
                 <td>-</td>
                 <td>{{ $grand_total ?: '-' }}</td>

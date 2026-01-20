@@ -33,7 +33,9 @@
                                     <select name="purchase_invoice_id" id="po_no" class="select2 form-select @error('purchase_invoice_id') is-invalid @enderror" data-placeholder="Select PO Invoice Number">
                                         <option value="">Select PO Invoice Number</option>
                                         @foreach($purchaseInvoices as $inv)
-                                            <option value="{{ $inv->id }}" {{ old('purchase_invoice_id', $grn->purchase_invoice_id ?? '') == $inv->id ? 'selected' : '' }}>{{ $inv->invoice_no }}</option>
+                                            <option value="{{ $inv->id }}" {{ old('purchase_invoice_id', $grn->purchase_invoice_id ?? '') == $inv->id ? 'selected' : '' }}>
+                                                {{ $inv->invoice_no }} {{ isset($inv->purchaseOrder) ? '(PO: ' . $inv->purchaseOrder->po_number . ')' : '' }}
+                                            </option>
                                         @endforeach
                                     </select>
                                     <label>PO Invoice Number *</label>
@@ -402,6 +404,9 @@
                 });
             } else {
                 $('#show_item_det').addClass('d-none');
+                $('#supplier_display').val('');
+                $('#sup_inv_date').val('');
+                $('#grn-items-table tbody').empty();
             }
         });
 

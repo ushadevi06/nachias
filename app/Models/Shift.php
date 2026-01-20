@@ -1,23 +1,23 @@
 <?php
 
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class JobCardCuttingSizeRatio extends Model
+class Shift extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_entry_id', 'size', 'ratio',
-        'qty_fs', 'qty_hs', 'total_qty'
+        'shift_name',
+        'start_time',
+        'end_time',
+        'status',
+        'created_by',
+        'updated_by',
     ];
-
-    public function jobCardEntry()
-    {
-        return $this->belongsTo(JobCardEntry::class);
-    }
 }
+

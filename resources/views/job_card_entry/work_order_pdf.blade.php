@@ -153,18 +153,16 @@
                     $artNo = $detail->art_no;
 
                     // Helper to check if any size has value
-                    $hasValue = function($prefix) use ($detail, $sizes) {
-                        foreach($sizes as $s) {
-                            if (!empty($detail->{$prefix . '_' . $s})) return true;
-                        }
-                        return false;
+                    $hasValue = function($prefix) use ($detail) {
+                        return $detail->quantities->where('qty_' . $prefix, '>', 0)->count() > 0;
                     };
                     
                     // Helper to get sizes array
                     $getSizesArray = function($prefix) use ($detail, $sizes) {
                         $arr = [];
                         foreach($sizes as $s) {
-                            $arr[$s] = $detail->{$prefix . '_' . $s} ?? 0;
+                            $q = $detail->quantities->where('size', $s)->first();
+                            $arr[$s] = $q ? ($q->{'qty_' . $prefix} ?? 0) : 0;
                         }
                         return $arr;
                     };

@@ -115,7 +115,7 @@ class RawMaterialController extends Controller
                 'supplier_design_name' => 'nullable|string|max:150',
                 'size_width' => 'nullable|numeric|min:0',
                 'uom_id' => 'required|exists:uoms,id',
-                'fabric_type_id' => 'required|exists:fabric_types,id',
+                'fabric_type_id' => 'nullable|exists:fabric_types,id',
                 'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'specification' => 'nullable|string|max:255',
                 'min_stock' => 'nullable|numeric|min:0',

@@ -230,6 +230,7 @@ class PurchaseInvoiceController extends Controller
                     'payment_mode' => $request->payment_mode,
                     'due_date' => $request->due_date ? Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d') : null,
                     'notes' => $request->notes,
+                    'transaction_id' => $request->transaction_id,
                 ];
 
                 $uploadPath = public_path('uploads/purchase_invoices');
@@ -242,7 +243,7 @@ class PurchaseInvoiceController extends Controller
                     $file = $request->file('auth_sign');
                     $fileName = time() . '_auth_' . $file->getClientOriginalName();
                     $file->move($uploadPath, $fileName);
-                    $invoiceData['auth_sign'] = $fileName;
+                    $invoiceData['auth_signature'] = $fileName;
                 }
 
                 if ($request->hasFile('attachments')) {
@@ -276,6 +277,7 @@ class PurchaseInvoiceController extends Controller
                             'amount' => $newPayment,
                             'payment_date' => now(),
                             'payment_mode' => $request->payment_mode ?? 'Cash',
+                            'transaction_id' => $request->transaction_id,
                             'notes' => 'Additional payment from invoice edit',
                             'created_by' => auth()->id(),
                         ]);
@@ -296,6 +298,7 @@ class PurchaseInvoiceController extends Controller
                             'amount' => $request->received_amount,
                             'payment_date' => now(),
                             'payment_mode' => $request->payment_mode ?? 'Cash',
+                            'transaction_id' => $request->transaction_id,
                             'notes' => 'Initial payment from invoice creation',
                             'created_by' => auth()->id(),
                         ]);
@@ -418,15 +421,15 @@ class PurchaseInvoiceController extends Controller
         }
         $invoice = PurchaseInvoice::findOrFail($id);
 
-        if ($invoice->auth_sign) {
-            $filePath = public_path('uploads/invoices/' . $invoice->auth_sign);
+        if ($invoice->auth_signature) {
+            $filePath = public_path('uploads/purchase_invoices/' . $invoice->auth_signature);
             if (file_exists($filePath)) {
                 unlink($filePath);
             }
         }
 
         if ($invoice->attachments) {
-            $filePath = public_path('uploads/invoices/' . $invoice->attachments);
+            $filePath = public_path('uploads/purchase_invoices/' . $invoice->attachments);
             if (file_exists($filePath)) {
                 unlink($filePath);
             }

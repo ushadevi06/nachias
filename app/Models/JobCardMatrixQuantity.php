@@ -4,20 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class JobCardCuttingSizeRatio extends Model
+class JobCardMatrixQuantity extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_entry_id', 'size', 'ratio',
-        'qty_fs', 'qty_hs', 'total_qty'
+        'job_card_fabric_detail_id', 'size', 'qty_fs', 'qty_hs', 'total_qty'
     ];
 
-    public function jobCardEntry()
+    public function fabricDetail()
     {
-        return $this->belongsTo(JobCardEntry::class);
+        return $this->belongsTo(JobCardFabricDetail::class, 'job_card_fabric_detail_id');
     }
 }

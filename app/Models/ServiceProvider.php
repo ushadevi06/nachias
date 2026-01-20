@@ -14,6 +14,7 @@ class ServiceProvider extends Model
         'service_type_id',
         'name',
         'code',
+        'is_plant',
         'email',
         'mobile_no',
         'zip_code',
@@ -58,5 +59,11 @@ class ServiceProvider extends Model
     public function place()
     {
         return $this->belongsTo(Place::class);
+    }
+
+    // Many-to-many: Service Provider has many Production Services
+    public function productionServices()
+    {
+        return $this->belongsToMany(ProductionService::class, 'service_provider_production_service');
     }
 }

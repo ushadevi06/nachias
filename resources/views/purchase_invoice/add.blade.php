@@ -460,19 +460,13 @@
 
                                         <div class="mb-3">
                                             <div class="form-floating form-floating-outline mb-3">
-                                                <input type="file"
-                                                    class="form-control @error('auth_sign') is-invalid @enderror"
-                                                    id="auth_sign"
-                                                    name="auth_sign"
-                                                    accept="image/*">
+                                                <input type="file" class="form-control @error('auth_sign') is-invalid @enderror" id="auth_sign" name="auth_sign" accept="image/*">
                                                 <label for="auth_sign">Authorized Signature / Stamp Upload</label>
                                             </div>
 
-                                            @if(!empty($invoice->auth_sign))
-                                            <a href="javascript:void(0)"
-                                                class="view-image mt-1 d-inline-block"
-                                                data-image="{{ url('uploads/purchase_invoices/' . $invoice->auth_sign) }}">
-                                                <i class="ri ri-image-line"></i> View
+                                            @if(!empty($invoice->auth_signature))
+                                            <a href="javascript:void(0)" class="view-image mt-1 d-inline-block" data-image="{{ url('uploads/purchase_invoices/' . $invoice->auth_signature) }}">
+                                                <i class="ri ri-attachment-2"></i> View
                                             </a>
                                             @endif
 
@@ -482,21 +476,14 @@
                                         </div>
 
                                         <div class="form-floating form-floating-outline mb-3">
-                                            <input type="file"
-                                                class="form-control @error('attachments') is-invalid @enderror"
-                                                id="attachments"
-                                                name="attachments">
+                                            <input type="file" class="form-control @error('attachments') is-invalid @enderror" id="attachments" name="attachments">
                                             <label for="attachments">Attachments</label>
                                         </div>
-
                                         @if(!empty($invoice->attachments))
-                                        <a href="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}"
-                                            target="_blank"
-                                            class="mt-1 d-inline-block">
+                                        <a href="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}" target="_blank" class="mt-1 d-inline-block">
                                             <i class="ri ri-attachment-2"></i> View
                                         </a>
                                         @endif
-
                                         @error('attachments')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                         @enderror
@@ -508,18 +495,13 @@
                                 $discountPercent = old('discount_percent', $invoice->discount_percent ?? 0);
                                 $discountAmount = old('discount_amount', $invoice->discount_amount ?? 0);
                                 $taxableAmount = old('taxable_amount', $invoice->taxable_amount ?? 0);
-
                                 $otherState = old('other_state', isset($invoice) && $invoice->other_state ? 'Y' : 'N');
-
                                 $igstPercent = old('igst_percent', $invoice->igst_percent ?? $web_settings->igst);
                                 $igstAmount = old('igst_amount', $invoice->igst_amount ?? 0);
-
                                 $cgstPercent = old('cgst_percent', $invoice->cgst_percent ?? $web_settings->cgst);
                                 $cgstAmount = old('cgst_amount', $invoice->cgst_amount ?? 0);
-
                                 $sgstPercent = old('sgst_percent', $invoice->sgst_percent ?? $web_settings->sgst);
                                 $sgstAmount = old('sgst_amount', $invoice->sgst_amount ?? 0);
-
                                 $taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
                                 $otherCharges = old('other_charges', $invoice->other_charges ?? 0);
                                 $roundOff = old('round_off', $invoice->round_off ?? 0);

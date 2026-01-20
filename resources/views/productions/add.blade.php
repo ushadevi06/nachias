@@ -31,12 +31,12 @@
                                     <label>Job Card No *</label>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            {{-- <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="work_order_no" value="WO-2026-001" readonly>
                                     <label>Work Order No</label>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="po_no" value="PO-2025-099" readonly>
@@ -52,15 +52,6 @@
                                         <option value="Kalavasal">Kalavasal</option>
                                     </select>
                                     <label>Plant</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="production_unit" class="select2 form-select" data-placeholder="Select Unit">
-                                        <option value="">Select Unit</option>
-                                        <option value="NFPL - CUT">NFPL - CUT</option>
-                                    </select>
-                                    <label>Production Unit</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -92,52 +83,20 @@
                             </div>
                              <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="start_date">
+                                    <input type="text" class="form-control date-picker" id="start_date" placeholder="Planned Start Date">
                                     <label>Planned Start Date</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="end_date">
+                                    <input type="text" class="form-control date-picker" id="end_date" placeholder="Planned End Date">
                                     <label>Planned End Date</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="completion_date">
+                                    <input type="text" class="form-control date-picker" id="completion_date" placeholder="Exp. Completion Date">
                                     <label>Exp. Completion Date</label>
-                                </div>
-                            </div>
-                             <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="issue_store" class="select2 form-select" data-placeholder="Select Store">
-                                        <option value="">Select Store</option>
-                                        <option value="Fabric Store">Fabric Store</option>
-                                        <option value="Accessories Store">Accessories Store</option>
-                                        <option value="Finished Goods">Finished Goods</option>
-                                    </select>
-                                    <label>Issue Store</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="receipt_store" class="select2 form-select" data-placeholder="Select Store">
-                                        <option value="">Select Store</option>
-                                        <option value="Finished Goods Store">Finished Goods Store</option>
-                                    </select>
-                                    <label>Receipt Store</label>
-                                </div>
-                            </div>
-                             <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="reference_no">
-                                    <label>Reference No</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="reference_date">
-                                    <label>Reference Date</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -150,9 +109,9 @@
                                     <label>Status</label>
                                 </div>
                             </div>
-                            <div class="col-md-9">
+                            <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="remarks">
+                                    <textarea name="remarks" class="form-control" id="remarks"></textarea>
                                     <label>Remarks</label>
                                 </div>
                             </div>
@@ -173,7 +132,7 @@
                         {{-- 1. Stepper Header --}}
                         <div class="bs-stepper wizard-numbered mt-2">
                             <div class="bs-stepper-header border-bottom p-4">
-                                {{-- Step 1 --}}
+                                {{-- Commented out Cutting Stage
                                 <div class="step active" data-target="#stage-cutting">
                                     <button type="button" class="step-trigger">
                                         <span class="bs-stepper-circle bg-success text-white"><i class="ri ri-scissors-cut-line"></i></span>
@@ -184,8 +143,9 @@
                                     </button>
                                 </div>
                                 <div class="line"></div>
-                                {{-- Step 2 --}}
-                                <div class="step" data-target="#stage-stitching">
+                                --}}
+                                {{-- Step 2 (Now Step 1) --}}
+                                <div class="step active" data-target="#stage-stitching">
                                     <button type="button" class="step-trigger">
                                         <span class="bs-stepper-circle bg-warning text-white"><i class="ri ri-t-shirt-line"></i></span>
                                         <span class="bs-stepper-label text-warning">
@@ -209,7 +169,7 @@
 
                             {{-- 2. Stepper Content --}}
                             <div class="bs-stepper-content p-4">                              
-                                {{-- Stage 1: Cutting Form --}}
+                                {{-- Stage 1 Details: Cutting (Commented Out)
                                 <div id="stage-cutting" class="content active dstepper-block">
                                     <div class="row g-3">
                                         <div class="col-12 mb-2"><h6 class="fw-bold text-success">Stage 1 Details: Cutting</h6></div>
@@ -243,14 +203,6 @@
                                                 <label>Due Date</label>
                                             </div>
                                         </div>
-                                        {{-- <div class="col-md-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select class="form-select select2">
-                                                    <option value="Nachias fashion private limited">Nachias fashion private limited</option>
-                                                </select>
-                                                <label>Scheduled To</label>
-                                            </div>
-                                        </div> --}}
                                         <div class="col-md-4">
                                             <div class="form-floating form-floating-outline">
                                                 <select class="form-select select2">
@@ -267,6 +219,7 @@
                                                 <table class="table table-sm table-hover mb-0">
                                                     <thead class="bg-light">
                                                         <tr>
+                                                            <th>Check</th>
                                                             <th>Service Name</th>
                                                             <th>Applies To</th>
                                                             <th class="text-end">Qty</th>
@@ -274,7 +227,6 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody id="services-cutting">
-                                                        <!-- JS will populate this -->
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -285,11 +237,12 @@
                                         </div>
                                     </div>
                                 </div>
+                                --}}
 
                                 {{-- Stage 2: Stitching Form --}}
-                                <div id="stage-stitching" class="content d-none">
+                                <div id="stage-stitching" class="content active dstepper-block">
                                     <div class="row g-3">
-                                        <div class="col-12 mb-2"><h6 class="fw-bold text-warning">Stage 2 Details: Stitching</h6></div>
+                                        <div class="col-12 mb-2"><h6 class="fw-bold text-warning">Stage 1 Details: Stitching</h6></div>
                                         <div class="col-md-3">
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" class="form-control" value="1000">
@@ -342,6 +295,7 @@
                                                 <table class="table table-sm table-hover mb-0">
                                                     <thead class="bg-light">
                                                         <tr>
+                                                            <th>Check</th>
                                                             <th>Service Name</th>
                                                             <th>Applies To</th>
                                                             <th class="text-end">Qty</th>
@@ -356,7 +310,7 @@
                                         </div>
 
                                         <div class="col-12 text-end mt-4">
-                                            <button type="button" class="btn btn-outline-secondary me-2" onclick="showStep('#stage-cutting')"><i class="ri ri-arrow-left-line me-1"></i> Prev</button>
+                                            <button type="button" class="btn btn-outline-secondary me-2" onclick="showStep('#stage-stitching')"><i class="ri ri-arrow-left-line me-1"></i> Prev</button>
                                             <button type="button" class="btn btn-primary btn-next" onclick="showStep('#stage-finishing')">Next: Finishing <i class="ri ri-arrow-right-line ms-1"></i></button>
                                         </div>
                                     </div>
@@ -365,7 +319,7 @@
                                 {{-- Stage 3: Finishing Form --}}
                                 <div id="stage-finishing" class="content d-none">
                                     <div class="row g-3">
-                                        <div class="col-12 mb-2"><h6 class="fw-bold text-secondary">Stage 3 Details: Finishing</h6></div>
+                                        <div class="col-12 mb-2"><h6 class="fw-bold text-secondary">Stage 2 Details: Finishing</h6></div>
                                         <div class="col-md-3">
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" class="form-control" value="1000">
@@ -418,6 +372,7 @@
                                                 <table class="table table-sm table-hover mb-0">
                                                     <thead class="bg-light">
                                                         <tr>
+                                                            <th>Check</th>
                                                             <th>Service Name</th>
                                                             <th>Applies To</th>
                                                             <th class="text-end">Qty</th>
@@ -441,7 +396,7 @@
                     </div>
                 </div>
                 {{-- MODULE 3: FINISHED GOODS RECEIPT --}}
-                <div class="card border-0 shadow-sm erp-header-card mt-4">
+                {{-- <div class="card border-0 shadow-sm erp-header-card mt-4">
                     <div class="card-header border-bottom py-3 bg-light">
                         <div class="d-flex align-items-center justify-content-between">
                             <h5 class="mb-0 fw-bold d-flex align-items-center">
@@ -525,13 +480,13 @@
                             </div>
                             <div class="col-md-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="receipt_remarks">
+                                    <textarea name="" class="form-control" id="receipt_remarks"></textarea>
                                     <label>Remarks</label>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> --}}
                 {{-- Action Buttons --}}
                  <div class="mt-4">
                     <div class="text-end">
@@ -561,32 +516,32 @@
 
         // Auto-calculation logic for Services
         const serviceDefinitions = {
-            cutting: [
+            /* cutting: [
                 { name: 'Layering & Cutting', appliesTo: 'ALL' }
-            ],
+            ], */
             stitching: [
                 { name: 'CLR-ATT (Collar Attach)', appliesTo: 'ALL' },
                 { name: 'CLR-LBL-ATT (Collar Label Attach)', appliesTo: 'ALL' },
                 { name: 'TOWER', appliesTo: 'ALL' },
-                { name: 'SLV-TOP', appliesTo: 'ALL' },
-                { name: 'SLV-ATT', appliesTo: 'ALL' },
-                { name: 'DEAL-SLV-ATT', appliesTo: 'ALL' },
-                { name: 'BF-ATT', appliesTo: 'ALL' },
-                { name: 'SID-ATT-FS', appliesTo: 'FS' },
-                { name: 'SID-ATT-HS', appliesTo: 'HS' },
-                { name: 'CUF-ATT', appliesTo: 'CUFF' },
-                { name: 'CUF-TOP', appliesTo: 'FS' },
-                { name: 'CUF-TURN', appliesTo: 'FS' },
-                { name: 'CUF-TWR-MRK', appliesTo: 'FS' }
+                { name: 'SLV-TOP(Sleeve Top)', appliesTo: 'ALL' },
+                { name: 'SLV-ATT(Sleeve Attach)', appliesTo: 'ALL' },
+                { name: 'DEAL-SLV-ATT(Dealer Sleeve Attach)', appliesTo: 'ALL' },
+                { name: 'BF-ATT(Bottom Facing Attach)', appliesTo: 'ALL' },
+                { name: 'SID-ATT-FS(Side Attach-Full Stitch)', appliesTo: 'FS' },
+                { name: 'SID-ATT-HS(Side Attach-Half Stitch)', appliesTo: 'HS' },
+                { name: 'CUF-ATT(Cuff Attach)', appliesTo: 'CUFF' },
+                { name: 'CUF-TOP(Cuff Top)', appliesTo: 'FS' },
+                { name: 'CUF-TURN(Cuff Turn)', appliesTo: 'FS' },
+                { name: 'CUF-TWR-MRK(Cuff Tower Mark)', appliesTo: 'FS' }
             ],
             finishing: [
-                { name: 'BUT - OPR', appliesTo: 'ALL' },
-                { name: 'BUT', appliesTo: 'ALL' },
-                { name: 'KAJA-OPR', appliesTo: 'ALL' },
-                { name: 'KAJA', appliesTo: 'ALL' },
-                { name: 'TWR-TRI-CHK', appliesTo: 'ALL' },
-                { name: 'ASS-TRI-CHK', appliesTo: 'ALL' },
-                { name: 'CUF-IRON', appliesTo: 'FS' },
+                { name: 'BUT - OPR(Button Operator)', appliesTo: 'ALL' },
+                { name: 'BUT(Button)', appliesTo: 'ALL' },
+                { name: 'KAJA-OPR(Kaja Operator)', appliesTo: 'ALL' },
+                { name: 'KAJA(Kaja)', appliesTo: 'ALL' },
+                { name: 'TWR-TRI-CHK(Tower Trim Check)', appliesTo: 'ALL' },
+                { name: 'ASS-TRI-CHK(Assam Trim Check)', appliesTo: 'ALL' },
+                { name: 'CUF-IRON(Cuff Iron)', appliesTo: 'FS' },
                 { name: 'Ironing & Packing', appliesTo: 'ALL' }
             ]
         };
@@ -597,8 +552,6 @@
             const totalQty = fsQty + hsQty;
             
             $('#planned_qty').val(totalQty);
-
-            // Populate each stage
             Object.keys(serviceDefinitions).forEach(stage => {
                 const tbody = $(`#services-${stage}`);
                 tbody.empty();
@@ -619,6 +572,7 @@
 
                     tbody.append(`
                         <tr>
+                            <td><input type="checkbox" name="selected_services[${stage}][]" value="${service.name}" class="form-check-input service-checkbox" data-stage="${stage}" checked></td>
                             <td>${service.name}</td>
                             <td><span class="badge bg-label-info">${displayAppliesTo}</span></td>
                             <td class="text-end fw-bold">${calculatedQty}</td>
@@ -628,11 +582,13 @@
                 });
             });
         }
-
-        // Listen for quantity changes
         $('#planned_qty_fs, #planned_qty_hs').on('input', calculateServices);
+        // Select All handler
+        $(document).on('change', '.select-all-services', function() {
+            const stage = $(this).data('stage');
+            $(`.service-checkbox[data-stage="${stage}"]`).prop('checked', $(this).prop('checked'));
+        });
 
-        // Initial calculation
         calculateServices();
     });
 

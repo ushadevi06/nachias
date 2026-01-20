@@ -45,13 +45,8 @@
                             </div>
 
                             <div class="col-md-3">
-                                <button type="button" class="btn btn-primary" id="filter-btn">
-                                    <i class="ri ri-filter-3-line"></i> Filter
-                                </button>
-
-                                <button type="button" class="btn btn-secondary" id="reset-btn">
-                                    <i class="ri ri-refresh-line"></i> Reset
-                                </button>
+                                <button type="button" class="btn btn-primary" id="filter-btn">Filter</button>
+                                <button type="button" class="btn btn-secondary" id="reset-btn">Reset</button>
                             </div>
 
                         </div>

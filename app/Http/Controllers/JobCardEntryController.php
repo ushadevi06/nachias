@@ -13,7 +13,6 @@ use App\Models\Brand;
 use App\Models\Season;
 use App\Models\ProcessGroup;
 use App\Models\SizeRatio;
-use App\Models\OperationStage;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -29,6 +28,8 @@ use App\Models\GrnEntry;
 use App\Models\GrnEntryItem;
 use App\Models\PurchaseInvoice;
 use App\Models\JobCardIssueItem;
+use App\Models\ServiceProvider;
+use App\Models\StoreType;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -80,6 +81,9 @@ class JobCardEntryController extends Controller
                 'job_card_no' => 'required|string|max:255|unique:job_card_entries,job_card_no' . ($id ? ',' . $id : ''),
                 'reference_no' => 'required|string|max:255',
                 'purchase_order_id' => 'required|exists:purchase_orders,id',
+                'service_provider_id' => 'required|exists:service_providers,id',
+                'issue_store_id' => 'required|exists:store_types,id',
+                'receipt_store_id' => 'required|exists:store_types,id',
                 'issue_date' => 'required|date_format:d-m-Y',
                 'delivery_date' => 'required|date_format:d-m-Y',
                 'washing' => 'nullable|in:Yes,No',
@@ -99,9 +103,9 @@ class JobCardEntryController extends Controller
                 'cuff_type' => 'nullable|string',
                 'pocket_type' => 'nullable|string',
                 'bottom_cut' => 'nullable|string',
-                'cutting_master_id' => 'required|exists:users,id',
-                'cutting_date' => 'required|date_format:d-m-Y',
-                'cutting_issue_unit' => 'required|string',
+                'cutting_master_id' => 'nullable|exists:users,id',
+                'cutting_date' => 'nullable|date_format:d-m-Y',
+                'cutting_issue_unit' => 'nullable|string',
                 'stages' => 'nullable|array|min:1',
                 'size_ratio_id' => 'required|exists:size_ratios,id',
             ];
@@ -122,6 +126,9 @@ class JobCardEntryController extends Controller
                     'job_card_no' => $request->job_card_no,
                     'reference_no' => $request->reference_no,
                     'purchase_order_id' => $request->purchase_order_id,
+                    'service_provider_id' => $request->service_provider_id,
+                    'issue_store_id' => $request->issue_store_id,
+                    'receipt_store_id' => $request->receipt_store_id,
                     'job_card_date' => date('Y-m-d', strtotime($request->issue_date)),
                     'delivery_date' => $request->delivery_date ? date('Y-m-d', strtotime($request->delivery_date)) : null,
                     'washing' => $request->washing,
@@ -129,7 +136,6 @@ class JobCardEntryController extends Controller
                     'mrp' => $request->mrp,
                     'fs_qty' => $request->fs,
                     'hs_qty' => $request->hs,
-                    'receipt_store' => $request->receipt_store,
                     'remarks' => $request->remarks,
                     'status' => $request->status ?? 'Draft',
                     'fit' => $request->fit,
@@ -191,7 +197,6 @@ class JobCardEntryController extends Controller
                     $jobCard->update($data);
                     $jobCard->cuttingSizeRatios()->forceDelete();
                     $jobCard->fabricDetails()->forceDelete();
-                    $jobCard->operations()->delete();
                     
                     $newData = $jobCard->fresh()->toArray();
                     addLog('update', 'Job Card Entry', 'job_card_entries', $id, $oldData, $newData);
@@ -206,7 +211,6 @@ class JobCardEntryController extends Controller
                 if ($request->matrix_items) {
                     foreach ($request->matrix_items as $item) {
                         $jobCard->cuttingSizeRatios()->create([
-                            'article_no' => $item['article_no'],
                             'size' => $item['size'],
                             'ratio' => $item['ratio'] ?? 0,
                             'qty_fs' => $item['qty_fs'] ?? 0,
@@ -220,36 +224,46 @@ class JobCardEntryController extends Controller
                     foreach ($request->article_matrix as $index => $matrix) {
                         $fabric = collect($request->fabrics)->where('art_no', $matrix['art_no'])->first() ?? ($request->fabrics[$index] ?? null);
                         
-                        $newMatrix = $jobCard->fabricDetails()->create([
+                        $fabricDetail = $jobCard->fabricDetails()->create([
                             'art_no'  => $matrix['art_no'],
                             'width'   => $fabric['width'] ?? null,
                             'mtr'     => $fabric['mtr'] ?? null,
                             'in_out'  => $fabric['in_out'] ?? null,
                             'n_patti' => $fabric['n_patti'] ?? null,
-                            'fs_36'   => $matrix['fs_36'] ?? 0,
-                            'fs_38'   => $matrix['fs_38'] ?? 0,
-                            'fs_40'   => $matrix['fs_40'] ?? 0,
-                            'fs_42'   => $matrix['fs_42'] ?? 0,
-                            'fs_44'   => $matrix['fs_44'] ?? 0,
-                            'hs_36'   => $matrix['hs_36'] ?? 0,
-                            'hs_38'   => $matrix['hs_38'] ?? 0,
-                            'hs_40'   => $matrix['hs_40'] ?? 0,
-                            'hs_42'   => $matrix['hs_42'] ?? 0,
-                            'hs_44'   => $matrix['hs_44'] ?? 0,
-                            'hs_46'   => $matrix['hs_46'] ?? 0,
-                            'ex_1'    => $matrix['ex_1'] ?? 0,
-                            'ex_2'    => $matrix['ex_2'] ?? 0,
-                            'row_total' => array_sum([
-                                $matrix['fs_36'] ?? 0, $matrix['fs_38'] ?? 0, $matrix['fs_40'] ?? 0, $matrix['fs_42'] ?? 0, $matrix['fs_44'] ?? 0,
-                                $matrix['hs_36'] ?? 0, $matrix['hs_38'] ?? 0, $matrix['hs_40'] ?? 0, $matrix['hs_42'] ?? 0, $matrix['hs_44'] ?? 0,
-                                $matrix['hs_46'] ?? 0, $matrix['ex_1'] ?? 0, $matrix['ex_2'] ?? 0
-                            ])
+                            'row_total' => 0 
                         ]);
+
+                        $rowTotal = 0;
+                        $sizeQtys = [];
+                        foreach ($matrix as $key => $val) {
+                            if (str_starts_with($key, 'fs_')) {
+                                $size = substr($key, 3);
+                                $sizeQtys[$size]['fs'] = $val;
+                            } elseif (str_starts_with($key, 'hs_')) {
+                                $size = substr($key, 3);
+                                $sizeQtys[$size]['hs'] = $val;
+                            }
+                        }
+
+                        foreach ($sizeQtys as $size => $qtys) {
+                            $qFs = floatval($qtys['fs'] ?? 0);
+                            $qHs = floatval($qtys['hs'] ?? 0);
+                            if ($qFs > 0 || $qHs > 0) {
+                                $fabricDetail->quantities()->create([
+                                    'size' => $size,
+                                    'qty_fs' => $qFs,
+                                    'qty_hs' => $qHs,
+                                    'total_qty' => $qFs + $qHs
+                                ]);
+                                $rowTotal += ($qFs + $qHs);
+                            }
+                        }
+                        $fabricDetail->update(['row_total' => $rowTotal]);
 
                         if (isset($issueBackup[$matrix['art_no']])) {
                             JobCardIssueItem::create(array_merge($issueBackup[$matrix['art_no']], [
                                 'job_card_entry_id' => $jobCard->id,
-                                'job_card_article_matrix_id' => $newMatrix->id,
+                                'job_card_article_matrix_id' => $fabricDetail->id,
                                 'created_by' => auth()->id(),
                                 'updated_by' => auth()->id(),
                             ]));
@@ -278,7 +292,6 @@ class JobCardEntryController extends Controller
                         if (is_array($files) && count(array_filter($files)) > 0) {
                             $currentArtNo = $request->fabrics[$index]['art_no'] ?? null;
                             
-                            // Delete old images for ONLY this art_no when editing
                             if ($id && $currentArtNo) {
                                 $oldArtImages = $jobCard->images()->where('art_no', $currentArtNo)->get();
                                 foreach ($oldArtImages as $oldImage) {
@@ -317,7 +330,7 @@ class JobCardEntryController extends Controller
             }
         }
 
-        $jobCard = $id ? JobCardEntry::with(['cuttingSizeRatios', 'images', 'operations.operationStage', 'sizeRatio', 'fabricDetails', 'issueItems'])->findOrFail($id) : null;
+        $jobCard = $id ? JobCardEntry::with(['cuttingSizeRatios', 'images', 'sizeRatio', 'fabricDetails.quantities', 'issueItems'])->findOrFail($id) : null;
         
         $allPurchaseOrders = PurchaseOrder::with(['items'])->orderBy('id', 'desc')->get();
         
@@ -332,7 +345,6 @@ class JobCardEntryController extends Controller
         $seasons = Season::where('status', 'Active')->orderBy('name')->get();
         $processGroups = ProcessGroup::where('status', 'Active')->orderBy('name')->get();
         $sizeRatios = SizeRatio::where('status', 'Active')->orderBy('id')->get();
-        $operationStages = OperationStage::where('status', 'Active')->get();
         $employees = User::where('status', 'Active')->where('id', '!=', 1)->orderBy('name')->get();
         
         $fits = Fit::active()->orderBy('fit_name')->get();
@@ -342,17 +354,20 @@ class JobCardEntryController extends Controller
         $pocketTypes = PocketType::active()->orderBy('pocket_type_name')->get();
         $bottomCuts = BottomCut::active()->orderBy('bottom_cut_name')->get();
         $cuttingMasters = User::active()->where('id', '!=', 1)->orderBy('name')->get();
+        
+        $plants = ServiceProvider::where('is_plant', 1)->where('status', 'Active')->orderBy('name')->get();
+        $storeTypes = StoreType::where('status', 'Active')->orderBy('store_type_name')->get();
 
         return view('job_card_entry/add', compact(
             'jobCard', 'purchaseOrders', 'brands', 'seasons', 
-            'processGroups', 'sizeRatios', 'operationStages', 'employees',
+            'processGroups', 'sizeRatios', 'employees',
             'fits', 'pattiTypes', 'collarTypes', 'cuffTypes', 'pocketTypes', 
-            'bottomCuts', 'cuttingMasters'
+            'bottomCuts', 'cuttingMasters', 'plants', 'storeTypes'
         ));
     }
 
     public function view_details($id) {
-        $jobCard = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup', 'cuttingSizeRatios', 'fabricDetails', 'images', 'operations.operationStage', 'operations.employee'])->findOrFail($id);
+        $jobCard = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup', 'cuttingSizeRatios', 'fabricDetails.quantities', 'images'])->findOrFail($id);
         return view('job_card_entry/view_details', compact('jobCard'));
     }
 
@@ -363,7 +378,7 @@ class JobCardEntryController extends Controller
     }
 
     public function view_jc_item($id) {
-        $jobCard = JobCardEntry::with(['brand', 'fabricDetails', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems'])->findOrFail($id);
+        $jobCard = JobCardEntry::with(['brand', 'fabricDetails.quantities', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems'])->findOrFail($id);
         $issueItemMap = $jobCard->issueItems->keyBy(function($item) {
             return $item->job_card_article_matrix_id . '_' . $item->sleeve_type;
         });
@@ -557,7 +572,7 @@ class JobCardEntryController extends Controller
     {
         $jobCard = JobCardEntry::with([
             'brand', 
-            'fabricDetails', 
+            'fabricDetails.quantities', 
             'purchaseOrder.items.rawMaterial.uom', 
             'purchaseOrder.supplier', 
             'purchaseOrder.items.uom', 
@@ -565,12 +580,9 @@ class JobCardEntryController extends Controller
             'issueItems.fabricDetail'
         ])->findOrFail($id);
 
-        // Calculate Matrix Totals per Art No
         $artTotalMap = [];
         foreach ($jobCard->fabricDetails as $detail) {
-            $fsRows = [$detail->fs_36, $detail->fs_38, $detail->fs_40, $detail->fs_42, $detail->fs_44, $detail->fs_46, $detail->fs_48];
-            $hsRows = [$detail->hs_36, $detail->hs_38, $detail->hs_40, $detail->hs_42, $detail->hs_44, $detail->hs_46, $detail->hs_48];
-            $total = array_sum(array_map('floatval', $fsRows)) + array_sum(array_map('floatval', $hsRows));
+            $total = $detail->quantities->sum('total_qty');
             
             if (!isset($artTotalMap[$detail->art_no])) {
                 $artTotalMap[$detail->art_no] = 0;
@@ -589,11 +601,10 @@ class JobCardEntryController extends Controller
                 'qty_used' => $items->sum('qty_used'),
                 'qty_adjusted' => $items->sum('qty_adjusted'),
                 'balance' => $items->sum('balance'),
-                'unit_price' => $items->average('unit_price'), // Using average price for the article
+                'unit_price' => $items->average('unit_price'), 
                 'total_cost' => $items->sum('total_cost'),
             ];
         })->values();
-
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
         $grnItems = GrnEntryItem::whereIn('grn_entry_id', function($query) use ($invoiceIds) {
             $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
@@ -622,7 +633,7 @@ class JobCardEntryController extends Controller
     {
         $jobCard = JobCardEntry::with([
             'brand',
-            'fabricDetails',
+            'fabricDetails.quantities',
             'purchaseOrder.items.brand',
             'purchaseOrder.items.uom',
             'purchaseOrder.items.style',
@@ -658,10 +669,8 @@ class JobCardEntryController extends Controller
             'season', 
             'processGroup', 
             'cuttingSizeRatios', 
-            'fabricDetails', 
+            'fabricDetails.quantities', 
             'images', 
-            'operations.operationStage', 
-            'operations.employee',
             'cuttingMaster',
             'sizeRatio'
         ])->findOrFail($id);
