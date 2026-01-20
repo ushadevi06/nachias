@@ -196,18 +196,15 @@ class PurchaseOrderController extends Controller
                 $taxAmount = $request->tax_amount ?? 0;
                 
                 $totalBeforeRoundOff = round($taxableAmount + $taxAmount, 2);
-                $decimalPart = $totalBeforeRoundOff - floor($totalBeforeRoundOff);
-                $decimalPart = round($decimalPart, 2);
-    
+                $roundOffAmount = $request->round_off ?? 0;
+                $roundOffType = $request->round_off_type ?? 'Add';
+
                 $finalTotal = $totalBeforeRoundOff;
-                if ($decimalPart > 0.5) {
-                    $finalTotal = ceil($totalBeforeRoundOff);
+                if ($roundOffType === 'Add') {
+                    $finalTotal += $roundOffAmount;
+                } elseif ($roundOffType === 'Less') {
+                    $finalTotal -= $roundOffAmount;
                 }
-    
-                $roundOffDifference = $finalTotal - $totalBeforeRoundOff;
-                $roundOffAmount = abs($roundOffDifference);
-                
-                $roundOffType = ($roundOffDifference > 0) ? 'Add' : (($roundOffDifference < 0) ? 'Less' : 'Add');
 
                 $poData = [
                     'po_number' => $request->po_number,
@@ -255,6 +252,13 @@ class PurchaseOrderController extends Controller
                 }
 
                 if ($request->hasFile('additional_attachments')) {
+                    if (!empty($purchaseOrder->additional_attachments)) {
+                        $oldFilePath = public_path('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments);
+                        if (file_exists($oldFilePath)) {
+                            @unlink($oldFilePath);
+                        }
+                    }
+
                     $file = $request->file('additional_attachments');
                     $fileName = 'additional_' . time() . '.' . $file->getClientOriginalExtension();
                     $uploadPath = public_path('uploads/po/' . $purchaseOrder->id);

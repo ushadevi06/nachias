@@ -137,9 +137,9 @@
                             <table class="table align-middle">
                                 <thead class="table-primary">
                                     <tr>
-                                        <th style="min-width: 200px;">Category *</th>
+                                        <th style="min-width: 200px;">Store Category *</th>
                                         <th style="min-width: 150px;">Brand</th>
-                                        <th style="min-width: 200px;">Material *</th>
+                                        <th style="min-width: 200px;">Raw Material *</th>
                                         <th style="min-width: 150px;">Style</th>
                                         <th style="min-width: 150px;">Fabric Width</th>
                                         <th style="min-width: 100px;">UOM *</th>
@@ -158,8 +158,8 @@
                                     @foreach(old('items') as $index => $item)
                                     <tr class="item-row">
                                         <td>
-                                            <select class="select2 form-select po_store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror" name="items[{{ $index }}][store_category_id]" data-placeholder="Select Category">
-                                                <option value="">Select Category</option>
+                                            <select class="select2 form-select po_store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror" name="items[{{ $index }}][store_category_id]" data-placeholder="Select Store Category">
+                                                <option value="">Select Store Category</option>
                                                 @foreach($storeCategories as $category)
                                                 <option value="{{ $category->id }}" {{ $item['store_category_id'] == $category->id ? 'selected' : '' }}>
                                                     {{ $category->category_name }}({{ $category->code }})
@@ -182,7 +182,7 @@
                                             @enderror
                                         </td>
                                         <td>
-                                            <select class="select2 form-select material @error('items.'.$index.'.raw_material_id') is-invalid @enderror" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Material">
+                                            <select class="select2 form-select material @error('items.'.$index.'.raw_material_id') is-invalid @enderror" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Raw Material">
                                                 @if(isset($item['raw_material_id']) && $item['raw_material_id'])
                                                     @php
                                                         $selectedMaterial = \App\Models\RawMaterial::find($item['raw_material_id']);
@@ -551,7 +551,22 @@
                                             <label for="additional_attachments">Additional Attachments</label>
                                             @if($purchaseOrder && $purchaseOrder->additional_attachments)
                                             <div class="mt-2">
-                                                <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ asset('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments) }}"><i class="ri ri-image-line"></i> View</a>
+                                                @php
+                                                    $attachment = $purchaseOrder->additional_attachments;
+                                                    $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                                    $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                    $url = asset('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
+                                                @endphp
+
+                                                @if($isImage)
+                                                    <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ $url }}">
+                                                        <i class="ri ri-image-line"></i> View
+                                                    </a>
+                                                @else
+                                                    <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
+                                                        <i class="ri ri-file-text-line"></i> View
+                                                    </a>
+                                                @endif
                                             </div>
                                             @endif
                                         </div>
@@ -661,8 +676,18 @@
                                         </div>
 
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <label for="round_off" class="fw-medium">Round Off:</label>
-                                            <input type="text" class="form-control-plaintext text-end w-50" id="round_off" name="round_off" value="{{ old('round_off',$purchaseOrder->round_off ?? '') }}" readonly>
+                                            <label class="fw-medium">Round Off:</label>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-check-inline me-2">
+                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="round_off_add">Add</label>
+                                                </div>
+                                                <div class="form-check form-check-inline me-2">
+                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="round_off_less">Less</label>
+                                                </div>
+                                                <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}">
+                                            </div>
                                         </div>
 
                                         <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
@@ -899,6 +924,10 @@
             calculateTotals();
         });
 
+        $(document).on('change', 'input[name="round_off_type"]', function() {
+            calculateTotals();
+        });
+
         $(document).on('change', 'input[name="other_state"]', function() {
             toggleTaxDivs();
             calculateTotals();
@@ -954,24 +983,16 @@
 
             let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount).toFixed(2));
             
-            let finalTotal = Math.round(totalBeforeRoundOff);
+            let roundOffAmount = parseFloat($('#round_off').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let finalTotal = 0;
 
-            let roundOffDifference = finalTotal - totalBeforeRoundOff;
-            let roundOffAmount = Math.abs(roundOffDifference);
-            
-            let roundOffType = '';
-            if (roundOffDifference > 0) {
-                roundOffType = 'Add';
-                $('#round_off_type').val('Add');
-            } else if (roundOffDifference < 0) {
-                roundOffType = 'Less';
-                $('#round_off_type').val('Less');
+            if (roundOffType === 'Add') {
+                finalTotal = totalBeforeRoundOff + roundOffAmount;
             } else {
-                roundOffType = 'Add';
-                $('#round_off_type').val('Add');
+                finalTotal = totalBeforeRoundOff - roundOffAmount;
             }
 
-            $('#round_off').val(roundOffAmount.toFixed(2));
             $('#total_amount').val(finalTotal.toFixed(2));
         }
 
@@ -989,7 +1010,7 @@
        $(document).on('click', '.view-image', function () {
         let imagePath = $(this).data('image');
 
-        let imageSrc = imagePath.startsWith('http') || imagePath.startsWith('data:')
+        let imageSrc = imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('blob:')
             ? imagePath
             : APP_URL + imagePath;
 
@@ -999,19 +1020,32 @@
 
     $(document).on('change', '.file-input', function () {
         let file = this.files[0];
-        if (file) {
-            let reader = new FileReader();
-            let $container = $(this).closest('td, .file-container');
+        let $container = $(this).closest('td, .file-container');
+        
+        // Remove ONLY dynamic previews (added by JS), keeping the server-rendered "View" link
+        $container.find('.js-preview').remove();
 
-            reader.onload = function (e) {
-                $container.find('.view-image').remove();
-                $container.append(`
-                    <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="${e.target.result}">
-                        <i class="ri ri-image-line"></i> View
+        if (file) {
+            let fileUrl = URL.createObjectURL(file);
+            let fileType = file.type;
+
+            if (fileType.startsWith('image/')) {
+                 $container.append(`
+                    <a href="javascript:void(0)" class="view-image mt-1 d-block js-preview" data-image="${fileUrl}">
+                        <i class="ri ri-image-line"></i> View Selected Image
                     </a>
                 `);
-            };
-            reader.readAsDataURL(file);
+            } else if (fileType === 'application/pdf') {
+                 $container.append(`
+                    <a href="${fileUrl}" class="view-file mt-1 d-block js-preview" target="_blank">
+                        <i class="ri ri-file-pdf-line"></i> View Selected PDF
+                    </a>
+                `);
+            } else {
+                 $container.append(`
+                    <span class="text-muted small mt-1 d-block text-truncate js-preview">Selected: ${file.name}</span>
+                `);
+            }
         }
     });
     calculateTotals();

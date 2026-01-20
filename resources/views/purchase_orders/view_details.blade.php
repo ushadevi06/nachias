@@ -65,9 +65,22 @@
                             <label class="detail-title">Additional Attachments:</label>
                             <div class="text-muted">
                                 @if($purchaseOrder->additional_attachments)
-                                <a href="javascript:void(0)" class="view-image" data-image="{{ asset('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments) }}">
-                                    <i class="ri ri-image-line"></i> View
-                                </a>
+                                    @php
+                                        $attachment = $purchaseOrder->additional_attachments;
+                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                        $url = asset('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
+                                    @endphp
+
+                                    @if($isImage)
+                                        <a href="javascript:void(0)" class="view-image" data-image="{{ $url }}">
+                                            <i class="ri ri-image-line"></i> View
+                                        </a>
+                                    @else
+                                        <a href="{{ $url }}" target="_blank">
+                                            <i class="ri ri-file-text-line"></i> View
+                                        </a>
+                                    @endif
                                 @else
                                 -
                                 @endif

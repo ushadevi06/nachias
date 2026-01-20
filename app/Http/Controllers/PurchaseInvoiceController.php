@@ -240,6 +240,15 @@ class PurchaseInvoiceController extends Controller
                 }
 
                 if ($request->hasFile('auth_sign')) {
+                    // Start: Unlink Old File
+                    if ($id && !empty($invoice->auth_signature)) {
+                        $oldFilePath = public_path('uploads/purchase_invoices/' . $invoice->auth_signature);
+                        if (file_exists($oldFilePath)) {
+                            @unlink($oldFilePath);
+                        }
+                    }
+                    // End: Unlink Old File
+                    
                     $file = $request->file('auth_sign');
                     $fileName = time() . '_auth_' . $file->getClientOriginalName();
                     $file->move($uploadPath, $fileName);
@@ -247,6 +256,15 @@ class PurchaseInvoiceController extends Controller
                 }
 
                 if ($request->hasFile('attachments')) {
+                     // Start: Unlink Old File
+                     if ($id && !empty($invoice->attachments)) {
+                        $oldFilePath = public_path('uploads/purchase_invoices/' . $invoice->attachments);
+                        if (file_exists($oldFilePath)) {
+                            @unlink($oldFilePath);
+                        }
+                    }
+                    // End: Unlink Old File
+
                     $file = $request->file('attachments');
                     $fileName = time() . '_attach_' . $file->getClientOriginalName();
                     $file->move($uploadPath, $fileName);
@@ -370,7 +388,7 @@ class PurchaseInvoiceController extends Controller
                             'purchase_order_items.quantity',
                             'purchase_order_items.purchase_order_id'
                         )
-                        ->havingRaw('SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)) < purchase_order_items.quantity');
+                        ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
                 });
                 
                 if ($invoice) {
@@ -386,10 +404,7 @@ class PurchaseInvoiceController extends Controller
             $setting = \App\Models\Setting::first();
             if ($setting && $setting->purchase_invoice_prefix) {
                 $prefix = $setting->purchase_invoice_prefix;
-                $lastInvoice = PurchaseInvoice::where('invoice_no', 'like', $prefix . '%')
-                    ->orderBy('id', 'desc')
-                    ->first();
-
+                $lastInvoice = PurchaseInvoice::where('invoice_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
                 if ($lastInvoice) {
                     $lastNumberStr = substr($lastInvoice->invoice_no, strlen($prefix));
                     $lastNumber = intval($lastNumberStr);
@@ -465,7 +480,8 @@ class PurchaseInvoiceController extends Controller
                 $item->id
             )->sum('quantity');
 
-            $balanceQty = $item->quantity - $alreadyInvoicedQty;
+            // Use ROUND to avoid floating point precision issues (e.g. 9.999999 vs 10)
+            $balanceQty = round($item->quantity - $alreadyInvoicedQty, 3);
 
             if ($balanceQty <= 0) {
                 return null;

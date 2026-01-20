@@ -415,18 +415,10 @@
                                         <div class="form-floating form-floating-outline mb-3">
                                             <select id="payment_mode" name="payment_mode" class="select2 form-select @error('payment_mode') is-invalid @enderror" data-placeholder="Select Payment Mode">
                                                 <option value="">Select Payment Mode</option>
-                                                <option value="Bank Transfer" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Bank Transfer' ? 'selected' : '' }}>
-                                                    Bank Transfer
-                                                </option>
-                                                <option value="Cheque" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cheque' ? 'selected' : '' }}>
-                                                    Cheque
-                                                </option>
-                                                <option value="UPI" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'UPI' ? 'selected' : '' }}>
-                                                    UPI
-                                                </option>
-                                                <option value="Cash" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cash' ? 'selected' : '' }}>
-                                                    Cash
-                                                </option>
+                                                <option value="Bank Transfer" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Bank Transfer' ? 'selected' : '' }}>Bank Transfer</option>
+                                                <option value="Cheque" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cheque' ? 'selected' : '' }}>Cheque</option>
+                                                <option value="UPI" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'UPI' ? 'selected' : '' }}>UPI</option>
+                                                <option value="Cash" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cash' ? 'selected' : '' }}>Cash</option>
                                             </select>
                                             <label for="payment_mode">Payment Mode</label>
                                         </div>
@@ -459,34 +451,64 @@
                                         @enderror
 
                                         <div class="mb-3">
-                                            <div class="form-floating form-floating-outline mb-3">
-                                                <input type="file" class="form-control @error('auth_sign') is-invalid @enderror" id="auth_sign" name="auth_sign" accept="image/*">
+                                            <div class="form-floating form-floating-outline text-black">
+                                                <input type="file" class="form-control @error('auth_sign') is-invalid @enderror" id="auth_sign" name="auth_sign" accept="*">
                                                 <label for="auth_sign">Authorized Signature / Stamp Upload</label>
+                                                @if(!empty($invoice->auth_signature))
+                                                <div class="mt-2">
+                                                    @php
+                                                        $attachment = $invoice->auth_signature;
+                                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                        $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
+                                                    @endphp
+
+                                                    @if($isImage)
+                                                        <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ $url }}">
+                                                            <i class="ri ri-image-line"></i> View
+                                                        </a>
+                                                    @else
+                                                        <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
+                                                            <i class="ri ri-file-text-line"></i> View
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                                @endif
                                             </div>
-
-                                            @if(!empty($invoice->auth_signature))
-                                            <a href="javascript:void(0)" class="view-image mt-1 d-inline-block" data-image="{{ url('uploads/purchase_invoices/' . $invoice->auth_signature) }}">
-                                                <i class="ri ri-attachment-2"></i> View
-                                            </a>
-                                            @endif
-
                                             @error('auth_sign')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
                                         </div>
 
-                                        <div class="form-floating form-floating-outline mb-3">
-                                            <input type="file" class="form-control @error('attachments') is-invalid @enderror" id="attachments" name="attachments">
-                                            <label for="attachments">Attachments</label>
+                                        <div class="mb-3">
+                                            <div class="form-floating form-floating-outline text-black">
+                                                <input type="file" class="form-control @error('attachments') is-invalid @enderror" id="attachments" name="attachments">
+                                                <label for="attachments">Attachments</label>
+                                                @if(!empty($invoice->attachments))
+                                                <div class="mt-2">
+                                                    @php
+                                                        $attachment = $invoice->attachments;
+                                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                        $url = url('uploads/purchase_invoices/' . $invoice->attachments);
+                                                    @endphp
+
+                                                    @if($isImage)
+                                                        <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ $url }}">
+                                                            <i class="ri ri-image-line"></i> View
+                                                        </a>
+                                                    @else
+                                                        <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
+                                                            <i class="ri ri-file-text-line"></i> View
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                                @endif
+                                            </div>
+                                            @error('attachments')
+                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                            @enderror
                                         </div>
-                                        @if(!empty($invoice->attachments))
-                                        <a href="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}" target="_blank" class="mt-1 d-inline-block">
-                                            <i class="ri ri-attachment-2"></i> View
-                                        </a>
-                                        @endif
-                                        @error('attachments')
-                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                        @enderror
                                     </div>
                                 </div>
                             </div>
@@ -514,7 +536,6 @@
                             <div class="col-lg-6">
                                 <div class="p-3">
                                     <h5 class="fw-semibold mb-3">Invoice Summary</h5>
-
                                     {{-- Sub Total --}}
                                     <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Sub total:</span>
@@ -600,7 +621,6 @@
                                                 <span>%</span>
                                                 <strong id="sgst_amt">{{ number_format($sgstAmount, 2) }}</strong>
                                                 <input type="hidden" name="sgst_amount" id="sgst_amount_input" value="{{ $sgstAmount }}">
-
                                             </div>
                                         </div>
                                         @error('sgst_percent')
@@ -627,10 +647,18 @@
 
                                     {{-- Round Off --}}
                                     <div class="d-flex justify-content-between py-2 border-bottom">
-                                        <span>Round Off:</span>
-                                        <strong id="round_off_display">{{ number_format($roundOff, 2) }}</strong>
-                                        <input type="hidden" name="round_off" id="round_off_input" value="{{ $roundOff }}">
-                                        <input type="hidden" name="round_off_type" id="round_off_type" value="{{ $roundOffType }}">
+                                        <label class="fw-semibold">Round Off:</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="form-check form-check-inline m-0">
+                                                <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ $roundOffType == 'Add' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="round_off_add">Add</label>
+                                            </div>
+                                            <div class="form-check form-check-inline m-0">
+                                                <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ $roundOffType == 'Less' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="round_off_less">Less</label>
+                                            </div>
+                                            <input type="number" class="form-control form-control-sm text-end" style="width: 80px;" id="round_off_input" name="round_off" value="{{ $roundOff }}" step="0.01" min="0">
+                                        </div>
                                     </div>
 
                                     {{-- Grand Total --}}
@@ -643,8 +671,8 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
 
-                                    @if(isset($invoice))
                                     {{-- Paid So Far --}}
+                                    @if(isset($invoice))
                                     <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Paid So Far:</span>
                                         <div class="d-flex align-items-center">
@@ -726,10 +754,32 @@
     </div>
 </div>
 @endif
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="Preview">
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @endsection
 @section('scripts')
 <script>
     $(document).ready(function() {
+        $(document).on('click', '.view-image', function() {
+            let imageUrl = $(this).data('image');
+            $('#modalImage').attr('src', imageUrl);
+            $('#imageModal').modal('show');
+        });
         $('.select2').select2({
             width: '100%',
             dropdownParent: $('body')
@@ -780,7 +830,6 @@
 
                             let itemsHtml = "";
                             response.items.forEach(function(item, index) {
-                                // Calculate balanced qty
                                 const balancedQty = item.qty_ordered - item.qty_invoiced;
 
                                 itemsHtml += `
@@ -901,7 +950,6 @@
             }
         });
 
-        // Add this event handler to auto-calculate balanced qty when received qty changes
         $(document).on('input', '.received-qty-input', function() {
             const $row = $(this).closest('tr');
             const receivedQty = parseFloat($(this).val()) || 0;
@@ -1033,7 +1081,7 @@
                 let val = parseFloat($(this).val());
                 if (val < 0) $(this).val(Math.abs(val));
             }
-            calculateGrandTotalOnly();
+            calculateSummaryOnly();
         });
 
         function calculateGrandTotalOnly() {
@@ -1121,16 +1169,20 @@
             $('#other_charges').text(otherCharges.toFixed(2));
             $('#other_charges_input').val(otherCharges.toFixed(2));
 
-            let totalBeforeRoundOff = taxableAmount + taxAmount + otherCharges;
-            let finalTotal = Math.round(totalBeforeRoundOff);
-            let roundOffDifference = finalTotal - totalBeforeRoundOff;
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
             
-            let roundOffAmount = Math.abs(roundOffDifference);
-            let roundOffType = roundOffDifference >= 0 ? 'Add' : 'Less';
+            let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let finalTotal = 0;
 
-            $('#round_off_display').text(roundOffAmount.toFixed(2));
-            $('#round_off_input').val(roundOffAmount.toFixed(2));
-            $('#round_off_type').val(roundOffType);
+            if (roundOffType === 'Add') {
+                finalTotal = totalBeforeRoundOff + roundOffAmount;
+            } else {
+                finalTotal = totalBeforeRoundOff - roundOffAmount;
+            }
+
+            // $('#round_off_display').text(roundOffAmount.toFixed(2)); // Removed display element
+            // $('#round_off_input').val(roundOffAmount.toFixed(2)); // Don't overwrite user input
 
             $('#grand_total').text(finalTotal.toFixed(2));
             $('#grand_total_input').val(finalTotal.toFixed(2));
@@ -1362,17 +1414,17 @@
 
             let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
             
-            // ✅ Automated Round Off
             let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
-            let finalTotal = Math.round(totalBeforeRoundOff);
-            let roundOffDifference = finalTotal - totalBeforeRoundOff;
             
-            let roundOffAmount = Math.abs(roundOffDifference);
-            let roundOffType = roundOffDifference >= 0 ? 'Add' : 'Less';
+            let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let finalTotal = 0;
 
-            $('#round_off_display').text(roundOffAmount.toFixed(2));
-            $('#round_off_input').val(roundOffAmount.toFixed(2));
-            $('#round_off_type').val(roundOffType);
+            if (roundOffType === 'Add') {
+                finalTotal = totalBeforeRoundOff + roundOffAmount;
+            } else {
+                finalTotal = totalBeforeRoundOff - roundOffAmount;
+            }
 
             $('#grand_total').text(finalTotal.toFixed(2));
             $('#grand_total_input').val(finalTotal.toFixed(2));
@@ -1459,15 +1511,20 @@
             
             // Automated Round Off
             let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
-            let finalTotal = Math.round(totalBeforeRoundOff);
-            let roundOffDifference = finalTotal - totalBeforeRoundOff;
             
-            let roundOffAmount = Math.abs(roundOffDifference);
-            let roundOffType = roundOffDifference >= 0 ? 'Add' : 'Less';
+            let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let finalTotal = 0;
 
-            $('#round_off_display').text(roundOffAmount.toFixed(2));
-            $('#round_off_input').val(roundOffAmount.toFixed(2));
-            $('#round_off_type').val(roundOffType);
+            if (roundOffType === 'Add') {
+                finalTotal = totalBeforeRoundOff + roundOffAmount;
+            } else {
+                finalTotal = totalBeforeRoundOff - roundOffAmount;
+            }
+
+            // $('#round_off_display').text(roundOffAmount.toFixed(2));
+            // $('#round_off_input').val(roundOffAmount.toFixed(2));
+            // $('#round_off_type').val(roundOffType);
 
             $('#grand_total').text(finalTotal.toFixed(2));
             $('#grand_total_input').val(finalTotal.toFixed(2));
@@ -1525,8 +1582,66 @@
         });
         @endif
 
+        // Recalculate when round off type changes (Delegated Event for robustness)
+        $(document).on('change', 'input[name="round_off_type"]', function() {
+            calculateSummaryOnly();
+        });
+
     });
 </script>
+<script>
+    $(document).ready(function() {
+        // ... (existing scripts) ... 
+        
+        // Image Preview Modal Logic
+        $(document).on('click', '.view-image', function () {
+            let imagePath = $(this).data('image');
+            let imageSrc = imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('blob:')
+                ? imagePath
+                : "{{ url('/') }}/" + imagePath;
 
+            $('#modalImage').attr('src', imageSrc);
+            $('#imageModal').modal('show');
+        });
 
+        // File Input Change Handler (New Uploads)
+        $('#auth_sign, #attachments').on('change', function () {
+            let file = this.files[0];
+            let $container = $(this).parent(); // Adjust based on HTML structure if needed
+            
+            // Remove ONLY dynamic previews (added by JS), keeping any server-rendered "View" link
+            $container.find('.js-preview').remove();
+
+            if (file) {
+                let fileUrl = URL.createObjectURL(file);
+                let fileType = file.type;
+
+                if (fileType.startsWith('image/')) {
+                     $container.append(`
+                        <div class="mt-2 js-preview">
+                            <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="${fileUrl}">
+                                <i class="ri ri-image-line"></i> View Selected Image
+                            </a>
+                        </div>
+                    `);
+                } else if (fileType === 'application/pdf') {
+                     $container.append(`
+                        <div class="mt-2 js-preview">
+                            <a href="${fileUrl}" class="mt-1 d-block" target="_blank">
+                                <i class="ri ri-file-pdf-line"></i> View Selected PDF
+                            </a>
+                        </div>
+                    `);
+                } else {
+                     $container.append(`
+                        <div class="mt-2 js-preview">
+                            <span class="text-muted small mt-1 d-block text-truncate">Selected: ${file.name}</span>
+                        </div>
+                    `);
+                }
+            }
+        });
+        
+    });
+</script>
 @endsection

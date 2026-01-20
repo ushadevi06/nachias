@@ -193,7 +193,22 @@
                             <label class="detail-title">Attachments:</label>
                             <div class="text-muted">
                                 @if($invoice->attachments != '')
-                                <img src="{{ url('uploads/purchase_invoices/' . $invoice->attachments) }}" alt="document" class="detail-img">
+                                    @php
+                                        $attachment = $invoice->attachments;
+                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                        $url = url('uploads/purchase_invoices/' . $attachment);
+                                    @endphp
+                                    
+                                    @if($isImage)
+                                        <a href="javascript:void(0)" class="view-image" data-image="{{ $url }}">
+                                            <i class="ri ri-image-line"></i> View
+                                        </a>
+                                    @else
+                                        <a href="{{ $url }}" target="_blank">
+                                            <i class="ri ri-file-text-line"></i> View
+                                        </a>
+                                    @endif
                                 @else
                                 -
                                 @endif
@@ -203,7 +218,22 @@
                             <label class="detail-title">Authorized Signature:</label>
                             <div class="text-muted">
                                 @if($invoice->auth_signature != '')
-                                <img src="{{ url('uploads/purchase_invoices/' . $invoice->auth_signature) }}" alt="signature" class="detail-img">
+                                    @php
+                                        $attachment = $invoice->auth_signature;
+                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                        $url = url('uploads/purchase_invoices/' . $attachment);
+                                    @endphp
+                                    
+                                    @if($isImage)
+                                        <a href="javascript:void(0)" class="view-image" data-image="{{ $url }}">
+                                            <i class="ri ri-image-line"></i> View
+                                        </a>
+                                    @else
+                                        <a href="{{ $url }}" target="_blank">
+                                            <i class="ri ri-file-text-line"></i> View
+                                        </a>
+                                    @endif
                                 @else
                                 -
                                 @endif
@@ -222,4 +252,31 @@
         </div>
     </div>
 </div>
+
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="Preview">
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        $(document).on('click', '.view-image', function() {
+            let imageUrl = $(this).data('image');
+            $('#modalImage').attr('src', imageUrl);
+            $('#imageModal').modal('show');
+        });
+    });
+</script>
 @endsection
