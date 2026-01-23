@@ -52,7 +52,7 @@
                                     <thead>
                                         <tr>
                                             <th>S.No</th>
-                                            <th>Item</th>
+                                            <th>Raw Material</th>
                                             <th>HSN Code</th>
                                             <th>Quantity</th>
                                             <th>Rate</th>

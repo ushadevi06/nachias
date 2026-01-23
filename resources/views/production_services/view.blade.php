@@ -30,6 +30,8 @@
                                     <th>Service Name</th>
                                     <th>Service Code</th>
                                     <th>Production Stage</th>
+                                    <th>Applies To</th>
+                                    <th>Multiplier</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -56,6 +58,8 @@
                 { data: 'service_name' },
                 { data: 'service_code' },
                 { data: 'operation_stage' },
+                { data: 'applies_to' },
+                { data: 'multiplier' },
                 {
                     data: 'status',
                     orderable: false,

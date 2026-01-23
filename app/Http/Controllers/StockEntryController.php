@@ -28,8 +28,6 @@ class StockEntryController extends Controller
 
         if ($request->ajax()) {
             $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory']);
-
-            // Filters
             if ($request->material_category) {
                 $query->whereHas('stockEntryItems', function($q) use ($request) {
                     $q->where('store_category_id', $request->material_category);
@@ -92,9 +90,6 @@ class StockEntryController extends Controller
         return view('stock_entry.view', compact('storeCategories', 'rawMaterials'));
     }
 
-    /**
-     * Add/Edit stock entry (single item form - matching original UI)
-     */
     public function add(Request $request, $id = null)
     {
         if ($id) {
@@ -176,7 +171,6 @@ class StockEntryController extends Controller
                     'price' => $request->price ?? 0,
                 ];
 
-                // Handle file upload
                 if ($request->hasFile('reference_document')) {
                     $file = $request->file('reference_document');
                     $filename = 'stock_ref_' . time() . '.' . $file->getClientOriginalExtension();
@@ -249,9 +243,6 @@ class StockEntryController extends Controller
         return view('stock_entry.add', compact('stockEntry', 'grnEntries', 'storeCategories', 'rawMaterials', 'storeLocations', 'uoms', 'nextStockNo', 'savedItems'));
     }
 
-    /**
-     * View stock entry details
-     */
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view_details stock entries')) {
@@ -273,9 +264,6 @@ class StockEntryController extends Controller
         return view('stock_entry.view_details', compact('stockEntry'));
     }
 
-    /**
-     * Delete (soft delete) stock entry
-     */
     public function delete($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete stock entries')) {
@@ -290,13 +278,10 @@ class StockEntryController extends Controller
         return response()->json(['success' => true, 'message' => 'Stock Entry deleted successfully']);
     }
 
-    /**
-     * AJAX: Get GRN entry items for populating stock entry
-     */
+    
     public function getGrnEntryItems($grn_entry_id)
     {
         $stockEntryId = request('stock_entry_id');
-
         $grnEntry = GrnEntry::with([
             'grnEntryItems.purchaseInvoiceItem.rawMaterial.storeCategory',
             'grnEntryItems.storeLocation',
@@ -306,21 +291,18 @@ class StockEntryController extends Controller
 
         $items = $grnEntry->grnEntryItems
             ->filter(function($item) use ($stockEntryId) {
-                // We show the item if it has balance qty OR if it is already part of THIS stock entry (edit mode)
                 $stockQty = $item->stockEntryItems->sum('qty_in');
                 return $stockQty < $item->qty_accepted || ($stockEntryId && $item->stockEntryItems->contains('stock_entry_id', $stockEntryId));
             })
             ->values() 
             ->map(function($item) use ($stockEntryId) {
-                // Fallback logic: Try to get data from PurchaseInvoiceItem, but handle if null
                 $piItem = $item->purchaseInvoiceItem ?? null;
                 $rawMaterial = $piItem ? $piItem->rawMaterial : null;
 
-                // Prepare data with fallbacks
-                $rawMaterialId = $rawMaterial ? $rawMaterial->id : ($item->raw_material_id ?? null); // In case GrnEntryItem has raw_material_id directly
+                $rawMaterialId = $rawMaterial ? $rawMaterial->id : ($item->raw_material_id ?? null); 
                 $rawMaterialName = $rawMaterial 
                     ? ($rawMaterial->name . ' (' . $rawMaterial->code . ')') 
-                    : ($item->raw_material_name ?? 'Unknown Material'); // Fallback name if available
+                    : ($item->raw_material_name ?? 'Unknown Material'); 
 
                 $storeCategoryId = $rawMaterial ? $rawMaterial->store_category_id : null;
                 $storeCategoryName = ($rawMaterial && $rawMaterial->storeCategory)
@@ -330,7 +312,6 @@ class StockEntryController extends Controller
                 $uomId = $piItem ? $piItem->uom_id : ($item->uom_id ?? null);
                 $uomName = ($piItem && $piItem->uom) ? $piItem->uom->uom_code : '-';
                 
-                // Allow rate to come from PI item or directly from GRN item if stored there
                 $rate = $piItem ? $piItem->rate : ($item->rate ?? 0);
 
                 return [
@@ -341,11 +322,10 @@ class StockEntryController extends Controller
                     'raw_material_name' => $rawMaterialName,
                     'store_category_id' => $storeCategoryId,
                     'store_category_name' => $storeCategoryName,
-                    'store_location_id' => $item->store_location_id, // Directly from GRN Item
+                    'store_location_id' => $item->store_location_id, 
                     'store_location_name' => $item->storeLocation->store_location ?? '-',
                     'uom_id' => $uomId,
                     'uom_name' => $uomName,
-                    // Available Qty = Total Accepted - (Used by OTHER entries)
                     'qty_accepted' => $item->qty_accepted - $item->stockEntryItems->where('stock_entry_id', '!=', $stockEntryId)->sum('qty_in'),
                     'rate' => $rate,
                 ];

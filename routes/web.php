@@ -73,6 +73,7 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\ProductionServiceController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\ResourceController;
+use App\Http\Controllers\ProductionReceiptController;
 
 /*
 |--------------------------------------------------------------------------
@@ -383,6 +384,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('job_card_entries/delete/{id}', [JobCardEntryController::class, 'destroy']);
     Route::get('job_card_entries/get-size-ratio/{id}', [JobCardEntryController::class, 'getSizeRatioDetails']);
     Route::get('job_card_entries/get-po-details/{id}', [JobCardEntryController::class, 'getPoDetails']);
+    Route::get('job_card_entries/get_items_by_store_category', [JobCardEntryController::class, 'getItemsByStoreCategory']);
+    Route::get('job_card_entries/get_items_by_brand_category', [JobCardEntryController::class, 'getItemsByBrandCategory']);
     Route::delete('job_card_entries/delete-image/{id}', [JobCardEntryController::class, 'deleteImage']);
     Route::get('job_card_entries/view-item/{id}', [JobCardEntryController::class, 'view_jc_item']);
     Route::post('job_card_entries/issue-items/{id}', [JobCardEntryController::class, 'issue_items'])->name('job_card_entries.issue_items');
@@ -392,12 +395,31 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Production */
     Route::get('productions', [ProductionController::class, 'index']);
-    Route::get('add_production', [ProductionController::class, 'add']);
-    Route::get('view_production', [ProductionController::class, 'view']);
-    Route::get('task_management', [TaskManagementController::class, 'index']);
-    Route::get('add_task_management', [TaskManagementController::class, 'add']);
-    Route::get('view_task_management', [TaskManagementController::class, 'view1']);
-    Route::get('view_task_details', [TaskManagementController::class, 'view_details']);
+    Route::match(['GET', 'POST'], 'productions/add/{id?}', [ProductionController::class, 'add']);
+    Route::get('productions/get-job-card-details/{id}', [ProductionController::class, 'getJobCardDetails']);
+    Route::get('productions/get-services/{stage}/{id}', [ProductionController::class, 'getServices']);
+    Route::get('view_production/{id}', [ProductionController::class, 'view']);
+    Route::get('task_management', [TaskManagementController::class, 'index']); 
+    Route::match(['GET', 'POST'], 'task_management/add/{id}', [TaskManagementController::class, 'add'])->name('task_management.edit');
+    Route::match(['GET', 'POST'], 'task_management/create', [TaskManagementController::class, 'add'])->name('task_management.add');
+    Route::get('task_management/view/{id}', [TaskManagementController::class, 'view']);
+    Route::get('task_management/delete/{id}', [TaskManagementController::class, 'destroy']);
+    Route::post('task_management/update-status', [TaskManagementController::class, 'updateStatus'])->name('task_management.update_status');
+
+    /* Task Receive */
+    Route::get('task_receives', [TaskManagementController::class, 'receive_index'])->name('task_receives.index');
+    Route::match(['GET', 'POST'], 'task_receives/add/{id?}', [TaskManagementController::class, 'receive_add'])->name('task_receives.add');
+    Route::get('task_receives/delete/{id}', [TaskManagementController::class, 'receive_destroy']);
+    Route::get('task_receives/get-task-details/{id}', [TaskManagementController::class, 'getTaskDetails']);
+
+    /* Task Adjustment */
+    Route::post('task_adjustments/add/{id?}', [TaskManagementController::class, 'adjustment_add'])->name('task_adjustments.add');
+
+    /* Production Receipts */
+    Route::get('production_receipts', [ProductionReceiptController::class, 'index']);
+    Route::match(['GET', 'POST'], 'production_receipts/add/{id?}', [ProductionReceiptController::class, 'add']);
+    Route::get('production_receipts/get-job-card-details/{id}', [ProductionReceiptController::class, 'getJobCardDetails']);
+    Route::get('production_receipts/delete/{id}', [ProductionReceiptController::class, 'destroy']);
 
     /* Shifts */
     Route::get('shifts', [ShiftController::class, 'index']);
@@ -448,7 +470,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     /* Task Tracking & Monitoring */
     Route::get('task_tracking_monitoring', [TaskTrackingMonitoringController::class, 'index']);
     Route::get('add_task_tracking_monitoring', [TaskTrackingMonitoringController::class, 'add']);
-    Route::get('view_task_tracking_monitoring', [TaskTrackingMonitoringController::class, 'view']);
+    Route::get('view_task_tracking_monitoring/{id}', [TaskTrackingMonitoringController::class, 'view']);
 
     /* Task Status Update */
     Route::get('task_status_updates', [TaskStatusUpdateController::class, 'index']);

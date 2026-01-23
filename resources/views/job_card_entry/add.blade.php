@@ -254,6 +254,38 @@
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
+                            <h4>Item Details</h4>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="brand_category_id" name="brand_category_id" class="form-select select2" data-placeholder="Select Brand Category">
+                                        <option value="">Select Brand Category</option>
+                                        @foreach($brandCategories as $cat)
+                                            <option value="{{ $cat->id }}" {{ (old('brand_category_id', $jobCard ? $jobCard->brand_category_id : '') == $cat->id) ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="brand_category_id">Brand Category</label>
+                                </div>
+                                @error('brand_category_id') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="item_id" name="item_id" class="form-select select2" data-placeholder="Select Item">
+                                        <option value="">Select Item</option>
+                                    </select>
+                                    <label for="item_id">Item</label>
+                                </div>
+                                @error('item_id') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="card-header-box">
                             <h4>Tailoring Specification</h4>
                         </div>
                         <div class="row g-4">
@@ -427,7 +459,7 @@
                                     @endphp
                                     
                                     {{-- QTY - F/S ROW --}}
-                                    <tr class="qty-fs-row" style="{{ $hasFS ? '' : 'display:none;' }}">
+                                    <tr class="qty-fs-row">
                                         <td><strong>QTY - F/S</strong></td>
                                         @foreach($sizes as $idx => $s)
                                             @php
@@ -451,7 +483,7 @@
                                     </tr>
 
                                     {{-- INFO ROW (F/S) --}}
-                                    <tr class="qty-fs-info-row" style="{{ $hasFS ? '' : 'display:none;' }}">
+                                    <tr class="qty-fs-info-row">
                                         <td><strong>{{ $fsInfoLabel }}</strong></td>
                                         <td colspan="{{ count($sizes) }}">
                                             <input type="text" name="matrix_items_info[fs]" class="form-control form-control-sm text-center text-muted" value="{{ $sizeStr }}">
@@ -460,7 +492,7 @@
                                     </tr>
 
                                     {{-- QTY - H/S ROW --}}
-                                    <tr class="qty-hs-row" style="{{ $hasHS ? '' : 'display:none;' }}">
+                                    <tr class="qty-hs-row">
                                         <td><strong>QTY - H/S</strong></td>
                                         @foreach($sizes as $idx => $s)
                                             @php
@@ -483,11 +515,11 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="text-end mt-3" id="trigger-sync-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
+                        {{-- <div class="text-end mt-3" id="trigger-sync-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
                             <button type="button" class="btn btn-primary" id="trigger-sync">
                                 <i class="ri ri-play-circle-line me-1"></i> GO
                             </button>
-                        </div>
+                        </div> --}} 
                     </div>
                 </div>
                 
@@ -678,6 +710,7 @@
 <script>
     $(document).ready(function() {
         const oldFabrics = @json(old('fabrics', []));
+        const oldMatrix = @json(old('article_matrix', []));
         const existingImages = @json($jobCard && $jobCard->images ? $jobCard->images : []);
         const existingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails : []);
         const existingCuttingRatios = @json(old('matrix_items', $jobCard && $jobCard->cuttingSizeRatios ? $jobCard->cuttingSizeRatios : []));
@@ -723,6 +756,52 @@
             });
         });
 
+        function resetItemSelect(selectedId = null) {
+            const $item = $('#item_id');
+            $item.empty().append('<option value="">Select Item</option>');
+            if (selectedId) {
+                $item.val(String(selectedId)).trigger('change');
+            } else {
+                $item.val('').trigger('change');
+            }
+        }
+
+        function loadItemsByBrandCategory(brandCategoryId, selectedItemId = null) {
+            if (!brandCategoryId) {
+                resetItemSelect();
+                return;
+            }
+
+            $.get(`{{ url('job_card_entries/get_items_by_brand_category') }}`, { brand_category_id: brandCategoryId }, function(res) {
+                const items = res && res.items ? res.items : [];
+                const $item = $('#item_id');
+                $item.empty().append('<option value="">Select Item</option>');
+                items.forEach(it => {
+                    const text = it.code ? `${it.name} (${it.code})` : it.name;
+                    $item.append(`<option value="${it.id}">${text}</option>`);
+                });
+                if (selectedItemId) {
+                    $item.val(String(selectedItemId)).trigger('change');
+                } else {
+                    $item.val('').trigger('change');
+                }
+            }).fail(function() {
+                resetItemSelect();
+            });
+        }
+
+        $('#brand_category_id').on('change', function() {
+            loadItemsByBrandCategory($(this).val(), null);
+        });
+
+        const initialBrandCategoryId = $('#brand_category_id').val();
+        const initialItemId = @json(old('item_id', $jobCard ? $jobCard->item_id : null));
+        if (initialBrandCategoryId) {
+            loadItemsByBrandCategory(initialBrandCategoryId, initialItemId);
+        } else {
+            resetItemSelect(initialItemId);
+        }
+
         const initialPoId = $('#purchase_order').val();
         if (initialPoId) {
             $.get(`{{ url('job_card_entries/get-po-details') }}/${initialPoId}`, function(data) {
@@ -740,8 +819,6 @@
                 }
             });
         }
-
-
 
         function renderArticleQtyMatrix(artNumbers, activeFsSizes = [], activeHsSizes = []) {
             const $table = $('#article-qty-matrix');
@@ -771,13 +848,16 @@
 
             artNumbers.forEach((art, index) => {
                 const existingRow = isEditMode && existingMatrix.length > 0  ? existingMatrix.find(r => String(r.art_no).trim() == String(art).trim()) : null;
+                const oldRow = oldMatrix && oldMatrix.length > 0 ? (oldMatrix.find(r => String(r.art_no).trim() == String(art).trim()) || oldMatrix[index]) : null;
                     
                 let rowHtml = `<tr>
                                 <td><input type="text" name="article_matrix[${index}][art_no]" class="form-control form-control-sm text-center" value="${art}" readonly></td>`;
                 
                 activeFsSizes.forEach(s => {
                     let fsVal = '';
-                    if (existingRow && existingRow.quantities) {
+                    if (oldRow && oldRow[`fs_${s}`] !== undefined) {
+                        fsVal = oldRow[`fs_${s}`];
+                    } else if (existingRow && existingRow.quantities) {
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
                     }
@@ -786,7 +866,9 @@
 
                 activeHsSizes.forEach(s => {
                     let hsVal = '';
-                    if (existingRow && existingRow.quantities) {
+                    if (oldRow && oldRow[`hs_${s}`] !== undefined) {
+                        hsVal = oldRow[`hs_${s}`];
+                    } else if (existingRow && existingRow.quantities) {
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
                     }
@@ -906,6 +988,7 @@
                 $('#process_group_id').val(currentProcessGroupId);
                 renderCuttingSizeTable(currentSizes, currentRatios);
                 updateQuantityRowVisibility();
+                syncMatrixWithMasterTable(false);
                 $('.qty-input').first().trigger('input'); 
                 bootstrap.Modal.getInstance(document.getElementById('processGroupModal')).hide();
             }
@@ -1089,8 +1172,8 @@
             };
 
             const fsInfoLabel = name.includes('OTHERS') ? 'QTY - F/S' : 'SIZE';
-            addTypeRows('fs', 'QTY - F/S', hasFS, true, fsInfoLabel);
-            addTypeRows('hs', 'QTY - H/S', hasHS, false);
+            addTypeRows('fs', 'QTY - F/S', true, true, fsInfoLabel);
+            addTypeRows('hs', 'QTY - H/S', true, false);
 
             syncSummaryToHeader(); 
         }
@@ -1101,8 +1184,7 @@
             const hasHS = !currentProcessGroup || name.includes('H/S') || name.includes('HALF');
             $('#total_qty_fs').closest('.col-md-6').toggle(hasFS);
             $('#total_qty_hs').closest('.col-md-6').toggle(hasHS);
-            $('.qty-fs-row, .qty-fs-info-row').toggle(hasFS);
-            $('.qty-hs-row').toggle(hasHS);
+            // No longer hiding master table rows here
         }
 
 
@@ -1146,22 +1228,14 @@
         }
 
 
-        // Removed Live Sync as requested to prevent auto-filling as user types in Master Table
-        /*
         $(document).on('input', '.qty-direct-input', function() {
-            const type = $(this).data('type');
-            const size = $(this).data('size');
-            const val = $(this).val();
-            
-            $(`#article-qty-matrix tbody .qty-input[data-col="${type}-${size}"]`).val(val);
-            
-            calculateMatrixTotals();
+            syncMatrixWithMasterTable(true);
         });
-        */
 
         function syncMatrixWithMasterTable(populateValues = true) {
             const activeFsSizes = [];
             const activeHsSizes = [];
+            
             $('.qty-direct-input[data-type="fs"]').each(function() {
                 const val = parseFloat($(this).val()) || 0;
                 const size = $(this).data('size');
@@ -1169,6 +1243,7 @@
                     activeFsSizes.push(size);
                 }
             });
+            
             $('.qty-direct-input[data-type="hs"]').each(function() {
                 const val = parseFloat($(this).val()) || 0;
                 const size = $(this).data('size');

@@ -112,9 +112,9 @@
                                     <thead>
                                         <tr>
                                             <th>S.No</th>
-                                            <th>Category</th>
+                                            <th>Store Category</th>
                                             <th>Brand</th>
-                                            <th>Material (Code)</th>
+                                            <th>Raw Material (Code)</th>
                                             <th>Fabric Width</th>
                                             <th>Supplier Design Name</th>
                                             <th>Quantity</th>

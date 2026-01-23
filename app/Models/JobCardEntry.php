@@ -17,6 +17,7 @@ use App\Models\ProcessGroup;
 use App\Models\SizeRatio;
 use App\Models\User;
 use App\Models\JobCardIssueItem;
+use App\Models\Item;
 
 class JobCardEntry extends Model
 {
@@ -29,7 +30,7 @@ class JobCardEntry extends Model
         'cuff_type', 'pocket_type', 'bottom_cut', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',
         'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'average', 'remarks', 'status', 
-        'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label'
+        'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label', 'brand_category_id', 'item_id'
     ];
 
     public function cuttingMaster()
@@ -105,5 +106,10 @@ class JobCardEntry extends Model
     public function issueItems()
     {
         return $this->hasMany(JobCardIssueItem::class);
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(Item::class);
     }
 }

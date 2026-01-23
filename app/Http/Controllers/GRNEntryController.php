@@ -93,18 +93,16 @@ class GrnEntryController extends Controller
     {
         if ($id) {
             if (auth()->id() != 1 && !auth()->user()->can('edit grn-entry')) {
-                 return unauthorizedRedirect();
+                return unauthorizedRedirect();
             }
             $grn = GrnEntry::with(['grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'purchaseInvoice.purchaseOrder'])->findOrFail($id);
-            // Filter: Show if any item has balance, OR it's the current invoice of this GRN
             $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) use ($id) {
                 $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.grn_entry_id != ? AND grn_entry_items.deleted_at IS NULL)', [$id]);
             })->orWhere('id', $grn->purchase_invoice_id)->orderBy('invoice_no')->get();
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create grn-entry')) {
-                 return unauthorizedRedirect();
+                return unauthorizedRedirect();
             }
-            // Filter: Show only if any item has balance (Ordered > Total Received)
             $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) {
                 $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.deleted_at IS NULL)');
             })->orderBy('invoice_no')->get();

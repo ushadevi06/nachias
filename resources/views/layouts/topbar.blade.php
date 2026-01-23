@@ -388,6 +388,16 @@ $isSuper = $user->id == 1;
                                                     </a>
                                                 </li>
                                                 @endif
+                                                  <li class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
+                                                    <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
+                                                        <div>Stitch Commission Agent</div>
+                                                    </a>
+                                                </li>
+                                                  <li class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
+                                                    <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
+                                                        <div>Iron Commission Agent</div>
+                                                    </a>
+                                                </li>
                                             </ul>
                                         </li>
                                         @endif
@@ -435,6 +445,11 @@ $isSuper = $user->id == 1;
                                                     </a>
                                                 </li>
                                                 @endif
+                                                <li class="menu-item {{ request()->is('items*') ? 'active' : '' }}">
+                                                    <a href="{{ url('items') }}" class="menu-link">
+                                                        <div>Items</div>
+                                                    </a>
+                                                </li>
                                             </ul>
                                         </li>
                                         @endif
@@ -515,7 +530,7 @@ $isSuper = $user->id == 1;
 
                                 {{-- Production --}}
                                 @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card') || $user->can('view task-management')))
-                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('add_production*')) ? 'active' : '' }}">
+                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('production_receipts*') || request()->is('add_production*') || request()->is('task_management*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-inbox-line"></i>
                                         <div>Production</div>
@@ -544,6 +559,12 @@ $isSuper = $user->id == 1;
                                             </a>
                                         </li>
                                         @endif
+                                        
+                                        <li class="menu-item {{ request()->is('production_receipts*') ? 'active' : '' }}">
+                                            <a href="{{ url('production_receipts') }}" class="menu-link">
+                                                <div>Production Receipts</div>
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
                                 @endif
@@ -772,4 +793,74 @@ $isSuper = $user->id == 1;
                         </div>
                         <a href="#" class="menu-horizontal-next"></a>
                     </div>
-                </aside>
+                </aside> 
+<!-- <script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const toggles = document.querySelectorAll('.menu-link.menu-toggle');
+    const menuWrapper = document.getElementById('layout-menu');
+
+    toggles.forEach(toggle => {
+        toggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const menuItem = this.closest('.menu-item');
+
+            // close siblings
+            menuItem.parentElement
+                .querySelectorAll(':scope > .menu-item.menu-open')
+                .forEach(i => i !== menuItem && i.classList.remove('menu-open'));
+
+            menuItem.classList.toggle('menu-open');
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!menuWrapper.contains(e.target)) {
+            document.querySelectorAll('.menu-item.menu-open')
+                .forEach(item => item.classList.remove('menu-open'));
+        }
+    });
+});
+</script>
+
+
+<style>
+.menu-sub {
+    display: none !important;
+        /* max-height: 500px;
+    overflow: auto; */
+}
+
+.menu-item.menu-open > .menu-sub {
+    display: block !important;
+}
+.menu-item > .menu-sub {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 260px;
+    max-height: 400px;
+    overflow-y: auto;    
+    overflow-x: hidden;  
+    display: none;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,.12);
+    z-index: 1000;
+}
+.menu-sub-level-2 {
+    position: absolute;
+    top: 0;
+    left: 100%;     
+    width: 260px;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: none;
+    background: #fff;
+    box-shadow: 4px 0 14px rgba(0,0,0,.12);
+    z-index: 1100;
+}
+
+</style> -->

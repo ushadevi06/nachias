@@ -21,21 +21,21 @@
                                 <div class="form-floating form-floating-outline">
                                     <select name="task_status" id="task_status" class="form-select select2" data-placeholder="Select Task Status">
                                         <option value="">Select Task Status</option>
-                                        <option value="Not Started">Not Started</option>
+                                        <option value="Planned">Planned</option>
                                         <option value="In Progress">In Progress</option>
                                         <option value="Completed">Completed</option>
-                                        <option value="Overdue">Overdue</option>
+                                        <option value="Hold">Hold</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <button type="button" class="btn btn-primary">Filter</button>
-                                <button type="button" class="btn btn-secondary">Reset</button>
+                                <button type="button" class="btn btn-primary" id="filter-btn">Filter</button>
+                                <button type="button" class="btn btn-secondary" id="reset-btn">Reset</button>
                             </div>
                         </div>
                     </div>
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="datatables-products table" id="task-tracking-table">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -54,81 +54,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>TASK-2025-001</td>
-                                    <td>JC20250924-001-K</td>
-                                    <td>Cutting for Order #SO-1001</td>
-                                    <td>Admin</td>
-                                    <td>Ramesh <span class="mini-title">(EMP001)</span></td>
-                                    <td><span class="badge bg-warning">In Progress</span></td>
-                                    <td>25</td>
-                                    <td>20</td>
-                                    <td>5</td>
-                                    <td>29-09-2025</td>
-                                    <td>
-                                        <div class="form-check mb-0">
-                                            <input class="form-check-input" type="checkbox" value="1" name="remember" id="alerts" />
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_task_tracking_monitoring') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_task_tracking_monitoring') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>TASK-2025-002</td>
-                                    <td>JC20250924-001-K</td>
-                                    <td>Fabric Quality Check</td>
-                                    <td>Admin</td>
-                                    <td>Karthick <span class="mini-title">(EMP002)</span></td>
-                                    <td><span class="badge bg-danger">Not Progress</span></td>
-                                    <td>10</td>
-                                    <td>0</td>
-                                    <td>10</td>
-                                    <td>26-09-2025</td>
-                                    <td>
-                                        <div class="form-check mb-0">
-                                            <input class="form-check-input" type="checkbox" value="1" name="remember" id="alerts" checked />
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_task_tracking_monitoring') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_task_tracking_monitoring') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>TASK-2025-003</td>
-                                    <td>JC20250924-002-K</td>
-                                    <td>Stitching Order #SO-1002</td>
-                                    <td>Admin</td>
-                                    <td>Akash Mehta <span class="mini-title">(EMP003)</span></td>
-                                    <td><span class="badge bg-success">Completed</span></td>
-                                    <td>0</td>
-                                    <td>10</td>
-                                    <td>0</td>
-                                    <td>03-10-2025</td>
-                                    <td>
-                                        <div class="form-check mb-0">
-                                            <input class="form-check-input" type="checkbox" value="1" name="remember" id="alerts" checked />
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_task_tracking_monitoring') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_task_tracking_monitoring') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -137,4 +62,48 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    var table = $('#task-tracking-table').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ url('task_tracking_monitoring') }}",
+            type: 'GET',
+            data: function(d) {
+                d.task_status = $('#task_status').val();
+            }
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'task_id', name: 'task_id' },
+            { data: 'job_card_no', name: 'job_card_no' },
+            { data: 'task_title', name: 'task_title' },
+            { data: 'assigned_by', name: 'assigned_by' },
+            { data: 'assigned_to', name: 'assigned_to' },
+            { data: 'task_status', name: 'task_status' },
+            { data: 'qty_ordered', name: 'qty_ordered' },
+            { data: 'qty_completed', name: 'qty_completed' },
+            { data: 'qty_pending', name: 'qty_pending' },
+            { data: 'deadline_date', name: 'deadline_date' },
+            { data: 'alerts', name: 'alerts', orderable: false, searchable: false },
+            { data: 'action', name: 'action', orderable: false, searchable: false }
+        ],
+        order: [[1, 'desc']],
+        pageLength: 25
+    });
+
+    $('#filter-btn').on('click', function() {
+        table.draw();
+    });
+
+    $('#reset-btn').on('click', function() {
+        $('#task_status').val('').trigger('change');
+        table.draw();
+    });
+});
+</script>
 @endsection

@@ -87,17 +87,17 @@
         </tr>
     </table>
 
-    <div class="title">Work Order</div>
+    <div class="title">Job Card</div>
 
     <table class="metadata-table">
         <tr>
-            <td class="label">WO#</td>
+            <td class="label">Job Card No #</td>
             <td class="value">: {{ $jobCard->job_card_no }}</td>
             <td class="label" style="text-align: right;">Plant</td>
-            <td class="value" style="text-align: left;">: Nachias Fashion Private Limited</td>
+            <td class="value" style="text-align: left;">: {{ $jobCard->serviceProvider->name ?? 'Nachias Fashion Private Limited' }}</td>
         </tr>
         <tr>
-            <td class="label">WO Date</td>
+            <td class="label">Job Card Date</td>
             <td class="value">: {{ $jobCard->job_card_date ? date('d/m/Y', strtotime($jobCard->job_card_date)) : '-' }}</td>
             <td></td>
             <td></td>
@@ -105,11 +105,11 @@
     </table>
 
     <div class="section-header">
-        {{ $jobCard->brand->brand_name ?? 'JOB CARD DETAILS' }}
+        {{ ($jobCard->item && $jobCard->item->name) ? $jobCard->item->name : ($jobCard->brand->brand_name ?? 'JOB CARD DETAILS') }}
     </div>
 
     @php
-        $defaultSizes = ['36', '38', '40', '42', '44', '46', '48'];
+        $defaultSizes = [];
         $sizes = $defaultSizes;
         if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
             $sizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
@@ -148,7 +148,12 @@
                     $uom = ($matchingPOItem && $matchingPOItem->uom) ? $matchingPOItem->uom->uom_code : (($matchingPOItem && $matchingPOItem->rawMaterial && $matchingPOItem->rawMaterial->uom) ? $matchingPOItem->rawMaterial->uom->uom_code : ($artUomMap[$detail->art_no] ?? '-'));
                     
                     $style = $matchingPOItem->style->style_name ?? $allPOItems->whereNotNull('style_id')->first()?->style?->style_name ?? '';
-                    $description = trim(($jobCard->brand->brand_name ?? '') . ' ' . $style);
+                    // Use item name if available, otherwise fallback to brand name
+                    if ($jobCard->item && $jobCard->item->name) {
+                        $description = trim($jobCard->item->name . ' ' . $style);
+                    } else {
+                        $description = trim(($jobCard->brand->brand_name ?? '') . ' ' . $style);
+                    }
                     $description = $description ?: '-';
                     $artNo = $detail->art_no;
 

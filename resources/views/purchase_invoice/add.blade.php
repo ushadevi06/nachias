@@ -119,7 +119,7 @@
                                         <th width="50px">
                                             <input type="checkbox" id="select_all_items" class="form-check-input">
                                         </th>
-                                        <th>Material</th>
+                                        <th>Raw Material</th>
                                         <th>HSN Code</th>
                                         <th>Ordered Qty</th>
                                         <th>Invoiced Qty</th>

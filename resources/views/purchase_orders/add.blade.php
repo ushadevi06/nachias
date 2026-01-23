@@ -292,8 +292,8 @@
                                     @foreach($purchaseOrder->items as $index => $item)
                                     <tr class="item-row">
                                         <td>
-                                            <select class="select2 form-select po_store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror" name="items[{{ $index }}][store_category_id]" data-placeholder="Select Category">
-                                                <option value="">Select Category</option>
+                                            <select class="select2 form-select po_store_category @error('items.'.$index.'.store_category_id') is-invalid @enderror" name="items[{{ $index }}][store_category_id]" data-placeholder="Select Store Category">
+                                                <option value="">Select Store Category</option>
                                                 @foreach($storeCategories as $category)
                                                 <option value="{{ $category->id }}" {{ $item->store_category_id == $category->id ? 'selected' : '' }}>{{ $category->category_name }}({{ $category->code }})
                                                 </option>
@@ -315,7 +315,7 @@
                                             @enderror
                                         </td>
                                         <td>
-                                            <select class="select2 form-select material @error('items.'.$index.'.raw_material_id') is-invalid @enderror" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Material">
+                                            <select class="select2 form-select material @error('items.'.$index.'.raw_material_id') is-invalid @enderror" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Raw Material">
                                                 <option value="{{ $item->raw_material_id }}" data-uom-id="{{ $item->rawMaterial->uom_id }}">{{ $item->rawMaterial->name }} ({{ $item->rawMaterial->code }})</option>
                                             </select>
                                             @error('items.'.$index.'.raw_material_id')
@@ -420,8 +420,8 @@
                                     @else
                                     <tr class="item-row">
                                         <td>
-                                            <select class="select2 form-select po_store_category" name="items[0][store_category_id]" data-placeholder="Select Category">
-                                                <option value="">Select Category</option>
+                                            <select class="select2 form-select po_store_category" name="items[0][store_category_id]" data-placeholder="Select Store Category">
+                                                <option value="">Select Store Category</option>
                                                 @foreach($storeCategories as $category)
                                                 <option value="{{ $category->id }}">{{ $category->category_name }}({{ $category->code }})</option>
                                                 @endforeach
@@ -436,8 +436,8 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <select class="select2 form-select material" name="items[0][raw_material_id]" data-placeholder="Select Material">
-                                                <option value="">Select Material</option>
+                                            <select class="select2 form-select material" name="items[0][raw_material_id]" data-placeholder="Select Raw Material">
+                                                <option value="">Select Raw Material</option>
                                             </select>
                                         </td>
                                         <td>
@@ -686,7 +686,7 @@
                                                     <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="round_off_less">Less</label>
                                                 </div>
-                                                <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}">
+                                                <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}" autocomplete="off">
                                             </div>
                                         </div>
 
@@ -734,8 +734,8 @@
             let rowHtml = `
             <tr class="item-row">
                 <td>
-                    <select class="select2 form-select po_store_category" name="items[${itemIndex}][store_category_id]" data-placeholder="Select Category">
-                        <option value="">Select Category</option>
+                    <select class="select2 form-select po_store_category" name="items[${itemIndex}][store_category_id]" data-placeholder="Select Store Category">
+                        <option value="">Select Store Category</option>
                         @foreach($storeCategories as $category)
                         <option value="{{ $category->id }}">{{ $category->category_name }}({{ $category->code }})</option>
                         @endforeach
@@ -750,8 +750,8 @@
                     </select>
                 </td>
                 <td>
-                    <select class="select2 form-select material" name="items[${itemIndex}][raw_material_id]" data-placeholder="Select Material">
-                        <option value="">Select Material</option>
+                    <select class="select2 form-select material" name="items[${itemIndex}][raw_material_id]" data-placeholder="Select Raw Material">
+                        <option value="">Select Raw Material</option>
                     </select>
                 </td>
                 <td>
@@ -832,7 +832,7 @@
                 materialSelect.select2('destroy');
             }
 
-            materialSelect.empty().append('<option value="">Select Material</option>');
+            materialSelect.empty().append('<option value="">Select Raw Material</option>');
 
             if (!category_id) {
                 materialSelect.select2({
@@ -848,7 +848,7 @@
                 type: 'GET',
                 success: function (response) {
 
-                    let materialsHtml = '<option value="">Select Material</option>';
+                    let materialsHtml = '<option value="">Select Raw Material</option>';
 
                     if (response.materials?.length) {
                         response.materials.forEach(material => {
@@ -875,7 +875,7 @@
 
                 },
                 error: function () {
-                    materialSelect.html('<option value="">Select Material</option>').select2({
+                    materialSelect.html('<option value="">Select Raw Material</option>').select2({
                         dropdownParent: materialSelect.parent(),
                         width: '100%'
                     });

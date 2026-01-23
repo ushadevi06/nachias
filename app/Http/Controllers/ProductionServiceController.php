@@ -53,6 +53,8 @@ class ProductionServiceController extends Controller
                     'service_code' => $row->service_code,
                     'service_name' => $row->service_name,
                     'operation_stage' => $row->operationStage ? $row->operationStage->operation_stage_name : '-',
+                    'applies_to'   => $row->applies_to,
+                    'multiplier'   => $row->multiplier,
                     'status'       => $status,
                     'action'       => $action,
                 ];
@@ -83,7 +85,11 @@ class ProductionServiceController extends Controller
                 'service_name' => 'required|string|max:255|unique:production_services,service_name,' . $id . ',id,deleted_at,NULL',
                 'service_code' => 'required|string|max:50|unique:production_services,service_code,' . $id . ',id,deleted_at,NULL',
                 'operation_stage_id' => 'required|exists:operation_stages,id',
-                'status'       => 'required|in:Active,Inactive'
+                'status'       => 'required|in:Active,Inactive',
+                'applies_to'   => 'required|in:ALL,Full Sleeve,Half Sleeve,Both',
+                'base_quantity_source' => 'required|in:Total Qty,FS Qty,HS Qty',
+                'multiplier'   => 'required|numeric|min:0',
+                'uom'          => 'required|string|max:20',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
@@ -91,7 +97,10 @@ class ProductionServiceController extends Controller
             ];
             $request->validate($rules, $messages);
 
-            $data = $request->only(['service_name', 'service_code', 'operation_stage_id', 'status']);
+            $data = $request->only([
+                'service_name', 'service_code', 'operation_stage_id', 'status',
+                'applies_to', 'base_quantity_source', 'multiplier', 'uom'
+            ]);
 
             if ($id) {
                 $data['updated_by'] = auth()->id();
@@ -108,9 +117,10 @@ class ProductionServiceController extends Controller
             return redirect('production_services')->with('success', $msg);
         }
 
-        $operationStages = OperationStage::where('status', 'Active')->get();
+        $operationStages = OperationStage::active()->get();
+        $uoms = \App\Models\Uom::active()->get();
 
-        return view('production_services.add', compact('service', 'operationStages'));
+        return view('production_services.add', compact('service', 'operationStages', 'uoms'));
     }
 
     public function destroy($id)

@@ -4,9 +4,36 @@
 <div class="container-xxl section-padding">
     <div class="row justify-content-center">
         <div class="col-lg-12 col-xl-11">
-            <form action="" method="POST" class="common-form">
-                
-                {{-- MODULE 1: PRODUCTION PLANNING (HEADER) --}}
+            <form action="{{ url('productions/add' . ($production ? '/' . $production->id : '')) }}" method="POST" class="common-form">
+                @csrf
+                @if($errors->any())
+                    <div class="alert alert-danger shadow-sm border-0 mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="ri-error-warning-line fs-4 me-2"></i>
+                            <h6 class="mb-0 fw-bold">Please correct the following errors:</h6>
+                        </div>
+                        <ul class="mb-0 ps-3">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @if(session('success'))
+                    <div class="alert alert-success shadow-sm border-0 mb-4 d-flex align-items-center">
+                        <i class="ri ri-checkbox-circle-line fs-4 me-2"></i>
+                        <h6 class="mb-0 fw-bold">{{ session('success') }}</h6>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger shadow-sm border-0 mb-4 d-flex align-items-center">
+                        <i class="ri-error-warning-line fs-4 me-2"></i>
+                        <h6 class="mb-0 fw-bold">{{ session('error') }}</h6>
+                    </div>
+                @endif
+
                 <div class="card mb-4 border-0 shadow-sm erp-header-card">
                     <div class="card-header border-bottom py-3 bg-light">
                         <div class="d-flex align-items-center">
@@ -24,102 +51,119 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="job_card_no" class="select2 form-select" data-placeholder="Select Job Card">
+                                    <select id="job_card_entry_id" name="job_card_entry_id" class="select2 form-select @error('job_card_entry_id') is-invalid @enderror" data-placeholder="Select Job Card">
                                         <option value="">Select Job Card</option>
-                                        <option value="JC20260113-001-K">JC20260113-001-K</option>
+                                        @foreach($jobCards as $jc)
+                                            <option value="{{ $jc->id }}" {{ old('job_card_entry_id', optional($production)->job_card_entry_id) == $jc->id ? 'selected' : '' }}>{{ $jc->job_card_no }}</option>
+                                        @endforeach
                                     </select>
-                                    <label>Job Card No *</label>
+                                    <label>Job Card No <span class="text-danger">*</span></label>
+                                    @error('job_card_entry_id')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                    <input type="hidden" name="job_card_no" id="job_card_no_hidden" value="{{ old('job_card_no', optional($production)->job_card_no) }}">
                                 </div>
                             </div>
-                            {{-- <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="work_order_no" value="WO-2026-001" readonly>
-                                    <label>Work Order No</label>
-                                </div>
-                            </div> --}}
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="po_no" value="PO-2025-099" readonly>
+                                    <input type="text" class="form-control" id="po_no_display" value="{{ optional($production)->purchase_order_no }}" readonly>
+                                    <input type="hidden" name="purchase_order_id" id="purchase_order_id" value="{{ old('purchase_order_id', optional($production)->purchase_order_id) }}">
+                                    <input type="hidden" name="purchase_order_no" id="purchase_order_no" value="{{ old('purchase_order_no', optional($production)->purchase_order_no) }}">
                                     <label>Purchase Order No</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="plant" class="select2 form-select" data-placeholder="Select Plant">
+                                    <select id="plant_id" name="plant_id" class="select2 form-select @error('plant_id') is-invalid @enderror" data-placeholder="Select Plant">
                                         <option value="">Select Plant</option>
-                                        <option value="Nachias fashion private limited" selected>Nachias Fashion Private Limited</option>
-                                        <option value="Samayanallur">Samayanallur</option>
-                                        <option value="Kalavasal">Kalavasal</option>
+                                        @foreach($plants as $plant)
+                                            <option value="{{ $plant->id }}" {{ old('plant_id', optional($production)->plant_id) == $plant->id ? 'selected' : '' }}>{{ $plant->name }}</option>
+                                        @endforeach
                                     </select>
                                     <label>Plant</label>
+                                    @error('plant_id')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="process_group" class="select2 form-select" data-placeholder="Select Group">
-                                        <option value="">Select Group</option>
-                                        <option value="Others Full & Half Sleeves">Others Full & Half Sleeve</option>
-                                    </select>
+                                    <input type="text" class="form-control" id="process_group_display" value="{{ optional($production)->processGroup ? $production->processGroup->name : '' }}" readonly>
+                                    <input type="hidden" name="process_group_id" id="process_group_id" value="{{ old('process_group_id', optional($production)->process_group_id) }}">
                                     <label>Process Group</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control" id="planned_qty_fs" value="334">
+                                    <input type="number" class="form-control" name="full_sleeve_qty" id="planned_qty_fs" value="{{ old('full_sleeve_qty', optional($production)->full_sleeve_qty ?? 0) }}" readonly>
                                     <label>Full Sleeve Qty (FS)</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control" id="planned_qty_hs" value="228">
+                                    <input type="number" class="form-control" name="half_sleeve_qty" id="planned_qty_hs" value="{{ old('half_sleeve_qty', optional($production)->half_sleeve_qty ?? 0) }}" readonly>
                                     <label>Half Sleeve Qty (HS)</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control bg-light" id="planned_qty" value="562" readonly>
+                                    <input type="number" class="form-control bg-light" name="total_planned_qty" id="planned_qty" value="{{ old('total_planned_qty', optional($production)->total_planned_qty ?? 0) }}" readonly>
                                     <label>Total Planned Qty</label>
                                 </div>
                             </div>
-                             <div class="col-md-3">
+                            <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="start_date" placeholder="Planned Start Date">
-                                    <label>Planned Start Date</label>
+                                    <input type="text" class="form-control date-picker @error('planned_start_date') is-invalid @enderror" name="planned_start_date" id="start_date" value="{{ old('planned_start_date', (isset($production->planned_start_date) ? date('d-m-Y', strtotime($production->planned_start_date)) : '')) }}" placeholder="Planned Start Date">
+                                    <label>Planned Start Date <span class="text-danger">*</span></label>
+                                    @error('planned_start_date')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="end_date" placeholder="Planned End Date">
-                                    <label>Planned End Date</label>
+                                    <input type="text" class="form-control date-picker @error('planned_end_date') is-invalid @enderror" name="planned_end_date" id="end_date" value="{{ old('planned_end_date', (isset($production->planned_end_date) ? date('d-m-Y', strtotime($production->planned_end_date)) : '')) }}" placeholder="Planned End Date">
+                                    <label>Planned End Date <span class="text-danger">*</span></label>
+                                    @error('planned_end_date')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="completion_date" placeholder="Exp. Completion Date">
-                                    <label>Exp. Completion Date</label>
+                                    <input type="text" class="form-control date-picker @error('expected_completion_date') is-invalid @enderror" name="expected_completion_date" id="completion_date" value="{{ old('expected_completion_date', (isset($production->expected_completion_date) ? date('d-m-Y', strtotime($production->expected_completion_date)) : '')) }}" placeholder="Exp. Completion Date">
+                                    <label>Exp. Completion Date <span class="text-danger">*</span></label>
+                                    @error('expected_completion_date')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="status" class="select2 form-select" data-placeholder="Select Status">
-                                        <option value="Draft">Draft</option>
-                                        <option value="Planned">Planned</option>
-                                        <option value="In-Progress">In-Progress</option>
+                                    <select name="status" id="status" class="select2 form-select" data-placeholder="Select Status">
+                                        <option value=""></option>
+                                        <option value="Draft" {{ old('status', optional($production)->status) == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                        <option value="Confirmed" {{ old('status', optional($production)->status) == 'Confirmed' ? 'selected' : '' }}>Confirmed</option>
+                                        <option value="Closed" {{ old('status', optional($production)->status) == 'Closed' ? 'selected' : '' }}>Closed</option>
                                     </select>
-                                    <label>Status</label>
+                                    <label>Status <span class="text-danger">*</span></label>
+                                    @error('status')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea name="remarks" class="form-control" id="remarks"></textarea>
+                                    <textarea name="remarks" class="form-control @error('remarks') is-invalid @enderror" id="remarks">{{ old('remarks', optional($production)->remarks) }}</textarea>
                                     <label>Remarks</label>
+                                    @error('remarks')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {{-- MODULE 2: PROCESS SCHEDULE (STEPPER STYLE) --}}
                 <div class="card border-0 shadow-sm erp-header-card">
                     <div class="card-header border-bottom py-3 bg-light">
                         <div class="d-flex align-items-center justify-content-between">
@@ -128,366 +172,129 @@
                             </h5>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                        {{-- 1. Stepper Header --}}
+                    <div class="card-body pt-4">
                         <div class="bs-stepper wizard-numbered mt-2">
-                            <div class="bs-stepper-header border-bottom p-4">
-                                {{-- Commented out Cutting Stage
-                                <div class="step active" data-target="#stage-cutting">
-                                    <button type="button" class="step-trigger">
-                                        <span class="bs-stepper-circle bg-success text-white"><i class="ri ri-scissors-cut-line"></i></span>
-                                        <span class="bs-stepper-label text-success">
-                                            <span class="bs-stepper-title">Cutting</span>
-                                            <span class="bs-stepper-subtitle">Completed</span>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="line"></div>
-                                --}}
-                                {{-- Step 2 (Now Step 1) --}}
-                                <div class="step active" data-target="#stage-stitching">
-                                    <button type="button" class="step-trigger">
-                                        <span class="bs-stepper-circle bg-warning text-white"><i class="ri ri-t-shirt-line"></i></span>
-                                        <span class="bs-stepper-label text-warning">
-                                            <span class="bs-stepper-title">Stitching</span>
-                                            <span class="bs-stepper-subtitle">In Progress</span>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="line"></div>
-                                {{-- Step 3 --}}
-                                <div class="step" data-target="#stage-finishing">
-                                    <button type="button" class="step-trigger">
-                                        <span class="bs-stepper-circle bg-secondary text-white"><i class="ri ri-shirt-line"></i></span>
-                                        <span class="bs-stepper-label">
-                                            <span class="bs-stepper-title">Finishing</span>
-                                            <span class="bs-stepper-subtitle">Pending</span>
-                                        </span>
-                                    </button>
-                                </div>
+                            <div class="bs-stepper-header border-bottom">
+                                @foreach($operationStages as $index => $stage)
+                                    <div class="step {{ $index === 0 ? 'active' : '' }}" data-target="#stage-content-{{ $stage->id }}" data-id="{{ $stage->id }}" data-name="{{ $stage->operation_stage_name }}">
+                                        <button type="button" class="step-trigger" disabled>
+                                            <span class="bs-stepper-circle">
+                                                @if($index === 0)
+                                                    <i class="ri ri-check-line d-none"></i>
+                                                @endif
+                                                <span class="step-number">{{ $index + 1 }}</span>
+                                            </span>
+                                            <span class="bs-stepper-label">
+                                                <span class="bs-stepper-title">{{ $stage->operation_stage_name }}</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                    @if(!$loop->last)
+                                        <div class="line"></div>
+                                    @endif
+                                @endforeach
                             </div>
+                            
+                            <div class="bs-stepper-content pt-4">
+                                @foreach($operationStages as $index => $stage)
+                                    <div id="stage-content-{{ $stage->id }}" class="content {{ $index === 0 ? 'active d-block' : 'd-none' }}">
+                                        <div class="row g-3">
+                                            <div class="col-12 mb-2">
+                                                <h6 class="fw-bold text-primary">{{ $stage->operation_stage_name }} Details</h6>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-floating form-floating-outline">
+                                                    <input type="number" class="form-control schedule-input" name="schedules[{{ $stage->id }}][planned_qty]" data-field="planned_qty" placeholder="Planned Qty">
+                                                    <label>Planned Qty</label>
+                                                    @error('schedules.' . $stage->id . '.planned_qty')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating form-floating-outline">
+                                                    <input type="text" class="form-control date-picker schedule-input" name="schedules[{{ $stage->id }}][start_date]" data-field="start_date" placeholder="Start Date">
+                                                    <label>Start Date <span class="text-danger">*</span></label>
+                                                    @error('schedules.' . $stage->id . '.start_date')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating form-floating-outline">
+                                                    <input type="text" class="form-control date-picker schedule-input" name="schedules[{{ $stage->id }}][end_date]" data-field="end_date" placeholder="End Date">
+                                                    <label>End Date <span class="text-danger">*</span></label>
+                                                    @error('schedules.' . $stage->id . '.end_date')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating form-floating-outline">
+                                                    <input type="text" class="form-control date-picker schedule-input" name="schedules[{{ $stage->id }}][due_date]" data-field="due_date" placeholder="Due Date">
+                                                    <label>Due Date <span class="text-danger">*</span></label>
+                                                    @error('schedules.' . $stage->id . '.due_date')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="form-floating form-floating-outline">
+                                                    <select class="form-select select2 schedule-input" name="schedules[{{ $stage->id }}][scheduled_to]" data-field="scheduled_to" data-plac>
+                                                        <option value="">Select Unit</option>
+                                                        @foreach($plants as $plant)
+                                                            <option value="{{ $plant->name }}">{{ $plant->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <label>Scheduled To <span class="text-danger">*</span></label>
+                                                    @error('schedules.' . $stage->id . '.scheduled_to')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
 
-                            {{-- 2. Stepper Content --}}
-                            <div class="bs-stepper-content p-4">                              
-                                {{-- Stage 1 Details: Cutting (Commented Out)
-                                <div id="stage-cutting" class="content active dstepper-block">
-                                    <div class="row g-3">
-                                        <div class="col-12 mb-2"><h6 class="fw-bold text-success">Stage 1 Details: Cutting</h6></div>
-                                        <div class="col-md-3">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" class="form-control" value="1000">
-                                                <label>Planned Qty</label>
+                                            <div class="col-12 mt-4">
+                                                <h6 class="fw-bold text-secondary mb-3"><i class="ri ri-list-settings-line me-1"></i> {{ $stage->operation_stage_name }} Services</h6>
+                                                <div class="table-responsive border rounded bg-white">
+                                                    <table class="table table-sm table-hover mb-0">
+                                                        <thead class="bg-light">
+                                                            <tr>
+                                                                <th style="width: 50px;">Check</th>
+                                                                <th>Service Name</th>
+                                                                <th>Applies To</th>
+                                                                <th class="text-end">Qty</th>
+                                                                <th>UOM</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="services-tbody-{{ $stage->id }}">
+                                                            <tr><td colspan="5" class="text-center small text-muted">Select a Job Card to load services</td></tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" value="PCS">
-                                                <label>UOM</label>
+                                            
+                                            <div class="col-12 mt-4 d-flex justify-content-between">
+                                                @if(!$loop->first)
+                                                    <button type="button" class="btn btn-outline-secondary btn-prev" data-target="{{ $index - 1 }}">
+                                                        <i class="ri ri-arrow-left-line me-1"></i> Previous
+                                                    </button>
+                                                @else
+                                                    <div></div>
+                                                @endif
+                                                
+                                                @if(!$loop->last)
+                                                    <button type="button" class="btn btn-primary btn-next" data-target="{{ $index + 1 }}">
+                                                        Next <i class="ri ri-arrow-right-line ms-1"></i>
+                                                    </button>
+                                                @endif
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="Start Date">
-                                                <label>Start Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="End Date">
-                                                <label>End Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="Due Date">
-                                                <label>Due Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select class="form-select select2">
-                                                    <option value="Samayanallur Unit">Samayanallur Unit</option>
-                                                    <option value="Kalavasal Unit">Kalavasal Unit</option>
-                                                </select>
-                                                <label>Service Provider</label>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 mt-4">
-                                            <h6 class="fw-bold text-success mb-3"><i class="ri ri-list-settings-line me-1"></i> Auto-Generated Services (Cutting)</h6>
-                                            <div class="table-responsive border rounded">
-                                                <table class="table table-sm table-hover mb-0">
-                                                    <thead class="bg-light">
-                                                        <tr>
-                                                            <th>Check</th>
-                                                            <th>Service Name</th>
-                                                            <th>Applies To</th>
-                                                            <th class="text-end">Qty</th>
-                                                            <th>UOM</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="services-cutting">
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 text-end mt-4">
-                                            <button type="button" class="btn btn-primary btn-next" onclick="showStep('#stage-stitching')">Next: Stitching <i class="ri ri-arrow-right-line ms-1"></i></button>
                                         </div>
                                     </div>
-                                </div>
-                                --}}
-
-                                {{-- Stage 2: Stitching Form --}}
-                                <div id="stage-stitching" class="content active dstepper-block">
-                                    <div class="row g-3">
-                                        <div class="col-12 mb-2"><h6 class="fw-bold text-warning">Stage 1 Details: Stitching</h6></div>
-                                        <div class="col-md-3">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" class="form-control" value="1000">
-                                                <label>Planned Qty</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" value="PCS">
-                                                <label>UOM</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="Start Date">
-                                                <label>Start Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="End Date">
-                                                <label>End Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="Due Date">
-                                                <label>Due Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select class="form-select select2">
-                                                    <option value="Samayanallur Unit">Samayanallur Unit</option>
-                                                </select>
-                                                <label>Scheduled To</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select class="form-select select2" data-placeholder="Select Service Provider">
-                                                <option value="Int Unit">Internal Unit</option>
-                                                </select>
-                                                <label>Service Provider</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-12 mt-4">
-                                            <h6 class="fw-bold text-warning mb-3"><i class="ri ri-list-settings-line me-1"></i> Auto-Generated Services (Stitching)</h6>
-                                            <div class="table-responsive border rounded">
-                                                <table class="table table-sm table-hover mb-0">
-                                                    <thead class="bg-light">
-                                                        <tr>
-                                                            <th>Check</th>
-                                                            <th>Service Name</th>
-                                                            <th>Applies To</th>
-                                                            <th class="text-end">Qty</th>
-                                                            <th>UOM</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="services-stitching">
-                                                        <!-- JS will populate this -->
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 text-end mt-4">
-                                            <button type="button" class="btn btn-outline-secondary me-2" onclick="showStep('#stage-stitching')"><i class="ri ri-arrow-left-line me-1"></i> Prev</button>
-                                            <button type="button" class="btn btn-primary btn-next" onclick="showStep('#stage-finishing')">Next: Finishing <i class="ri ri-arrow-right-line ms-1"></i></button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {{-- Stage 3: Finishing Form --}}
-                                <div id="stage-finishing" class="content d-none">
-                                    <div class="row g-3">
-                                        <div class="col-12 mb-2"><h6 class="fw-bold text-secondary">Stage 2 Details: Finishing</h6></div>
-                                        <div class="col-md-3">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" class="form-control" value="1000">
-                                                <label>Planned Qty</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" value="PCS">
-                                                <label>UOM</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="Start Date">
-                                                <label>Start Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="End Date">
-                                                <label>End Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control date-picker" placeholder="Due Date">
-                                                <label>Due Date</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select class="form-select select2">
-                                                     <option value="Kalavasal">Kalavasal</option>
-                                                </select>
-                                                <label>Scheduled To</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-floating form-floating-outline">
-                                                 <select class="form-select select2">
-                                                     <option value="Int Unit">Internal Unit</option>
-                                                 </select>
-                                                 <label>Service Provider</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-12 mt-4">
-                                            <h6 class="fw-bold text-secondary mb-3"><i class="ri ri-list-settings-line me-1"></i> Auto-Generated Services (Finishing)</h6>
-                                            <div class="table-responsive border rounded">
-                                                <table class="table table-sm table-hover mb-0">
-                                                    <thead class="bg-light">
-                                                        <tr>
-                                                            <th>Check</th>
-                                                            <th>Service Name</th>
-                                                            <th>Applies To</th>
-                                                            <th class="text-end">Qty</th>
-                                                            <th>UOM</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody id="services-finishing">
-                                                        <!-- JS will populate this -->
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 text-end mt-4">
-                                            <button type="button" class="btn btn-outline-secondary me-2" onclick="showStep('#stage-stitching')"><i class="ri ri-arrow-left-line me-1"></i> Prev</button>
-                                        </div>
-                                    </div>
-                                </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
                 </div>
-                {{-- MODULE 3: FINISHED GOODS RECEIPT --}}
-                {{-- <div class="card border-0 shadow-sm erp-header-card mt-4">
-                    <div class="card-header border-bottom py-3 bg-light">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <h5 class="mb-0 fw-bold d-flex align-items-center">
-                                <i class="ri ri-inbox-archive-line me-2 text-primary"></i> Module 3: Finished Goods Receipt
-                            </h5>
-                        </div>
-                    </div>
-                    <div class="card-body pt-4">
-                        <div class="row g-4">
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="prn_no" value="PRN-2026-001" readonly>
-                                    <label>PRN#</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control date-picker" id="received_on">
-                                    <label>Received On</label>
-                                </div>
-                            </div>
-                             <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select class="form-select select2">
-                                         <option value="Nachias fashion private limited">Nachias fashion private limited</option>
-                                    </select>
-                                    <label>Plant</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select class="form-select select2">
-                                         <option value="Finished Goods Store">Finished Goods Store</option>
-                                    </select>
-                                    <label>Store</label>
-                                </div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="doc_no">
-                                    <label>Doc#</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select class="form-select select2">
-                                         <option value="WOO">WOO</option>
-                                    </select>
-                                    <label>Doc. Type</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="consignee">
-                                    <label>Consignee</label>
-                                </div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="receipt_reference">
-                                    <label>Reference</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select class="form-select select2">
-                                         <option value="Nagendran">Nagendran</option>
-                                    </select>
-                                    <label>Staff</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select class="form-select select2">
-                                         <option value="JW001">JW001</option>
-                                    </select>
-                                    <label>Resource</label>
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="form-floating form-floating-outline">
-                                    <textarea name="" class="form-control" id="receipt_remarks"></textarea>
-                                    <label>Remarks</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> --}}
-                {{-- Action Buttons --}}
                  <div class="mt-4">
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary px-4 me-2">
@@ -502,6 +309,49 @@
 </div>
 
 <script>
+    let schedulesState = {};
+
+    @if(isset($production) && $production->processSchedules)
+        @foreach($production->processSchedules as $schedule)
+            @php
+                $sObj = \App\Models\OperationStage::where('operation_stage_name', $schedule->stage)->first();
+                $sId = $sObj ? $sObj->id : 0;
+            @endphp
+            @if($sId)
+            schedulesState[{{ $sId }}] = {
+                planned_qty: "{{ $schedule->planned_qty }}",
+                start_date: "{{ $schedule->start_date ? date('d-m-Y', strtotime($schedule->start_date)) : '' }}",
+                end_date: "{{ $schedule->end_date ? date('d-m-Y', strtotime($schedule->end_date)) : '' }}",
+                due_date: "{{ $schedule->due_date ? date('d-m-Y', strtotime($schedule->due_date)) : '' }}",
+                scheduled_to: "{{ $schedule->scheduled_to }}",
+                services: @json($schedule->services->map(function($s){ return ['service_id' => $s->service_id, 'selected' => 1]; }))
+            };
+            @endif
+        @endforeach
+    @endif
+    
+    @if(old('schedules'))
+        @foreach(old('schedules') as $sId => $oldData)
+            schedulesState[{{ $sId }}] = {
+                planned_qty: "{{ $oldData['planned_qty'] ?? '' }}",
+                start_date: "{{ $oldData['start_date'] ?? '' }}",
+                end_date: "{{ $oldData['end_date'] ?? '' }}",
+                due_date: "{{ $oldData['due_date'] ?? '' }}",
+                scheduled_to: "{{ $oldData['scheduled_to'] ?? '' }}",
+                services: []
+            };
+             @if(isset($oldData['services']))
+                 schedulesState[{{ $sId }}].services = [
+                     @foreach($oldData['services'] as $oldSvc)
+                        @if(isset($oldSvc['selected']))
+                            { service_id: "{{ $oldSvc['service_id'] }}", selected: 1 },
+                        @endif
+                     @endforeach
+                 ];
+             @endif
+        @endforeach
+    @endif
+
     $(document).ready(function() {
         $('.date-picker').flatpickr({ dateFormat: 'd-m-Y' });
         $('.select2').each(function() {
@@ -509,144 +359,246 @@
                 $(this).select2({ placeholder: "Select", allowClear: true, width: '100%' });
             }
         });
-        $('.step-trigger').click(function() {
-            var target = $(this).closest('.step').data('target');
-            showStep(target);
-        });
 
-        // Auto-calculation logic for Services
-        const serviceDefinitions = {
-            /* cutting: [
-                { name: 'Layering & Cutting', appliesTo: 'ALL' }
-            ], */
-            stitching: [
-                { name: 'CLR-ATT (Collar Attach)', appliesTo: 'ALL' },
-                { name: 'CLR-LBL-ATT (Collar Label Attach)', appliesTo: 'ALL' },
-                { name: 'TOWER', appliesTo: 'ALL' },
-                { name: 'SLV-TOP(Sleeve Top)', appliesTo: 'ALL' },
-                { name: 'SLV-ATT(Sleeve Attach)', appliesTo: 'ALL' },
-                { name: 'DEAL-SLV-ATT(Dealer Sleeve Attach)', appliesTo: 'ALL' },
-                { name: 'BF-ATT(Bottom Facing Attach)', appliesTo: 'ALL' },
-                { name: 'SID-ATT-FS(Side Attach-Full Stitch)', appliesTo: 'FS' },
-                { name: 'SID-ATT-HS(Side Attach-Half Stitch)', appliesTo: 'HS' },
-                { name: 'CUF-ATT(Cuff Attach)', appliesTo: 'CUFF' },
-                { name: 'CUF-TOP(Cuff Top)', appliesTo: 'FS' },
-                { name: 'CUF-TURN(Cuff Turn)', appliesTo: 'FS' },
-                { name: 'CUF-TWR-MRK(Cuff Tower Mark)', appliesTo: 'FS' }
-            ],
-            finishing: [
-                { name: 'BUT - OPR(Button Operator)', appliesTo: 'ALL' },
-                { name: 'BUT(Button)', appliesTo: 'ALL' },
-                { name: 'KAJA-OPR(Kaja Operator)', appliesTo: 'ALL' },
-                { name: 'KAJA(Kaja)', appliesTo: 'ALL' },
-                { name: 'TWR-TRI-CHK(Tower Trim Check)', appliesTo: 'ALL' },
-                { name: 'ASS-TRI-CHK(Assam Trim Check)', appliesTo: 'ALL' },
-                { name: 'CUF-IRON(Cuff Iron)', appliesTo: 'FS' },
-                { name: 'Ironing & Packing', appliesTo: 'ALL' }
-            ]
-        };
-
-        function calculateServices() {
-            const fsQty = parseInt($('#planned_qty_fs').val()) || 0;
-            const hsQty = parseInt($('#planned_qty_hs').val()) || 0;
-            const totalQty = fsQty + hsQty;
-            
-            $('#planned_qty').val(totalQty);
-            Object.keys(serviceDefinitions).forEach(stage => {
-                const tbody = $(`#services-${stage}`);
-                tbody.empty();
-
-                serviceDefinitions[stage].forEach(service => {
-                    let calculatedQty = 0;
-                    let displayAppliesTo = service.appliesTo;
-
-                    switch(service.appliesTo) {
-                        case 'ALL': calculatedQty = totalQty; break;
-                        case 'FS': calculatedQty = fsQty; break;
-                        case 'HS': calculatedQty = hsQty; break;
-                        case 'CUFF': 
-                            calculatedQty = fsQty; 
-                            displayAppliesTo = 'FS (1 Set)';
-                            break;
-                    }
-
-                    tbody.append(`
-                        <tr>
-                            <td><input type="checkbox" name="selected_services[${stage}][]" value="${service.name}" class="form-check-input service-checkbox" data-stage="${stage}" checked></td>
-                            <td>${service.name}</td>
-                            <td><span class="badge bg-label-info">${displayAppliesTo}</span></td>
-                            <td class="text-end fw-bold">${calculatedQty}</td>
-                            <td>PCS</td>
-                        </tr>
-                    `);
-                });
-            });
+        const firstStep = $('.step.active');
+        if (firstStep.length && $('#job_card_entry_id').val()) {
+            loadStepData(firstStep.data('id'), firstStep.data('name'));
         }
-        $('#planned_qty_fs, #planned_qty_hs').on('input', calculateServices);
-        // Select All handler
-        $(document).on('change', '.select-all-services', function() {
-            const stage = $(this).data('stage');
-            $(`.service-checkbox[data-stage="${stage}"]`).prop('checked', $(this).prop('checked'));
+
+
+        $('.btn-next').on('click', function() {
+            const currentContent = $(this).closest('.content');
+            const nextContent = currentContent.next('.content');
+            if (nextContent.length) {
+                const nextStepIndex = nextContent.index('.bs-stepper-content .content');
+                const nextStep = $('.bs-stepper-header .step').eq(nextStepIndex);
+                activateStep(nextStep);
+            }
         });
 
-        calculateServices();
-    });
+        $('.btn-prev').on('click', function() {
+            const currentContent = $(this).closest('.content');
+            const prevContent = currentContent.prev('.content');
+            if (prevContent.length) {
+                const prevStepIndex = prevContent.index('.bs-stepper-content .content');
+                const prevStep = $('.bs-stepper-header .step').eq(prevStepIndex);
+                activateStep(prevStep);
+            }
+        });
 
-    function showStep(targetId) {
-        $('.bs-stepper-content .content').addClass('d-none').removeClass('active');
-        $(targetId).removeClass('d-none').addClass('active');
-        $('.bs-stepper-header .step').removeClass('active');
-        $('.bs-stepper-header .step[data-target="' + targetId + '"]').addClass('active');
-    }
+        function activateStep(stepEl) {
+            $('.step').removeClass('active');
+            stepEl.addClass('active');
+            
+            $('.step').removeClass('completed');
+            stepEl.prevAll('.step').addClass('completed');
+            
+            $('.step').each(function() {
+                if ($(this).hasClass('completed')) {
+                    $(this).find('.bs-stepper-circle').html('<i class="ri-check-line"></i>');
+                    $(this).find('.bs-stepper-circle').html('<i class="ri-check-line"></i>');
+                } else if($(this).hasClass('active')) {
+                    const num = $(this).index('.step') + 1;
+                    $(this).find('.bs-stepper-circle').html(num);
+                    $(this).find('.bs-stepper-circle').html(num);
+                } else {
+                    const num = $(this).index('.step') + 1;
+                    $(this).find('.bs-stepper-circle').html(num);
+                    $(this).find('.bs-stepper-circle').html(num);
+                }
+            });
+
+            $('.content').removeClass('active d-block').addClass('d-none');
+            const target = $(stepEl.data('target'));
+            target.removeClass('d-none').addClass('active d-block');
+            
+            const id = stepEl.data('id');
+            const name = stepEl.data('name');
+            
+            if ($('#job_card_entry_id').val()) {
+                loadStepData(id, name);
+            }
+        }
+
+        function loadStepData(stageId, stageName) {
+            const jobCardId = $('#job_card_entry_id').val();
+            if (schedulesState[stageId]) {
+                const data = schedulesState[stageId];
+                $(`input[name="schedules[${stageId}][planned_qty]"]`).val(data.planned_qty);
+                $(`input[name="schedules[${stageId}][start_date]"]`).val(data.start_date);
+                $(`input[name="schedules[${stageId}][end_date]"]`).val(data.end_date);
+                $(`input[name="schedules[${stageId}][due_date]"]`).val(data.due_date);
+                $(`select[name="schedules[${stageId}][scheduled_to]"]`).val(data.scheduled_to).trigger('change');
+            } else {
+                const inputQty = $(`input[name="schedules[${stageId}][planned_qty]"]`);
+                if(inputQty.val() === '' && $('#planned_qty').val()) {
+                    inputQty.val($('#planned_qty').val());
+                }
+            }
+
+            fetchServicesForStage(stageId, stageName, jobCardId);
+        }
+
+        function fetchServicesForStage(stageId, stageName, jobCardId) {
+            const tbody = $(`#services-tbody-${stageId}`);
+             
+            if (tbody.find('tr').length > 1 && !tbody.find('td').text().includes('No services')) {
+                return;
+            }
+
+            tbody.html('<tr><td colspan="5" class="text-center small">Loading services...</td></tr>');
+             
+            $.ajax({
+                url: "{{ url('productions/get-services') }}/" + stageName + "/" + jobCardId,
+                method: 'GET',
+                success: function(response) {
+                    tbody.empty();
+                    if (response.success && response.services.length > 0) {
+                        const savedState = schedulesState[stageId] ? schedulesState[stageId].services : [];
+                        const savedIds = savedState.map(s => String(s.service_id));
+                        
+                        const isNewRecord = !schedulesState[stageId];
+
+                        response.services.forEach((service, index) => {
+                            let isChecked = isNewRecord ? true : savedIds.includes(String(service.id));
+                            
+                            tbody.append(`
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="schedules[${stageId}][services][${index}][selected]" value="1" class="form-check-input" ${isChecked ? 'checked' : ''}>
+                                        <input type="hidden" name="schedules[${stageId}][services][${index}][service_id]" value="${service.id}">
+                                        <input type="hidden" name="schedules[${stageId}][services][${index}][applies_to]" value="${service.applies_to}">
+                                        <input type="hidden" name="schedules[${stageId}][services][${index}][qty]" value="${service.qty}">
+                                        <input type="hidden" name="schedules[${stageId}][services][${index}][uom]" value="${service.uom}">
+                                    </td>
+                                    <td>${service.service_name}</td>
+                                    <td><span class="badge bg-label-info">${service.applies_to}</span></td>
+                                    <td class="text-end fw-bold">${service.qty}</td>
+                                    <td>${service.uom}</td>
+                                </tr>
+                            `);
+                        });
+                    } else {
+                        tbody.html('<tr><td colspan="5" class="text-center small text-muted">No services found for this stage.</td></tr>');
+                    }
+                },
+                error: function() {
+                    tbody.html('<tr><td colspan="5" class="text-center small text-danger">Error loading services.</td></tr>');
+                }
+             });
+        }
+
+        $('#job_card_entry_id').on('change', function() {
+            const id = $(this).val();
+            if(!id) return;
+
+            $('tbody[id^="services-tbody-"]').empty();
+            schedulesState = {}; 
+
+            $.ajax({
+                url: "{{ url('productions/get-job-card-details') }}/" + id,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const data = response.data;
+                        $('#job_card_no_hidden').val($('#job_card_entry_id option:selected').text());
+                        $('#po_no_display').val(data.purchase_order_no);
+                        $('#purchase_order_id').val(data.purchase_order_id);
+                        $('#purchase_order_no').val(data.purchase_order_no);
+                        $('#plant_id').val(data.plant_id).trigger('change');
+                        $('#process_group_display').val(data.process_group_name);
+                        $('#process_group_id').val(data.process_group_id);
+                        $('#planned_qty_fs').val(data.fs_qty);
+                        $('#planned_qty_hs').val(data.hs_qty);
+                        $('#planned_qty').val(data.total_qty);
+                        
+                        const activeStep = $('.step.active');
+                        if(activeStep.length) {
+                            loadStepData(activeStep.data('id'), activeStep.data('name'));
+                        }
+                    }
+                }
+            });
+        });
+        
+
+    });
 </script>
 
 <style>
-    /* Stepper CSS */
     .bs-stepper-header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        flex-wrap: nowrap; 
+        overflow-x: auto; 
+        padding-bottom: 1rem;
     }
-    .bs-stepper-header .line {
-        flex: 1;
-        height: 2px;
-        background-color: #e9ecef;
-        margin: 0 1rem;
+    
+    .step {
+        flex: 0 0 auto; 
+        position: relative;
+        padding: 0 1rem;
     }
+
     .step-trigger {
         display: flex;
         align-items: center;
         background: none;
         border: none;
         padding: 0;
-        cursor: pointer;
+        cursor: default;
+        outline: none !important;
     }
+
     .bs-stepper-circle {
-        width: 2.5rem;
-        height: 2.5rem;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-weight: 600;
+        color: #697a8d;
+        background-color: #f5f5f9;
         margin-right: 0.75rem;
-        font-size: 1.1rem;
+        transition: all 0.3s ease;
     }
-    .bs-stepper-label {
-        text-align: left;
-    }
-    .bs-stepper-title {
-        display: block;
-        font-weight: bold;
-        color: #566a7f;
-    }
-    .bs-stepper-subtitle {
-        display: block;
-        font-size: 0.75rem;
-        color: #a1acb8;
+
+    .step.active .bs-stepper-circle {
+        background-color: var(--bs-primary); 
+        color: #fff;
+        box-shadow: 0 3px 6px rgba(105, 108, 255, 0.4);
     }
     
-    /* Active State */
-    .step.active .bs-stepper-title { color: #696cff; }
-    .step.active .bs-stepper-circle { box-shadow: 0 0 0 4px rgba(105, 108, 255, 0.15); }
+    .step.completed .bs-stepper-circle {
+        background-color: var(--bs-primary); 
+        color: #fff;
+    }
+
+    .bs-stepper-label {
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+    }
+
+    .bs-stepper-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #566a7f;
+        white-space: nowrap;
+    }
+
+    .bs-stepper-subtitle {
+        font-size: 0.75rem;
+        color: #b4bdc6;
+    }
+
+    .line {
+        flex: 1;
+        height: 2px;
+        background-color: #e9ecef;
+        min-width: 50px;
+        margin: 0 0.5rem;
+    }
 </style>
 @endsection

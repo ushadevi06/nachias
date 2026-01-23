@@ -57,120 +57,177 @@
                     @endphp
                     <div class="card-header-box mb-3 d-flex justify-content-between align-items-center bg-primary text-white p-2 rounded">
                         <h4 class="mb-0 text-white"><i class="ri-list-check-2 mr-2"></i> Issue Items</h4>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="badge bg-white text-primary px-3 py-2 rounded-pill">
+                                <strong>F/S Shirt Price: ₹<span id="summary-price-fs">{{ number_format($jobCard->price_fs, 2) }}</span></strong>
+                            </div>
+                            <div class="badge bg-white text-primary px-3 py-2 rounded-pill">
+                                <strong>H/S Shirt Price: ₹<span id="summary-price-hs">{{ number_format($jobCard->price_hs, 2) }}</span></strong>
+                            </div>
                             <div class="small text-white">Records: {{ $totalIssueItems }} <i class="ri-search-line"></i></div>
                         </div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered table-sm align-middle text-nowrap" id="issue-items-table">
-                            <thead class="bg-primary">
-                                <tr>
-                                    <th>Action</th>
-                                    <th>Line#</th>
-                                    <th>Store</th>
-                                    <th>Location</th>
-                                    <th>Item</th>
-                                    <th>Description</th>
-                                    <th>Art</th>
-                                    <th>Supplier</th>
-                                    <th>Qty/UOM</th>
-                                    <th>UOM</th>
-                                    <th>Qty To Issue</th>
-                                    <th>Qty Adjusted</th>
-                                    <th>Qty Wastage</th>
-                                    <th>Qty Used</th>
-                                    <th>Unit Price</th>
-                                    <th>Total Cost</th>
-                                    <th>Status</th>
-                                    <th>Modified By</th>
-                                    <th>Modified On</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @php $lineNum = 1; @endphp
-                                @foreach($jobCard->fabricDetails as $index => $item)
-                                @php
-                                    $materialName = $artMaterialMap[$item->art_no] ?? $item->art_no;
-                                    $locationName = $artLocationMap[$item->art_no] ?? '-';
-                                    $poItem = $jobCard->purchaseOrder->items->where('art_no', $item->art_no)->first();
-                                    $uomName = ($poItem && $poItem->uom) ? $poItem->uom->uom_code : (($poItem && $poItem->rawMaterial && $poItem->rawMaterial->uom) ? $poItem->rawMaterial->uom->uom_code : ($artUomMap[$item->art_no] ?? '-'));
-                                    $brandCode = $poItem->brand->code ?? ($jobCard->brand->code ?? ($jobCard->purchaseOrder->items->first()->brand->code ?? '-'));
-                                    $styleName = $poItem->style->style_name ?? ($jobCard->purchaseOrder->items->whereNotNull('style_id')->first()->style->style_name ?? '-');
-                                    $styleCode = $poItem->style->code ?? ($jobCard->purchaseOrder->items->whereNotNull('style_id')->first()->style->code ?? '-');
-                                    $brandName = $poItem->brand->brand_name ?? ($jobCard->brand->brand_name ?? ($jobCard->purchaseOrder->items->first()->brand->brand_name ?? '-'));
-                                    $fs_total = $item->quantities->sum('qty_fs');
-                                    $hs_total = $item->quantities->sum('qty_hs');
-                                    $produced_qty_for_issue = $item->quantities->sum('total_qty') ?: ($fs_total + $hs_total);
-                                    $sleeveTypes = [];
-                                    if($fs_total > 0) $sleeveTypes['Full Sleeve'] = $produced_qty_for_issue;
-                                    if($hs_total > 0) $sleeveTypes['Half Sleeve'] = $produced_qty_for_issue;
-                                    if(empty($sleeveTypes)) $sleeveTypes['Full Sleeve'] = $produced_qty_for_issue;
-                                @endphp
-                                
-                                @foreach($sleeveTypes as $sleeveType => $pieces)
-                                @php
-                                    $savedItem = $issueItemMap[$item->id . '_' . $sleeveType] ?? ($issueItemMap[$item->id . '_'] ?? null);
-                                    $sleeveSuffix = ($sleeveType == 'Full Sleeve') ? 'FS' : 'HS';
-                                    $sleeveShort = ($sleeveType == 'Full Sleeve') ? 'F/S' : 'H/S';
-                                    $itemDisplayName = $brandCode . '-' . $styleCode . '-' . $sleeveSuffix;
-                                    $itemDescription = $brandName . ' ' . $styleName . ' ' . $sleeveType . ' (' . $sleeveShort . ')';
-                                @endphp
-                                <tr data-line="{{ $lineNum }}">
-                                    <td>
-                                        <div class="d-flex gap-1">
-                                            <button type="button" class="btn btn-sm btn-icon edit-item-btn text-primary" 
-                                                data-bs-toggle="modal" data-bs-target="#editItemModal"
-                                                data-store="{{ $jobCard->receipt_store }}"
-                                                data-item="{{ $itemDisplayName }}"
-                                                data-sleeve-type="{{ $sleeveType }}"
-                                                data-art="{{ $item->art_no }}"
-                                                data-uom="{{ $uomName }}"
-                                                data-qty-issue="{{ $savedItem->qty_issue ?? $item->mtr }}"
-                                                data-matrix-id="{{ $item->id }}"
-                                                data-qty-adjusted="{{ $savedItem->qty_adjusted ?? '0.00' }}"
-                                                data-qty-wastage="{{ $savedItem->qty_wastage ?? '0.00' }}"
-                                                data-qty-used="{{ $savedItem->qty_used ?? '0.00' }}"
-                                                data-bit="{{ $savedItem->bit ?? '0.00' }}"
-                                                data-balance="{{ $savedItem->balance ?? '0.00' }}"
-                                                data-average="{{ $savedItem->average ?? '0.00' }}"
-                                                data-produced-qty="{{ $pieces }}"
-                                                data-row-qty="{{ $pieces }}"
-                                                title="Edit">
-                                                <i class="ri ri-edit-line"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td>{{ $lineNum++ }}</td>
-                                    <td class="col-store">{{ $jobCard->receipt_store }}</td>
-                                    <td>{{ $locationName }}</td>
-                                    <td class="col-item">{{ $itemDisplayName }}</td>
-                                    <td class="col-description">{{ $itemDescription }}</td>
-                                    <td class="fw-bold col-art">{{ $item->art_no }}</td>
-                                    <td>{{ $jobCard->purchaseOrder->supplier->name ?? '-' }}</td>
-                                    <td>1</td>
-                                    <td>{{ $uomName }}</td>
-                                    <td>
-                                        <input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_issue]" class="form-control form-control-sm text-end col-qty-issue" value="{{ $savedItem->qty_issue ?? $item->mtr }}" readonly>
-                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][bit]" class="col-bit" value="{{ $savedItem->bit ?? '0.00' }}">
-                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][balance]" class="col-balance" value="{{ $savedItem->balance ?? '0.00' }}">
-                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][average]" class="col-average" value="{{ $savedItem->average ?? '0.00' }}">
-                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][produced_qty]" class="col-produced-qty" value="{{ $pieces }}">
-                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][sleeve_type]" class="col-sleeve-type" value="{{ $sleeveType }}">
-                                    </td>
-                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_adjusted]" class="form-control form-control-sm text-end col-qty-adjusted" value="{{ $savedItem->qty_adjusted ?? '0.00' }}"></td>
-                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_wastage]" class="form-control form-control-sm text-end col-qty-wastage" value="{{ $savedItem->qty_wastage ?? '0.00' }}" readonly></td>
-                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_used]" class="form-control form-control-sm text-end col-qty-used" value="{{ $savedItem->qty_used ?? '0.00' }}"></td>
-                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][unit_price]" class="form-control form-control-sm text-end col-unit-price" value="{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : '0.00' }}"></td>
-                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][total_cost]" class="form-control form-control-sm text-end col-total-cost" value="{{ (isset($savedItem->total_cost) && $savedItem->total_cost > 0) ? number_format($savedItem->total_cost, 2, '.', '') : '0.00' }}"></td>
-                                    <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
-                                    <td>{{ $jobCard->creator->name ?? 'N/A' }}</td>
-                                    <td>{{ $jobCard->created_at->format('d/m/Y H:i') }}</td>
-                                </tr>
-                                @endforeach
-                                @endforeach
-                            </tbody>
-                        </table>
+                    <ul class="nav nav-tabs mb-3" id="issueTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="issue-fs-tab" data-bs-toggle="tab" data-bs-target="#issue-fs-content" type="button" role="tab">Full Sleeve (F/S)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="issue-hs-tab" data-bs-toggle="tab" data-bs-target="#issue-hs-content" type="button" role="tab">Half Sleeve (H/S)</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="issueTabsContent">
+                        {{-- F/S Tab --}}
+                        <div class="tab-pane fade show active" id="issue-fs-content" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered table-sm align-middle text-nowrap issue-items-table" id="issue-items-table-fs">
+                                    <thead class="bg-primary">
+                                        <tr>
+                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Supplier</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Adjusted</th><th>Qty Wastage</th><th>Qty Used</th><th>Unit Price</th><th>Total Cost</th><th style="min-width: 100px;">Cost/Pc</th><th>Status</th><th>Modified By</th><th>Modified On</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php $lineNumFs = 1; @endphp
+                                        @foreach($jobCard->fabricDetails as $index => $item)
+                                            @php
+                                                $materialName = $artMaterialMap[$item->art_no] ?? $item->art_no;
+                                                $locationName = $artLocationMap[$item->art_no] ?? '-';
+                                                $poItem = $jobCard->purchaseOrder->items->where('art_no', $item->art_no)->first();
+                                                $uomName = ($poItem && $poItem->uom) ? $poItem->uom->uom_code : (($poItem && $poItem->rawMaterial && $poItem->rawMaterial->uom) ? $poItem->rawMaterial->uom->uom_code : ($artUomMap[$item->art_no] ?? '-'));
+                                                
+                                                $fs_total = $item->quantities->sum('qty_fs');
+                                                $produced_qty_fs = $item->quantities->sum('qty_fs') ?: $fs_total;
+                                            @endphp
+                                            
+                                            @if($fs_total > 0 || (!$fs_total && !$item->quantities->sum('qty_hs')))
+                                                @php
+                                                    $sleeveType = 'Full Sleeve';
+                                                    $pieces = $produced_qty_fs;
+                                                    $savedItem = $issueItemMap[$item->id . '_' . $sleeveType] ?? ($issueItemMap[$item->id . '_'] ?? null);
+                                                    $itemDisplayName = ($jobCard->item->code ?: $jobCard->item->name) . '-FS';
+                                                    $itemDescription = $jobCard->item->name . ' Full Sleeve (F/S)';
+                                                @endphp
+                                                <tr data-line="{{ $lineNumFs }}">
+                                                    <td>
+                                                        <button type="button" class="btn btn-sm btn-icon edit-item-btn text-primary" 
+                                                            data-bs-toggle="modal" data-bs-target="#editItemModal"
+                                                            data-store="{{ $jobCard->issueStore->store_type_name ?? '-' }}" data-item="{{ $itemDisplayName }}"
+                                                            data-sleeve-type="{{ $sleeveType }}" data-art="{{ $item->art_no }}"
+                                                            data-uom="{{ $uomName }}" data-qty-issue="{{ $savedItem->qty_issue ?? $item->mtr }}"
+                                                            data-matrix-id="{{ $item->id }}" data-qty-adjusted="{{ $savedItem->qty_adjusted ?? '0.00' }}"
+                                                            data-qty-wastage="{{ $savedItem->qty_wastage ?? '0.00' }}" data-qty-used="{{ $savedItem->qty_used ?? '0.00' }}"
+                                                            data-bit="{{ $savedItem->bit ?? '0.00' }}" data-balance="{{ $savedItem->balance ?? '0.00' }}"
+                                                            data-average="{{ $savedItem->average ?? '0.00' }}" data-produced-qty="{{ $pieces }}"
+                                                            data-row-qty="{{ $pieces }}" title="Edit">
+                                                            <i class="ri ri-edit-line"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td>{{ $lineNumFs++ }}</td>
+                                                    <td class="col-store">{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
+                                                    <td>{{ $locationName }}</td>
+                                                    <td class="col-item">{{ $itemDisplayName }}</td>
+                                                    <td class="col-description">{{ $itemDescription }}</td>
+                                                    <td class="fw-bold col-art">{{ $item->art_no }}</td>
+                                                    <td>{{ $jobCard->purchaseOrder->supplier->name ?? '-' }}</td>
+                                                    <td>1</td><td>{{ $uomName }}</td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_issue]" class="form-control form-control-sm text-end col-qty-issue" value="{{ $savedItem->qty_issue ?? $item->mtr }}" readonly>
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][bit]" class="col-bit" value="{{ $savedItem->bit ?? '0.00' }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][balance]" class="col-balance" value="{{ $savedItem->balance ?? '0.00' }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][average]" class="col-average" value="{{ $savedItem->average ?? '0.00' }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][produced_qty]" class="col-produced-qty" value="{{ $pieces }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][sleeve_type]" class="col-sleeve-type" value="{{ $sleeveType }}">
+                                                    </td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_adjusted]" class="form-control form-control-sm text-end col-qty-adjusted" value="{{ $savedItem->qty_adjusted ?? '0.00' }}"></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_wastage]" class="form-control form-control-sm text-end col-qty-wastage" value="{{ $savedItem->qty_wastage ?? '0.00' }}" readonly></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_used]" class="form-control form-control-sm text-end col-qty-used" value="{{ $savedItem->qty_used ?? '0.00' }}"></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][unit_price]" class="form-control form-control-sm text-end col-unit-price" value="{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : (isset($artPriceMap[$item->art_no]) ? number_format($artPriceMap[$item->art_no], 2, '.', '') : '0.00') }}"></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][total_cost]" class="form-control form-control-sm text-end col-total-cost" value="{{ (isset($savedItem->total_cost) && $savedItem->total_cost > 0) ? number_format($savedItem->total_cost, 2, '.', '') : '0.00' }}"></td>
+                                                    <td><input type="number" step="0.01" class="form-control form-control-sm text-end col-cost-per-pc fw-bold bg-light" value="{{ (isset($savedItem->cost_per_pc) && $savedItem->cost_per_pc > 0) ? number_format($savedItem->cost_per_pc, 2, '.', '') : '0.00' }}" readonly tabindex="-1"></td>
+                                                    <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
+                                                    <td>{{ $jobCard->creator->name ?? 'N/A' }}</td><td>{{ $jobCard->created_at->format('d/m/Y H:i') }}</td>
+                                                </tr>
+                                            @endif
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {{-- H/S Tab --}}
+                        <div class="tab-pane fade" id="issue-hs-content" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered table-sm align-middle text-nowrap issue-items-table" id="issue-items-table-hs">
+                                    <thead class="bg-primary">
+                                        <tr>
+                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Supplier</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Adjusted</th><th>Qty Wastage</th><th>Qty Used</th><th>Unit Price</th><th>Total Cost</th><th style="min-width: 100px;">Cost/Pc</th><th>Status</th><th>Modified By</th><th>Modified On</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php $lineNumHs = 1; @endphp
+                                        @foreach($jobCard->fabricDetails as $index => $item)
+                                            @php
+                                                $locationName = $artLocationMap[$item->art_no] ?? '-';
+                                                $poItem = $jobCard->purchaseOrder->items->where('art_no', $item->art_no)->first();
+                                                $uomName = ($poItem && $poItem->uom) ? $poItem->uom->uom_code : (($poItem && $poItem->rawMaterial && $poItem->rawMaterial->uom) ? $poItem->rawMaterial->uom->uom_code : ($artUomMap[$item->art_no] ?? '-'));
+                                                
+                                                $hs_total = $item->quantities->sum('qty_hs');
+                                                $produced_qty_hs = $item->quantities->sum('qty_hs') ?: $hs_total;
+                                            @endphp
+                                            
+                                            @if($hs_total > 0)
+                                                @php
+                                                    $sleeveType = 'Half Sleeve';
+                                                    $pieces = $produced_qty_hs;
+                                                    $savedItem = $issueItemMap[$item->id . '_' . $sleeveType] ?? ($issueItemMap[$item->id . '_'] ?? null);
+                                                    $itemDisplayName = ($jobCard->item->code ?: $jobCard->item->name) . '-HS';
+                                                    $itemDescription = $jobCard->item->name . ' Half Sleeve (H/S)';
+                                                @endphp
+                                                <tr data-line="{{ $lineNumHs }}">
+                                                    <td>
+                                                        <button type="button" class="btn btn-sm btn-icon edit-item-btn text-primary" 
+                                                            data-bs-toggle="modal" data-bs-target="#editItemModal"
+                                                            data-store="{{ $jobCard->issueStore->store_type_name ?? '-' }}" data-item="{{ $itemDisplayName }}"
+                                                            data-sleeve-type="{{ $sleeveType }}" data-art="{{ $item->art_no }}"
+                                                            data-uom="{{ $uomName }}" data-qty-issue="{{ $savedItem->qty_issue ?? $item->mtr }}"
+                                                            data-matrix-id="{{ $item->id }}" data-qty-adjusted="{{ $savedItem->qty_adjusted ?? '0.00' }}"
+                                                            data-qty-wastage="{{ $savedItem->qty_wastage ?? '0.00' }}" data-qty-used="{{ $savedItem->qty_used ?? '0.00' }}"
+                                                            data-bit="{{ $savedItem->bit ?? '0.00' }}" data-balance="{{ $savedItem->balance ?? '0.00' }}"
+                                                            data-average="{{ $savedItem->average ?? '0.00' }}" data-produced-qty="{{ $pieces }}"
+                                                            data-row-qty="{{ $pieces }}" title="Edit">
+                                                            <i class="ri ri-edit-line"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td>{{ $lineNumHs++ }}</td>
+                                                    <td class="col-store">{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
+                                                    <td>{{ $locationName }}</td>
+                                                    <td class="col-item">{{ $itemDisplayName }}</td>
+                                                    <td class="col-description">{{ $itemDescription }}</td>
+                                                    <td class="fw-bold col-art">{{ $item->art_no }}</td>
+                                                    <td>{{ $jobCard->purchaseOrder->supplier->name ?? '-' }}</td>
+                                                    <td>1</td><td>{{ $uomName }}</td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_issue]" class="form-control form-control-sm text-end col-qty-issue" value="{{ $savedItem->qty_issue ?? $item->mtr }}" readonly>
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][bit]" class="col-bit" value="{{ $savedItem->bit ?? '0.00' }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][balance]" class="col-balance" value="{{ $savedItem->balance ?? '0.00' }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][average]" class="col-average" value="{{ $savedItem->average ?? '0.00' }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][produced_qty]" class="col-produced-qty" value="{{ $pieces }}">
+                                                        <input type="hidden" name="items[{{ $item->id }}][{{ $sleeveType }}][sleeve_type]" class="col-sleeve-type" value="{{ $sleeveType }}">
+                                                    </td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_adjusted]" class="form-control form-control-sm text-end col-qty-adjusted" value="{{ $savedItem->qty_adjusted ?? '0.00' }}"></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_wastage]" class="form-control form-control-sm text-end col-qty-wastage" value="{{ $savedItem->qty_wastage ?? '0.00' }}" readonly></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][qty_used]" class="form-control form-control-sm text-end col-qty-used" value="{{ $savedItem->qty_used ?? '0.00' }}"></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][unit_price]" class="form-control form-control-sm text-end col-unit-price" value="{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : (isset($artPriceMap[$item->art_no]) ? number_format($artPriceMap[$item->art_no], 2, '.', '') : '0.00') }}"></td>
+                                                    <td><input type="number" step="0.01" name="items[{{ $item->id }}][{{ $sleeveType }}][total_cost]" class="form-control form-control-sm text-end col-total-cost" value="{{ (isset($savedItem->total_cost) && $savedItem->total_cost > 0) ? number_format($savedItem->total_cost, 2, '.', '') : '0.00' }}"></td>
+                                                    <td><input type="number" step="0.01" class="form-control form-control-sm text-end col-cost-per-pc fw-bold bg-light" value="{{ (isset($savedItem->cost_per_pc) && $savedItem->cost_per_pc > 0) ? number_format($savedItem->cost_per_pc, 2, '.', '') : '0.00' }}" readonly tabindex="-1"></td>
+                                                    <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
+                                                    <td>{{ $jobCard->creator->name ?? 'N/A' }}</td><td>{{ $jobCard->created_at->format('d/m/Y H:i') }}</td>
+                                                </tr>
+                                            @endif
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -263,22 +320,15 @@
                                     <input type="number" step="0.01" id="modal_balance" class="form-control bg-white fw-bold" readonly>
                                     <label>Balance</label>
                                 </div>
-                                <div class="form-floating form-floating-outline mb-3">
+                                {{-- <div class="form-floating form-floating-outline mb-3">
                                     <input type="number" id="modal_pieces" class="form-control bg-white" readonly>
                                     <label>Pieces for Item</label>
-                                    <input type="hidden" id="modal_produced_qty">
-                                </div>
+                                </div> --}}
+                                <input type="hidden" id="modal_produced_qty">
+                                <input type="hidden" id="modal_unit_price">
+                                <input type="hidden" id="modal_total_cost">
+                                <input type="hidden" id="modal_cost_per_pc">
                             </div>
-                            {{-- <div class="col-md-3">
-                                <div class="form-floating form-floating-outline mb-3">
-                                    <input type="number" step="0.01" id="modal_unit_price" class="form-control border-primary" placeholder="Unit Price">
-                                    <label>Unit Price</label>
-                                </div>
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" id="modal_total_cost" class="form-control bg-white fw-bold text-success" readonly>
-                                    <label>Total Cost</label>
-                                </div>
-                            </div> --}}
                         </div>
                     </div>
                 </form>
@@ -352,26 +402,38 @@ $(document).ready(function() {
         const qtyIssue = parseFloat($('#modal_qty_issue').val()) || 0;
         const qtyAdjusted = parseFloat($('#modal_qty_adjusted').val()) || 0;
         const totalAvailable = qtyIssue + qtyAdjusted;
+        const producedQty = parseFloat($('#modal_produced_qty').val()) || 1;
         
         let qtyUsed = parseFloat($('#modal_qty_used').val()) || 0;
         let balance = parseFloat($('#modal_balance').val()) || 0;
         const bit = parseFloat($('#modal_bit').val()) || 0;
+        let consumption = parseFloat($('#modal_consumption').val()) || 0;
 
-        if (source === 'balance') {
-            qtyUsed = totalAvailable - balance;
+        if (source === 'consumption') {
+            qtyUsed = consumption * producedQty;
             $('#modal_qty_used').val(qtyUsed.toFixed(2));
-        } else {
             balance = totalAvailable - qtyUsed;
             $('#modal_balance').val(balance.toFixed(2));
+        } else if (source === 'balance') {
+            qtyUsed = totalAvailable - balance;
+            $('#modal_qty_used').val(qtyUsed.toFixed(2));
+        } else if (source === 'used') {
+            balance = totalAvailable - qtyUsed;
+            $('#modal_balance').val(balance.toFixed(2));
+        } else {
+             balance = totalAvailable - qtyUsed;
+             $('#modal_balance').val(balance.toFixed(2));
+        }
+
+        if (source !== 'consumption' && producedQty > 0) {
+            consumption = qtyUsed / producedQty;
+            $('#modal_consumption').val(consumption.toFixed(4));
         }
 
         const wastage = balance - bit;
         $('#modal_qty_wastage').val(wastage.toFixed(2));
 
-        const producedQty = parseFloat($('#modal_pieces').val()) || 0;
-        $('#modal_produced_qty').val(producedQty);
-
-        const qtyConsumed = qtyUsed + wastage + qtyAdjusted;
+        const qtyConsumed = qtyUsed + wastage;
 
         let artAvg = 0;
         if (producedQty > 0) {
@@ -382,7 +444,12 @@ $(document).ready(function() {
         const unitPrice = parseFloat($('#modal_unit_price').val()) || 0;
         const totalCost = qtyUsed * unitPrice;
         $('#modal_total_cost').val(totalCost.toFixed(2));
+
+        const costPerPc = producedQty > 0 ? (totalCost / producedQty) : 0;
+        $('#modal_cost_per_pc').val(costPerPc.toFixed(2));
     }
+
+    $('#modal_consumption').on('input', function() { calculateAll('consumption'); });
 
     $('#modal_balance').on('input', function() { calculateAll('balance'); });
     $('#modal_qty_used').on('input', function() { calculateAll('used'); });
@@ -439,7 +506,11 @@ $(document).ready(function() {
                             var itemData = response.updated_items[matrixId][sleeveType];
                             currentRow.find('.col-unit-price').val(parseFloat(itemData.unit_price).toFixed(2));
                             currentRow.find('.col-total-cost').val(parseFloat(itemData.total_cost).toFixed(2));
+                            currentRow.find('.col-cost-per-pc').val(parseFloat(itemData.cost_per_pc).toFixed(2));
                             currentRow.find('.status-badge').removeClass('bg-label-info').addClass('bg-label-success').text('COMPLETED');
+                            
+                            if (response.total_fs_price !== undefined) $('#summary-price-fs').text(parseFloat(response.total_fs_price).toLocaleString(undefined, {minimumFractionDigits: 2}));
+                            if (response.total_hs_price !== undefined) $('#summary-price-hs').text(parseFloat(response.total_hs_price).toLocaleString(undefined, {minimumFractionDigits: 2}));
                         }
 
                         const editBtn = currentRow.find('.edit-item-btn');

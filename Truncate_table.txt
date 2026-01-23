@@ -50,16 +50,46 @@ TRUNCATE `grn_entries`;
 TRUNCATE `stock_entries`;
 TRUNCATE `stock_entry_items`;
 
-TRUNCATE `debit_note_items`;
 TRUNCATE `debit_notes`;
+TRUNCATE `debit_note_items`;
+
+TRUNCATE `grn_entries`;
+TRUNCATE `grn_entry_items`;
+TRUNCATE `grn_entry_item_variants`;
 
 TRUNCATE `job_card_cutting_size_ratios`;
-TRUNCATE `job_card_operations`;
+TRUNCATE `job_card_entries`;
 TRUNCATE `job_card_fabric_details`;
 TRUNCATE `job_card_images`;
-TRUNCATE `job_card_issue_items`; 
-TRUNCATE `job_card_operations`; 
-TRUNCATE `job_card_entries`;
+TRUNCATE `job_card_issue_items`;
+TRUNCATE `job_card_issue_stock_details`;
+TRUNCATE `job_card_matrix_quantities`;
+TRUNCATE `job_card_operations`;
+
+TRUNCATE `process_schedules`;
+TRUNCATE `process_schedule_services`;
+
+TRUNCATE `productions`;
+TRUNCATE `production_receipts`;
+TRUNCATE `production_receipt_items`;
+
+TRUNCATE `purchase_invoices`;
+TRUNCATE `purchase_invoice_charges`;
+TRUNCATE `purchase_invoice_items`;
+TRUNCATE `purchase_invoice_payments`;
+
+TRUNCATE `purchase_orders`;
+TRUNCATE `purchase_order_items`;
+
+TRUNCATE `stock_entries`;
+TRUNCATE `stock_entry_items`;
+
+TRUNCATE `tasks`;
+TRUNCATE `task_adjustments`;
+TRUNCATE `task_receives`;
+TRUNCATE `task_status`;
+
+
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -72,3 +102,117 @@ TRUNCATE `permissions`;
 
 DELETE FROM users WHERE id != 1;
 ALTER TABLE users AUTO_INCREMENT = 2;
+
+
+=======================================================================================================
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- =========================
+-- TASK & PRODUCTION FLOW
+-- =========================
+DELETE FROM task_receives;
+DELETE FROM task_adjustments;
+DELETE FROM task_status;
+DELETE FROM tasks;
+
+DELETE FROM production_receipt_items;
+DELETE FROM production_receipts;
+DELETE FROM productions;
+
+DELETE FROM process_schedule_services;
+DELETE FROM process_schedules;
+
+-- =========================
+-- JOB CARD
+-- =========================
+DELETE FROM job_card_issue_stock_details;
+DELETE FROM job_card_issue_items;
+DELETE FROM job_card_operations;
+DELETE FROM job_card_matrix_quantities;
+DELETE FROM job_card_cutting_size_ratios;
+DELETE FROM job_card_fabric_details;
+DELETE FROM job_card_images;
+DELETE FROM job_card_entries;
+
+-- =========================
+-- GRN / STOCK
+-- =========================
+DELETE FROM grn_entry_item_variants;
+DELETE FROM grn_entry_items;
+DELETE FROM grn_entries;
+
+DELETE FROM stock_entry_items;
+DELETE FROM stock_entries;
+
+-- =========================
+-- PURCHASE
+-- =========================
+DELETE FROM purchase_invoice_payments;
+DELETE FROM purchase_invoice_charges;
+DELETE FROM purchase_invoice_items;
+DELETE FROM purchase_invoices;
+
+DELETE FROM purchase_order_items;
+DELETE FROM purchase_orders;
+
+-- =========================
+-- DEBIT NOTES
+-- =========================
+DELETE FROM debit_note_items;
+DELETE FROM debit_notes;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- =========================
+-- TASK & PRODUCTION
+-- =========================
+ALTER TABLE tasks AUTO_INCREMENT = 1;
+ALTER TABLE productions AUTO_INCREMENT = 1;
+ALTER TABLE production_receipts AUTO_INCREMENT = 1;
+ALTER TABLE production_receipt_items AUTO_INCREMENT = 1;
+
+ALTER TABLE process_schedules AUTO_INCREMENT = 1;
+ALTER TABLE process_schedule_services AUTO_INCREMENT = 1;
+
+-- =========================
+-- JOB CARD
+-- =========================
+ALTER TABLE job_card_entries AUTO_INCREMENT = 1;
+ALTER TABLE job_card_operations AUTO_INCREMENT = 1;
+ALTER TABLE job_card_matrix_quantities AUTO_INCREMENT = 1;
+
+-- =========================
+-- GRN / STOCK
+-- =========================
+ALTER TABLE grn_entries AUTO_INCREMENT = 1;
+ALTER TABLE grn_entry_items AUTO_INCREMENT = 1;
+ALTER TABLE grn_entry_item_variants AUTO_INCREMENT = 1;
+
+ALTER TABLE stock_entries AUTO_INCREMENT = 1;
+ALTER TABLE stock_entry_items AUTO_INCREMENT = 1;
+
+-- =========================
+-- PURCHASE
+-- =========================
+ALTER TABLE purchase_orders AUTO_INCREMENT = 1;
+ALTER TABLE purchase_order_items AUTO_INCREMENT = 1;
+
+ALTER TABLE purchase_invoices AUTO_INCREMENT = 1;
+ALTER TABLE purchase_invoice_items AUTO_INCREMENT = 1;
+ALTER TABLE purchase_invoice_charges AUTO_INCREMENT = 1;
+ALTER TABLE purchase_invoice_payments AUTO_INCREMENT = 1;
+
+-- =========================
+-- DEBIT NOTES
+-- =========================
+ALTER TABLE debit_notes AUTO_INCREMENT = 1;
+ALTER TABLE debit_note_items AUTO_INCREMENT = 1;
+
+-- =========================
+-- TASK SUPPORT
+-- =========================
+ALTER TABLE task_receives AUTO_INCREMENT = 1;
+ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
+ALTER TABLE task_status AUTO_INCREMENT = 1;
+

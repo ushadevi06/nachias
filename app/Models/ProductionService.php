@@ -16,6 +16,10 @@ class ProductionService extends Model
         'service_code',
         'operation_stage_id',
         'status',
+        'applies_to',
+        'base_quantity_source',
+        'multiplier',
+        'uom',
         'created_by',
         'updated_by',
     ];
@@ -23,6 +27,10 @@ class ProductionService extends Model
     public function operationStage()
     {
         return $this->belongsTo(OperationStage::class, 'operation_stage_id');
+    }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
     }
 }
 

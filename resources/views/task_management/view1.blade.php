@@ -9,10 +9,10 @@
                     <div class="card-header-box d-flex justify-content-between align-items-center mb-4">
                         <h4 class="mb-0">Task Management List</h4>
                         <div class="d-flex gap-2">
-                             <a href="{{ url('task_management') }}" class="btn btn-outline-primary waves-effect waves-light">
+                             <a href="{{ url('task_management/kanban') }}" class="btn btn-outline-primary waves-effect waves-light">
                                 <i class="ri-kanban-view me-1"></i> Kanban Board
                             </a>
-                            <a href="{{ url('add_task_management') }}" class="btn btn-primary waves-effect waves-light">
+                            <a href="{{ url('task_management/add') }}" class="btn btn-primary waves-effect waves-light">
                                 <i class="ri-add-line me-1"></i> Add Task
                             </a>
                         </div>
@@ -21,7 +21,7 @@
                         <table class="datatables-products table table-hover">
                             <thead>
                                 <tr>
-                                    <th>Task ID</th>
+                                    <th>Task No</th>
                                     <th>Assigned To</th>
                                     <th>Stage / Dept</th>
                                     <th>Progress</th>
@@ -29,50 +29,6 @@
                                     <th class="text-center">Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="fw-bold">TASK-2025-001</td>
-                                    <td>Ramesh</td>
-                                    <td>Cutting</td>
-                                    <td>
-                                        <div class="d-flex align-items-center" style="min-width: 150px;">
-                                            <div class="progress w-100 me-2" style="height: 6px;">
-                                                <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                                            </div>
-                                            <span class="small fw-bold">80%</span>
-                                        </div>
-                                    </td>
-                                    <td><span class="badge rounded-pill bg-label-info">In Progress</span></td>
-                                    <td class="text-center">
-                                        <div class="button-box">
-                                            <a href="{{ url('add_task_management') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_task_management') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn" onclick="delete_data('{{ url('delete_task_management/1') }}')"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-bold">TASK-2025-002</td>
-                                    <td>Karthick</td>
-                                    <td>Stitching</td>
-                                    <td>
-                                        <div class="d-flex align-items-center" style="min-width: 150px;">
-                                            <div class="progress w-100 me-2" style="height: 6px;">
-                                                <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                                            </div>
-                                            <span class="small fw-bold">0%</span>
-                                        </div>
-                                    </td>
-                                    <td><span class="badge rounded-pill bg-label-secondary">Not Started</span></td>
-                                    <td class="text-center">
-                                        <div class="button-box">
-                                            <a href="{{ url('add_task_management') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_task_management') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-delete delete-btn" onclick="delete_data('{{ url('delete_task_management/2') }}')"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -80,4 +36,37 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        if ($('.datatables-products').length) {
+            $('.datatables-products').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ url('task_management') }}",
+                },
+                columns: [
+                    {data: 'task_no', name: 'task_no'},
+                    {data: 'assigned_to', name: 'assigned_to'},
+                    {data: 'stage_dept', name: 'stage_dept'},
+                    {data: 'progress', name: 'progress'},
+                    {data: 'status', name: 'status'},
+                    {data: 'action', name: 'action', orderable: false, searchable: false},
+                ],
+                order: [[0, 'desc']],
+                dom: '<"card-header border-bottom p-1"<"head-label"><"dt-action-buttons text-end"B>><"d-flex justify-content-between align-items-center mx-0 row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>t<"d-flex justify-content-between mx-0 row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+                displayLength: 10,
+                lengthMenu: [10, 25, 50, 75, 100],
+            });
+        }
+    });
+
+    function delete_data(url) {
+        if (confirm("Are you sure you want to delete this task?")) {
+            window.location.href = url;
+        }
+    }
+</script>
 @endsection
