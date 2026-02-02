@@ -47,8 +47,15 @@
 <script>
     $(function() {
         $('#storeTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
-            serverSide: false,
             ajax: "{{ url('stores') }}",
             columns: [
                 { data: 'DT_RowIndex' },

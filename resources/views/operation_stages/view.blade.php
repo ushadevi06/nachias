@@ -49,8 +49,15 @@
     $(document).ready(function() {
         // Initialize DataTable
         let table = $('#operationStagesTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
-            serverSide: false,
             ajax: {
                 url: "{{ url('operation_stages') }}",
                 type: "GET"

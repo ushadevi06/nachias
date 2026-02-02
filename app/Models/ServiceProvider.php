@@ -11,7 +11,7 @@ class ServiceProvider extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'service_type_id',
+        'operation_stage_id',
         'name',
         'code',
         'is_plant',
@@ -41,9 +41,9 @@ class ServiceProvider extends Model
         'updated_by',
     ];
 
-    public function serviceType()
+    public function operationStage()
     {
-        return $this->belongsTo(ServiceType::class);
+        return $this->belongsTo(OperationStage::class);
     }
 
     public function state()
@@ -59,11 +59,5 @@ class ServiceProvider extends Model
     public function place()
     {
         return $this->belongsTo(Place::class);
-    }
-
-    // Many-to-many: Service Provider has many Production Services
-    public function productionServices()
-    {
-        return $this->belongsToMany(ProductionService::class, 'service_provider_production_service');
     }
 }

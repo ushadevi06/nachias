@@ -83,8 +83,14 @@
     $(document).ready(function() {
 
         let table = $('#raw-material-table').DataTable({
-            processing: true,
-            serverSide: false,
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: {
                 url: "{{ url('raw_materials') }}",
                 data: function(d) {

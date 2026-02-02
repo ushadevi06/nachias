@@ -10,7 +10,7 @@
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
             </div>
- @if(session('success'))
+            @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -62,8 +62,16 @@
 <script>
     $(document).ready(function() {
         let table = $('#debit_notes_table').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
-            serverSide: false, // Since we are getting all data at once in controller for now
+            serverSide: false,
             ajax: {
                 url: "{{ url('debit_notes') }}",
                 data: function(d) {

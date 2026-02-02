@@ -45,42 +45,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>ISSUE001</td>
-                                    <td>22-09-2025</td>
-                                    <td>Stitching</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_stock_consumables_return') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_stock_consumables_return') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>ISSUE002</td>
-                                    <td>22-09-2025</td>
-                                    <td>Cutting</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_stock_consumables_return') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_stock_consumables_return') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>ISSUE003</td>
-                                    <td>22-09-2025</td>
-                                    <td>Packing</td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_stock_consumables_return') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="{{ url('add_stock_consumables_return') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -89,4 +53,30 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        $('#consumablesTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
+            processing: true,
+            ajax: "{{ url('stock_consumables_returns') }}",
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex' },
+                { data: 'issue_no', name: 'issue_no' },
+                { data: 'issue_date', name: 'issue_date' },
+                { data: 'production', name: 'production' },
+                { data: 'action', name: 'action', orderable: false, searchable: false },
+            ],
+            order: [[0, 'desc']]
+        });
+    });
+</script>
 @endsection

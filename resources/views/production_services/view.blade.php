@@ -1,11 +1,11 @@
 @extends('layouts.common')
-@section('title', 'Production Services - ' . env('WEBSITE_NAME'))
+@section('title', 'Services - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Production Services</h4>
+                <h4>Services</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create services'))
                 <a class="btn btn-primary" href="{{ url('production_services/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
@@ -50,8 +50,14 @@
 <script>
     $(function() {
         $('#serviceTable').DataTable({
-            processing: true,
-            serverSide: false,
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: "{{ url('production_services') }}",
             columns: [
                 { data: 'DT_RowIndex' },

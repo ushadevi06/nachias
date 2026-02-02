@@ -31,6 +31,20 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="service_provider_id" name="service_provider_id" class="form-select select2 @error('service_provider_id') is-invalid @enderror" data-placeholder="Select Service Provider">
+                                        <option value="">Select Service Provider</option>
+                                        @foreach($serviceProviders as $provider)
+                                        <option value="{{ $provider->id }}" {{ old('service_provider_id', $employee->service_provider_id ?? '') == $provider->id ? 'selected' : '' }}>{{ $provider->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="service_provider_id">Service Provider</label>
+                                </div>
+                                @error('service_provider_id')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <select id="role_id" name="role_id" class="form-select select2 @error('role_id') is-invalid @enderror" data-placeholder="Select Role">
                                         <option value="">Select Role</option>
                                         @foreach($roles as $role)
@@ -63,7 +77,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('email') is-invalid @enderror" id="email" placeholder="Enter Email" name="email" value="{{ old('email', $employee->email ?? '') }}">
+                                    <input type="email" class="form-control @error('email') is-invalid @enderror" id="email" placeholder="Enter Email" name="email" value="{{ old('email', $employee->email ?? '') }}">
                                     <label for="email">Email <span class="text-danger">*</span></label>
                                 </div>
                                 @error('email')

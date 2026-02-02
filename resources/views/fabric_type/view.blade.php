@@ -46,8 +46,15 @@
     $(function() {
 
         let table = $('#fabricTypesTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
-            serverSide: false,
             ajax: {
                 url: "{{ url('fabric_type') }}"
             },

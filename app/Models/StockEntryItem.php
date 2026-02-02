@@ -15,10 +15,11 @@ class StockEntryItem extends Model
         'stock_type',
         'grn_entry_item_id',
         'raw_material_id',
-        'finished_item_code', // TEMPORARY: Replace with finished_good_id FK later
+        'finished_item_code', 
         'store_category_id',
         'store_location_id',
         'uom_id',
+        'size',
         'qty_in',
         'qty_out',
         'price',

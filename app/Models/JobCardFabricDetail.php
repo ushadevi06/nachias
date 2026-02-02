@@ -13,7 +13,8 @@ class JobCardFabricDetail extends Model
 
     protected $fillable = [
         'job_card_entry_id', 'art_no', 
-        'width', 'mtr', 'in_out', 'n_patti', 'row_total'
+        'width', 'mtr', 'in_out', 'n_patti', 'row_total',
+        'fs_qty', 'hs_qty'
     ];
 
     public function jobCardEntry()
@@ -24,5 +25,10 @@ class JobCardFabricDetail extends Model
     public function quantities()
     {
         return $this->hasMany(JobCardMatrixQuantity::class, 'job_card_fabric_detail_id');
+    }
+
+    public function consumptions()
+    {
+        return $this->hasMany(JobCardFabricConsumption::class, 'job_card_fabric_detail_id');
     }
 }

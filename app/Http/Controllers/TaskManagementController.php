@@ -12,8 +12,14 @@ use App\Models\TaskStatus;
 use App\Models\TaskReceive;
 use App\Models\Shift;
 use App\Models\TaskAdjustment;
+use App\Models\ProductionStageConsumable;
+use App\Models\StockConsumableIssue;
+use App\Models\StockConsumableIssueItem;
+use App\Models\StockConsumableStockDetail;
+use App\Models\StockEntryItem;
+use App\Models\RawMaterial;
 use Illuminate\Support\Facades\DB;
-use Yajra\DataTables\DataTables;
+
 use Carbon\Carbon;
 
 class TaskManagementController extends Controller
@@ -36,8 +42,6 @@ class TaskManagementController extends Controller
             }
 
             $tasks = Task::with(['receives', 'adjustments'])->get();
-            
-            // Fetch all task statuses
             $allStatuses = TaskStatus::all();
 
             $boards = [];
@@ -47,16 +51,12 @@ class TaskManagementController extends Controller
 
             foreach ($tasks as $t) {
                 $statusName = $t->status ?: 'Planned';
-                
-                // Calculate target quantity by summing individual service quantities
                 $targetQty = 0;
-                $serviceTargets = []; // Store target per service
+                $serviceTargets = [];
                 
                 if ($t->services && is_array($t->services) && $t->stage_id) {
                     foreach ($t->services as $serviceId) {
-                        $scheduleService = \App\Models\ProcessScheduleService::where('process_schedule_id', $t->stage_id)
-                            ->where('service_id', $serviceId)
-                            ->first();
+                        $scheduleService = \App\Models\ProcessScheduleService::where('process_schedule_id', $t->stage_id)->where('service_id', $serviceId)->first();
                         if ($scheduleService) {
                             $qty = (float)($scheduleService->calculated_qty ?? 0);
                             $serviceTargets[$serviceId] = $qty;
@@ -64,28 +64,23 @@ class TaskManagementController extends Controller
                         }
                     }
                 }
-                
-                // If no services found, fallback to stage planned_qty
                 if ($targetQty == 0 && $t->stage) {
                     $targetQty = (float)($t->stage->planned_qty ?? 0);
                 }
                 
-                // Calculate total received per service
                 $totalReceived = 0;
                 foreach ($t->receives as $receive) {
                     if ($receive->received_services && is_array($receive->received_services)) {
                         foreach ($receive->received_services as $serviceId => $quantities) {
                             $goodQty = (float)($quantities['good_qty'] ?? 0);
                             $wastageQty = (float)($quantities['wastage_qty'] ?? 0);
-                            $totalReceived += $goodQty + $wastageQty;  // Good + Wastage = Work completed
+                            $totalReceived += $goodQty + $wastageQty;
                         }
                     } else {
-                        // Fallback for old records without per-service tracking
                         $totalReceived += (float)($receive->good_qty ?? 0);
                     }
                 }
                 
-                // Apply adjustments
                 foreach($t->adjustments as $adj) {
                     if ($adj->adjustment_type == 'Loss') {
                         $totalReceived += (float)$adj->qty; 
@@ -151,6 +146,14 @@ class TaskManagementController extends Controller
 
         if (request()->isMethod('post')) {
             $request = request();
+            
+            if ($request->issue_date) {
+                $request->merge(['issue_date' => Carbon::createFromFormat('d-m-Y', $request->issue_date)->format('Y-m-d')]);
+            }
+            if ($request->due_date) {
+                $request->merge(['due_date' => Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d')]);
+            }
+
             $request->validate([
                 'stage_id' => 'required',
                 'issued_to' => 'required',
@@ -198,6 +201,7 @@ class TaskManagementController extends Controller
                 $production = Production::with([
                     'jobCard',
                     'processSchedules.operationStage',
+                    'processSchedules.serviceProvider',
                     'processSchedules.services.productionService'
                 ])->find($prodId);
             } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
@@ -214,6 +218,7 @@ class TaskManagementController extends Controller
             $production = Production::with([
                 'jobCard',
                 'processSchedules.operationStage',
+                'processSchedules.serviceProvider',
                 'processSchedules.services.productionService'
             ])->find($task->production_id);
             if ($production) {
@@ -285,32 +290,6 @@ class TaskManagementController extends Controller
         return redirect('task_management')->with('success', 'Task deleted successfully');
     }
 
-    /* Task Receive Methods */
-    public function receive_index(Request $request)
-    {
-        if ($request->ajax()) {
-            $data = TaskReceive::with(['task', 'receivedFrom'])->latest()->get();
-            return DataTables::of($data)
-                ->addIndexColumn()
-                ->addColumn('task_no', function($row){
-                    return $row->task->task_no ?? 'N/A';
-                })
-                ->addColumn('received_from_name', function($row){
-                    return $row->receivedFrom->name ?? 'N/A';
-                })
-                ->addColumn('action', function($row){
-                    $btn = '<div class="d-flex gap-2">';
-                    $btn .= '<a href="'.url('task_receives/add/'.$row->id).'" class="btn btn-sm btn-primary"><i class="ri-edit-2-line"></i></a>';
-                    $btn .= '<a href="'.url('task_receives/delete/'.$row->id).'" class="btn btn-sm btn-danger" onclick="return confirm(\'Are you sure?\')"><i class="ri-delete-bin-line"></i></a>';
-                    $btn .= '</div>';
-                    return $btn;
-                })
-                ->rawColumns(['action'])
-                ->make(true);
-        }
-        return view('task_management/receive_index');
-    }
-
     public function receive_add($id = null)
     {
         $taskReceive = null;
@@ -320,6 +299,10 @@ class TaskManagementController extends Controller
 
         if (request()->isMethod('post')) {
             $request = request();
+            if ($request->received_date) {
+                $request->merge(['received_date' => Carbon::createFromFormat('d-m-Y', $request->received_date)->format('Y-m-d')]);
+            }
+
             $request->validate([
                 'task_id' => 'required|exists:tasks,id',
                 'received_date' => 'required|date',
@@ -331,7 +314,6 @@ class TaskManagementController extends Controller
             ]);
 
             $task = Task::findOrFail($request->task_id);
-
 
             DB::beginTransaction();
             try {
@@ -395,6 +377,20 @@ class TaskManagementController extends Controller
                     \App\Models\TaskStatus::firstOrCreate(['name' => $newStatus], ['color' => 'secondary']);
                 }
 
+                /* 
+                if ($newStatus == 'Completed') {
+                    $task->load('stage'); 
+                    if ($task->stage && $task->stage->consumables_issued_at === null) {
+                        $totalGoodQty = $task->receives()->sum('good_qty');
+                        
+                        if ($totalGoodQty > 0) {
+                            $this->issueConsumables($task, $totalGoodQty);
+                            $task->stage->update(['consumables_issued_at' => now()]);
+                        }
+                    }
+                }
+                */
+
                 DB::commit();
                 return redirect('task_management')->with('success', 'Task received successfully');
             } catch (\Exception $e) {
@@ -438,97 +434,352 @@ class TaskManagementController extends Controller
                 'services' => $serviceData
             ]);
         }
-        return response.json(['success' => false]);
+        return response()->json(['success' => false]);
+    }
+
+    public function getStageConsumables($id)
+    {
+        $schedule = \App\Models\ProcessSchedule::with(['operationStage', 'production.jobCard.fabricDetails'])->find($id);
+        if (!$schedule) return response()->json(['success' => false]);
+        
+        $stageName = $schedule->operationStage->operation_stage_name ?? ($schedule->stage ?? '');
+        
+        $consumableConfigs = \App\Models\ProductionStageConsumable::where('stage', $stageName)
+            ->where('status', 'Active')
+            ->pluck('raw_material_id')
+            ->toArray();
+
+        $jobCard = $schedule->production->jobCard ?? null;
+        $rmIdsFromArt = [];
+        $rmIdsFromIssues = [];
+        if ($jobCard) {
+            $artNumbers = $jobCard->fabricDetails->pluck('art_no')->filter()->toArray();
+            $rmIdsFromArt = RawMaterial::whereIn('code', $artNumbers)->pluck('id')->toArray();
+            
+            $rmIdsFromIssues = \App\Models\StockEntryItem::whereIn('id', function($q) use ($jobCard) {
+                $q->select('stock_entry_item_id')
+                  ->from('job_card_issue_items')
+                  ->where('job_card_entry_id', $jobCard->id);
+            })->pluck('raw_material_id')->toArray();
+        }
+
+        $allRelatedRmIds = array_unique(array_merge($rmIdsFromArt, $rmIdsFromIssues, $consumableConfigs));
+
+        $materials = RawMaterial::whereIn('id', $allRelatedRmIds)
+            ->where('status', 'Active')
+            ->get();
+
+        $formatted = $materials->map(function($m) {
+            return [
+                'id' => $m->id,
+                'text' => $m->name . ($m->code ? " ({$m->code})" : "")
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'materials' => $formatted
+        ]);
     }
 
     public function adjustment_add(Request $request, $id = null)
     {
         $request->validate([
             'task_id' => 'required|exists:tasks,id',
-            'adjustment_type' => 'required',
-            'qty' => 'required|numeric',
-            'reason' => 'required'
-        ],[
-            'required' => 'This field is required.'
+            'approved_by' => 'required',
+            'overall_reason' => 'required',
+            'items' => 'required|array|min:1',
+            'items.*.raw_material_id' => 'required|exists:raw_materials,id',
+            'items.*.adjustment_type' => 'required',
+            'items.*.qty' => 'required|numeric|min:0.01',
+        ], [
+            'required' => 'This field is required.',
+            'items.*.qty.min' => 'Quantity must be greater than zero.',
+            'items.required' => 'At least one material adjustment is required.'
         ]);
-
-        $taskReceiveExists = TaskReceive::where('task_id', $request->task_id)->exists();
-        if (!$taskReceiveExists) {
-            return back()->with('error', 'Adjustments can only be recorded after a Task Receive has been previously submitted for this task.')->withInput();
-        }
 
         DB::beginTransaction();
         try {
-            $data = $request->all();
-            if (!$id) {
-                if (!$request->adjustment_no) {
-                    $count = TaskAdjustment::count();
-                    $data['adjustment_no'] = 'ADJ-' . date('Y') . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            /*
+            if ($id) {
+                $existing = TaskAdjustment::find($id);
+                if ($existing && $existing->status == 'Posted') {
+                    throw new \Exception("Posted adjustments cannot be edited. Please create a new adjustment for corrections.");
                 }
-                $data['created_by'] = auth()->id();
-                TaskAdjustment::create($data);
-                $message = 'Adjustment created successfully';
+            }
+            */
+            $task = Task::findOrFail($request->task_id);
+            $nextAdjNo = $request->adjustment_no;
+            if (!$id && !$nextAdjNo) {
+                $count = TaskAdjustment::count();
+                $nextAdjNo = 'ADJ-' . date('Y') . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            }
+
+            $headerData = [
+                'adjustment_no' => $nextAdjNo,
+                'task_id' => $task->id,
+                'job_card_id' => $request->job_card_id,
+                'affected_stage' => $request->affected_stage,
+                'service_id' => $request->service_id,
+                'approved_by' => $request->approved_by,
+                'overall_reason' => $request->overall_reason,
+                'status' => 'Posted'
+            ];
+
+            if (!$id) {
+                $headerData['created_by'] = auth()->id();
+                $adjustment = TaskAdjustment::create($headerData);
+                $message = 'Adjustment posted successfully';
             } else {
-                $adj = TaskAdjustment::findOrFail($id);
-                $data['updated_by'] = auth()->id();
-                $adj->update($data);
+                $adjustment = TaskAdjustment::findOrFail($id);
+                $headerData['updated_by'] = auth()->id();
+                $adjustment->update($headerData);
+                $adjustment->items()->delete();
                 $message = 'Adjustment updated successfully';
             }
+
+            $decreaseTypes = ['Loss', 'Rework', 'Damage'];
+            $stageName = $task->stage->operationStage->operation_stage_name ?? ($task->stage->stage ?? 'N/A');
+
+            foreach ($request->items as $itemData) {
+                $currentStock = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])->sum(DB::raw('qty_in - qty_out'));
+                
+                $diff = (float)$itemData['qty'];
+                $newStock = in_array($itemData['adjustment_type'], $decreaseTypes) ? ($currentStock - $diff) : ($currentStock + $diff);
+                $item = $adjustment->items()->create([
+                    'raw_material_id' => $itemData['raw_material_id'],
+                    'adjustment_type' => $itemData['adjustment_type'],
+                    'qty' => $diff,
+                    'remarks' => $itemData['remarks'] ?? '',
+                    'previous_stock' => $currentStock,
+                    'new_stock' => $newStock
+                ]);
+
+                /*
+                if (in_array($itemData['adjustment_type'], $decreaseTypes)) {
+                    $this->deductSingleMaterialStock(
+                        $itemData['raw_material_id'], 
+                        $diff, 
+                        'Task Adj (' . $itemData['adjustment_type'] . ') - ' . $nextAdjNo,
+                        $stageName,
+                        $itemData['adjustment_type']
+                    );
+                } else {
+                    $this->addSingleMaterialStock(
+                        $itemData['raw_material_id'], 
+                        $diff, 
+                        'Task Adj (' . $itemData['adjustment_type'] . ') - ' . $nextAdjNo,
+                        $stageName
+                    );
+                }
+                */
+            }
+
+            $issueQty = (float)($task->issue_qty ?? 0);
+            $serviceCount = is_array($task->services) ? count($task->services) : 1;
+            $targetQty = $issueQty * $serviceCount;
+
+            $totalReceived = (float)$task->receives()->sum('good_qty');
             
-            $task = Task::find($request->task_id);
-            if ($task) {
-                $issueQty = (float)($task->issue_qty ?? 0);
-                $serviceCount = is_array($task->services) ? count($task->services) : 1;
-                $targetQty = $issueQty * $serviceCount;
+            $allAdjustmentItems = \App\Models\TaskAdjustmentItem::whereHas('adjustment', function($q) use ($task) {
+                $q->where('task_id', $task->id);
+            })->get();
 
-                $totalReceived = (float)$task->receives()->sum('good_qty');
-                foreach($task->adjustments as $adjRec) { 
-                    if ($adjRec->adjustment_type == 'Loss' || $adjRec->adjustment_type == 'Excess') {
-                        $totalReceived += (float)$adjRec->qty;
-                    } elseif ($adjRec->adjustment_type == 'Rework') {
-                        $totalReceived -= (float)$adjRec->qty;
-                    }
-                }
-
-                $newStatus = $task->status;
-                if ($targetQty > 0 && $totalReceived >= $targetQty) {
-                    $newStatus = 'Completed';
-                } elseif ($totalReceived > 0 && $task->status == 'Planned') {
-                    $newStatus = 'In Progress';
-                }
-                 if ($task->status == 'Completed' && $totalReceived < $targetQty) {
-                    $newStatus = 'In Progress';
-                }
-
-                if ($newStatus !== $task->status) {
-                    $task->status = $newStatus;
-                    $task->save();
+            foreach($allAdjustmentItems as $adjItem) { 
+                if ($adjItem->adjustment_type == 'Loss' || $adjItem->adjustment_type == 'Excess') {
+                    $totalReceived += (float)$adjItem->qty;
+                } elseif ($adjItem->adjustment_type == 'Rework') {
+                    $totalReceived -= (float)$adjItem->qty;
                 }
             }
+
+            $newStatus = $task->status;
+            if ($targetQty > 0 && $totalReceived >= $targetQty) {
+                $newStatus = 'Completed';
+            } elseif ($totalReceived > 0 && $task->status == 'Planned') {
+                $newStatus = 'In Progress';
+            }
+
+            if ($task->status == 'Completed' && $totalReceived < $targetQty) {
+                $newStatus = 'In Progress';
+            }
+
+            if ($newStatus !== $task->status) {
+                $task->status = $newStatus;
+                $task->save();
+            }
+
             DB::commit();
             return redirect('task_management')->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', $e->getMessage())->withInput();
         }
     }
 
-    public function addCustomStatus(Request $request)
+    private function issueConsumables($task, $qtyProduced)
     {
-        $request->validate([
-            'status_name' => 'required|string|max:255|unique:task_status,name'
+        $stageName = $task->stage->operationStage->operation_stage_name ?? ($task->stage->stage ?? 'N/A');
+        $consumables = ProductionStageConsumable::where('stage', $stageName)->where('status', 'Active')->get();
+        if ($consumables->isEmpty()) return;
+
+        $issueCount = StockConsumableIssue::count();
+        $issueNo = 'ISSUE-AUTO-' . date('Ymd') . '-' . str_pad($issueCount + 1, 4, '0', STR_PAD_LEFT);
+        
+        $issue = StockConsumableIssue::create([
+            'issue_no' => $issueNo,
+            'issue_date' => date('Y-m-d'),
+            'issue_type' => 'Consumable Issue',
+            'production_stage' => $stageName,
+            'remarks' => 'Auto-issued for Task: ' . $task->task_no . ' (Qty: ' . $qtyProduced . ')',
+            'status' => 'Posted',
+            'created_by' => auth()->id(),
         ]);
 
-        $status = \App\Models\TaskStatus::create([
-            'name' => $request->status_name,
-            'color' => 'secondary',
-            'progress_percent' => null
+        foreach ($consumables as $config) {
+            $requiredQty = $qtyProduced * $config->quantity_per_unit;
+            
+            if ($requiredQty <= 0) continue;
+
+            $tempStockUsage = [];
+            $weightedCost = 0;
+            $remainingToDeduct = $requiredQty;
+
+            $stockCandidates = StockEntryItem::where('raw_material_id', $config->raw_material_id)
+                ->whereRaw('(qty_in - qty_out) > 0')
+                ->orderBy('id', 'asc')
+                ->get();
+
+            foreach ($stockCandidates as $stockItem) {
+                if ($remainingToDeduct <= 0) break;
+
+                $available = $stockItem->qty_in - $stockItem->qty_out;
+                if ($available <= 0) continue;
+
+                $take = min($available, $remainingToDeduct);
+                
+                $stockItem->qty_out += $take;
+                $stockItem->save();
+                
+                $tempStockUsage[] = [
+                    'stock_entry_item_id' => $stockItem->id,
+                    'qty' => $take
+                ];
+                
+                $weightedCost += ($take * $stockItem->price);
+                $remainingToDeduct -= $take;
+            }
+
+            $unitPrice = ($requiredQty > 0) ? ($weightedCost / $requiredQty) : 0;
+            $totalValue = $requiredQty * $unitPrice;
+
+            $issueItem = StockConsumableIssueItem::create([
+                'stock_consumable_issue_id' => $issue->id,
+                'raw_material_id' => $config->raw_material_id,
+                'stock_entry_item_id' => $tempStockUsage[0]['stock_entry_item_id'] ?? null,
+                'qty_issued' => $requiredQty,
+                'qty_returned' => 0,
+                'net_consumption' => $requiredQty,
+                'uom_id' => $config->uom_id,
+                'unit_price' => $unitPrice,
+                'total_value' => $totalValue,
+                'created_by' => auth()->id(),
+            ]);
+
+            foreach ($tempStockUsage as $usage) {
+                StockConsumableStockDetail::create([
+                    'stock_consumable_issue_item_id' => $issueItem->id,
+                    'stock_entry_item_id' => $usage['stock_entry_item_id'],
+                    'qty' => $usage['qty']
+                ]);
+            }
+        }
+    }
+
+    private function deductSingleMaterialStock($materialId, $qty, $remarks, $stageName = null, $type = 'Stock Adjustment')
+    {
+        if ($qty <= 0) return;
+        $issueCount = \App\Models\StockConsumableIssue::count();
+        $issueNo = 'ISSUE-ADJ-' . date('Ymd') . '-' . str_pad($issueCount + 1, 4, '0', STR_PAD_LEFT);
+        
+        $issueType = 'Stock Adjustment';
+        if ($type == 'Rework') $issueType = 'Rework';
+
+        $issue = \App\Models\StockConsumableIssue::create([
+            'issue_no' => $issueNo,
+            'issue_date' => date('Y-m-d'),
+            'issue_type' => $issueType,
+            'production_stage' => $stageName,
+            'remarks' => $remarks,
+            'status' => 'Posted',
+            'created_by' => auth()->id(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Custom status added successfully',
-            'status' => $status
+        $tempStockUsage = [];
+        $weightedCost = 0;
+        $remainingToDeduct = $qty;
+
+        $mat = \App\Models\RawMaterial::find($materialId);
+        $matName = $mat ? $mat->name : "Unknown Item";
+
+        $stockCandidates = \App\Models\StockEntryItem::where('raw_material_id', $materialId)->whereRaw('(qty_in - qty_out) > 0')->orderBy('id', 'asc')->get();
+
+        $totalAvailable = $stockCandidates->sum(function($item) { return $item->qty_in - $item->qty_out; });
+        if ($totalAvailable < $qty) {
+            throw new \Exception("Insufficient stock for '{$matName}'. Available: {$totalAvailable}, Required: {$qty}");
+        }
+
+        foreach ($stockCandidates as $stockItem) {
+            if ($remainingToDeduct <= 0) break;
+            $available = $stockItem->qty_in - $stockItem->qty_out;
+            if ($available <= 0) continue;
+            $take = min($available, $remainingToDeduct);
+            $stockItem->qty_out += $take;
+            $stockItem->save();
+            $tempStockUsage[] = ['stock_entry_item_id' => $stockItem->id, 'qty' => $take];
+            $weightedCost += ($take * $stockItem->price);
+            $remainingToDeduct -= $take;
+        }
+
+        $unitPrice = ($qty > 0) ? ($weightedCost / $qty) : 0;
+        $totalValue = $qty * $unitPrice;
+
+        $mat = \App\Models\RawMaterial::find($materialId);
+        $issueItem = \App\Models\StockConsumableIssueItem::create([
+            'stock_consumable_issue_id' => $issue->id,
+            'raw_material_id' => $materialId,
+            'stock_entry_item_id' => $tempStockUsage[0]['stock_entry_item_id'] ?? null,
+            'qty_issued' => $qty,
+            'qty_returned' => 0,
+            'net_consumption' => $qty,
+            'uom_id' => $mat->uom_id ?? null,
+            'unit_price' => $unitPrice,
+            'total_value' => $totalValue,
+            'created_by' => auth()->id(),
         ]);
+
+        foreach ($tempStockUsage as $usage) {
+            \App\Models\StockConsumableStockDetail::create([
+                'stock_consumable_issue_item_id' => $issueItem->id,
+                'stock_entry_item_id' => $usage['stock_entry_item_id'],
+                'qty' => $usage['qty']
+            ]);
+
+            $stockItemRec = \App\Models\StockEntryItem::find($usage['stock_entry_item_id']);
+            if ($stockItemRec) {
+                $stockItemRec->qty_in += $usage['qty'];
+                $stockItemRec->save();
+            }
+        }
+    }
+
+    private function addSingleMaterialStock($materialId, $qty, $remarks, $stageName = null)
+    {
+        if ($qty <= 0) return;
+        $stockEntryItem = \App\Models\StockEntryItem::where('raw_material_id', $materialId)->orderBy('id', 'desc')->first();
+        if ($stockEntryItem) {
+            $stockEntryItem->qty_in += $qty;
+            $stockEntryItem->save();
+        }
     }
 }

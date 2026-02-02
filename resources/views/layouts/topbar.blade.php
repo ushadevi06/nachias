@@ -2,6 +2,99 @@
 $user = auth()->user();
 $isSuper = $user->id == 1;
 @endphp
+<style>
+    /* Fix for long menus in horizontal layout */
+    .layout-horizontal .menu-inner > .menu-item > .menu-sub {
+        max-height: 80vh !important;
+        overflow-y: auto !important;
+        scrollbar-width: thin;
+        box-shadow: 0 4px 14px rgba(0,0,0,.15) !important;
+    }
+
+    /* Convert nested sub-menus to vertical accordions */
+    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item > .menu-sub {
+        position: static !important;
+        display: none !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        background: rgba(0, 0, 0, 0.05) !important;
+        padding-left: 20px !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        max-height: none !important;
+    }
+
+    /* Show nested submenu ONLY when parent has 'manual-open' class */
+    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item.manual-open > .menu-sub {
+        display: block !important;
+    }
+
+    /* Disable hover-based display and enforce open via 'manual-open' class for top level as well */
+    .layout-horizontal .menu-inner .menu-item:hover > .menu-sub,
+    .layout-horizontal .menu-inner .menu-item.open > .menu-sub {
+        display: none !important;
+    }
+
+    /* Top-level menu items show submenu on click */
+    .layout-horizontal .menu-inner > .menu-item.manual-open > .menu-sub {
+        display: block !important;
+    }
+
+    /* Arrow rotation for accordion items */
+    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item.manual-open > .menu-toggle::after {
+        transform: translateY(-50%) rotate(90deg) !important;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all menu toggles in horizontal layout
+    const menuToggles = document.querySelectorAll('.layout-horizontal .menu-inner .menu-toggle');
+
+    menuToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const menuItem = this.closest('.menu-item');
+            const parentMenu = menuItem.closest('.menu-sub, .menu-inner');
+
+            // Close siblings at the same level
+            if (parentMenu) {
+                const siblings = parentMenu.children;
+                for (let sibling of siblings) {
+                    if (sibling !== menuItem && sibling.classList.contains('menu-item')) {
+                        sibling.classList.remove('manual-open');
+                        
+                        // Deep close children of siblings
+                        const nestedOpen = sibling.querySelectorAll('.menu-item.manual-open');
+                        nestedOpen.forEach(n => n.classList.remove('manual-open'));
+                    }
+                }
+            }
+
+            // Toggle current item
+            menuItem.classList.toggle('manual-open');
+        });
+    });
+
+    // Close menus when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.menu-inner')) {
+            const openItems = document.querySelectorAll('.layout-horizontal .menu-inner .menu-item.manual-open');
+            openItems.forEach(item => item.classList.remove('manual-open'));
+        }
+    });
+
+    // Close menus when hitting Esc
+    document.addEventListener('keydown', function(e) {
+        if(e.key === "Escape") {
+            const openItems = document.querySelectorAll('.layout-horizontal .menu-inner .menu-item.manual-open');
+            openItems.forEach(item => item.classList.remove('manual-open'));
+        }
+    });
+});
+</script>
 <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
     <div class="layout-container">
         <!-- Layout container -->
@@ -136,9 +229,7 @@ $isSuper = $user->id == 1;
                                         <i class="menu-icon icon-base ri ri-layout-2-line"></i>
                                         <div>Master</div>
                                     </a>
-
                                     <ul class="menu-sub">
-
                                         @if($isSuper || $user->can('view states'))
                                         <li class="menu-item {{ request()->is('states*') ? 'active' : '' }}">
                                             <a href="{{ url('states') }}" class="menu-link">
@@ -269,7 +360,7 @@ $isSuper = $user->id == 1;
                                                 @if($isSuper || $user->can('view fits'))
                                                 <li class="menu-item {{ request()->is('fits*') ? 'active' : '' }}">
                                                     <a href="{{ url('fits') }}" class="menu-link">
-                                                        <div>Fit</div>
+                                                        <div>Fits</div>
                                                     </a>
                                                 </li>
                                                 @endif
@@ -277,7 +368,7 @@ $isSuper = $user->id == 1;
                                                 @if($isSuper || $user->can('view patti types'))
                                                 <li class="menu-item {{ request()->is('patti_types*') ? 'active' : '' }}">
                                                     <a href="{{ url('patti_types') }}" class="menu-link">
-                                                        <div>Patti Type</div>
+                                                        <div>Patti Types</div>
                                                     </a>
                                                 </li>
                                                 @endif
@@ -285,7 +376,7 @@ $isSuper = $user->id == 1;
                                                 @if($isSuper || $user->can('view collar types'))
                                                 <li class="menu-item {{ request()->is('collar_types*') ? 'active' : '' }}">
                                                     <a href="{{ url('collar_types') }}" class="menu-link">
-                                                        <div>Collar Type</div>
+                                                        <div>Collar Types</div>
                                                     </a>
                                                 </li>
                                                 @endif
@@ -293,7 +384,7 @@ $isSuper = $user->id == 1;
                                                 @if($isSuper || $user->can('view cuff types'))
                                                 <li class="menu-item {{ request()->is('cuff_types*') ? 'active' : '' }}">
                                                     <a href="{{ url('cuff_types') }}" class="menu-link">
-                                                        <div>Cuff Type</div>
+                                                        <div>Cuff Types</div>
                                                     </a>
                                                 </li>
                                                 @endif
@@ -301,7 +392,7 @@ $isSuper = $user->id == 1;
                                                 @if($isSuper || $user->can('view pocket types'))
                                                 <li class="menu-item {{ request()->is('pocket_types*') ? 'active' : '' }}">
                                                     <a href="{{ url('pocket_types') }}" class="menu-link">
-                                                        <div>Pocket Type</div>
+                                                        <div>Pocket Types</div>
                                                     </a>
                                                 </li>
                                                 @endif
@@ -309,19 +400,19 @@ $isSuper = $user->id == 1;
                                                 @if($isSuper || $user->can('view bottom cuts'))
                                                 <li class="menu-item {{ request()->is('bottom_cuts*') ? 'active' : '' }}">
                                                     <a href="{{ url('bottom_cuts') }}" class="menu-link">
-                                                        <div>Bottom Cut</div>
+                                                        <div>Bottom Cuts</div>
                                                     </a>
                                                 </li>
                                                 @endif
                                             </ul>
                                         </li>
                                         @endif
-                                        {{-- Production Master Submenu --}}
                                         <li class="menu-item {{ (request()->is('shifts*') || request()->is('production_services*') || request()->is('resources*')) ? 'active' : '' }}">
                                             <a href="javascript:void(0)" class="menu-link menu-toggle">
                                                 <div>Production Master</div>
                                             </a>
                                             <ul class="menu-sub">
+
                                                 <li class="menu-item {{ request()->is('shifts*') ? 'active' : '' }}">
                                                     <a href="{{ url('shifts') }}" class="menu-link">
                                                         <div>Shifts</div>
@@ -332,12 +423,6 @@ $isSuper = $user->id == 1;
                                                         <div>Services</div>
                                                     </a>
                                                 </li>
-                                                <li class="menu-item {{ request()->is('resources*') ? 'active' : '' }}">
-                                                    <a href="{{ url('resources') }}" class="menu-link">
-                                                        <div>Resources</div>
-                                                    </a>
-                                                </li>
-
                                             </ul>
                                         </li>
 
@@ -388,16 +473,6 @@ $isSuper = $user->id == 1;
                                                     </a>
                                                 </li>
                                                 @endif
-                                                  <li class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
-                                                    <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
-                                                        <div>Stitch Commission Agent</div>
-                                                    </a>
-                                                </li>
-                                                  <li class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
-                                                    <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
-                                                        <div>Iron Commission Agent</div>
-                                                    </a>
-                                                </li>
                                             </ul>
                                         </li>
                                         @endif
@@ -409,7 +484,7 @@ $isSuper = $user->id == 1;
                                             <a href="javascript:void(0)" class="menu-link menu-toggle">
                                                 <div>Item Setup</div>
                                             </a>
-                                            <ul class="menu-sub">
+                                            <ul class="menu-sub menu-restricted-scroll">
                                                 @if($isSuper || $user->can('view store-categories'))
                                                 <li class="menu-item {{ request()->is('store_categories*') ? 'active' : '' }}">
                                                     <a href="{{ url('store_categories') }}" class="menu-link">
@@ -445,11 +520,6 @@ $isSuper = $user->id == 1;
                                                     </a>
                                                 </li>
                                                 @endif
-                                                <li class="menu-item {{ request()->is('items*') ? 'active' : '' }}">
-                                                    <a href="{{ url('items') }}" class="menu-link">
-                                                        <div>Items</div>
-                                                    </a>
-                                                </li>
                                             </ul>
                                         </li>
                                         @endif
@@ -468,7 +538,7 @@ $isSuper = $user->id == 1;
                                         @if($isSuper || $user->can('view purchase-order'))
                                         <li class="menu-item {{ request()->is('purchase_orders*') ? 'active' : '' }}">
                                             <a href="{{ url('purchase_orders') }}" class="menu-link">
-                                                <div>Purchase Order</div>
+                                                <div>Purchase Orders</div>
                                             </a>
                                         </li>
                                         @endif
@@ -476,7 +546,7 @@ $isSuper = $user->id == 1;
                                         @if($isSuper || $user->can('view purchase-invoice'))
                                         <li class="menu-item {{ request()->is('purchase_invoices*') ? 'active' : '' }}">
                                             <a href="{{ url('purchase_invoices') }}" class="menu-link">
-                                                <div>Purchase Invoice</div>
+                                                <div>Purchase Invoices</div>
                                             </a>
                                         </li>
                                         @endif
@@ -494,7 +564,6 @@ $isSuper = $user->id == 1;
 
                                 <!-- Store -->
                                 @if($user && ($isSuper || $user->can('view grn-entry') || $user->can('view stock-entry') || $user->can('view stock-consumable-return')))
-
                                 <li class="menu-item {{ (request()->is('grn_entries*') || request()->is('stock_entries*') || request()->is('stock_consumables_returns*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-shopping-bag-line"></i>
@@ -529,8 +598,8 @@ $isSuper = $user->id == 1;
                                 @endif
 
                                 {{-- Production --}}
-                                @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card') || $user->can('view task-management')))
-                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('production_receipts*') || request()->is('add_production*') || request()->is('task_management*')) ? 'active' : '' }}">
+                                @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card') || $user->can('view task-management') || $user->can('view stock-adjustment')))
+                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('production_receipts*') || request()->is('add_production*') || request()->is('view_production*') || request()->is('task_management*') || request()->is('stock_adjustments*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-inbox-line"></i>
                                         <div>Production</div>
@@ -618,7 +687,6 @@ $isSuper = $user->id == 1;
                                 </li>
                                 @endif
 
-                                <!-- Emp. Payroll & Attendance -->
                                 @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime-bonus') || $user->can('view salary-calculation') || $user->can('view payslip-generation') || $user->can('view payroll-reports')))
                                 <li class="menu-item {{ (request()->is('attendances*') || request()->is('leave*') || request()->is('overtime*') || request()->is('salary_calculation*') || request()->is('payslip*') || request()->is('payroll_reports*')) ? 'active' : '' }}">
 
@@ -842,8 +910,8 @@ document.addEventListener('DOMContentLoaded', function () {
     left: 0;
     width: 260px;
     max-height: 400px;
-    overflow-y: auto;    
-    overflow-x: hidden;  
+    overflow-y: auto;
+    overflow-x: hidden;
     display: none;
     background: #fff;
     box-shadow: 0 4px 14px rgba(0,0,0,.12);

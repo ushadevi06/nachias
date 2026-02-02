@@ -15,7 +15,7 @@
                 </a>
                 @endif
             </div>
-  @if(session('success'))
+            @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -51,7 +51,14 @@
     $(function() {
 
         let table = $('#brands-table').DataTable({
-            processing: true,
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: "{{ url('brands') }}",
             columns: [{
                     data: 'DT_RowIndex',

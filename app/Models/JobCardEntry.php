@@ -112,4 +112,9 @@ class JobCardEntry extends Model
     {
         return $this->belongsTo(Item::class);
     }
+
+    public function sleeveMeters()
+    {
+        return $this->hasMany(JobCardSleeveMeter::class, 'job_card_id');
+    }
 }

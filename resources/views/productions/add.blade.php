@@ -6,34 +6,6 @@
         <div class="col-lg-12 col-xl-11">
             <form action="{{ url('productions/add' . ($production ? '/' . $production->id : '')) }}" method="POST" class="common-form">
                 @csrf
-                @if($errors->any())
-                    <div class="alert alert-danger shadow-sm border-0 mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="ri-error-warning-line fs-4 me-2"></i>
-                            <h6 class="mb-0 fw-bold">Please correct the following errors:</h6>
-                        </div>
-                        <ul class="mb-0 ps-3">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                @if(session('success'))
-                    <div class="alert alert-success shadow-sm border-0 mb-4 d-flex align-items-center">
-                        <i class="ri ri-checkbox-circle-line fs-4 me-2"></i>
-                        <h6 class="mb-0 fw-bold">{{ session('success') }}</h6>
-                    </div>
-                @endif
-
-                @if(session('error'))
-                    <div class="alert alert-danger shadow-sm border-0 mb-4 d-flex align-items-center">
-                        <i class="ri-error-warning-line fs-4 me-2"></i>
-                        <h6 class="mb-0 fw-bold">{{ session('error') }}</h6>
-                    </div>
-                @endif
-
                 <div class="card mb-4 border-0 shadow-sm erp-header-card">
                     <div class="card-header border-bottom py-3 bg-light">
                         <div class="d-flex align-items-center">
@@ -45,7 +17,7 @@
                         <div class="row g-4">
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="production_id" value="PROD-2026-001" readonly>
+                                    <input type="text" class="form-control" id="production_id" value="{{ $nextProductionId }}" readonly>
                                     <label>Production ID</label>
                                 </div>
                             </div>

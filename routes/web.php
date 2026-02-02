@@ -74,6 +74,8 @@ use App\Http\Controllers\ProductionServiceController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ProductionReceiptController;
+use App\Http\Controllers\StockAdjustmentController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -117,6 +119,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('employees/add/{id?}', [EmployeeController::class, 'add']);
     Route::post('employees/status/{id}', [EmployeeController::class, 'updateStatus']);
     Route::get('employees/delete/{id}', [EmployeeController::class, 'destroy']);
+    Route::get('get-employees-by-plant/{plantId?}', [EmployeeController::class, 'getEmployeesByPlant']);
 
     /* States */
     Route::get('/states', [StateController::class, 'index']);
@@ -348,6 +351,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('stock_entries/get-grn-items/{id}', [StockEntryController::class, 'getGrnEntryItems']);
     Route::get('stock_entries', [StockEntryController::class, 'index']);
     Route::match(['get', 'post'], 'stock_entries/add/{id?}', [StockEntryController::class, 'add']);
+    Route::post('stock_entries/quick-adjustment', [StockEntryController::class, 'quickAdjustment'])->name('stock_entries.quick_adjustment');
+    Route::get('stock_entries/adjustment-logs/{id?}', [StockEntryController::class, 'adjustmentLogs'])->name('stock_entries.adjustment_logs');
     Route::get('stock_entries/view/{id}', [StockEntryController::class, 'view']);
 
     /* Store */
@@ -392,6 +397,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('job_card_entries/fabric-consumption-pdf/{id}', [JobCardEntryController::class, 'fabricConsumptionPdf'])->name('job_card_entries.fabric_consumption_pdf');
     Route::get('job_card_entries/work-order-pdf/{id}', [JobCardEntryController::class, 'workOrderPdf'])->name('job_card_entries.work_order_pdf');
     Route::get('job_card_entries/view-details-pdf/{id}', [JobCardEntryController::class, 'viewDetailsPdf'])->name('job_card_entries.view_details_pdf');
+    Route::get('job_card_entries/costing-analysis/{id}', [JobCardEntryController::class, 'costing_analysis'])->name('job_card_entries.costing_analysis');
 
     /* Production */
     Route::get('productions', [ProductionController::class, 'index']);
@@ -411,9 +417,17 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['GET', 'POST'], 'task_receives/add/{id?}', [TaskManagementController::class, 'receive_add'])->name('task_receives.add');
     Route::get('task_receives/delete/{id}', [TaskManagementController::class, 'receive_destroy']);
     Route::get('task_receives/get-task-details/{id}', [TaskManagementController::class, 'getTaskDetails']);
+    Route::get('task_management/get-stage-consumables/{id}', [TaskManagementController::class, 'getStageConsumables']);
 
     /* Task Adjustment */
     Route::post('task_adjustments/add/{id?}', [TaskManagementController::class, 'adjustment_add'])->name('task_adjustments.add');
+
+    /* Stock Adjustment (Standalone) */
+    Route::get('stock_adjustments', [StockAdjustmentController::class, 'index'])->name('stock_adjustments.index');
+    Route::get('stock_adjustments/edit/{id}', [StockAdjustmentController::class, 'edit'])->name('stock_adjustments.edit');
+    Route::post('stock_adjustments/add/{id?}', [StockAdjustmentController::class, 'store'])->name('stock_adjustments.store');
+    Route::delete('stock_adjustments/delete/{id}', [StockAdjustmentController::class, 'destroy'])->name('stock_adjustments.delete');
+    Route::get('stock_adjustments/get-task-materials/{taskId}', [StockAdjustmentController::class, 'get_task_materials'])->name('stock_adjustments.get_task_materials');
 
     /* Production Receipts */
     Route::get('production_receipts', [ProductionReceiptController::class, 'index']);
@@ -438,7 +452,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['GET', 'POST'], 'resources/add/{id?}', [ResourceController::class, 'add']);
     Route::get('resources/delete/{id}', [ResourceController::class, 'destroy']);
     Route::post('resources/status/{id}', [ResourceController::class, 'updateStatus']);
-
 
     /* Production Stores */
     Route::get('stores', [StoreController::class, 'index']);

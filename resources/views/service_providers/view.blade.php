@@ -30,10 +30,10 @@
                             </div>
 
                             <div class="col-md-4 col-lg-3">
-                                <select name="service_type" id="service_type" class="form-select select2" data-placeholder="Select Service Type">
-                                    <option value="">Select Service Type</option>
-                                    @foreach($service_types as $type)
-                                    <option value="{{ $type->id }}">{{ $type->service_type_name }}</option>
+                                <select name="operation_stage_id" id="operation_stage_id" class="form-select select2" data-placeholder="Select Operation Stage">
+                                    <option value="">Select Operation Stage</option>
+                                    @foreach($operation_stages as $stage)
+                                    <option value="{{ $stage->id }}">{{ $stage->operation_stage_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -61,7 +61,7 @@
                                     <th>Name</th>
                                     <th>Contact Info</th>
                                     <th>Location</th>
-                                    <th>Service Type</th>
+                                    <th>Operation Stage</th>
                                     <th>Service Rate</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -81,13 +81,19 @@
 <script>
     $(document).ready(function() {
         var table = $('#service-providers-table').DataTable({
-            processing: true,
-            serverSide: false,
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: {
                 url: "{{ url('service_providers') }}",
                 type: "GET",
                 data: function(d) {
-                    d.service_type = $('#service_type').val();
+                    d.operation_stage_id = $('#operation_stage_id').val();
                     d.service_rate = $('#service_rate').val();
                 }
             },
@@ -106,7 +112,7 @@
                     data: 'location'
                 },
                 {
-                    data: 'service_type'
+                    data: 'operation_stage'
                 },
                 {
                     data: 'service_rate'
@@ -129,7 +135,7 @@
         });
 
         $('#reset-btn').on('click', function() {
-            $('#service_type').val('').trigger('change');
+            $('#operation_stage_id').val('').trigger('change');
             $('#service_rate').val('').trigger('change');
             table.ajax.reload();
         });

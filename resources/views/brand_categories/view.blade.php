@@ -53,8 +53,14 @@
     $(document).ready(function() {
 
         let table = $('.brand-categories-table').DataTable({
-            processing: true,
-            serverSide: false,
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: {
                 url: "{{ url('brand_categories') }}"
             },

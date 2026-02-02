@@ -12,4 +12,9 @@ class JobCardIssueStockDetail extends Model
         'stock_entry_item_id',
         'qty',
     ];
+
+    public function jobCardIssueItem()
+    {
+        return $this->belongsTo(JobCardIssueItem::class);
+    }
 }

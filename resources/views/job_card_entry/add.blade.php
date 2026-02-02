@@ -13,6 +13,18 @@
     }
     
     $sizes = !empty($dynamicSizes) ? array_values(array_unique($dynamicSizes)) : ['36', '38', '40', '42', '44'];
+    $ratios = [];
+    foreach($sizes as $s) {
+        $found = false;
+        foreach($matrixItems as $item) {
+            if (($item['size'] ?? '') == $s) {
+                $ratios[] = $item['ratio'] ?? '';
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) $ratios[] = '';
+    }
     
     $fabrics = old('fabrics', $jobCard ? $jobCard->fabricDetails->toArray() : []);
     
@@ -234,8 +246,8 @@
                                 <div class="form-floating form-floating-outline">
                                     <select id="status" name="status" class="form-select select2" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Urgent" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Urgent') ? 'selected' : '' }}>Urgent</option>
-                                        <option value="Normal" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Normal') ? 'selected' : '' }}>Normal</option>
+                                        <option value="Production Hold" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Hold') ? 'selected' : '' }}>Production Hold</option>
+                                        <option value="Production Completed" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Completed') ? 'selected' : '' }}>Production Completed</option>
                                     </select>
                                     <label for="status">Status *</label>
                                 </div>
@@ -267,7 +279,7 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <label for="brand_category_id">Brand Category</label>
+                                    <label for="brand_category_id">Brand Category *</label>
                                 </div>
                                 @error('brand_category_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -276,7 +288,7 @@
                                     <select id="item_id" name="item_id" class="form-select select2" data-placeholder="Select Item">
                                         <option value="">Select Item</option>
                                     </select>
-                                    <label for="item_id">Item</label>
+                                    <label for="item_id">Item *</label>
                                 </div>
                                 @error('item_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -374,6 +386,18 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="cutting_issue_unit" name="cutting_issue_unit" class="form-select select2" data-placeholder="Select Cutting Issue Unit">
+                                        <option value="">Select Cutting Issue Unit</option>
+                                        <option value="Nachias Fashion Private Limited" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Nachias Fashion Private Limited') ? 'selected' : '' }}>Nachias Fashion Private Limited</option>
+                                        <option value="Samayanallur" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Samayanallur') ? 'selected' : '' }}>Samayanallur</option>
+                                        <option value="Kalavasal" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Kalavasal') ? 'selected' : '' }}>Kalavasal</option>
+                                    </select>
+                                    <label for="cutting_issue_unit">Cutting Issue Unit *</label>
+                                </div>
+                                @error('cutting_issue_unit') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div> 
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <select id="cutting_master" name="cutting_master_id" class="form-select select2" data-placeholder="Select Cutting Master">
                                         <option value="">Select Cutting Master</option>
                                         @foreach($cuttingMasters as $master)
@@ -393,18 +417,6 @@
                                 </div>
                                 @error('cutting_date') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="cutting_issue_unit" name="cutting_issue_unit" class="form-select select2" data-placeholder="Select Cutting Issue Unit">
-                                        <option value="">Select Cutting Issue Unit</option>
-                                        <option value="Nachias Fashion Private Limited" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Nachias Fashion Private Limited') ? 'selected' : '' }}>Nachias Fashion Private Limited</option>
-                                        <option value="Samayanallur" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Samayanallur') ? 'selected' : '' }}>Samayanallur</option>
-                                        <option value="Kalavasal" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Kalavasal') ? 'selected' : '' }}>Kalavasal</option>
-                                    </select>
-                                    <label for="cutting_issue_unit">Cutting Issue Unit *</label>
-                                </div>
-                                @error('cutting_issue_unit') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div> 
                         </div>
                     </div>
                 </div>
@@ -584,6 +596,20 @@
                                         </tr>
                                         <tr>
                                             @foreach($fabrics as $index => $fabric)
+                                                <td class="fw-bold">SLEEVE WISE QTY</td>
+                                                <td>
+                                                    <div class="input-group input-group-sm flex-nowrap">
+                                                        <span class="input-group-text px-1">F/S</span>
+                                                        <input type="text" name="fabrics[{{ $index }}][fs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="{{ $fabric['art_no'] ?? '' }}" value="{{ $fabric['fs_qty'] ?? '' }}">
+                                                        <span class="input-group-text px-1">H/S</span>
+                                                        <input type="text" name="fabrics[{{ $index }}][hs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="{{ $fabric['art_no'] ?? '' }}" value="{{ $fabric['hs_qty'] ?? '' }}">
+                                                        <span class="input-group-text px-1 uom-label">{{ $fabric['uom_code'] ?? 'PCS' }}</span>
+                                                    </div>
+                                                </td>
+                                            @endforeach
+                                        </tr>
+                                        <tr>
+                                            @foreach($fabrics as $index => $fabric)
                                                 <td class="fw-bold">N.PATTI</td>
                                                 <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}"></td>
                                             @endforeach
@@ -597,68 +623,32 @@
 
                 <div class="card mb-4 {{ $showMatrix ? '' : 'd-none' }}" id="article-matrix-card">
                     <div class="card-body">
-                        <div class="card-header-box">
+                        <div class="card-header-box mb-3">
                             <h4>Article Quantity Matrix</h4>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-center align-middle" id="article-qty-matrix">
-                                <thead>
-                                    <tr>
-                                        <th rowspan="2" class="align-middle" style="min-width: 120px;">ART NO</th>
-                                        @if(count($activeFs) > 0)
-                                            <th colspan="{{ count($activeFs) }}">F/S</th>
-                                        @endif
-                                        @if(count($activeHs) > 0)
-                                            <th colspan="{{ count($activeHs) }}">H/S</th>
-                                        @endif
-                                        {{-- <th colspan="2">EX</th> --}}
-                                        <th rowspan="2" class="align-middle">TOTAL</th>
-                                    </tr>
-                                    <tr class="size-headers">
-                                        <!-- F/S Sizes -->
-                                        @foreach($activeFs as $s)
-                                            <th class="mat-fs-head">{{ $s }}</th>
-                                        @endforeach
-                                        <!-- H/S Sizes -->
-                                        @foreach($activeHs as $s)
-                                            <th class="mat-hs-head">{{ $s }}</th>
-                                        @endforeach
-                                        <!-- EX -->
-                                        {{-- <th>EX 1</th>
-                                        <th>EX 2</th> --}}
-                                    </tr>
-                                </thead>
-                                <tbody id="article-qty-matrix-body">
-                                    @foreach($matrixRows as $index => $row)
-                                        <tr>
-                                            <td><input type="text" name="article_matrix[{{ $index }}][art_no]" class="form-control form-control-sm text-center" value="{{ $row['art_no'] ?? '' }}" readonly></td>
-                                            @foreach($activeFs as $s)
-                                                <td><input type="number" name="article_matrix[{{ $index }}][fs_{{ $s }}]" class="form-control form-control-sm qty-input text-center" data-col="fs-{{ $s }}" value="{{ !empty($row['fs_'.$s]) ? (float)$row['fs_'.$s] : '' }}"></td>
-                                            @endforeach
-                                            @foreach($activeHs as $s)
-                                                <td><input type="number" name="article_matrix[{{ $index }}][hs_{{ $s }}]" class="form-control form-control-sm qty-input text-center" data-col="hs-{{ $s }}" value="{{ !empty($row['hs_'.$s]) ? (float)$row['hs_'.$s] : '' }}"></td>
-                                            @endforeach
-                                            {{-- <td><input type="number" name="article_matrix[{{ $index }}][ex_1]" class="form-control form-control-sm qty-input text-center" data-col="ex-1" value="{{ !empty($row['ex_1']) ? (float)$row['ex_1'] : '' }}"></td>
-                                            <td><input type="number" name="article_matrix[{{ $index }}][ex_2]" class="form-control form-control-sm qty-input text-center" data-col="ex-2" value="{{ !empty($row['ex_2']) ? (float)$row['ex_2'] : '' }}"></td> --}}
-                                            <td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td class="fw-bold text-center">TOTAL</td>
-                                        @foreach($activeFs as $s)
-                                            <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-{{ $s }}" readonly tabindex="-1"></td>
-                                        @endforeach
-                                        @foreach($activeHs as $s)
-                                            <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-{{ $s }}" readonly tabindex="-1"></td>
-                                        @endforeach
-                                        {{-- <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-1" readonly tabindex="-1"></td>
-                                        <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-2" readonly tabindex="-1"></td> --}}
-                                        <td><input type="text" id="grand-total" class="form-control form-control-sm text-center fw-bold bg-light" readonly tabindex="-1"></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                        
+                        <!-- Section 1: Fabric -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3">1. Fabric Pieces (Source)</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle mb-0" id="article-qty-matrix-1">
+                                    <thead></thead>
+                                    <tbody id="article-qty-matrix-1-body"></tbody>
+                                    <tfoot></tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Consumables -->
+                        <div>
+                            <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3">2. Consumables (Derived)</h6>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle mb-0" id="article-qty-matrix-2">
+                                    <thead></thead>
+                                    <tbody id="article-qty-matrix-2-body"></tbody>
+                                    <tfoot></tfoot>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -707,22 +697,62 @@
     </div>
 </div>
 
+<div class="modal fade" id="stockValidationErrorModal" tabindex="-1" aria-labelledby="stockValidationErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title text-white" id="stockValidationErrorModalLabel">Stock Validation Error</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle text-center" id="stockErrorTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Art No</th>
+                                <th>Required (Mtr)</th>
+                                <th>Issued (Mtr)</th>
+                                <th>Calculation Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <label for="stock_error_notes" class="form-label fw-bold">Validation Notes</label>
+                    <textarea class="form-control" id="stock_error_notes" name="stock_error_notes" rows="3" placeholder="Enter notes regarding this stock discrepancy"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="$('form.common-form').attr('data-skip-validation', 'true').submit();">Ignore & Submit Anyway</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function() {
         const oldFabrics = @json(old('fabrics', []));
         const oldMatrix = @json(old('article_matrix', []));
         const existingImages = @json($jobCard && $jobCard->images ? $jobCard->images : []);
         const existingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails : []);
-        const existingCuttingRatios = @json(old('matrix_items', $jobCard && $jobCard->cuttingSizeRatios ? $jobCard->cuttingSizeRatios : []));
+        const matrixItems = @json(old('matrix_items', $jobCard && $jobCard->cuttingSizeRatios ? $jobCard->cuttingSizeRatios : []));
         const isEditMode = {{ $jobCard ? 'true' : 'false' }};
+        let globalActiveSizes = { fs: [], hs: [] };
         let isSyncing = false;
         let currentArtNumbers = @json(array_values(array_unique(array_column($fabrics, 'art_no'))));
+        const articleUoms = @json(collect($fabrics)->pluck('uom_code', 'art_no')) || {};
         let currentArtData = []; 
-        let currentSizes = ['36', '38', '40', '42', '44'];
-        let currentRatios = ['', '', '', '', ''];
+        let currentSizes = @json($sizes);
+        let currentRatios = @json($ratios);
         let currentProcessGroupId = '{{ old("process_group_id", $jobCard ? $jobCard->process_group_id : "") }}';
         let currentProcessGroup = '{{ old("process_group_display", $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : "") }}';
         let addedStages = [];
+        let fsMeterValue = '{{ old("fs_meter", $jobCard ? ($jobCard->sleeveMeters->where("sleeve_type", "Full Sleeve")->first()->meter ?? "") : "") }}';
+        let hsMeterValue = '{{ old("hs_meter", $jobCard ? ($jobCard->sleeveMeters->where("sleeve_type", "Half Sleeve")->first()->meter ?? "") : "") }}';
 
         function syncReferenceNo() {
             const jobCardNo = $('#job_card_no').val();
@@ -734,11 +764,134 @@
             $('#reference_no').val($(this).val());
         });
         if(!$('#reference_no').val()) {
-             syncReferenceNo();
+            syncReferenceNo();
         }
 
         const flatpickrConfig = { dateFormat: 'd-m-Y', allowInput: true };
         $('.issue_date, .delivery_date, .cutting_date, .dynamic-stage-date').flatpickr(flatpickrConfig);
+
+        $('form').on('submit', function(e) {
+            if ($(this).attr('data-skip-validation') === 'true') return;
+
+            let isValid = true;
+            let errors = [];
+            
+            const artDataMap = {};
+                                
+            $('.sleeve-qty-input').each(function() {
+                const art = $(this).data('art');
+                const val = parseFloat($(this).val()) || 0;
+                const name = $(this).attr('name');
+                const isFs = name.includes('fs_qty') || name.includes('fs_cons');
+                const isSizeWise = $(this).hasClass('size-cons-input');
+                const size = $(this).data('size'); 
+
+                if (!artDataMap[art]) {
+                    artDataMap[art] = { 
+                        default_fs_cons: 0, 
+                        default_hs_cons: 0,
+                        size_wise_cons: {}, 
+                        issued: 0,
+                        is_mtr: false
+                    };
+
+                    if (currentArtData) {
+                        const d = currentArtData.find(d => d.art_no == art);
+                        if (d) {
+                            artDataMap[art].issued = parseFloat(d.mtr) || 0;
+                            artDataMap[art].is_mtr = (d.uom_code === 'MTR');
+                        }
+                    } else {
+                    const $row = $('tr.cat1-row, tr.cat2-row').filter(function() {
+                        return $(this).data('art') == art;
+                    });
+                    if ($row.length) {
+                        artDataMap[art].is_mtr = ($row.data('uom') === 'MTR');
+                        artDataMap[art].issued = parseFloat($('#fabric-details-card').find(`.uom-label[data-art="${art}"]`).closest('tr').siblings().find('input[name*="[mtr]"]').val()) || 0;
+                    }
+                    }
+                }
+                
+                if (isSizeWise) {
+                    if (!artDataMap[art].size_wise_cons[size]) artDataMap[art].size_wise_cons[size] = { fs: 0, hs: 0 };
+                    if (isFs) artDataMap[art].size_wise_cons[size].fs = val;
+                    else artDataMap[art].size_wise_cons[size].hs = val;
+                } else {
+                    if (isFs) artDataMap[art].default_fs_cons = val;
+                    else artDataMap[art].default_hs_cons = val;
+                }
+            });
+
+            for (const art in artDataMap) {
+                const data = artDataMap[art];
+
+                let required = 0;
+                let calcDetails = "";
+
+                const $matrixRow = $('tr.cat1-row, tr.cat2-row').filter(function() {
+                    return $(this).data('art') == art;
+                });
+
+                if ($matrixRow.length > 0) {
+                    if (data.is_mtr) {
+                        for (const sz in data.size_wise_cons) {
+                            const cons = data.size_wise_cons[sz];
+                            const piecesFs = parseFloat($matrixRow.find('input').filter(function() { return (this.name || "").includes(`[fs_${sz}]`); }).val()) || 0;
+                            const piecesHs = parseFloat($matrixRow.find('input').filter(function() { return (this.name || "").includes(`[hs_${sz}]`); }).val()) || 0;
+                            
+                            required += (cons.fs * piecesFs) + (cons.hs * piecesHs);
+                            if (cons.fs > 0 || cons.hs > 0) {
+                                if (piecesFs > 0 || piecesHs > 0) {
+                                    calcDetails += (calcDetails ? " + " : "") + `${sz}: (${cons.fs}*${piecesFs} F/S + ${cons.hs}*${piecesHs} H/S)`;
+                                }
+                            }
+                        }
+                    } else {
+                        let totalPieces = 0;
+                        $matrixRow.find('.qty-input').each(function() {
+                            totalPieces += parseFloat($(this).val()) || 0;
+                        });
+                        
+                        required = totalPieces;
+                        calcDetails = `Total from matrix: ${totalPieces} pieces`;
+                    }
+                }
+
+                required = Math.round(required * 1000) / 1000;
+                const issued = Math.round(data.issued * 1000) / 1000;
+
+                if (required > issued) {
+                    if (!data.is_mtr) {
+                        isValid = false;
+                    }
+                    errors.push({
+                        art: art,
+                        required: required,
+                        issued: issued,
+                        calc: calcDetails,
+                        is_mtr: data.is_mtr || false
+                    });
+                }
+            }
+
+            if (!isValid || errors.length > 0) {
+                e.preventDefault();
+                const $tbody = $('#stockErrorTable tbody').empty();
+                errors.forEach(err => {
+                    const rowClass = err.is_mtr ? 'table-info' : '';
+                    const badge = err.is_mtr ? '<span class="badge bg-info ms-2">Info Only</span>' : '';
+                    $tbody.append(`
+                        <tr class="${rowClass}">
+                            <td class="fw-bold">${err.art}${badge}</td>
+                            <td class="text-danger fw-bold">${err.required}</td>
+                            <td class="text-success fw-bold">${err.issued}</td>
+                            <td class="small text-start">${err.calc}</td>
+                        </tr>
+                    `);
+                });
+                new bootstrap.Modal(document.getElementById('stockValidationErrorModal')).show();
+            }
+        });
 
         $('#purchase_order').on('change', function() {
             const poId = $(this).val();
@@ -747,6 +900,13 @@
             $.get(`{{ url('job_card_entries/get-po-details') }}/${poId}`, function(data) {
                 currentArtNumbers = data.art_numbers;
                 currentArtData = data.art_data; 
+                
+                if (data.art_data) {
+                    data.art_data.forEach(d => {
+                        articleUoms[d.art_no] = d.uom_code;
+                    });
+                }
+
                 $('#fabric-details-card').removeClass('d-none');
                 
                 renderFabricDetails();
@@ -814,6 +974,8 @@
                     renderCuttingSizeTable(currentSizes, currentRatios);
                     updateQuantityRowVisibility();
                 } else {
+                    renderFabricDetails(); 
+                    renderCuttingSizeTable(currentSizes, currentRatios); 
                     syncMatrixWithMasterTable(false);
                     updateQuantityRowVisibility();
                 }
@@ -821,37 +983,67 @@
         }
 
         function renderArticleQtyMatrix(artNumbers, activeFsSizes = [], activeHsSizes = []) {
-            const $table = $('#article-qty-matrix');
-            const $thead = $table.find('thead');
-            const $tbody = $table.find('tbody');
-            const $tfoot = $table.find('tfoot');
-            $thead.empty();
-            $thead.empty();
-            const headHtml = `
-                <tr>
-                    <th rowspan="2" class="align-middle" style="min-width: 120px;">ART NO</th>
-                    ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
-                    ${activeHsSizes.length > 0 ? `<th colspan="${activeHsSizes.length}">H/S</th>` : ''}
-                    <!-- <th colspan="2">EX</th> -->
-                    <th rowspan="2" class="align-middle">TOTAL</th>
-                </tr>
-                <tr class="size-headers">
-                    ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
-                    ${activeHsSizes.map(s => `<th class="mat-hs-head">${s}</th>`).join('')}
-                    <!-- <th>EX 1</th>
-                    <th>EX 2</th> -->
-                </tr>`;
-            $thead.append(headHtml);
+            const tableIds = ['#article-qty-matrix-1', '#article-qty-matrix-2'];
+            
+            tableIds.forEach(id => {
+                const $table = $(id);
+                $table.find('thead').empty();
+                $table.find('tbody').empty();
+                $table.find('tfoot').empty();
 
-            $tbody.empty();
+                const headHtml = `
+                    <tr>
+                        <th rowspan="2" class="align-middle" style="min-width: 150px;">ART NO / MATERIAL</th>
+                        ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
+                        ${activeHsSizes.length > 0 ? `<th colspan="${activeHsSizes.length}">H/S</th>` : ''}
+                        <th rowspan="2" class="align-middle">TOTAL</th>
+                    </tr>
+                    <tr class="size-headers">
+                        ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
+                        ${activeHsSizes.map(s => `<th class="mat-hs-head">${s}</th>`).join('')}
+                    </tr>`;
+                $table.find('thead').append(headHtml);
+                
+                const footHtml = `
+                    <tr class="${id === '#article-qty-matrix-2' ? 'd-none' : ''}">
+                        <td class="fw-bold text-center small">TOTAL</td>
+                        ${activeFsSizes.map(s => `<td><div class="col-total text-center fw-bold small py-1 bg-secondary-subtle border rounded" data-col="fs-${s}" style="min-height: 30px;"></div></td>`).join('')}
+                        ${activeHsSizes.map(s => `<td><div class="col-total text-center fw-bold small py-1 bg-secondary-subtle border rounded" data-col="hs-${s}" style="min-height: 30px;"></div></td>`).join('')}
+                        <td><div id="${id.replace('#','')}-grand-total" class="grand-total text-center fw-bold py-1 bg-secondary-subtle border rounded small" style="min-height: 30px;"></div></td>
+                    </tr>`;
+                $table.find('tfoot').append(footHtml);
+            });
+
             if (!artNumbers || artNumbers.length === 0) return;
 
             artNumbers.forEach((art, index) => {
                 const existingRow = isEditMode && existingMatrix.length > 0  ? existingMatrix.find(r => String(r.art_no).trim() == String(art).trim()) : null;
                 const oldRow = oldMatrix && oldMatrix.length > 0 ? (oldMatrix.find(r => String(r.art_no).trim() == String(art).trim()) || oldMatrix[index]) : null;
+                
+                let uom = (articleUoms[art] || 'PCS').toUpperCase();
+                let artName = '';
+                let catId = 1;
+
+                if (currentArtData && currentArtData.length > 0) {
+                    const d = currentArtData.find(d => String(d.art_no).trim() == String(art).trim());
+                    if (d) {
+                        artName = d.art_name || '';
+                        uom = (d.uom_code || uom).toUpperCase();
+                        catId = d.store_category_id || 1;
+                    }
+                }
                     
-                let rowHtml = `<tr>
-                                <td><input type="text" name="article_matrix[${index}][art_no]" class="form-control form-control-sm text-center" value="${art}" readonly></td>`;
+                const readonlyAttr = (catId != 1) ? 'readonly tabindex="-1"' : '';
+                const rowClass = (catId != 1) ? 'cat2-row' : 'cat1-row';
+                const sectionId = (catId == 1) ? 1 : 2;
+                const $targetTbody = $(`#article-qty-matrix-${sectionId}-body`);
+
+                let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}">
+                                <td>
+                                    <div class="border rounded p-1 mb-1 text-center fw-bold small" style="background: #f8f9fa;">${art}</div>
+                                    <input type="hidden" name="article_matrix[${index}][art_no]" value="${art}">
+                                    <div class="small text-muted text-center" style="font-size: 10px; line-height: 1.1;">${artName}</div>
+                                </td>`;
                 
                 activeFsSizes.forEach(s => {
                     let fsVal = '';
@@ -861,7 +1053,7 @@
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
                     }
-                    rowHtml += `<td><input type="number" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" value="${fsVal}"></td>`;
+                    rowHtml += `<td><input type="number" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" data-art="${art}" value="${fsVal}" ${readonlyAttr}></td>`;
                 });
 
                 activeHsSizes.forEach(s => {
@@ -872,87 +1064,135 @@
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
                     }
-                    rowHtml += `<td><input type="number" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" value="${hsVal}"></td>`;
+                    rowHtml += `<td><input type="number" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" data-art="${art}" value="${hsVal}" ${readonlyAttr}></td>`;
                 });
 
-                rowHtml += `
-                    <!-- <td><input type="number" name="article_matrix[${index}][ex_1]" class="form-control form-control-sm qty-input text-center" data-col="ex-1" value=""></td>
-                    <td><input type="number" name="article_matrix[${index}][ex_2]" class="form-control form-control-sm qty-input text-center" data-col="ex-2" value=""></td> -->
-                    <td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td>
-                </tr>`;
-                $tbody.append(rowHtml);
+                rowHtml += `<td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td></tr>`;
+                $targetTbody.append(rowHtml);
             });
-
-            $tfoot.empty();
-            const footHtml = `
-                <tr>
-                    <td class="fw-bold text-center">TOTAL</td>
-                    ${activeFsSizes.map(s => `<td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="fs-${s}" readonly tabindex="-1"></td>`).join('')}
-                    ${activeHsSizes.map(s => `<td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="hs-${s}" readonly tabindex="-1"></td>`).join('')}
-                    <!-- <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-1" readonly tabindex="-1"></td>
-                    <td><input type="text" class="form-control form-control-sm col-total text-center fw-bold" data-col="ex-2" readonly tabindex="-1"></td> -->
-                    <td><input type="text" id="grand-total" class="form-control form-control-sm text-center fw-bold bg-light" readonly tabindex="-1"></td>
-                </tr>`;
-            $tfoot.append(footHtml);
 
             calculateMatrixTotals();
         }
 
-        $(document).on('input', '#article-qty-matrix .qty-input', function() {
-            calculateMatrixTotals();
+        $(document).on('input', '.qty-input', function() {
+            if (isSyncing) return;
+            
+            const $el = $(this);
+            const $row = $el.closest('tr');
+            if ($row.closest('table').is('#article-qty-matrix-1, #article-qty-matrix-2')) {
+                const isCat1 = ($row.attr('data-category') == 1);
+
+                // Sync with master table ONLY IF it's Category 1 and first row (usually Fabric)
+                if (isCat1 && $row.is(':first-child')) {
+                    const col = $el.data('col');
+                    const parts = (col || "").split('-');
+                    if (parts.length >= 2) {
+                        const type = parts[0];
+                        const size = parts[1];
+                        const val = parseFloat($el.val()) || 0;
+                        const pieces = val; 
+
+                        const $masterInput = $('.qty-direct-input').filter(function() {
+                            return $(this).data('size') == size && $(this).data('type') == type;
+                        });
+                        if ($masterInput.length) {
+                            const wasSyncing = isSyncing;
+                            isSyncing = true;
+                            $masterInput.val(pieces);
+                            isSyncing = wasSyncing;
+                            
+                            syncMatrixWithMasterTable(true, false, type, size);
+                            return;
+                        }
+                    }
+                }
+                calculateMatrixTotals();
+            }
         });
 
-        function calculateMatrixTotals() {
-            if (isSyncing) return;
+        function calculateMatrixTotals(force = false) {
+            if (isSyncing && !force) return;
+            let wasSyncing = isSyncing;
             isSyncing = true;
 
             try {
-                $('#article-qty-matrix tbody tr').each(function() {
+                // Step 1: Sum Category 1 pieces per column (Source for Consumables)
+                const cat1ColSums = {};
+                $('#article-qty-matrix-1-body tr').each(function() {
                     let rowTotal = 0;
                     $(this).find('.qty-input').each(function() {
-                        rowTotal += parseFloat($(this).val()) || 0;
+                        const col = $(this).data('col');
+                        const val = parseFloat($(this).val()) || 0;
+                        cat1ColSums[col] = (cat1ColSums[col] || 0) + val;
+                        rowTotal += val;
                     });
-                    $(this).find('.row-total').val(rowTotal || '');
+                    $(this).find('.row-total').val(rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(3)) : '');
                 });
 
-                const colSums = {};
+                // Step 2: Auto-calculate Category 2 based on Cat 1 sums
+                $('#article-qty-matrix-2-body tr').each(function() {
+                    const $row = $(this);
+                    const art = $row.data('art');
+                    let rowTotal = 0;
+                    $row.find('.qty-input').each(function() {
+                        const col = $(this).data('col');
+                        const parts = col.split('-');
+                        const type = parts[0];
+                        const size = parts[1];
+                        
+                        const pieces = cat1ColSums[col] || 0;
+                        const cons = getConsumptionValue(art, type, size);
+                        const calcVal = pieces * cons;
+                        
+                        $(this).val(calcVal > 0 ? (calcVal % 1 === 0 ? calcVal : calcVal.toFixed(3)) : '');
+                        rowTotal += (parseFloat($(this).val()) || 0);
+                    });
+                    $(this).find('.row-total').val(rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(3)) : '');
+                });
+
+                // Step 3: Column Totals and Grand Totals for both tables
+                const tableIds = ['#article-qty-matrix-1', '#article-qty-matrix-2'];
                 let totalFS = 0;
                 let totalHS = 0;
 
-                $('#article-qty-matrix .qty-input').each(function() {
-                    const col = $(this).data('col');
-                    const val = parseFloat($(this).val()) || 0;
-                    colSums[col] = (colSums[col] || 0) + val;
+                tableIds.forEach(id => {
+                    const colSums = {};
+                    let tableGrandTotal = 0;
                     
-                    if (col.startsWith('fs')) {
-                        totalFS += val;
-                    } else if (col.startsWith('hs')) {
-                        totalHS += val;
-                    /* } else if (col === 'ex-1') { 
-                        totalHS += val;
-                    } else if (col === 'ex-2') {
-                        totalFS += val;
-                    } */
-                    }
+                    $(`${id}-body tr`).each(function() {
+                        const uom = ($(this).attr('data-uom') || '').toUpperCase();
+                        const isMtr = (uom === 'MTR');
+
+                        $(this).find('.qty-input').each(function() {
+                            const val = parseFloat($(this).val()) || 0;
+                            const col = $(this).data('col');
+                            colSums[col] = (colSums[col] || 0) + val;
+                            tableGrandTotal += val;
+                            
+                            if (isMtr) {
+                                if (col.startsWith('fs')) totalFS += val;
+                                else if (col.startsWith('hs')) totalHS += val;
+                            }
+                        });
+                    });
+
+                    // Update footer
+                    $(`${id} .col-total`).each(function() {
+                        const col = $(this).data('col');
+                        const sum = colSums[col] || 0;
+                        $(this).text(sum > 0 ? (sum % 1 === 0 ? sum : sum.toFixed(3)) : ''); 
+                    });
+                    $(`${id}-grand-total`).text(tableGrandTotal > 0 ? (tableGrandTotal % 1 === 0 ? tableGrandTotal : tableGrandTotal.toFixed(3)) : '');
                 });
 
-                let grandTotal = 0;
-                $('.col-total').each(function() {
-                    const col = $(this).data('col');
-                    const sum = colSums[col] || 0;
-                    $(this).val(sum || '');
-                    grandTotal += sum;
-                });
+                // Summary updates
+                $('#total_qty_fs').val(totalFS > 0 ? Math.round(totalFS) : '');
+                $('#total_qty_hs').val(totalHS > 0 ? Math.round(totalHS) : '');
+                $('.total-summary-fs').text(totalFS > 0 ? Math.round(totalFS) : '0');
+                $('.total-summary-hs').text(totalHS > 0 ? Math.round(totalHS) : '0');
 
-                $('#grand-total').val(grandTotal || '');
-
-                $('#total_qty_fs').val(totalFS || '');
-                $('#total_qty_hs').val(totalHS || '');
-                
-                $('.total-summary-fs').text(totalFS || '0');
-                $('.total-summary-hs').text(totalHS || '0');
             } finally {
-                isSyncing = false;
+                if (!wasSyncing) isSyncing = false;
             }
         }
 
@@ -1034,13 +1274,13 @@
             $tbody.empty();
 
             if (!currentArtNumbers.length) return;
-
             let headHtml = '<tr>';
             let artRow = '<tr>';
             let widthRow = '<tr>';
             let mtrRow = '<tr>';
             let inOutRow = '<tr>';
             let nPattiRow = '<tr>';
+            let sleeveQtyRow = '<tr>';
 
             currentArtNumbers.forEach((art, index) => {
                 let existingImagesHtml = '';
@@ -1098,6 +1338,80 @@
                 mtrRow += `<td class="fw-bold">Mtr/B.M</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center" value="${vMtr}"></td>`;
                 inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center" value="${vInOut}"></td>`;
                 nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center" value="${vNPatti}"></td>`;
+                
+                let uom = '';
+                if (currentArtData && currentArtData.length > 0) {
+                    const d = currentArtData.find(d => d.art_no == art);
+                    if (d) {
+                        uom = d.uom_code || '';
+                    }
+                }
+
+                if (uom === 'MTR') {
+                    let sizes = [...new Set([...globalActiveSizes.fs, ...globalActiveSizes.hs])].sort((a,b) => parseFloat(a)-parseFloat(b) || String(a).localeCompare(String(b)));
+                    
+                    let sizeTableHtml = '';
+                    if (sizes.length > 0) {
+                        sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1" style="font-size: 11px;">
+                            <thead class="bg-light"><tr><th>Size</th><th>F/S</th><th>H/S</th></tr></thead>
+                            <tbody>`;
+                        
+                        sizes.forEach(sz => {
+                            let vSzFs = '';
+                            let vSzHs = '';
+                            
+                            if (oldFabrics && oldFabrics[index] && oldFabrics[index]['consumptions'] && oldFabrics[index]['consumptions'][sz]) {
+                                vSzFs = oldFabrics[index]['consumptions'][sz]['fs_cons'] || '';
+                                vSzHs = oldFabrics[index]['consumptions'][sz]['hs_cons'] || '';
+                            }
+                            
+                            if (!vSzFs && isEditMode && existingMatrix.length > 0) {
+                                const m = existingMatrix.find(m => m.art_no == art);
+                                if (m && m.consumptions) {
+                                    const c = m.consumptions.find(c => String(c.size) === String(sz));
+                                    if (c) {
+                                        vSzFs = c.fs_cons || '';
+                                        vSzHs = c.hs_cons || '';
+                                    }
+                                }
+                            }
+
+                            sizeTableHtml += `<tr>
+                                <td>${sz}</td>
+                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][fs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="fs" data-uom="${uom}" value="${vSzFs}"></td>
+                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][hs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="hs" data-uom="${uom}" value="${vSzHs}"></td>
+                            </tr>`;
+                        });
+                        sizeTableHtml += `</tbody></table>`;
+                    } else {
+                        sizeTableHtml = `<div class="small text-muted p-1">Enter Matrix Qty first to see sizes</div>`;
+                    }
+
+                    sleeveQtyRow += `<td class="fw-bold">SLEEVE WISE QTY<br><span class="badge bg-info uom-label" data-art="${art}">${uom}</span></td>
+                        <td>${sizeTableHtml}</td>`;
+                } else {
+                    let vFsQty = (oldFabrics && oldFabrics[index] && oldFabrics[index]['fs_qty']) ? oldFabrics[index]['fs_qty'] : '';
+                    let vHsQty = (oldFabrics && oldFabrics[index] && oldFabrics[index]['hs_qty']) ? oldFabrics[index]['hs_qty'] : '';
+
+                    if (!vFsQty && existingMatrix.length > 0) {
+                        const m = existingMatrix.find(m => m.art_no == art);
+                        if (m) {
+                            vFsQty = m.fs_qty || '';
+                            vHsQty = m.hs_qty || '';
+                        }
+                    }
+
+                    sleeveQtyRow += `<td class="fw-bold">SLEEVE WISE QTY</td>
+                            <td>
+                                <div class="input-group input-group-sm flex-nowrap">
+                                    <span class="input-group-text px-1">F/S</span>
+                                    <input type="text" name="fabrics[${index}][fs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="fs" data-uom="${uom}" value="${vFsQty}">
+                                    <span class="input-group-text px-1">H/S</span>
+                                    <input type="text" name="fabrics[${index}][hs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="hs" data-uom="${uom}" value="${vHsQty}">
+                                    <span class="input-group-text px-1 uom-label">${uom}</span>
+                                </div>
+                            </td>`;
+                }
             });
 
             $thead.append(headHtml + '</tr>');
@@ -1105,6 +1419,7 @@
             $tbody.append(widthRow + '</tr>');
             $tbody.append(mtrRow + '</tr>');
             $tbody.append(inOutRow + '</tr>');
+            $tbody.append(sleeveQtyRow + '</tr>');
             $tbody.append(nPattiRow + '</tr>');
         }
 
@@ -1141,8 +1456,8 @@
                 let vRow = `<tr class="qty-${type}-row" style="${style}"><td><strong>${label}</strong></td>`;
                 sizes.forEach((s, idx) => {
                     let savedVal = '';
-                    if (isEditMode && existingCuttingRatios.length > 0) {
-                        const savedRecord = existingCuttingRatios.find(r => String(r.size) === String(s));
+                    if (isEditMode && matrixItems.length > 0) {
+                        const savedRecord = matrixItems.find(r => String(r.size) === String(s));
                         if (savedRecord) {
                             const fsVal = savedRecord.qty_fs != null ? savedRecord.qty_fs : '';
                             const hsVal = savedRecord.qty_hs != null ? savedRecord.qty_hs : '';
@@ -1184,7 +1499,6 @@
             const hasHS = !currentProcessGroup || name.includes('H/S') || name.includes('HALF');
             $('#total_qty_fs').closest('.col-md-6').toggle(hasFS);
             $('#total_qty_hs').closest('.col-md-6').toggle(hasHS);
-            // No longer hiding master table rows here
         }
 
 
@@ -1229,64 +1543,132 @@
 
 
         $(document).on('input', '.qty-direct-input', function() {
+            if (isSyncing) return;
             syncMatrixWithMasterTable(true);
         });
 
-        function syncMatrixWithMasterTable(populateValues = true) {
-            const activeFsSizes = [];
-            const activeHsSizes = [];
-            
-            $('.qty-direct-input[data-type="fs"]').each(function() {
-                const val = parseFloat($(this).val()) || 0;
-                const size = $(this).data('size');
-                if (val > 0 && !activeFsSizes.includes(size)) {
-                    activeFsSizes.push(size);
-                }
-            });
-            
-            $('.qty-direct-input[data-type="hs"]').each(function() {
-                const val = parseFloat($(this).val()) || 0;
-                const size = $(this).data('size');
-                if (val > 0 && !activeHsSizes.includes(size)) {
-                    activeHsSizes.push(size);
-                }
-            });
+        function syncMatrixWithMasterTable(populateValues = true, reRenderFabric = true, targetType = null, targetSize = null) {
+            if (isSyncing) return { fs: [], hs: [] };
+            isSyncing = true;
+            let activeFsSizes = [];
+            let activeHsSizes = [];
+            try {
+                $('.qty-direct-input[data-type="fs"]').each(function() {
+                    const val = parseFloat($(this).val()) || 0;
+                    const size = String($(this).data('size'));
+                    if (val > 0 && !activeFsSizes.includes(size)) activeFsSizes.push(size);
+                });
+                $('.qty-direct-input[data-type="hs"]').each(function() {
+                    const val = parseFloat($(this).val()) || 0;
+                    const size = String($(this).data('size'));
+                    if (val > 0 && !activeHsSizes.includes(size)) activeHsSizes.push(size);
+                });
 
-            const sizeSort = (a, b) => {
-                const numA = parseFloat(a);
-                const numB = parseFloat(b);
-                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-                return String(a).localeCompare(String(b));
-            };
-            activeFsSizes.sort(sizeSort);
-            activeHsSizes.sort(sizeSort);
-
-            const artNumbers = getArtNumbers();
-
-            if (artNumbers.length > 0 && (activeFsSizes.length > 0 || activeHsSizes.length > 0)) {
-                renderArticleQtyMatrix(artNumbers, activeFsSizes, activeHsSizes);
-                $('#article-matrix-card').removeClass('d-none');
-                
-                if (populateValues) {
-                    $('.qty-direct-input').each(function() {
-                        const type = $(this).data('type');
-                        const size = $(this).data('size');
-                        const val = $(this).val();
-                        if (val !== '') {
-                            $(`#article-qty-matrix tbody .qty-input[data-col="${type}-${size}"]`).each(function() {
-                                $(this).val(val);
-                            });
+                $('.qty-input').each(function() {
+                    const val = parseFloat($(this).val()) || 0;
+                    if (val > 0) {
+                        const col = $(this).data('col') || '';
+                        const parts = col.split('-');
+                        if (parts.length >= 2) {
+                            const type = parts[0];
+                            const size = String(parts[1]);
+                            if (type === 'fs' && !activeFsSizes.includes(size)) activeFsSizes.push(size);
+                            if (type === 'hs' && !activeHsSizes.includes(size)) activeHsSizes.push(size);
                         }
-                    });
+                    }
+                });
+
+                const sizeSort = (a, b) => {
+                    const numA = parseFloat(a);
+                    const numB = parseFloat(b);
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    return String(a).localeCompare(String(b));
+                };
+                activeFsSizes.sort(sizeSort);
+                activeHsSizes.sort(sizeSort);
+
+                const sizesChanged = JSON.stringify(globalActiveSizes.fs) !== JSON.stringify(activeFsSizes) || JSON.stringify(globalActiveSizes.hs) !== JSON.stringify(activeHsSizes);
+
+                const artNumbers = getArtNumbers();
+
+                if (artNumbers.length > 0 && (activeFsSizes.length > 0 || activeHsSizes.length > 0)) {
+                    if (sizesChanged) {
+                        renderArticleQtyMatrix(artNumbers, activeFsSizes, activeHsSizes);
+                    }
+                    $('#article-matrix-card').removeClass('d-none');
+                    
+                    if (populateValues) {
+                        $('.qty-direct-input').each(function() {
+                            const type = $(this).data('type');
+                            const size = String($(this).data('size'));
+                            
+                            if (targetType && targetSize && (type !== targetType || size !== String(targetSize))) return;
+
+                            const val = parseFloat($(this).val()); 
+                            const pieces = isNaN(val) ? 0 : val;
+
+                            $('#article-qty-matrix tbody tr.cat1-row .qty-input').filter(function() {
+                                return $(this).data('col') === `${type}-${size}`;
+                            }).each(function() {
+                                const uom = ($(this).closest('tr').attr('data-uom') || '').toUpperCase();
+                                let finalCalc;
+                                
+                                if (uom === 'PCS') {
+                                    // Normally Cat 1 should be MTR, but if it's PCS, we use direct pieces
+                                    finalCalc = pieces > 0 ? Math.round(pieces).toString() : '';
+                                } else {
+                                    finalCalc = pieces > 0 ? pieces.toString() : '';
+                                }
+                                
+                                if ($(this).val() != finalCalc) {
+                                    $(this).val(finalCalc);
+                                }
+                            });
+                        });
+                    }
+                    calculateMatrixTotals(true);
+                } else {
+                    if (artNumbers.length > 0 && sizesChanged) {
+                        renderArticleQtyMatrix(artNumbers, [], []);
+                    }
                 }
-                calculateMatrixTotals();
-            } else {
-                if (artNumbers.length > 0) {
-                    renderArticleQtyMatrix(artNumbers, [], []);
+                
+                if (reRenderFabric && sizesChanged) {
+                    globalActiveSizes = { fs: activeFsSizes, hs: activeHsSizes };
+                    renderFabricDetails();
+                } else {
+                    globalActiveSizes = { fs: activeFsSizes, hs: activeHsSizes };
                 }
+            } finally {
+                isSyncing = false;
             }
+
             return { fs: activeFsSizes, hs: activeHsSizes };
         }
+
+        function getConsumptionValue(art, type, size) {
+            const $sizeWise = $(`.size-cons-input[data-art="${art}"][data-size="${size}"][data-type="${type}"]`);
+            if ($sizeWise.length) {
+                const val = parseFloat($sizeWise.val());
+                if (!isNaN(val)) return val;
+                
+                return 0;
+            }
+            const $stdInput = $(`.sleeve-qty-input[data-art="${art}"][data-type="${type}"]:not(.size-cons-input)`);
+            if ($stdInput.length) {
+                const val = parseFloat($stdInput.val());
+                if (!isNaN(val)) return val;
+                
+                return 0;
+            }
+            
+            return 0; 
+        }
+
+        $(document).on('input', '.sleeve-qty-input', function() {
+            syncMatrixWithMasterTable(false, false);
+        });
+
 
         $('#trigger-sync').on('click', function() {
             if (!$('#purchase_order').val()) {
@@ -1304,13 +1686,6 @@
                 scrollTop: $("#article-qty-matrix").offset().top - 100
             }, 500);
         });
-
-        $(document).on('input', '#total_qty_fs, #total_qty_hs', function() {
-            distributeQuantitiesByRatio();
-        });
-
-        function distributeQuantitiesByRatio() {
-        }
 
         const oldStages = @json(old('stages', []));
         if (oldStages.length) {
@@ -1379,4 +1754,17 @@
         };
     });
 </script>
+<style>
+    /* Hide spinners in Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Hide spinners in Firefox */
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
 @endsection

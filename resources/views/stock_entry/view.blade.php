@@ -73,12 +73,80 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Stock Adjustment -->
+<div class="modal fade" id="modalAdjustment" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Stock Adjustment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAdjustment">
+                @csrf
+                <input type="hidden" name="item_id" id="adj_item_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="form-floating form-floating-outline">
+                                <input type="text" class="form-control" id="adj_grn_no" readonly>
+                                <label>GRN No.</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-floating form-floating-outline">
+                                <input type="text" class="form-control" id="adj_material" readonly>
+                                <label>Material</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-floating form-floating-outline">
+                                <input type="text" class="form-control" id="adj_current_qty" readonly>
+                                <label>Current Qty (In)</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-floating form-floating-outline">
+                                <input type="number" step="0.01" class="form-control" name="qty_to_add" id="adj_qty_to_add" placeholder="0.00" required>
+                                <label>Add Quantity *</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-floating form-floating-outline">
+                                <input type="text" class="form-control" name="approved_by" id="adj_approved_by" placeholder="Supervisor/Manager Name" required>
+                                <label>Approved By *</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-floating form-floating-outline">
+                                <textarea class="form-control" name="reason" id="adj_reason" rows="3" placeholder="Reason for adjustment" required style="height: 80px;"></textarea>
+                                <label>Reason for Adjustment *</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-adjustment">Adjust Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
     $(function() {
         let table = $('.stock-entry-table').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
             serverSide: false,
             ajax: {
@@ -136,13 +204,57 @@
         });
     });
 
+    // Handle Adjustment Button Click
+    $(document).on('click', '.btn-adjust', function() {
+        let btn = $(this);
+        $('#adj_item_id').val(btn.data('item-id'));
+        $('#adj_grn_no').val(btn.data('grn-no'));
+        $('#adj_material').val(btn.data('material'));
+        $('#adj_current_qty').val(btn.data('current-qty'));
+        $('#adj_qty_to_add').val('');
+        $('#adj_reason').val('');
+        $('#adj_approved_by').val('');
+        
+        $('#modalAdjustment').modal('show');
+    });
+
+    // Handle Adjustment Form Submit
+    $('#formAdjustment').on('submit', function(e) {
+        e.preventDefault();
+        let btn = $('#btn-save-adjustment');
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adjusting...');
+
+        $.ajax({
+            url: "{{ route('stock_entries.quick_adjustment') }}",
+            type: "POST",
+            data: $(this).serialize(),
+            success: function(res) {
+                if(res.success) {
+                    $('#modalAdjustment').modal('hide');
+                    alert(res.message);
+                    table.ajax.reload();
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function(xhr) {
+                let msg = 'Error adjusting stock. Please check the console.';
+                if(xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                alert(msg);
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('Adjust Stock');
+            }
+        });
+    });
+
     function delete_data(url) {
         if (confirm('Are you sure you want to delete this stock entry?')) {
             $.post(url, {
                 _token: "{{ csrf_token() }}",
             }, function(res) {
                 if (res.success) {
-                    $('.datatables-products').DataTable().ajax.reload();
+                    table.ajax.reload();
                 }
             });
         }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
+use App\Models\StockEntryAdjustment;
 use App\Models\GrnEntry;
 use App\Models\GrnEntryItem;
 use App\Models\StoreCategory;
@@ -45,8 +46,6 @@ class StockEntryController extends Controller
             $count = 1;
 
             foreach ($stockEntries as $entry) {
-
-
                 $totalQtyIn = $entry->stockEntryItems->sum('qty_in');
                 $totalQtyOut = $entry->stockEntryItems->sum('qty_out');
 
@@ -59,15 +58,11 @@ class StockEntryController extends Controller
                     : ($firstItem && $firstItem->finished_item_code ? $firstItem->finished_item_code : '-');
 
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view_details stock entries')) {
-                    $action .= '<a href="' . url('stock_entries/view/' . $entry->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
-                }
+                $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
+                $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
                 if (auth()->id() == 1 || auth()->user()->can('edit stock entries')) {
                     $action .= '<a href="' . url('stock_entries/add/' . $entry->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-                /* if (auth()->id() == 1 || auth()->user()->can('delete stock entries')) {
-                    $action .= '<button class="btn btn-delete" onclick="delete_data(`' . url('stock_entries/delete/' . $entry->id) . '`)"><i class="icon-base ri ri-delete-bin-line"></i></button>';
-                } */
                 $action .= '</div>';
 
                 $data[] = [
@@ -89,7 +84,6 @@ class StockEntryController extends Controller
         
         return view('stock_entry.view', compact('storeCategories', 'rawMaterials'));
     }
-
     public function add(Request $request, $id = null)
     {
         if ($id) {
@@ -182,8 +176,7 @@ class StockEntryController extends Controller
                     $headerData['updated_by'] = auth()->id();
                     $oldValues = $stockEntry->toArray();
                     $stockEntry->update($headerData);
-                    $stockEntry->stockEntryItems()->delete();
-                    
+                    $stockEntry->stockEntryItems()->forceDelete();
                     addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
                 } else {
                     $lastEntry = StockEntry::latest('id')->first();
@@ -194,23 +187,18 @@ class StockEntryController extends Controller
                     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
                 }
 
-                $totalQty = (int)($request->qty_in ?? 1);
-                
-                for ($i = 0; $i < $totalQty; $i++) {
-                    StockEntryItem::create([
-                        'stock_entry_id' => $stockEntry->id,
-                        'stock_type' => 'raw_material',
-                        'grn_entry_item_id' => $request->grn_entry_item_id ?? null,
-                        'raw_material_id' => $request->raw_material_id ?? null,
-                        'store_category_id' => $request->store_category_id ?? null,
-                        'store_location_id' => $request->store_location_id,
-                        'uom_id' => $request->uom_id ?? null,
-                        'qty_in' => 1,
-                        'qty_out' => 0,
-                        'price' => $request->price ?? 0,
-                    ]);
-                }
-
+                StockEntryItem::create([
+                    'stock_entry_id' => $stockEntry->id,
+                    'stock_type' => 'raw_material',
+                    'grn_entry_item_id' => $request->grn_entry_item_id ?? null,
+                    'raw_material_id' => $request->raw_material_id ?? null,
+                    'store_category_id' => $request->store_category_id ?? null,
+                    'store_location_id' => $request->store_location_id,
+                    'uom_id' => $request->uom_id ?? null,
+                    'qty_in' => $request->qty_in ?? 1,
+                    'qty_out' => 0,
+                    'price' => $request->price ?? 0,
+                ]);
                 DB::commit();
                 return redirect('stock_entries')->with('success', 'Stock Entry saved successfully');
             } catch (\Exception $e) {
@@ -242,7 +230,6 @@ class StockEntryController extends Controller
 
         return view('stock_entry.add', compact('stockEntry', 'grnEntries', 'storeCategories', 'rawMaterials', 'storeLocations', 'uoms', 'nextStockNo', 'savedItems'));
     }
-
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view_details stock entries')) {
@@ -263,22 +250,6 @@ class StockEntryController extends Controller
 
         return view('stock_entry.view_details', compact('stockEntry'));
     }
-
-    public function delete($id)
-    {
-        if (auth()->id() != 1 && !auth()->user()->can('delete stock entries')) {
-            return unauthorizedRedirect();
-        }
-        $stockEntry = StockEntry::findOrFail($id);
-        
-       addLog('delete', 'Stock Entry', 'stock_entries', $stockEntry->id, $stockEntry->toArray(), null);
-        
-        $stockEntry->delete();
-
-        return response()->json(['success' => true, 'message' => 'Stock Entry deleted successfully']);
-    }
-
-    
     public function getGrnEntryItems($grn_entry_id)
     {
         $stockEntryId = request('stock_entry_id');
@@ -338,4 +309,64 @@ class StockEntryController extends Controller
         ]);
     }
 
+    public function quickAdjustment(Request $request)
+    {
+        $request->validate([
+            'item_id' => 'required|exists:stock_entry_items,id',
+            'qty_to_add' => 'required|numeric',
+            'reason' => 'required',
+            'approved_by' => 'required'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $item = StockEntryItem::findOrFail($request->item_id);
+            
+            $previousQtyIn = $item->qty_in;
+            $newQtyIn = $previousQtyIn + $request->qty_to_add;
+            $item->qty_in = $newQtyIn;
+            $item->save();
+
+            $count = StockEntryAdjustment::count();
+            $adjNo = 'ADJ-SE-' . date('Ymd') . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+
+            StockEntryAdjustment::create([
+                'adjustment_no' => $adjNo,
+                'stock_entry_item_id' => $item->id,
+                'raw_material_id' => $item->raw_material_id,
+                'qty' => $request->qty_to_add,
+                'previous_stock' => $previousQtyIn,
+                'new_stock' => $newQtyIn,
+                'approved_by' => $request->approved_by,
+                'reason' => $request->reason,
+                'status' => 'Posted',
+                'created_by' => auth()->id()
+            ]);
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Stock adjusted successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function adjustmentLogs($id = null)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock entries')) {
+            return unauthorizedRedirect();
+        }
+
+        $query = StockEntryAdjustment::with(['stockEntryItem.stockEntry', 'rawMaterial', 'creator']);
+        
+        if ($id) {
+            $query->whereHas('stockEntryItem', function($q) use ($id) {
+                $q->where('stock_entry_id', $id);
+            });
+        }
+
+        $logs = $query->orderBy('created_at', 'desc')->get();
+        
+        return view('stock_entry.adjustment_logs', compact('logs'));
+    }
 }

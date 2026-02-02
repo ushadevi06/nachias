@@ -7,12 +7,30 @@
             <form action="{{ url('production_receipts/add' . ($receipt ? '/' . $receipt->id : '')) }}" method="POST" class="common-form">
                 @csrf
                 @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
+                    <div class="alert alert-danger shadow-sm border-0 mb-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="ri-error-warning-line fs-4 me-2"></i>
+                            <h6 class="mb-0 fw-bold">Please correct the following errors:</h6>
+                        </div>
+                        <ul class="mb-0 ps-3 text-danger">
                             @foreach ($errors->all() as $error)
                                 <li>{{ $error }}</li>
                             @endforeach
                         </ul>
+                    </div>
+                @endif
+
+                @if(session('success'))
+                    <div class="alert alert-success shadow-sm border-0 mb-4 d-flex align-items-center">
+                        <i class="ri-checkbox-circle-line fs-4 me-2 text-success"></i>
+                        <h6 class="mb-0 fw-bold text-success">{{ session('success') }}</h6>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger shadow-sm border-0 mb-4 d-flex align-items-center">
+                        <i class="ri-error-warning-line fs-4 me-2 text-danger"></i>
+                        <h6 class="mb-0 fw-bold text-danger">{{ session('error') }}</h6>
                     </div>
                 @endif
                 <div class="card mb-4">
@@ -26,9 +44,7 @@
                                     <select name="job_card_id" id="job_card_id" class="form-select select2" data-placeholder="Select Job Card No">
                                         <option value="">Select Job Card No</option>
                                         @foreach($jobCards as $jobCard)
-                                            <option value="{{ $jobCard->id }}" {{ old('job_card_id', $receipt->job_card_id ?? '') == $jobCard->id ? 'selected' : '' }}>
-                                                {{ $jobCard->job_card_no }}
-                                            </option>
+                                            <option value="{{ $jobCard->id }}" {{ old('job_card_id', $receipt->job_card_id ?? '') == $jobCard->id ? 'selected' : '' }}>{{ $jobCard->job_card_no }}</option>
                                         @endforeach
                                     </select>
                                     <label for="job_card_id">Job Card No *</label>
@@ -87,6 +103,20 @@
                                     <label for="store_type_id">Store *</label>
                                 </div>
                                 @error('store_type_id') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select name="store_location_id" id="store_location_id" class="form-select select2" data-placeholder="Select Location">
+                                        <option value="">Select Location</option>
+                                        @foreach($storeLocations as $location)
+                                            <option value="{{ $location->id }}" {{ old('store_location_id', $receipt->store_location_id ?? '') == $location->id ? 'selected' : '' }}>
+                                                {{ $location->store_location }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="store_location_id">Store Location *</label>
+                                </div>
+                                @error('store_location_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -160,8 +190,6 @@
                 var scanQty = parseFloat(item.scan_qty || 0);
                 var alreadyRec = parseFloat(item.qty_already_received || 0);
                 var orderedQty = parseFloat(item.ordered_qty || 0);
-                
-                // User spec: Qty Balance = Ordered - (Already Received + Qty To Receive)
                 var currentBalance = orderedQty - (alreadyRec + scanQty);
 
                 var row = '<tr data-index="' + index + '">' +
@@ -182,33 +210,31 @@
                     '</tr>';
                 tbody.append(row);
             });
-
-
             $('#items-section').show();
         }
 
         function calculateRowValues(row) {
             var scanQty = parseFloat(row.find('.scan-qty').val()) || 0;
-            var balanceQty = parseFloat(row.find('.scan-qty').data('max')) || 0;
-            var originalReceived = parseFloat(row.find('.qty-already-received').val()) || 0;
+            var orderedQty = parseFloat(row.find('.ordered-qty').val()) || 0;
+            var alreadyReceived = parseFloat(row.find('.qty-already-received').val()) || 0;
+            var availableBalance = parseFloat(row.find('.scan-qty').data('max')) || 0;
             
-            var qtyToReceive = scanQty;
-            
-            if (qtyToReceive > balanceQty) {
-                alert('Qty To Receive cannot exceed Balance Qty (' + balanceQty.toFixed(2) + ')');
-                row.find('.scan-qty').val(balanceQty.toFixed(2));
-                qtyToReceive = balanceQty;
+            if (scanQty > availableBalance) {
+                alert('Qty To Receive cannot exceed Available Balance (' + availableBalance.toFixed(2) + ')');
+                scanQty = availableBalance;
+                row.find('.scan-qty').val(scanQty.toFixed(2));
             }
             
-            if (qtyToReceive < 0) {
-                qtyToReceive = 0;
+            if (scanQty < 0) {
+                scanQty = 0;
+                row.find('.scan-qty').val('0.00');
             }
 
-            var newReceived = originalReceived + qtyToReceive;
-            row.find('.qty-received-text').text(newReceived.toFixed(2));
+            var totalReceived = alreadyReceived + scanQty;
+            row.find('.qty-received-text').text(totalReceived.toFixed(2));
 
-            var newBalance = balanceQty - qtyToReceive;
-            row.find('.qty-balance-text').text(newBalance.toFixed(2));
+            var remainingBalance = orderedQty - totalReceived;
+            row.find('.qty-balance-text').text(remainingBalance.toFixed(2));
         }
 
         $(document).on('input', '.scan-qty', function() {
@@ -249,17 +275,13 @@
                         if (response.data.items && response.data.items.length > 0) {
                             var responseItems = response.data.items;
                             
-                            // If we have old items (from validation error), override scan_qty
                             if (oldItems && Object.keys(oldItems).length > 0) {
                                 responseItems.forEach(function(item) {
-                                    // Try to find matching item in oldItems
-                                    // Match by item_id and size_variant
                                     var match = Object.values(oldItems).find(function(oi) {
                                         return oi.item_id == item.item_id && oi.size_variant == item.size_variant;
                                     });
                                     if (match) {
                                         item.scan_qty = match.scan_qty;
-                                        // item.qty_to_receive = match.scan_qty; // If needed
                                     }
                                 });
                             }

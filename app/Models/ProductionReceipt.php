@@ -19,6 +19,7 @@ class ProductionReceipt extends Model
         'doc_no',
         'doc_date',
         'store_type_id',
+        'store_location_id',
         'status',
         'remarks',
         'created_by',
@@ -38,6 +39,11 @@ class ProductionReceipt extends Model
     public function storeType()
     {
         return $this->belongsTo(StoreType::class, 'store_type_id');
+    }
+
+    public function storeLocation()
+    {
+        return $this->belongsTo(StoreLocation::class, 'store_location_id');
     }
 
     public function items()

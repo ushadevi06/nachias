@@ -63,8 +63,15 @@
         }
 
         let table = $('#citiesTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
-            serverSide: false,
             ajax: {
                 url: "{{ url('cities') }}",
                 data: function(d) {

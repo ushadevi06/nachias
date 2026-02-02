@@ -34,11 +34,11 @@
     @endif
     <div class="kanban-wrapper">
         <div class="kanban-add-new-board-column">
-            <div class="kanban-add-board-trigger" id="add-list-trigger">
+            {{--<div class="kanban-add-board-trigger" id="add-list-trigger">
                 <i class="ri-add-line fs-4 me-1"></i> New list
-            </div>
+            </div> --}}
             
-            <div class="kanban-new-list-form d-none" id="add-list-form">
+            {{--<div class="kanban-new-list-form d-none" id="add-list-form">
                 <h5 class="mb-3 fw-bold">New list</h5>
                 <div class="mb-4">
                     <label class="form-label-bold small text-uppercase" style="font-weight: 700; display: block; margin-bottom: 0.25rem;">Scope</label>
@@ -56,7 +56,7 @@
                     <button class="btn btn-primary btn-sm px-3" id="btn-add-board-static">Add to board</button>
                     <button class="btn btn-label-secondary btn-sm px-3" id="btn-cancel-board-static">Cancel</button>
                 </div>
-            </div>
+            </div> --}}
         </div>
     </div>
   </div>

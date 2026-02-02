@@ -11,6 +11,7 @@ class Employee extends Authenticatable
     use HasFactory;
 
     protected $fillable = [
+        'service_provider_id',
         'department_id',
         'role_id',
         'emp_id',
@@ -24,34 +25,24 @@ class Employee extends Authenticatable
         'profile_image',
         'password',
         'status',
-
-        // Address
         'country',
         'state_id',
         'city_id',
         'address_line1',
         'address_line2',
         'zipcode',
-
-        // Emergency Contact
         'contact_person_name',
         'contact_person_phone',
-
-        // Salary
         'basic_salary',
         'hra',
         'allowances',
         'deductions',
         'gross_salary',
         'net_salary',
-
-        // Documents
         'esi_document',
         'pf_document',
         'aadhaar_document',
         'pan_document',
-
-        // Bank
         'account_number',
         'bank_name',
         'ifsc_code',
@@ -100,6 +91,11 @@ class Employee extends Authenticatable
     public function city()
     {
         return $this->belongsTo(City::class);
+    }
+
+    public function serviceProvider()
+    {
+        return $this->belongsTo(ServiceProvider::class);
     }
 
     /* ===========================

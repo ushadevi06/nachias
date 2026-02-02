@@ -34525,6 +34525,18 @@ body:not(.modal-open) .layout-content-navbar .layout-navbar {
     color: #ffffff;
 }
 
+.btn-adjust {
+    box-shadow: none !important;
+    border: 1px solid transparent;
+    color: #8c57ff;
+    padding: 7px 8px;
+}
+
+.btn-adjust:hover {
+    background-color: #8c57ff;
+    color: #ffffff;
+}
+
 .btn-delete {
     box-shadow: none !important;
     border: 1px solid transparent;

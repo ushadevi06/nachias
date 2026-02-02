@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
 use Spatie\Permission\Models\Role;
 use Illuminate\Validation\Rule;
+use App\Models\ServiceProvider;
 
 class EmployeeController extends Controller
 {
@@ -23,7 +24,7 @@ class EmployeeController extends Controller
 
         if ($request->ajax()) {
 
-            $query = User::with(['department', 'role'])->orderBy('id', 'desc');
+            $query = User::with(['department', 'role', 'serviceProvider'])->orderBy('id', 'desc');
 
             if (!empty($request->department)) {
                 $query->where('department_id', $request->department);
@@ -60,19 +61,19 @@ class EmployeeController extends Controller
                 $checked = $emp->status === 'Active' ? 'checked' : '';
 
                 $statusSwitch = '
-                <label class="switch switch-success switch-lg">
-                    <input type="checkbox"
-                        class="switch-input employee-status-toggle"
-                        data-id="' . $emp->id . '"
-                        ' . $checked . '>
+                    <label class="switch switch-success switch-lg">
+                        <input type="checkbox"
+                            class="switch-input employee-status-toggle"
+                            data-id="' . $emp->id . '"
+                            ' . $checked . '>
 
-                    <span class="switch-toggle-slider">
-                        <span class="switch-on"></span>
-                        <span class="switch-off"></span>
-                    </span>
-                </label>
-                <div class="status_msg_' . $emp->id . '"></div>
-            ';
+                        <span class="switch-toggle-slider">
+                            <span class="switch-on"></span>
+                            <span class="switch-off"></span>
+                        </span>
+                    </label>
+                    <div class="status_msg_' . $emp->id . '"></div>
+                ';
 
                 $image = $emp->profile_image
                     ? url('uploads/employee/' . $emp->id . '/' . $emp->profile_image)
@@ -84,6 +85,7 @@ class EmployeeController extends Controller
                     'image'       => '<img src="' . $image . '" class="rounded-circle" width="50">',
                     'role'        => $emp->role->name ?? '-',
                     'department'  => $emp->department->department ?? '-',
+                    'service_provider' => $emp->serviceProvider->name ?? '-',
                     'contact_info' => ' 
                         <div class="contact-info">
                             <div>
@@ -122,6 +124,7 @@ class EmployeeController extends Controller
         $departments = Department::active()->get();
         $roles = Role::where('status','Active')->get();
         $bloodGroups = BloodGroup::get();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
         $states = State::active()->get();
         $cities = [];
 
@@ -152,6 +155,7 @@ class EmployeeController extends Controller
                     Rule::unique('users', 'emp_id')->ignore($id ?? null)->whereNull('deleted_at'),
                 ],
                 'department_id' => 'required|exists:departments,id',
+                'service_provider_id' => 'nullable|exists:service_providers,id',
                 'role_id' => 'required|exists:roles,id',
                 'blood_group_id' => 'nullable|exists:blood_groups,id',
                 'state_id' => 'required|exists:states,id',
@@ -203,6 +207,7 @@ class EmployeeController extends Controller
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'emp_id' => $request->emp_id,
+                'service_provider_id' => $request->service_provider_id,
                 'department_id' => $request->department_id,
                 'role_id' => $request->role_id,
                 'blood_group_id' => $request->blood_group_id,
@@ -333,7 +338,27 @@ class EmployeeController extends Controller
             return redirect('employees')->with('success', $message);
         }
 
-        return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities'));
+        return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities', 'serviceProviders'));
+    }
+
+    public function getEmployeesByPlant($plantId = null)
+    {
+        $query = User::where('status', 'Active')->where('id', '!=', 1);
+        if ($plantId && $plantId != 'null' && $plantId != 'undefined' && $plantId != 'all') {
+            $query->where('service_provider_id', $plantId);
+        }
+        
+        if (request()->has('q')) {
+            $query->where('name', 'like', '%' . request()->q . '%');
+        }
+
+        $employees = $query->get(['id', 'name']);
+        
+        $formatted = $employees->map(function($e) {
+            return ['id' => $e->id, 'text' => $e->name];
+        });
+
+        return response()->json(['success' => true, 'employees' => $employees, 'results' => $formatted]);
     }
 
     public function destroy($id)

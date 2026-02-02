@@ -132,7 +132,32 @@ class GrnEntryController extends Controller
 
             foreach ($request->items as $index => $item) {
                 if (($item['row_selected'] ?? 0) == 1) {
-                    $rules["items.$index.art_no"] = 'required';
+                    $rules["items.$index.art_no"] = [
+                        'required',
+                        function ($attribute, $value, $fail) use ($request) {
+                            $allArtNos = collect($request->items)
+                                ->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))
+                                ->pluck('art_no')
+                                ->map(fn($art) => (string)$art)
+                                ->toArray();
+                            
+                            $counts = array_count_values($allArtNos);
+                            
+                            if (isset($counts[$value]) && $counts[$value] > 1) {
+                                $fail('This article number is duplicated within this entry.');
+                            }
+
+                            $id = request()->route('id'); 
+                            $exists = \App\Models\GrnEntryItem::where('art_no', $value)
+                                ->whereNull('deleted_at')
+                                ->where('grn_entry_id', '!=', $id ?? 0)
+                                ->exists();
+
+                            if ($exists) {
+                                $fail('This article number already exists in another GRN entry.');
+                            }
+                        }
+                    ];
                     $rules["items.$index.qty_received"] = 'required|numeric|gt:0';
                     $rules["items.$index.qty_accepted"] = 'required|numeric|min:0';
                     $rules["items.$index.quality_check_status"] = 'required|in:Pass,Fail,Hold';
@@ -140,12 +165,9 @@ class GrnEntryController extends Controller
                     $rules["items.$index.fabric_type_id"] = 'nullable|exists:fabric_types,id';
                     $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048';
                     
-                    // Business Rule: Received Quantity cannot exceed Balance Quantity
                     $pi_item = PurchaseInvoiceItem::find($item['purchase_invoice_item_id']);
                     if ($pi_item) {
-                        $alreadyReceived = GrnEntryItem::where('purchase_invoice_item_id', $pi_item->id)
-                            ->where('grn_entry_id', '!=', $id ?? 0)
-                            ->sum('qty_received');
+                        $alreadyReceived = GrnEntryItem::where('purchase_invoice_item_id', $pi_item->id)->where('grn_entry_id', '!=', $id ?? 0)->sum('qty_received');
                         $balance = $pi_item->quantity - $alreadyReceived;
                         if ($item['qty_received'] > $balance) {
                             return back()->withInput()->withErrors(["items.$index.qty_received" => "Received quantity cannot exceed balance quantity ($balance)."]);
@@ -239,7 +261,6 @@ class GrnEntryController extends Controller
 
                 DB::commit();
 
-                // Check and update PO status if fully received
                 if (isset($invoice->purchase_order_id)) {
                     $poId = $invoice->purchase_order_id;
                     $po = \App\Models\PurchaseOrder::with('items')->find($poId);
@@ -326,7 +347,7 @@ class GrnEntryController extends Controller
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete grn-entry')) {
-             return unauthorizedRedirect();
+            return unauthorizedRedirect();
         }
 
         $grn = GrnEntry::findOrFail($id);

@@ -10,6 +10,13 @@
             </a>
         </div>
         <div class="col-lg-12">
+            @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            @endif
+
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -22,6 +29,7 @@
                                     <th>Receipt Date</th>
                                     <th>Store</th>
                                     <th>Status</th>
+                                    <th>Store Location</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -40,6 +48,14 @@
 <script>
     $(function () {
         $('#production-receipts-table').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
             ajax: '{{ url('production_receipts') }}',
             columns: [
@@ -49,6 +65,7 @@
                 { data: 'receipt_date', name: 'receipt_date' },
                 { data: 'store', name: 'store' },
                 { data: 'status', name: 'status' },
+                { data: 'store_location', name: 'store_location' },
                 { data: 'action', name: 'action', orderable: false, searchable: false },
             ],
             responsive: true,

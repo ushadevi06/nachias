@@ -110,10 +110,21 @@
                                                 <option value="">Select Stage</option>
                                                 @if(isset($stages) && $stages->count() > 0) 
                                                     @foreach($stages as $schedule)
+                                                        @php
+                                                            $isSelected = false;
+                                                            if (old('stage_id') == $schedule->id) {
+                                                                $isSelected = true;
+                                                            } elseif (isset($task) && $task->stage_id == $schedule->id) {
+                                                                $isSelected = true;
+                                                            } elseif (request('stage_id') == $schedule->id) {
+                                                                $isSelected = true;
+                                                            }
+                                                        @endphp
                                                         <option value="{{ $schedule->id }}" 
-                                                                {{ ($task->stage_id ?? '') == $schedule->id ? 'selected' : '' }}
+                                                                {{ $isSelected ? 'selected' : '' }}
                                                                 data-start-date="{{ $schedule->start_date ? \Carbon\Carbon::parse($schedule->start_date)->format('Y-m-d') : '' }}"
                                                                 data-qty="{{ $schedule->planned_qty ?? 0 }}"
+                                                                data-service-provider-id="{{ $schedule->serviceProvider->id ?? '' }}"
                                                                 data-services="{{ $schedule->services->map(function($s){ return ['id' => $s->productionService->id ?? '', 'name' => ($s->productionService->service_name ?? '') . ' - ' . ($s->productionService->service_code ?? '')]; })->toJson() }}">
                                                             {{ $schedule->operationStage->operation_stage_name ?? $schedule->stage }}
                                                         </option>
@@ -124,11 +135,9 @@
                                         </div>
                                         @error('stage_id') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
-                                    <!-- New Services Dropdown -->
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
                                             <select class="select2 form-select @error('service_ids') is-invalid @enderror" id="services_select" name="service_ids[]" multiple data-placeholder="Select Services">
-                                                <!-- Populated by JS -->
                                             </select>
                                             <label>Services *</label>
                                         </div>
@@ -136,25 +145,30 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control flatpickr @error('issue_date') is-invalid @enderror" id="issue_date" name="issue_date" value="{{ $task->issue_date ?? '' }}">
+                                            <input type="text" class="form-control flatpickr @error('issue_date') is-invalid @enderror" id="issue_date" name="issue_date" value="{{ isset($task->issue_date) ? \Carbon\Carbon::parse($task->issue_date)->format('d-m-Y') : (old('issue_date') ?? date('d-m-Y')) }}">
                                             <label>Issue Date *</label>
                                         </div>
                                         @error('issue_date') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control flatpickr" id="due_date" name="due_date" value="{{ $task->due_date ?? '' }}">
+                                            <input type="text" class="form-control flatpickr" id="due_date" name="due_date" value="{{ isset($task->due_date) ? \Carbon\Carbon::parse($task->due_date)->format('d-m-Y') : old('due_date') }}">
                                             <label>Due Date</label>
                                         </div>
                                     </div>
                                     <div class="col-md-12"><hr class="my-2"></div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <select class="select2 form-select @error('issued_to') is-invalid @enderror" name="issued_to" data-placeholder="Select Employee">
+                                            <select class="select2 form-select @error('issued_to') is-invalid @enderror" id="issued_to_select" name="issued_to" data-placeholder="Select Employee">
                                                 <option value="">Select Employee</option>
-                                                @foreach($users as $user)
-                                                    <option value="{{ $user->id }}" {{ ($task->issued_to ?? '') == $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
-                                                @endforeach
+                                                @if(isset($task->assignee))
+                                                    <option value="{{ $task->assignee->id }}" selected>{{ $task->assignee->name }}</option>
+                                                @elseif(old('issued_to'))
+                                                    @php $oldUser = \App\Models\User::find(old('issued_to')); @endphp
+                                                    @if($oldUser)
+                                                        <option value="{{ $oldUser->id }}" selected>{{ $oldUser->name }}</option>
+                                                    @endif
+                                                @endif
                                             </select>
                                             <label>Issued To *</label>
                                         </div>
@@ -228,7 +242,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control flatpickr @error('received_date') is-invalid @enderror" name="received_date" value="{{ $taskReceive ? $taskReceive->received_date : date('Y-m-d') }}">
+                                            <input type="text" class="form-control flatpickr @error('received_date') is-invalid @enderror" name="received_date" value="{{ $taskReceive ? \Carbon\Carbon::parse($taskReceive->received_date)->format('d-m-Y') : date('d-m-Y') }}">
                                             <label>Receive Date *</label>
                                         </div>
                                         @error('received_date') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
@@ -273,11 +287,10 @@
                                                 </div>
                                                 <div class="col-md-4">
                                                     <small class="fw-bold d-block text-uppercase mb-1">Original Issue Info</small>
-                                                    <span class="text-dark">Qty: <span id="span_issued_qty" class="fw-bold">{{ $task->issue_qty ?? '' }}</span> | Date: <span id="span_issue_date" class="fw-bold">{{ $task->issue_date ?? '' }}</span></span>
+                                                    {{-- <span class="text-dark">Qty: <span id="span_issued_qty" class="fw-bold">{{ $task->issue_qty ?? '' }}</span> | --}} Date: <span id="span_issue_date" class="fw-bold">{{ isset($task->issue_date) ? \Carbon\Carbon::parse($task->issue_date)->format('d-m-Y') : '' }}</span></span>
                                                 </div>
                                             </div>
                                         </div>
-
                                         <div class="table-responsive border rounded bg-white">
                                             <table class="table table-sm table-hover mb-0 align-middle">
                                                 <thead class="bg-light">
@@ -318,9 +331,7 @@
                                                             @foreach($task->services as $svcId)
                                                                 @php
                                                                     $svc = \App\Models\ProductionService::find($svcId);
-                                                                    $scheduleService = \App\Models\ProcessScheduleService::where('process_schedule_id', $task->stage_id)
-                                                                        ->where('service_id', $svcId)
-                                                                        ->first();
+                                                                    $scheduleService = \App\Models\ProcessScheduleService::where('process_schedule_id', $task->stage_id)->where('service_id', $svcId)->first();
                                                                     $serviceQty = $scheduleService ? $scheduleService->calculated_qty : 0;
                                                                 @endphp
                                                                 <tr>
@@ -343,7 +354,6 @@
                                             </table>
                                         </div>
                                     </div>
-
                                     <div class="col-md-4 mt-3">
                                         <div class="form-floating form-floating-outline">
                                             <select class="select2 form-select" name="qc_status" id="qc_status">
@@ -360,7 +370,6 @@
                                             <label>Remarks</label>
                                         </div>
                                     </div>
-
                                     <div class="col-12 text-end mt-3">
                                         <button type="submit" class="btn btn-primary fw-bold px-4">
                                             <i class="ri ri-save-3-line me-1"></i> {{ $taskReceive ? 'Update Task Receipt' : 'Save Task Receipt' }}
@@ -399,15 +408,23 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control" id="adj_jobcard_ref" value="{{ $task->job_card_no ?? '' }}" readonly>
+                                            <input type="hidden" name="job_card_id" value="{{ $task->production->jobCard->id ?? '' }}">
+                                            <input type="text" class="form-control" id="adj_jobcard_ref" value="{{ $task->production->jobCard->job_card_no ?? ($task->job_card_no ?? '') }}" readonly>
                                             <label>Job Card Reference</label>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control" id="adj_stage_ref" value="{{ isset($task->stage->operationStage) ? $task->stage->operationStage->operation_stage_name : ($task->stage->stage ?? '') }}" readonly>
+                                            <input type="text" class="form-control" name="affected_stage" id="adj_stage_ref" value="{{ isset($task->stage->operationStage) ? $task->stage->operationStage->operation_stage_name : ($task->stage->stage ?? '') }}" readonly>
                                             <label>Affected Stage</label>
                                         </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" class="form-control @error('approved_by') is-invalid @enderror" name="approved_by" placeholder="Supervisor Name" value="{{ old('approved_by', $taskAdjustment->approved_by ?? '') }}">
+                                            <label>Approved By *</label>
+                                        </div>
+                                        @error('approved_by') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
@@ -417,9 +434,7 @@
                                                     @foreach($task->services as $svcId)
                                                         @php $svc = \App\Models\ProductionService::find($svcId); @endphp
                                                         @if($svc)
-                                                            <option value="{{ $svc->id }}" {{ ($taskAdjustment && $taskAdjustment->service_id == $svc->id) ? 'selected' : '' }}>
-                                                                {{ $svc->service_name }}
-                                                            </option>
+                                                            <option value="{{ $svc->id }}" {{ (old('service_id', $taskAdjustment->service_id ?? '') == $svc->id) ? 'selected' : '' }}>{{ $svc->service_name }}</option>
                                                         @endif
                                                     @endforeach
                                                 @endif
@@ -427,39 +442,90 @@
                                             <label>Service (Optional)</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
-                                            <select class="select2 form-select @error('adjustment_type') is-invalid @enderror" name="adjustment_type">
-                                                <option value="Rework" {{ ($taskAdjustment && $taskAdjustment->adjustment_type == 'Rework') ? 'selected' : '' }}>Rework (Material Return)</option>
-                                                <option value="Loss" {{ ($taskAdjustment && $taskAdjustment->adjustment_type == 'Loss') ? 'selected' : '' }}>Loss / Damage (Reduce Stock)</option>
-                                                <option value="Excess" {{ ($taskAdjustment && $taskAdjustment->adjustment_type == 'Excess') ? 'selected' : '' }}>Excess Found (Add Stock)</option>
-                                            </select>
-                                            <label>Adjustment Type *</label>
-                                        </div>
-                                        @error('adjustment_type') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="number" step="0.01" class="form-control @error('qty') is-invalid @enderror" name="qty" placeholder="0" value="{{ $taskAdjustment->qty ?? '' }}">
-                                            <label>Adjustment Quantity *</label>
-                                        </div>
-                                        @error('qty') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control" name="approved_by" placeholder="Supervisor Name" value="{{ $taskAdjustment->approved_by ?? '' }}">
-                                            <label>Approved By</label>
-                                        </div>
-                                    </div>
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
-                                            <textarea class="form-control @error('reason') is-invalid @enderror" name="reason" style="height: 100px;" placeholder="Mandatory reason...">{{ $taskAdjustment->reason ?? '' }}</textarea>
-                                            <label>Reason for Adjustment *</label>
+                                            <textarea class="form-control @error('overall_reason') is-invalid @enderror" name="overall_reason" style="height: 60px;" placeholder="Overall reason for this adjustment...">{{ old('overall_reason', $taskAdjustment->overall_reason ?? ($taskAdjustment->reason ?? '')) }}</textarea>
+                                            <label>Overall Reason *</label>
                                         </div>
+                                        @error('overall_reason') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                    </div>
+
+                                    <!-- Multi-Item Table -->
+                                    <div class="col-md-12">
+                                        <div class="table-responsive border rounded">
+                                            <table class="table table-sm table-hover" id="adjustment_items_table">
+                                                <thead class="bg-light">
+                                                    <tr>
+                                                        <th style="width: 30%;">Material *</th>
+                                                        <th style="width: 25%;">Type *</th>
+                                                        <th style="width: 15%;">Qty *</th>
+                                                        <th style="width: 20%;">Remarks</th>
+                                                        <th style="width: 10%; text-align: center;">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @php
+                                                        $adjItems = old('items');
+                                                        if (!$adjItems && isset($taskAdjustment) && $taskAdjustment->items) {
+                                                            $adjItems = [];
+                                                            foreach($taskAdjustment->items as $idx => $it) {
+                                                                $adjItems[$idx] = [
+                                                                    'raw_material_id' => $it->raw_material_id,
+                                                                    'adjustment_type' => $it->adjustment_type,
+                                                                    'qty' => $it->qty,
+                                                                    'remarks' => $it->remarks
+                                                                ];
+                                                            }
+                                                        }
+                                                        if (!$adjItems) $adjItems = [['raw_material_id' => '', 'adjustment_type' => 'Loss', 'qty' => '', 'remarks' => '']];
+                                                    @endphp
+                                                    @foreach($adjItems as $index => $item)
+                                                        <tr class="item-row">
+                                                            <td>
+                                                                <select class="select2 form-select material-select" name="items[{{ $index }}][raw_material_id]" data-placeholder="Choose Material">
+                                                                    <option value="">Select Material</option>
+                                                                    @if(isset($item['raw_material_id']) && $item['raw_material_id'])
+                                                                        @php $rm = \App\Models\RawMaterial::find($item['raw_material_id']); @endphp
+                                                                        @if($rm)
+                                                                            <option value="{{ $rm->id }}" selected>{{ $rm->name }} ({{ $rm->code }})</option>
+                                                                        @endif
+                                                                    @endif
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <select class="form-select" name="items[{{ $index }}][adjustment_type]">
+                                                                    <option value="Loss" {{ ($item['adjustment_type'] ?? '') == 'Loss' ? 'selected' : '' }}>Loss / Damage (-)</option>
+                                                                    <option value="Rework" {{ ($item['adjustment_type'] ?? '') == 'Rework' ? 'selected' : '' }}>Rework (Consum.) (-)</option>
+                                                                    <option value="Excess" {{ ($item['adjustment_type'] ?? '') == 'Excess' ? 'selected' : '' }}>Excess Found (+)</option>
+                                                                    <option value="Material Return" {{ ($item['adjustment_type'] ?? '') == 'Material Return' ? 'selected' : '' }}>Return to Store (+)</option>
+                                                                </select>
+                                                            </td>
+                                                            <td>
+                                                                <input type="number" step="0.01" class="form-control" name="items[{{ $index }}][qty]" placeholder="0.00" value="{{ $item['qty'] ?? '' }}">
+                                                            </td>
+                                                            <td>
+                                                                <input type="text" class="form-control" name="items[{{ $index }}][remarks]" placeholder="Remarks" value="{{ $item['remarks'] ?? '' }}">
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-icon btn-outline-danger btn-sm remove-row"><i class="ri ri-delete-bin-line"></i></button>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <td colspan="5">
+                                                            <button type="button" class="btn btn-sm btn-outline-primary" id="add_adjustment_row"><i class="ri ri-add-line"></i> Add Material</button>
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
                                         @error('reason') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
                                     <div class="col-12 text-end">
-                                        <button type="submit" class="btn btn-warning fw-bold px-4 text-white">
+                                        <button type="submit" class="btn btn-warning fw-bold px-4 text-white mt-4">
                                             <i class="ri ri-alert-line me-1"></i> Post Adjustment
                                         </button>
                                     </div>
@@ -474,15 +540,19 @@
 </div>
 <script>
     $(document).ready(function() {
-        $("#issue_date").flatpickr({
-            dateFormat: "Y-m-d",
+        const issuePicker = $("#issue_date").flatpickr({
+            dateFormat: "d-m-Y",
             allowInput: true,
-            defaultDate: "{{ $task->issue_date ?? date('Y-m-d') }}"
+            defaultDate: "{{ isset($task->issue_date) ? \Carbon\Carbon::parse($task->issue_date)->format('d-m-Y') : (old('issue_date') ?? date('d-m-Y')) }}",
+            onChange: function(selectedDates, dateStr, instance) {
+                duePicker.set('minDate', dateStr);
+            }
         });
-        $("#due_date").flatpickr({
-            dateFormat: "Y-m-d",
+        const duePicker = $("#due_date").flatpickr({
+            dateFormat: "d-m-Y",
             allowInput: true,
-            defaultDate: "{{ $task->due_date ?? '' }}"
+            defaultDate: "{{ isset($task->due_date) ? \Carbon\Carbon::parse($task->due_date)->format('d-m-Y') : old('due_date') }}",
+            minDate: "{{ isset($task->issue_date) ? \Carbon\Carbon::parse($task->issue_date)->format('d-m-Y') : (old('issue_date') ?? date('d-m-Y')) }}"
         });
 
         $('.select2').each(function() {
@@ -497,7 +567,12 @@
             var services = selected.data('services');
             
             if(date) {
-                $('#issue_date').val(date);
+                let dParts = date.split('-');
+                let formattedDate = dParts[2] + '-' + dParts[1] + '-' + dParts[0];
+                $('#issue_date').val(formattedDate);
+                if (typeof duePicker !== 'undefined') {
+                    duePicker.set('minDate', formattedDate);
+                }
             }
 
             var servicesSelect = $('#services_select');
@@ -513,15 +588,131 @@
                             isSelected = true;
                         }
                         var newOption = new Option(service.name, service.id, isSelected, isSelected);
-                        console.log(newOption);
                         servicesSelect.append(newOption);
                     }
                 });
-            } else {
-                console.log('No services found for this stage.');
             }
             servicesSelect.trigger('change'); 
+
+            var providerId = selected.data('service-provider-id') || 'all';
+            var employeeSelect = $('#issued_to_select');
+            employeeSelect.select2({
+                ajax: {
+                    url: function() {
+                        var pId = $('#stage_select').find(':selected').data('service-provider-id') || 'all';
+                        return "{{ url('get-employees-by-plant') }}/" + pId;
+                    },
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.results
+                        };
+                    },
+                    cache: true
+                },
+                placeholder: 'Select Employee',
+                allowClear: true
+            });
         });
+
+        // Multi-Item Adjustment Table JS
+        var rowIndex = {{ count($adjItems) }};
+        var availableMaterials = [];
+
+        function initSelect2(selector) {
+            $(selector).select2({
+                placeholder: "Select Material",
+                allowClear: true,
+                width: '100%'
+            });
+        }
+
+        function populateAllMaterialDropdowns() {
+            var selectedStage = $('#stage_select').val();
+            if (!selectedStage) return;
+
+            $.ajax({
+                url: "{{ url('task_management/get-stage-consumables') }}/" + selectedStage,
+                type: "GET",
+                success: function(response) {
+                    if (response.success) {
+                        availableMaterials = response.materials;
+                        $('.material-select').each(function() {
+                            var currentVal = $(this).val();
+                            $(this).empty().append('<option value="">Select Material</option>');
+                            var $select = $(this);
+                            $.each(availableMaterials, function(i, mat) {
+                                $select.append(new Option(mat.text, mat.id, (mat.id == currentVal), (mat.id == currentVal)));
+                            });
+                            $(this).trigger('change');
+                        });
+                    }
+                }
+            });
+        }
+
+        $('#add_adjustment_row').on('click', function() {
+            var newRow = `
+                <tr class="item-row">
+                    <td>
+                        <select class="select2 form-select material-select" name="items[${rowIndex}][raw_material_id]">
+                            <option value="">Select Material</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select" name="items[${rowIndex}][adjustment_type]">
+                            <option value="Loss">Loss / Damage (-)</option>
+                            <option value="Rework">Rework (Consum.) (-)</option>
+                            <option value="Excess">Excess Found (+)</option>
+                            <option value="Material Return">Return to Store (+)</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" class="form-control" name="items[${rowIndex}][qty]" placeholder="0.00">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="items[${rowIndex}][remarks]" placeholder="Remarks">
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-icon btn-outline-danger btn-sm remove-row"><i class="ri ri-delete-bin-line"></i></button>
+                    </td>
+                </tr>
+            `;
+            $('#adjustment_items_table tbody').append(newRow);
+            var $row = $('#adjustment_items_table tbody tr:last');
+            initSelect2($row.find('.material-select'));
+            
+            // Populate the new dropdown
+            var $select = $row.find('.material-select');
+            $.each(availableMaterials, function(i, mat) {
+                $select.append(new Option(mat.text, mat.id, false, false));
+            });
+            $select.trigger('change');
+            
+            rowIndex++;
+        });
+
+        $(document).on('click', '.remove-row', function() {
+            if ($('#adjustment_items_table tbody tr').length > 1) {
+                $(this).closest('tr').remove();
+            } else {
+                alert('At least one item is.');
+            }
+        });
+
+        initSelect2('.material-select');
+
+        // Update materials whenever stage changes
+        $('#stage_select').on('change', function() {
+            populateAllMaterialDropdowns();
+        });
+
 
         if ($('#stage_select').val()) {
             $('#stage_select').trigger('change', [true]);
@@ -536,7 +727,7 @@
             $activeTab = session('active_tab', 'issue');
             if ($errors->any() && $activeTab == 'issue') {
                 $receiveKeys = ['received_date', 'received_store', 'received_services'];
-                $adjKeys = ['adjustment_type', 'qty', 'reason'];
+                $adjKeys = ['adjustment_type', 'qty', 'reason', 'raw_material_id', 'approved_by'];
                 foreach($errors->keys() as $key) {
                     if(in_array($key, $receiveKeys) || str_contains($key, 'received_services')) {
                         $activeTab = 'receive'; break;

@@ -31,14 +31,14 @@ class ProductionController extends Controller
                     $action .= '<a href="' . url('productions/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 
-                $action .= '<button class="btn btn-icon dropdown-toggle hide-arrow" data-bs-toggle="dropdown"><i class="icon-base ri ri-more-2-fill"></i></button>';
+                $action .= '<button class="btn dropdown-toggle hide-arrow" data-bs-toggle="dropdown"><i class="icon-base ri ri-more-2-fill"></i></button>';
                 $action .= '<div class="dropdown-menu dropdown-menu-end m-0">';
 
                 if (auth()->id() == 1 || auth()->user()->can('view production')) {
-                    $action .= '<a href="' . url('view_production/' . $row->id) . '" class="dropdown-item">View</a>';
+                    $action .= '<a href="' . url('view_production/' . $row->id) . '" class="dropdown-item"><i class="icon-base ri ri-eye-line me-2"></i>View</a>';
                 }
                 
-                $action .= '<a href="' . url('task_management/create?production_id=' . urlencode(\Illuminate\Support\Facades\Crypt::encrypt($row->id))) . '" class="dropdown-item">Assign Task</a>';
+                $action .= '<a href="' . url('task_management/create?production_id=' . urlencode(\Illuminate\Support\Facades\Crypt::encrypt($row->id))) . '" class="dropdown-item"><i class="icon-base ri ri-task-line me-2"></i>Assign Task</a>';
                 
                 $action .= '</div></div>';
 
@@ -85,7 +85,16 @@ class ProductionController extends Controller
             return $this->store(request(), $id);
         }
 
-        return view('productions.add', compact('production', 'jobCards', 'plants', 'operationStages'));
+        $nextProductionId = '';
+        if (!$id) {
+            $latestProduction = Production::latest()->first();
+            $nextId = $latestProduction ? $latestProduction->id + 1 : 1;
+            $nextProductionId = 'PROD-' . date('Y') . '-' . str_pad($nextId, 3, '0', STR_PAD_LEFT);
+        } else {
+            $nextProductionId = 'PROD-' . date('Y', strtotime($production->created_at)) . '-' . str_pad($production->id, 3, '0', STR_PAD_LEFT);
+        }
+
+        return view('productions.add', compact('production', 'jobCards', 'plants', 'operationStages', 'nextProductionId'));
     }
 
     public function getJobCardDetails($id)
@@ -147,7 +156,6 @@ class ProductionController extends Controller
             ];
         });
 
-        \Log::info("Returning services for stage $stage", ['services' => $data->pluck('id')->toArray()]);
         return response()->json(['success' => true, 'services' => $data]);
     }
 
@@ -265,15 +273,5 @@ class ProductionController extends Controller
         }
         $production = Production::with(['processSchedules.services.productionService', 'processSchedules.serviceProvider', 'jobCard.purchaseOrder', 'plant', 'processGroup'])->findOrFail($id);
         return view('productions/view_details', compact('production'));
-    }
-
-    public function suspend($id)
-    {
-        if (auth()->id() != 1 && !auth()->user()->can('edit production')) {
-            return unauthorizedRedirect();
-        }
-        $production = Production::findOrFail($id);
-        $production->update(['status' => 'Suspended']);
-        return redirect('productions')->with('success', 'Production suspended successfully');
     }
 }

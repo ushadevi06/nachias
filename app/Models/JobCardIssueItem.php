@@ -26,7 +26,6 @@ class JobCardIssueItem extends Model
         'total_cost',
         'cost_per_pc',
         'stock_entry_item_id',
-        'sleeve_type',
         'created_by',
         'updated_by',
     ];

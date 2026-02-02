@@ -26,6 +26,9 @@
     <div class="row">
         <div class="col-lg-12 text-end">
             <a href="{{ route('job_card_entries.view_details_pdf', $jobCard->id) }}" class="btn btn-primary" target="_blank"><i class="ri ri-file-pdf-line me-1"></i> PDF</a>
+            <button type="button" class="btn btn-success" id="btnCosting">
+                <i class="ri-scales-line me-1"></i> Costing Analysis
+            </button>
             <a href="{{ url('job_card_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line me-1"></i> Back to List</a>
         </div>
         <div class="col-lg-12 mt-4">
@@ -40,18 +43,18 @@
                 }
                 @media (max-width: 991px) {
                     .job-card-table {
-                        font-size: 0.55rem !important; /* Scaled down further */
+                        font-size: 0.55rem !important; 
                     }
                     .job-card-table .fw-bold {
                         font-size: 0.55rem !important;
                     }
                     .job-card-table td {
-                        padding: 1px 2px !important; /* Minimal padding */
+                        padding: 1px 2px !important; 
                     }
                 }
                 @media (max-width: 575px) {
                     .job-card-table {
-                        font-size: 0.45rem !important; /* Ultra-compact for small phones */
+                        font-size: 0.45rem !important; 
                     }
                     .job-card-table .fw-bold {
                         font-size: 0.45rem !important;
@@ -287,10 +290,20 @@
                             <tr class="text-center">
                                 <th rowspan="2">ART NO</th>
                                 @if(count($activeFs) > 0)
-                                    <th colspan="{{ count($activeFs) }}">F/S</th>
+                                    @php
+                                        $fsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Full Sleeve')->first()->meter ?? null;
+                                    @endphp
+                                    <th colspan="{{ count($activeFs) }}">
+                                        F/S @if($fsMeter) <br><small>({{ $fsMeter }} Mtr)</small> @endif
+                                    </th>
                                 @endif
                                 @if(count($activeHs) > 0)
-                                    <th colspan="{{ count($activeHs) }}">H/S</th>
+                                    @php
+                                        $hsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Half Sleeve')->first()->meter ?? null;
+                                    @endphp
+                                    <th colspan="{{ count($activeHs) }}">
+                                        H/S @if($hsMeter) <br><small>({{ $hsMeter }} Mtr)</small> @endif
+                                    </th>
                                 @endif
                                 <th rowspan="2">TOTAL</th>
                             </tr>
@@ -326,12 +339,28 @@
                                 <tr class="text-center">
                                     <td>{{ $detail->art_no }}</td>
                                     @foreach($activeFs as $s)
-                                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
-                                        <td>{{ ($q && $q->qty_fs > 0) ? (int)$q->qty_fs : '-' }}</td>
+                                        @php 
+                                            $q = $detail->quantities->where('size', $s)->first(); 
+                                            $cons = $detail->consumptions->where('size', $s)->first();
+                                        @endphp
+                                        <td>
+                                            {{ ($q && $q->qty_fs > 0) ? (int)$q->qty_fs : '-' }}
+                                            @if($cons && $cons->fs_cons > 0)
+                                                <br><small class="text-muted" style="font-size: 0.65rem;">{{ $cons->fs_cons }}m</small>
+                                            @endif
+                                        </td>
                                     @endforeach
                                     @foreach($activeHs as $s)
-                                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
-                                        <td>{{ ($q && $q->qty_hs > 0) ? (int)$q->qty_hs : '-' }}</td>
+                                        @php 
+                                            $q = $detail->quantities->where('size', $s)->first(); 
+                                            $cons = $detail->consumptions->where('size', $s)->first();
+                                        @endphp
+                                        <td>
+                                            {{ ($q && $q->qty_hs > 0) ? (int)$q->qty_hs : '-' }}
+                                            @if($cons && $cons->hs_cons > 0)
+                                                <br><small class="text-muted" style="font-size: 0.65rem;">{{ $cons->hs_cons }}m</small>
+                                            @endif
+                                        </td>
                                     @endforeach
                                     <td class="fw-bold">{{ $row_total ?: '-' }}</td>
                                 </tr>
@@ -421,4 +450,71 @@
         </div>
     </div>
 </div>
+@endsection
+
+<!-- Costing Modal -->
+<div class="modal fade" id="costingModal" tabindex="-1" aria-labelledby="costingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 15px;">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title font-weight-bold text-white" id="costingModalLabel">
+                    <i class="ri-scales-3-line me-2"></i> Per Shirt Costing Analysis
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0" id="costingModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Calculating costs, please wait...</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        $('#btnCosting').on('click', function() {
+            $('#costingModal').modal('show');
+            $('#costingModalBody').html(`
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Calculating costs, please wait...</p>
+                </div>
+            `);
+
+            $.ajax({
+                url: "{{ route('job_card_entries.costing_analysis', $jobCard->id) }}",
+                method: 'GET',
+                success: function(response) {
+                    $('#costingModalBody').html(response);
+                },
+                error: function() {
+                    $('#costingModalBody').html(`
+                        <div class="alert alert-danger m-3">
+                            <i class="ri-error-warning-line mr-1"></i> 
+                            Error loading costing data. Please try again.
+                        </div>
+                    `);
+                }
+            });
+        });
+    });
+
+    function printModalContent() {
+        var content = document.getElementById('costingModalBody').innerHTML;
+        var originalContents = document.body.innerHTML;
+        document.body.innerHTML = content;
+        window.print();
+        document.body.innerHTML = originalContents;
+        window.location.reload(); 
+    }
+</script>
 @endsection

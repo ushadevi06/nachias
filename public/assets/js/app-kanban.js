@@ -30,8 +30,8 @@
       <div class="dropdown kanban-tasks-item-dropdown">
         <i class="dropdown-toggle icon-base ri ri-more-2-fill cursor-pointer" id="kanban-tasks-item-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="kanban-tasks-item-dropdown">
-          <a class="dropdown-item" href="${editUrl}">Edit</a>
-          <a class="dropdown-item" href="${viewUrl}">View</a>
+          <a class="dropdown-item" href="${editUrl}"> <i class="icon-base ri ri-edit-box-line me-2"></i> Edit</a>
+          <a class="dropdown-item" href="${viewUrl}"><i class="icon-base ri ri-eye-line me-2"></i> View</a>
         </div>
       </div>`;
     }

@@ -12,6 +12,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nachias</title>
+    <link rel="icon" type="image/jpeg" href="{{ url('assets/images/fav.jpeg') }}">
     <link rel="stylesheet" href="{{ url('assets/css/core.css') }}">
     <link rel="stylesheet" href="{{ url('assets/css/demo.css') }}">
     <link rel="stylesheet" href="{{ url('assets/fonts/iconify-icons.css') }}">

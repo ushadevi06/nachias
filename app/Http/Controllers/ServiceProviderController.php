@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ServiceProvider;
-use App\Models\ServiceType;
-use App\Models\ProductionService;
+use App\Models\OperationStage;
 use App\Models\State;
 use App\Models\City;
 use App\Models\Place;
@@ -17,11 +16,11 @@ class ServiceProviderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view service-providers')) {
             return unauthorizedRedirect();
         }
-        $service_types = ServiceType::get();
+        $operation_stages = OperationStage::get();
         if ($request->ajax()) {
-            $query = ServiceProvider::with(['serviceType', 'state', 'city', 'place']);
-            if (!empty($request->service_type)) {
-                $query->where('service_type_id', $request->service_type);
+            $query = ServiceProvider::with(['operationStage', 'state', 'city', 'place']);
+            if (!empty($request->operation_stage_id)) {
+                $query->where('operation_stage_id', $request->operation_stage_id);
             }
 
             if (!empty($request->service_rate)) {
@@ -78,7 +77,7 @@ class ServiceProviderController extends Controller
                             <div><strong>Place:</strong> ' . ($provider->place->place_name ?? '-') . '</div>
                         </div>
                     ',
-                    'service_type' => $provider->serviceType->service_type_name ?? '-',
+                    'operation_stage' => $provider->operationStage->operation_stage_name ?? '-',
                     'service_rate' => $provider->service_rate,
                     'status' => $status,
                     'action' => $action,
@@ -88,7 +87,7 @@ class ServiceProviderController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        return view('service_providers.view',compact('service_types'));
+        return view('service_providers.view',compact('operation_stages'));
     }
 
     public function add($id = null)
@@ -104,16 +103,14 @@ class ServiceProviderController extends Controller
         }
         $serviceProvider = null;
         if ($id) {
-            $serviceProvider = ServiceProvider::with(['serviceType',  'state', 'city', 'place', 'productionServices'])->findOrFail($id);
+            $serviceProvider = ServiceProvider::with(['operationStage', 'state', 'city', 'place'])->findOrFail($id);
         }
 
         if (request()->isMethod('post')) {
             $request = request();
 
             $rules = [
-                'service_type_id' => 'required|exists:service_types,id',
-                'services' => 'nullable|array',
-                'services.*' => 'exists:production_services,id',
+                'operation_stage_id' => 'required|exists:operation_stages,id',
                 'name' => 'required|string|max:255',
                 'code' => 'required|string|max:50|unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:255|unique:service_providers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
@@ -147,7 +144,7 @@ class ServiceProviderController extends Controller
             $validated = $request->validate($rules, $messages);
             
             $data = [
-                'service_type_id' => $request->service_type_id,
+                'operation_stage_id' => $request->operation_stage_id,
                 'name' => $request->name,
                 'code' => $request->code,
                 'is_plant' => $request->has('is_plant') ? 1 : 0,
@@ -178,43 +175,22 @@ class ServiceProviderController extends Controller
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 $oldData = ServiceProvider::find($id)->toArray();
-
                 $provider = ServiceProvider::find($id);
                 $provider->update($data);
-                
-                // Sync production services
-                if ($request->has('services')) {
-                    $provider->productionServices()->sync($request->services);
-                } else {
-                    $provider->productionServices()->detach();
-                }
-
                 $newData = $provider->toArray();
-
                 addLog('update', 'Service Provider', 'service_providers', $id, $oldData, $newData);
-
                 $message = 'Service Provider updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $provider = ServiceProvider::create($data);
-                
-                // Attach production services
-                if ($request->has('services')) {
-                    $provider->productionServices()->attach($request->services);
-                }
-                
                 $newData = $provider->toArray();
-
                 addLog('create', 'Service Provider', 'service_providers', $provider->id, null, $newData);
-
                 $message = 'Service Provider added successfully';
             }
-
             return redirect('service_providers')->with('success', $message);
         }
 
-        $service_types = ServiceType::get();
-        $production_services = ProductionService::where('status', 'Active')->orderBy('service_name')->get();
+        $operation_stages = OperationStage::where('status', 'Active')->orderBy('operation_stage_name')->get();
         $states = State::where('status', 'Active')->get();
         $cities = [];
         $places = [];
@@ -228,7 +204,7 @@ class ServiceProviderController extends Controller
             $places = Place::where('city_id', $cityId)->where('status', 'Active')->get();
         }
 
-        return view('service_providers.add', compact('serviceProvider', 'service_types', 'production_services', 'states', 'cities', 'places'));
+        return view('service_providers.add', compact('serviceProvider', 'operation_stages', 'states', 'cities', 'places'));
     }
 
     public function destroy($id)

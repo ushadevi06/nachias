@@ -274,10 +274,20 @@
             <tr class="text-center bg-light">
                 <th rowspan="2" style="width: 15%;">ART NO</th>
                 @if(count($activeFs) > 0)
-                    <th colspan="{{ count($activeFs) }}">F/S</th>
+                    @php
+                        $fsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Full Sleeve')->first()->meter ?? null;
+                    @endphp
+                    <th colspan="{{ count($activeFs) }}">
+                        F/S @if($fsMeter) <br><span style="font-size: 6px; font-weight: normal;">({{ $fsMeter }} Mtr)</span> @endif
+                    </th>
                 @endif
                 @if(count($activeHs) > 0)
-                    <th colspan="{{ count($activeHs) }}">H/S</th>
+                    @php
+                        $hsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Half Sleeve')->first()->meter ?? null;
+                    @endphp
+                    <th colspan="{{ count($activeHs) }}">
+                        H/S @if($hsMeter) <br><span style="font-size: 6px; font-weight: normal;">({{ $hsMeter }} Mtr)</span> @endif
+                    </th>
                 @endif
                 <th colspan="2">EX</th>
                 <th rowspan="2" style="width: 8%;">TOTAL</th>
@@ -299,12 +309,28 @@
                 <tr class="text-center">
                     <td class="fw-bold">{{ $detail->art_no }}</td>
                     @foreach($activeFs as $s) 
-                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
-                        <td>{{ ($q && $q->qty_fs > 0) ? $q->qty_fs : '-' }}</td> 
+                        @php 
+                            $q = $detail->quantities->where('size', $s)->first(); 
+                            $cons = $detail->consumptions->where('size', $s)->first();
+                        @endphp
+                        <td>
+                            {{ ($q && $q->qty_fs > 0) ? $q->qty_fs : '-' }}
+                            @if($cons && $cons->fs_cons > 0)
+                                <br><span style="font-size: 6px; color: #666;">{{ $cons->fs_cons }}m</span>
+                            @endif
+                        </td> 
                     @endforeach
                     @foreach($activeHs as $s) 
-                        @php $q = $detail->quantities->where('size', $s)->first(); @endphp
-                        <td>{{ ($q && $q->qty_hs > 0) ? $q->qty_hs : '-' }}</td> 
+                        @php 
+                            $q = $detail->quantities->where('size', $s)->first(); 
+                            $cons = $detail->consumptions->where('size', $s)->first();
+                        @endphp
+                        <td>
+                            {{ ($q && $q->qty_hs > 0) ? $q->qty_hs : '-' }}
+                            @if($cons && $cons->hs_cons > 0)
+                                <br><span style="font-size: 6px; color: #666;">{{ $cons->hs_cons }}m</span>
+                            @endif
+                        </td> 
                     @endforeach
                     <td>-</td>
                     <td>-</td>

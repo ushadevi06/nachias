@@ -17,33 +17,17 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="service_type_id" id="service_type_id" class="select2 form-select @error('service_type_id') is-invalid @enderror" data-placeholder="Select Service Type">
-                                        <option value="">Select Service Type</option>
-                                        @foreach($service_types as $service_type)
-                                        <option value="{{ $service_type->id }}" {{ old('service_type_id', $serviceProvider->service_type_id ?? '') == $service_type->id ? 'selected' : '' }}>{{ $service_type->service_type_name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="service_type_id">Service Type <span class="text-danger">*</span></label>
-                                </div>
-                                @error('service_type_id')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select name="services[]" id="services" class="select2 form-select @error('services') is-invalid @enderror" multiple data-placeholder="Select Services">
-                                        @php
-                                            $selectedServiceIds = old('services', isset($serviceProvider) ? $serviceProvider->productionServices->pluck('id')->toArray() : []);
-                                        @endphp
-                                        @foreach($production_services as $service)
-                                        <option value="{{ $service->id }}" {{ in_array($service->id, $selectedServiceIds) ? 'selected' : '' }}>
-                                            {{ $service->service_name }} ({{ $service->service_code }})
+                                    <select name="operation_stage_id" id="operation_stage_id" class="select2 form-select @error('operation_stage_id') is-invalid @enderror" data-placeholder="Select Operation Stage">
+                                        <option value="">Select Operation Stage</option>
+                                        @foreach($operation_stages as $stage)
+                                        <option value="{{ $stage->id }}" {{ old('operation_stage_id', $serviceProvider->operation_stage_id ?? '') == $stage->id ? 'selected' : '' }}>
+                                            {{ $stage->operation_stage_name }}
                                         </option>
                                         @endforeach
                                     </select>
-                                    <label for="services">Services <span class="text-danger">*</span></label>
+                                    <label for="operation_stage_id">Operation Stage <span class="text-danger">*</span></label>
                                 </div>
-                                @error('services')
+                                @error('operation_stage_id')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>

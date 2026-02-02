@@ -7,8 +7,11 @@ use App\Models\ProductionReceipt;
 use App\Models\ProductionReceiptItem;
 use App\Models\JobCardEntry;
 use App\Models\StoreType;
+use App\Models\StockEntry;
+use App\Models\StockEntryItem;
 use App\Models\Task;
 use App\Models\TaskReceive;
+use App\Models\StoreLocation;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +26,7 @@ class ProductionReceiptController extends Controller
         }
 
         if ($request->ajax()) {
-            $receipts = ProductionReceipt::with(['production', 'jobCard', 'storeType'])->latest()->get();
+            $receipts = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation'])->orderBy('id', 'desc')->get();
             $data = [];
             $i = 1;
 
@@ -46,9 +49,10 @@ class ProductionReceiptController extends Controller
                     'receipt_no'    => $row->receipt_no ?? ('RCPT-' . str_pad($row->id, 4, '0', STR_PAD_LEFT)),
                     'job_card_no'   => $row->jobCard ? $row->jobCard->job_card_no : '-',
                     'receipt_date'  => $row->receipt_date ? date('d-m-Y', strtotime($row->receipt_date)) : '-',
-                    'store'         => $row->storeType ? $row->storeType->store_type_name : '-',
-                    'status'        => $statusBadge,
-                    'action'        => $action,
+                    'store'          => $row->storeType ? $row->storeType->store_type_name : '-',
+                    'status'         => $statusBadge,
+                    'store_location' => $row->storeLocation ? $row->storeLocation->store_location : '-',
+                    'action'         => $action,
                 ];
             }
 
@@ -73,6 +77,7 @@ class ProductionReceiptController extends Controller
         $receipt = $id ? ProductionReceipt::with(['production.plant', 'items'])->findOrFail($id) : null;
         $jobCards = JobCardEntry::with('serviceProvider')->orderBy('id', 'desc')->get();
         $storeTypes = StoreType::where('status', 'Active')->orderBy('store_type_name')->get();
+        $storeLocations = StoreLocation::where('status', 'Active')->get();
 
         if ($request->isMethod('post')) {
             $rules = [
@@ -81,9 +86,9 @@ class ProductionReceiptController extends Controller
                 'receipt_date'  => 'required|date_format:d-m-Y',
                 'doc_date'      => 'required|date_format:d-m-Y',
                 'store_type_id' => 'required|exists:store_types,id',
+                'store_location_id' => 'required|exists:store_locations,id',
                 'status'        => 'required|in:Draft,Posted',
                 'items'         => 'required|array|min:1',
-                // 'items.*.scan_qty' => 'nullable|numeric|min:0.01',
             ];
 
             $messages = [
@@ -109,6 +114,7 @@ class ProductionReceiptController extends Controller
                     'doc_no'        => $request->doc_no,
                     'doc_date'      => $request->doc_date ? date('Y-m-d', strtotime($request->doc_date)) : null,
                     'store_type_id' => $request->store_type_id,
+                    'store_location_id' => $request->store_location_id,
                     'status'        => $request->status,
                     'remarks'       => $request->remarks,
                 ];
@@ -172,6 +178,10 @@ class ProductionReceiptController extends Controller
                     addLog('create', 'Production Receipt', 'production_receipts', $receipt->id, null, $newData);
                 }
 
+                if ($newData['status'] == 'Posted') {
+                    $this->createStockEntry($receipt, $request->store_location_id);
+                }
+
                 DB::commit();
                 return redirect('production_receipts')->with('success', 'Production receipt saved successfully');
             } catch (\Exception $e) {
@@ -180,7 +190,60 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes'));
+        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations'));
+    }
+
+    private function createStockEntry($receipt, $storeLocationId)
+    {
+        $lastEntry = StockEntry::latest('id')->first();
+        $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+        $stockEntryNo = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+        $stockEntry = StockEntry::create([
+            'stock_entry_no' => $stockEntryNo,
+            'stock_date' => $receipt->receipt_date,
+            'entry_type' => 'Production Receipt',
+            'to_store_location_id' => $storeLocationId, 
+            'remarks' => $receipt->remarks,
+            'reference_document' => $receipt->receipt_no,
+            'status' => 'Posted',
+            'created_by' => Auth::id(),
+            'price' => $receipt->items->sum('total_value'),
+        ]);
+
+        foreach ($receipt->items as $item) {
+            $qty = (int)$item->qty_to_receive;
+            for ($i = 0; $i < $qty; $i++) {
+                StockEntryItem::create([
+                    'stock_entry_id' => $stockEntry->id,
+                    'stock_type' => 'finished_goods',
+                    'finished_item_code' => $item->item_code,
+                    'size' => $item->size,
+                    'store_location_id' => $storeLocationId,
+                    'uom_id' => $item->uom_id,
+                    'qty_in' => 1,
+                    'qty_out' => 0,
+                    'price' => $item->unit_price,
+                ]);
+            }
+            
+            $fraction = $item->qty_to_receive - $qty;
+            if ($fraction > 0) {
+                StockEntryItem::create([
+                    'stock_entry_id' => $stockEntry->id,
+                    'stock_type' => 'finished_goods',
+                    'finished_item_code' => $item->item_code,
+                    'size' => $item->size,
+                    'store_location_id' => $storeLocationId,
+                    'uom_id' => $item->uom_id,
+                    'qty_in' => $fraction,
+                    'qty_out' => 0,
+                    'price' => $item->unit_price,
+                ]);
+            }
+        }
+
+        return $stockEntry;
     }
 
     public function getJobCardDetails(Request $request, $id)
@@ -347,15 +410,17 @@ class ProductionReceiptController extends Controller
 
             if ($balance > 0 || ($excludeReceiptId && ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)->where('item_id', $itemData['item_id'])->where('size_variant', $itemData['size_variant'])->exists())) {
                 
-                $currentReceiptItem = null;
+                // User requirement: Default to 0 instead of auto-filling the balance
+                $scanQty = 0; 
                 if ($excludeReceiptId) {
                     $currentReceiptItem = ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)
                         ->where('item_id', $itemData['item_id'])
                         ->where('size_variant', $itemData['size_variant'])
                         ->first();
+                    if ($currentReceiptItem) {
+                        $scanQty = $currentReceiptItem->qty_to_receive;
+                    }
                 }
-
-                $scanQty = $currentReceiptItem ? $currentReceiptItem->qty_to_receive : 0;
                 
                 $itemData['qty_already_received'] = $alreadyRec;
                 $itemData['scan_qty'] = $scanQty;

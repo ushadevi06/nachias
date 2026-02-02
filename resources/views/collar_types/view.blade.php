@@ -46,8 +46,14 @@
 <script>
     $(function() {
         $('#collarTypeTable').DataTable({
-            processing: true,
-            serverSide: false,
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: "{{ url('collar_types') }}",
             columns: [
                 { data: 'DT_RowIndex' },

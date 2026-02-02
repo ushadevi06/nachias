@@ -50,8 +50,14 @@
 <script>
     $(document).ready(function() {
         var table = $('#suppliers-table').DataTable({
-            processing: true,
-            serverSide: false,
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: {
                 url: "{{ url('suppliers') }}",
                 type: "GET",

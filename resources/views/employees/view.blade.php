@@ -43,11 +43,11 @@
 
                             <div class="col-md-4">
                                 <button type="button" class="btn btn-primary" id="filter-btn">
-                                    <i class="ri ri-filter-3-line me-3"></i> Filter
+                                    Filter
                                 </button>
 
                                 <button type="button" class="btn btn-secondary" id="reset-btn">
-                                    <i class="ri ri-refresh-line me-3"></i> Reset
+                                    Reset
                                 </button>
                             </div>
                         </div>
@@ -61,6 +61,7 @@
                                     <th>Image</th>
                                     <th>Role</th>
                                     <th>Department</th>
+                                    <th>Service Provider</th>
                                     <th>Contact Info</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -85,6 +86,14 @@
     $(document).ready(function() {
 
         let table = $('#employeesTable').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             processing: true,
             ajax: {
                 url: "{{ url('employees') }}",
@@ -112,6 +121,9 @@
                 },
                 {
                     data: 'department'
+                },
+                {
+                    data: 'service_provider'
                 },
                 {
                     data: 'contact_info'
