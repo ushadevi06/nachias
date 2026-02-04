@@ -444,30 +444,32 @@ class TaskManagementController extends Controller
         
         $stageName = $schedule->operationStage->operation_stage_name ?? ($schedule->stage ?? '');
         
-        $consumableConfigs = \App\Models\ProductionStageConsumable::where('stage', $stageName)
-            ->where('status', 'Active')
-            ->pluck('raw_material_id')
-            ->toArray();
+        $consumableConfigs = \App\Models\ProductionStageConsumable::where('stage', $stageName)->where('status', 'Active')->pluck('raw_material_id')->toArray();
 
         $jobCard = $schedule->production->jobCard ?? null;
         $rmIdsFromArt = [];
         $rmIdsFromIssues = [];
         if ($jobCard) {
             $artNumbers = $jobCard->fabricDetails->pluck('art_no')->filter()->toArray();
-            $rmIdsFromArt = RawMaterial::whereIn('code', $artNumbers)->pluck('id')->toArray();
+            $rmIdsFromArt = RawMaterial::where(function($q) use ($artNumbers) {
+                $q->whereIn('code', $artNumbers)->orWhereIn('name', $artNumbers);
+            })->pluck('id')->toArray();
             
             $rmIdsFromIssues = \App\Models\StockEntryItem::whereIn('id', function($q) use ($jobCard) {
                 $q->select('stock_entry_item_id')
-                  ->from('job_card_issue_items')
-                  ->where('job_card_entry_id', $jobCard->id);
+                ->from('job_card_issue_items')
+                ->where('job_card_entry_id', $jobCard->id)
+                ->whereNotNull('stock_entry_item_id');
             })->pluck('raw_material_id')->toArray();
         }
 
         $allRelatedRmIds = array_unique(array_merge($rmIdsFromArt, $rmIdsFromIssues, $consumableConfigs));
-
-        $materials = RawMaterial::whereIn('id', $allRelatedRmIds)
-            ->where('status', 'Active')
-            ->get();
+        $materials = collect([]);
+        if (!empty($allRelatedRmIds)) {
+            $materials = RawMaterial::whereIn('id', $allRelatedRmIds)
+                ->where('status', 'Active')
+                ->get();
+        }
 
         $formatted = $materials->map(function($m) {
             return [

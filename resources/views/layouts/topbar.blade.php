@@ -3,52 +3,45 @@ $user = auth()->user();
 $isSuper = $user->id == 1;
 @endphp
 <style>
-    /* Fix for long menus in horizontal layout */
-    .layout-horizontal .menu-inner > .menu-item > .menu-sub {
-        max-height: 80vh !important;
+   /* .layout-horizontal .menu-inner > .menu-item > .menu-sub {
+        max-height: 70vh !important;
         overflow-y: auto !important;
         scrollbar-width: thin;
-        box-shadow: 0 4px 14px rgba(0,0,0,.15) !important;
     }
 
-    /* Convert nested sub-menus to vertical accordions */
-    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item > .menu-sub {
-        position: static !important;
-        display: none !important;
-        width: 100% !important;
-        box-shadow: none !important;
-        background: rgba(0, 0, 0, 0.05) !important;
-        padding-left: 20px !important;
-        border-radius: 0 !important;
-        overflow: visible !important;
-        max-height: none !important;
+    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item .menu-sub {
+        background-color: #fff !important;
+        padding: 0 !important;
     }
 
-    /* Show nested submenu ONLY when parent has 'manual-open' class */
-    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item.manual-open > .menu-sub {
-        display: block !important;
-    }
-
-    /* Disable hover-based display and enforce open via 'manual-open' class for top level as well */
     .layout-horizontal .menu-inner .menu-item:hover > .menu-sub,
     .layout-horizontal .menu-inner .menu-item.open > .menu-sub {
         display: none !important;
     }
 
-    /* Top-level menu items show submenu on click */
-    .layout-horizontal .menu-inner > .menu-item.manual-open > .menu-sub {
+    .layout-horizontal .menu-inner .menu-item.manual-open > .menu-sub {
         display: block !important;
     }
-
-    /* Arrow rotation for accordion items */
-    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item.manual-open > .menu-toggle::after {
-        transform: translateY(-50%) rotate(90deg) !important;
+    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item > .menu-sub {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 220px;
+        min-width: auto !important;
+        max-height: 80vh !important;
+        overflow-y: auto !important;
+        box-shadow: 0 4px 14px rgba(0,0,0,.12) !important;
+        background: #fff !important;
+        z-index: 9999 !important;
     }
+    .layout-horizontal .menu-inner .menu-item .menu-sub .menu-item > .menu-sub.menu-restricted-scroll {
+        max-height: 300px !important;
+        overflow-y: auto !important;
+    } */
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Select all menu toggles in horizontal layout
+/* document.addEventListener('DOMContentLoaded', function() {
     const menuToggles = document.querySelectorAll('.layout-horizontal .menu-inner .menu-toggle');
 
     menuToggles.forEach(toggle => {
@@ -58,42 +51,84 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const menuItem = this.closest('.menu-item');
             const parentMenu = menuItem.closest('.menu-sub, .menu-inner');
+            const subMenu = menuItem.querySelector('.menu-sub');
 
-            // Close siblings at the same level
             if (parentMenu) {
                 const siblings = parentMenu.children;
                 for (let sibling of siblings) {
                     if (sibling !== menuItem && sibling.classList.contains('menu-item')) {
                         sibling.classList.remove('manual-open');
-                        
-                        // Deep close children of siblings
-                        const nestedOpen = sibling.querySelectorAll('.menu-item.manual-open');
-                        nestedOpen.forEach(n => n.classList.remove('manual-open'));
+                        sibling.classList.remove('open');
+
+                        const nestedOpen = sibling.querySelectorAll('.menu-item.manual-open, .menu-item.open');
+                        nestedOpen.forEach(n => {
+                            n.classList.remove('manual-open');
+                            n.classList.remove('open');
+                        });
                     }
                 }
             }
 
-            // Toggle current item
+            const isOpening = !menuItem.classList.contains('manual-open');
             menuItem.classList.toggle('manual-open');
+
+            if (isOpening && subMenu && parentMenu.classList.contains('menu-sub')) {
+                const rect = menuItem.getBoundingClientRect();
+
+                subMenu.style.top = rect.top + 'px';
+                subMenu.style.left = (rect.right) + 'px';
+
+                if ((rect.right + 260) > window.innerWidth) {
+                    subMenu.style.left = (rect.left - 260) + 'px';
+                }
+                const bottomSpace = window.innerHeight - rect.top;
+                if (bottomSpace < 200) {
+                    subMenu.style.top = 'auto';
+                    subMenu.style.bottom = (window.innerHeight - rect.bottom) + 'px';
+                    subMenu.style.maxHeight = (rect.bottom - 20) + 'px';
+                } else {
+                     subMenu.style.maxHeight = (bottomSpace - 20) + 'px';
+                }
+            } else if (!isOpening && subMenu) {
+                subMenu.style.top = '';
+                subMenu.style.left = '';
+                subMenu.style.bottom = '';
+            }
         });
     });
 
-    // Close menus when clicking outside
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.menu-inner')) {
             const openItems = document.querySelectorAll('.layout-horizontal .menu-inner .menu-item.manual-open');
-            openItems.forEach(item => item.classList.remove('manual-open'));
+            openItems.forEach(item => {
+                item.classList.remove('manual-open');
+                const sub = item.querySelector('.menu-sub');
+                if(sub) { sub.style.top = ''; sub.style.left = ''; }
+            });
         }
     });
-
-    // Close menus when hitting Esc
     document.addEventListener('keydown', function(e) {
         if(e.key === "Escape") {
             const openItems = document.querySelectorAll('.layout-horizontal .menu-inner .menu-item.manual-open');
-            openItems.forEach(item => item.classList.remove('manual-open'));
+            openItems.forEach(item => {
+                item.classList.remove('manual-open');
+                const sub = item.querySelector('.menu-sub');
+                if(sub) { sub.style.top = ''; sub.style.left = ''; }
+            });
         }
     });
-});
+    const parentScrollContainers = document.querySelectorAll('.menu-sub');
+    parentScrollContainers.forEach(container => {
+        container.addEventListener('scroll', function() {
+            const openChildren = container.querySelectorAll('.menu-item.manual-open');
+            openChildren.forEach(child => {
+                child.classList.remove('manual-open');
+                const sub = child.querySelector('.menu-sub');
+                if(sub) { sub.style.top = ''; sub.style.left = ''; }
+            });
+        });
+    });
+}); */
 </script>
 <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
     <div class="layout-container">

@@ -114,6 +114,26 @@ class GrnEntryController extends Controller
         $colors = Color::orderBy('color_name')->get();
 
         if ($request->isMethod('post')) {
+            $headerRules = [
+                'grn_date' => 'required|date_format:d-m-Y',
+                'purchase_invoice_id' => 'required|exists:purchase_invoices,id',
+                'status' => 'required|in:Draft,Received,Partially Received,Invoiced,Cancelled',
+            ];
+
+            // Only require supplier invoice date if purchase_invoice_id is provided
+            if ($request->purchase_invoice_id) {
+                $headerRules['supplier_invoice_date'] = 'required|date_format:d-m-Y';
+            }
+
+            $messages = [
+                '*.required' => 'This field is required',
+                '*.numeric' => 'This field must be a number',
+                '*.min' => 'This field must be at least :min',
+                '*.exists' => 'This field is invalid',
+            ];
+
+            $request->validate($headerRules, $messages);
+
             $selectedItems = collect($request->items)->filter(function($item) {
                 return ($item['row_selected'] ?? 0) == 1;
             });
@@ -123,10 +143,6 @@ class GrnEntryController extends Controller
             }
 
             $rules = [
-                'grn_date' => 'required|date_format:d-m-Y',
-                'purchase_invoice_id' => 'required|exists:purchase_invoices,id',
-                'supplier_invoice_date' => 'required|date_format:d-m-Y',
-                'status' => 'required|in:Draft,Received,Partially Received,Invoiced,Cancelled',
                 'items' => 'required|array',
             ];
 
@@ -135,11 +151,7 @@ class GrnEntryController extends Controller
                     $rules["items.$index.art_no"] = [
                         'required',
                         function ($attribute, $value, $fail) use ($request) {
-                            $allArtNos = collect($request->items)
-                                ->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))
-                                ->pluck('art_no')
-                                ->map(fn($art) => (string)$art)
-                                ->toArray();
+                            $allArtNos = collect($request->items)->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))->pluck('art_no')->map(fn($art) => (string)$art)->toArray();
                             
                             $counts = array_count_values($allArtNos);
                             
@@ -175,11 +187,8 @@ class GrnEntryController extends Controller
                     }
                 }
             }
-            $messages = [
-                '*.required' => 'This field is required',
-                '*.numeric' => 'This field must be a number',
-                '*.min' => 'This field must be at least :min',
-                '*.exists' => 'This field is invalid',
+
+            $messages = array_merge($messages, [
                 'items.*.art_no.required' => 'This field is required',
                 'items.*.qty_received.required' => 'This field is required',
                 'items.*.qty_received.gt' => 'This field is required',
@@ -187,8 +196,9 @@ class GrnEntryController extends Controller
                 'items.*.qty_accepted.required' => 'This field is required',
                 'items.*.quality_check_status.required' => 'This field is required',
                 'items.*.store_location_id.required' => 'This field is required',
-            ];
-            $request->validate($rules,$messages);
+            ]);
+
+            $request->validate($rules, $messages);
 
             DB::beginTransaction();
             try {

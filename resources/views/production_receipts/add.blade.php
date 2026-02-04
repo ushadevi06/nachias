@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <form action="{{ url('production_receipts/add' . ($receipt ? '/' . $receipt->id : '')) }}" method="POST" class="common-form">
                 @csrf
-                @if ($errors->any())
+                {{-- @if ($errors->any())
                     <div class="alert alert-danger shadow-sm border-0 mb-4">
                         <div class="d-flex align-items-center mb-2">
                             <i class="ri-error-warning-line fs-4 me-2"></i>
@@ -32,7 +32,7 @@
                         <i class="ri-error-warning-line fs-4 me-2 text-danger"></i>
                         <h6 class="mb-0 fw-bold text-danger">{{ session('error') }}</h6>
                     </div>
-                @endif
+                @endif --}}
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -77,6 +77,12 @@
                                     <label for="doc_date">Doc Date *</label>
                                 </div>
                                 @error('doc_date') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4" id="customer_name_wrapper">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" name="customer_name" id="customer_name" class="form-control" placeholder="Customer Name" value="{{ old('customer_name', $receipt->customer_name ?? '') }}" readonly>
+                                    <label for="customer_name">Customer Name</label>
+                                </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -129,9 +135,9 @@
                                 </div>
                                 @error('status') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-12">
+                            <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea name="remarks" id="remarks" class="form-control" placeholder="Enter Remarks" rows="3">{{ old('remarks', $receipt->remarks ?? '') }}</textarea>
+                                    <textarea name="remarks" id="remarks" class="form-control" placeholder="Enter Remarks" >{{ old('remarks', $receipt->remarks ?? '') }}</textarea>
                                     <label for="remarks">Remarks</label>
                                 </div>
                             </div>
@@ -149,6 +155,7 @@
                                     <tr>
                                         <th>Item</th>
                                         <th>Description</th>
+                                        {{-- <th>Color</th> --}}
                                         <th>Size</th>
                                         <th>Unit Price</th>
                                         <th>Qty Ordered</th>
@@ -165,23 +172,61 @@
                 </div>
                 <div class="col-lg-12 text-end mt-3">
                     <button type="submit" class="btn btn-primary">Submit</button>
-                    <a href="{{ url('production_receipt_entries') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ url('production_receipts') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
 </div>  
+<div class="modal fade" id="consumptionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Consumption Breakdown</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="consumption-info" class="mb-3 p-2 bg-light rounded border"></div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light text-uppercase text-xs fw-bold text-muted">
+                            <tr>
+                                <th class="ps-3 border-0">Batch Usage</th>
+                                <th class="border-0">Material (Art No)</th>
+                                <th class="border-0">UOM</th>
+                                <th class="text-end border-0">Rate</th>
+                                <th class="text-end border-0">Unit Price</th>
+                                <th class="text-end pe-3 border-0">Per Shirt Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="consumption-tbody" class="border-top-0">
+                        </tbody>
+                        <tfoot class="border-top bg-light">
+                            <tr>
+                                <th colspan="5" class="text-end pe-3 py-3 fs-6">Grand Total (Per Shirt)</th>
+                                <th class="text-end pe-3 py-3 fs-6 text-primary" id="consumption-footer-total">₹0.00</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     $(document).ready(function () {
         $('.select2').select2();
         $('.receipt-date, .doc-date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
+        var itemDataStore = [];
+
         function populateItemsGrid(items) {
+            itemDataStore = items || [];
             var tbody = $('#items-tbody');
             tbody.empty();
             
             if (!items || items.length === 0) {
-                tbody.append('<tr><td colspan="8" class="text-center">No items found</td></tr>');
+                tbody.append('<tr><td colspan="9" class="text-center">No items found</td></tr>');
                 $('#items-section').hide();
                 return;
             }
@@ -193,8 +238,13 @@
                 var currentBalance = orderedQty - (alreadyRec + scanQty);
 
                 var row = '<tr data-index="' + index + '">' +
-                    '<td>' + (item.item_code || '') + ' - ' + (item.sleeve || '') + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || '') + '"></td>' +
-                    '<td>' + (item.description || '') + ' (' + (item.sleeve || '') + ')</td>' +
+                    '<td>' + (item.item_code || '') + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || '') + '"></td>' +
+                    '<td>' + 
+                        (item.description || '') + ' (' + (item.sleeve || '') + ') ' +
+                        '<button type="button" class="btn btn-sm btn-link p-0 ms-1 btn-show-consumption" data-index="' + index + '" title="View Consumption Details">' +
+                        '<i class="icon-base ri ri-information-line fs-5"></i></button>' +
+                    '</td>' +
+                    // '<td>' + (item.color || '-') + '</td>' +
                     '<td>' + (item.size || '') + '<input type="hidden" name="items[' + index + '][size]" value="' + (item.size || '') + '"></td>' +
                     '<td class="text-end">' + parseFloat(item.unit_price || 0).toFixed(2) + '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '"></td>' +
                     '<td class="text-end">' + orderedQty.toFixed(2) + '<input type="hidden" class="ordered-qty" name="items[' + index + '][ordered_qty]" value="' + orderedQty.toFixed(2) + '"></td>' +
@@ -212,6 +262,63 @@
             });
             $('#items-section').show();
         }
+
+        $(document).on('click', '.btn-show-consumption', function() {
+            var index = $(this).data('index');
+            var item = itemDataStore[index];
+            if (!item || !item.consumption_details) {
+                alert('No consumption details found for this item.');
+                return;
+            }
+
+            var infoHtml = '<div class="card bg-label-secondary border-0 mb-3">' +
+                           '<div class="card-body p-3 d-flex justify-content-between align-items-center">' +
+                           '<div><small class="text-uppercase text-muted fw-bold d-block mb-1">Item Details</small>' + 
+                           '<span class="fw-bold text-dark fs-6">' + item.item_code + '</span> <span class="badge bg-white text-dark shadow-sm ms-2">' + item.size_variant + '</span>' +
+                           '</div>' +
+                           '<div class="text-end">' +
+                           '<small class="text-uppercase text-muted fw-bold d-block mb-1">Batch Qty</small>' +
+                           '<span class="fs-4 fw-bolder text-primary">' + parseFloat(item.scan_qty || 0).toFixed(2) + '</span>' +
+                           '</div>' +
+                           '</div></div>';
+            $('#consumption-info').html(infoHtml);
+
+            var tbody = $('#consumption-tbody');
+            tbody.empty();
+            var grandTotalCost = 0;
+            var batchQty = parseFloat(item.scan_qty || 0);
+
+            item.consumption_details.forEach(function(detail) {
+                var rate = parseFloat(detail.rate);
+                var materialPrice = parseFloat(detail.price || 0);
+                var perShirtCost = rate * materialPrice;
+                var batchUsage = rate * batchQty;
+                
+                if (rate <= 0) return;
+                grandTotalCost += perShirtCost;
+
+                tbody.append('<tr>' +
+                    '<td class="ps-3"><span class="badge bg-label-success">' + batchUsage.toFixed(2) + '</span></td>' +
+                    '<td>' +
+                        '<div class="d-flex align-items-center">' +
+                            '<span class="badge bg-label-primary p-2 me-2 rounded"><i class="icon-base ri ri-shirt-line"></i></span>' +
+                            '<div>' +
+                                '<div class="fw-bold text-dark">' + detail.material_name + '</div>' +
+                                (detail.material_name != detail.art_no ? '<small class="text-muted">' + detail.art_no + '</small>' : '') +
+                            '</div>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td><span class="badge bg-label-secondary">' + (detail.uom || 'MTR') + '</span></td>' +
+                    '<td class="text-end"><span class="fw-bold">' + rate.toFixed(2) + '</span></td>' +
+                    '<td class="text-end">₹' + materialPrice.toFixed(2) + '</td>' +
+                    '<td class="text-end pe-3 fw-bold text-dark">₹' + perShirtCost.toFixed(2) + '</td>' +
+                    '</tr>');
+            });
+
+            $('#consumption-footer-total').text('₹' + grandTotalCost.toFixed(2));
+
+            $('#consumptionModal').modal('show');
+        });
 
         function calculateRowValues(row) {
             var scanQty = parseFloat(row.find('.scan-qty').val()) || 0;
@@ -285,7 +392,6 @@
                                     }
                                 });
                             }
-                            
                             populateItemsGrid(responseItems);
                         } else {
                             $('#items-section').hide();

@@ -56,6 +56,11 @@ class StockEntry extends Model
         return $this->belongsTo(GrnEntry::class);
     }
 
+    public function productionReceipt()
+    {
+        return $this->belongsTo(ProductionReceipt::class, 'reference_document', 'receipt_no');
+    }
+
     public function fromStoreLocation()
     {
         return $this->belongsTo(StoreLocation::class, 'from_store_location_id');

@@ -57,6 +57,15 @@
         <div class="col-lg-12">
             <form action="{{ url('job_card_entries/add/'. ($jobCard ?  $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -171,15 +180,15 @@
                             <input type="hidden" id="total_qty_hs" name="total_qty_hs" value="{{ old('total_qty_hs', $jobCard ? $jobCard->total_qty_hs : '') }}">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="season" name="season_id" class="form-select select2" data-placeholder="Select Season Code">
-                                        <option value="">Select Season Code</option>
+                                    <select id="season" name="season_id" class="form-select select2" data-placeholder="Select Season">
+                                        <option value="">Select Season</option>
                                         @foreach($seasons as $season)
                                             <option value="{{ $season->id }}" {{ (old('season_id', $jobCard ? $jobCard->season_id : '') == $season->id) ? 'selected' : '' }}>
                                                 {{ $season->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    <label for="season">Season Code</label>
+                                    <label for="season">Season </label>
                                 </div>
                                 @error('season_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
@@ -612,11 +621,13 @@
                     </div>
                 </div>
 
-                <div class="card mb-4 d-none" id="article-matrix-card">
+                <div class="card mb-4 {{ $showMatrix ? '' : 'd-none' }}" id="article-matrix-card">
                     <div class="card-body">
                         <div class="card-header-box mb-3">
                             <h4>Article Quantity Matrix</h4>
                         </div>
+                        
+                        <!-- Section 1: Fabric -->
                         <div class="mb-4">
                             <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3">1. Fabric Pieces (Source)</h6>
                             <div class="table-responsive">
@@ -628,6 +639,7 @@
                             </div>
                         </div>
 
+                        <!-- Section 2: Consumables -->
                         <div>
                             <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3">2. Consumables (Derived)</h6>
                             <div class="table-responsive">
@@ -684,9 +696,12 @@
         </div>
     </div>
 </div>
+
+<!-- Ultra Premium Stock Validation Modal -->
 <div class="modal fade" id="stockValidationErrorModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="stockValidationErrorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-2xl" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+            <!-- Header with Glowing Effect -->
             <div class="modal-header border-0 py-4 px-5" style="background: linear-gradient(135deg, #1a1a1a 0%, #3e1a1a 100%); position: relative;">
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 20% 50%, rgba(255, 82, 82, 0.15), transparent); pointer-events: none;"></div>
                 <div class="d-flex align-items-center">
@@ -702,6 +717,7 @@
             </div>
 
             <div class="modal-body p-0">
+                <!-- Data Presentation -->
                 <div class="px-5 pt-4 pb-2">
                     <div class="table-responsive rounded-4 overflow-hidden" style="border: 1px solid #f0f0f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                         <table class="table table-hover align-middle mb-0" id="stockErrorTable">
@@ -715,9 +731,12 @@
                                 </tr>
                             </thead>
                             <tbody class="fw-semibold">
+                                <!-- Dynamic Content -->
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Notes Area with Premium Styling -->
                     <div class="mt-4 mb-4">
                         <label for="stock_error_notes" class="form-label fw-bold text-secondary extra-small text-uppercase mb-2" style="letter-spacing: 1px;">Internal Validation Notes</label>
                         <div style="background: #fcfcfc; border: 1.5px solid #eee; border-radius: 16px; padding: 4px; transition: all 0.3s ease-in-out;" onfocusin="this.style.borderColor='#ff5252'; this.style.boxShadow='0 0 0 4px rgba(255, 82, 82, 0.1)'" onfocusout="this.style.borderColor='#eee'; this.style.boxShadow='none'">
@@ -727,6 +746,7 @@
                 </div>
             </div>
 
+            <!-- Footer Buttons with Interaction Effects -->
             <div class="modal-footer border-0 px-5 pb-5 pt-0 d-flex justify-content-end gap-3">
                 <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold px-4 hover-lift" data-bs-dismiss="modal" style="font-size: 0.9rem;">
                     CANCEL
@@ -799,7 +819,7 @@
 
         function performStockCheck(isRecheck = false) {
             const form = $('form.common-form');
-            if (isEditMode || form.attr('data-skip-validation') === 'true') return true;
+            if (form.attr('data-skip-validation') === 'true') return true;
 
             let isValid = true;
             let errors = [];
@@ -862,15 +882,18 @@
                     
                     if (d) {
                         const newStock = parseFloat(d.mtr) || 0;
+                        console.log(`[DEBUG] Updating art ${art} to ${newStock}`);
                         artDataMap[art].issued = newStock;
                         if (d.store_category_id) artDataMap[art].cat_id = d.store_category_id;
                         if (d.raw_material_id) artDataMap[art].mat_id = d.raw_material_id;
                         if (d.grn_no) artDataMap[art].grn_no = d.grn_no;
                         if (d.uom_code) artDataMap[art].is_mtr = (String(d.uom_code).trim().toUpperCase() === 'MTR');
                         
-                        $('.mtr-input[data-art]').filter(function() {
+                        const $input = $('.mtr-input[data-art]').filter(function() {
                             return clean($(this).data('art')) === fuzzyArt;
-                        }).val(newStock);
+                        });
+                        console.log(`[DEBUG] Found input for ${art}:`, $input.length);
+                        $input.val(newStock);
                     }
                 }
             }
@@ -1030,17 +1053,6 @@
 
         $('form.common-form').on('submit', function(e) {
             if ($(this).attr('data-skip-validation') === 'true') return;
-
-            const grandTotal1 = $('#article-qty-matrix-1-grand-total').text().trim();
-            const grandTotal2 = $('#article-qty-matrix-2-grand-total').text().trim();
-            const total1 = parseFloat(grandTotal1) || 0;
-            const total2 = parseFloat(grandTotal2) || 0;
-
-            if (total1 <= 0 && total2 <= 0) {
-                $(this).attr('data-skip-validation', 'true');
-                return; 
-            }
-
             e.preventDefault();
 
             const $form = $(this);
@@ -1058,6 +1070,7 @@
 
             fetchFreshStockData(poId)
                 .then(data => {
+                    console.log("[DEBUG] Fetch data success:", data);
                     currentArtData = data.art_data;
                     
                     const isValid = performStockCheck(false); 
@@ -1079,16 +1092,24 @@
             const $btn = $(this);
             const originalHtml = $btn.html();
             $btn.prop('disabled', true).html('<i class="ri ri-loader-4-line ri-spin fs-5"></i> SYNCING...');
+            
             const poId = $('#purchase_order').val() || $('#purchase_order_id').val();
+            
             fetchFreshStockData(poId)
                 .then(data => {
+                    console.log("[STOCK_SYNC_MANUAL] Data fetched:", data);
                     currentArtData = data.art_data;
+                    
+                    
                     const allClear = performStockCheck(true);
+                    console.log("[STOCK_SYNC_MANUAL] All clear:", allClear);
+                    
                     if (!allClear) {
                         $btn.prop('disabled', false).html(originalHtml);
                     }
                 })
                 .catch(err => {
+                    console.error("[STOCK_SYNC_MANUAL] Error:", err);
                     alert('Failed to sync: ' + err);
                     $btn.prop('disabled', false).html(originalHtml);
                 });
@@ -1101,6 +1122,7 @@
             $.get(`{{ url('job_card_entries/get-po-details') }}/${poId}`, function(data) {
                 currentArtNumbers = data.art_numbers;
                 currentArtData = data.art_data; 
+                
                 if (data.art_data) {
                     data.art_data.forEach(d => {
                         articleUoms[d.art_no] = d.uom_code;
@@ -1434,14 +1456,24 @@
             if (selectedValue) {
                 const poId = $('#purchase_order').val();
                 if (!poId) {
-                    showFieldError('#purchase_order', 'Please select Purchase Order first');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selection Required',
+                        text: 'Please select Purchase Order No first',
+                        confirmButtonText: 'OK'
+                    });
                     $this.val('').trigger('change.select2');
                     return;
                 }
                 
                 const processGroupId = $('#process_group_id').val();
                 if (!processGroupId) {
-                    showFieldError('#process_group_display', 'Please select Process Group first');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selection Required',
+                        text: 'Please select Process Group first',
+                        confirmButtonText: 'OK'
+                    });
                     $this.val('').trigger('change.select2');
                     return;
                 }
@@ -1754,25 +1786,6 @@
             calculateMatrixTotals();
         }
 
-        // Clear validation errors on input/change
-        $(document).on('input change', 'input, select, textarea', function() {
-            const $el = $(this);
-            $el.removeClass('is-invalid');
-            $el.closest('.col-md-6, .col-xl-4, .col-lg-4, .input-group, .form-group').find('.text-danger.small').fadeOut(function() {
-                $(this).remove();
-            });
-        });
-
-        function showFieldError(selector, message) {
-            const $el = $(selector);
-            $el.addClass('is-invalid');
-            const $container = $el.closest('.col-md-6, .col-xl-4, .col-lg-4, .input-group, .form-group');
-            $container.find('.text-danger.small').remove();
-            $container.append(`<div class="text-danger small mt-1">${message}</div>`);
-            $('html, body').animate({
-                scrollTop: $el.offset().top - 150
-            }, 500);
-        }
 
         $(document).on('input', '.qty-direct-input', function() {
             if (isSyncing) return;

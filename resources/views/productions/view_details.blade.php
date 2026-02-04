@@ -51,6 +51,47 @@
                 </div>
             </div>
 
+            {{-- Consumables Breakdown --}}
+            @if($production->consumables->count() > 0)
+            <div class="card mt-4 border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 fw-bold">Consumables Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Art No</th>
+                                    <th>Item Type</th>
+                                    <th>Raw Material</th>
+                                    <th>UOM</th>
+                                    <th>Sleeve</th>
+                                    <th class="text-end">FS Qty</th>
+                                    <th class="text-end">HS Qty</th>
+                                    <th class="text-end">Total Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($production->consumables as $consumable)
+                                <tr>
+                                    <td>{{ $consumable->art_no }}</td>
+                                    <td><span class="badge bg-label-secondary small">{{ $consumable->item_type }}</span></td>
+                                    <td class="small">{{ $consumable->rawMaterial->name ?? '-' }}</td>
+                                    <td>{{ $consumable->uom->name ?? '-' }}</td>
+                                    <td><span class="badge bg-label-info">{{ $consumable->sleeve_type }}</span></td>
+                                    <td class="text-end">{{ number_format($consumable->fs_qty, 2) }}</td>
+                                    <td class="text-end">{{ number_format($consumable->hs_qty, 2) }}</td>
+                                    <td class="text-end fw-bold">{{ number_format($consumable->total_qty, 2) }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             {{-- Process Schedules --}}
             @foreach($production->processSchedules as $schedule)
             <div class="card mt-4 border-0 shadow-sm">
@@ -82,7 +123,6 @@
                                     <th>Service Name</th>
                                     <th>Applies To</th>
                                     <th class="text-end">Qty</th>
-                                    <th>UOM</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -91,7 +131,6 @@
                                     <td>{{ $service->productionService->service_name ?? '-' }}</td>
                                     <td><span class="badge bg-label-info">{{ $service->applies_to }}</span></td>
                                     <td class="text-end fw-bold">{{ $service->calculated_qty }}</td>
-                                    <td>{{ $service->uom }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>

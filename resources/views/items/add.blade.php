@@ -87,15 +87,11 @@
                                 <div class="form-floating form-floating-outline">
                                     <select name="style" id="style" class="select2 form-select @error('style') is-invalid @enderror" data-placeholder="Select Style">
                                         <option value="">Select Style</option>
-                                        <option value="Plain" {{ old('style', $item->style ?? '') == 'Plain' ? 'selected' : '' }}>
-                                            Plain
+                                        @foreach($styles as $s)
+                                        <option value="{{ $s->style_name }}" {{ old('style', $item->style ?? '') == $s->style_name ? 'selected' : '' }}>
+                                            {{ $s->style_name }}
                                         </option>
-                                        <option value="Print" {{ old('style', $item->style ?? '') == 'Print' ? 'selected' : '' }}>
-                                            Print
-                                        </option>
-                                        <option value="Checked"
-                                            {{ old('style', $item->style ?? '') == 'Checked' ? 'selected' : '' }}>
-                                            Checked</option>
+                                        @endforeach
                                     </select>
                                     <label for="style">Style</label>
                                 </div>
@@ -401,7 +397,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title text-white" id="sizeRatioModalLabel">Select Size / Ratio</h5>
+                <h5 class="modal-title" id="sizeRatioModalLabel">Select Size / Ratio</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>

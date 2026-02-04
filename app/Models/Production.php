@@ -46,4 +46,9 @@ class Production extends Model
     {
         return $this->hasMany(ProcessSchedule::class);
     }
+
+    public function consumables()
+    {
+        return $this->hasMany(ProductionStageConsumable::class, 'production_id');
+    }
 }

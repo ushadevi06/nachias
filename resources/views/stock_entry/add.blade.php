@@ -11,7 +11,6 @@
                         <h4>{{ $stockEntry ? 'Edit' : 'Add' }} Stock Entry</h5>
                     </div>
                     <div class="card-body">
-                        
                         <div class="row mb-4">
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
@@ -22,7 +21,6 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" name="stock_date" class="form-control stock_date" placeholder="Enter Stock Date" value="{{ old('stock_date', $stockEntry ? $stockEntry->stock_date->format('d-m-Y') : date('d-m-Y')) }}" {{ $stockEntry ? 'readonly' : '' }} />
@@ -32,7 +30,6 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <input type="hidden" name="entry_type" value="Purchase Receipt">
                             <div class="col-lg-4 mb-4" id="grn_section">
                                 <div class="form-floating form-floating-outline">
@@ -51,7 +48,6 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="grn_entry_item_id" name="grn_entry_item_id" class="select2 form-select" data-placeholder="Select GRN Item">
@@ -63,15 +59,10 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <input type="hidden" name="entry_type_radio" value="raw_material">
                         </div>
-                        <!-- GRN Items Table (Removed for one-by-one selection) -->
                         {{-- <div class="row mb-4" id="grn_items_section" style="display:none;"> ... </div> --}}
-
                         <div class="row mb-4">
-
-                        <!-- RAW MATERIAL SECTION -->
                         <div class="row mb-4" id="raw_material_section" style="display:none;">
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
@@ -85,7 +76,6 @@
                                     <input type="hidden" id="store_category_val" name="store_category_id" value="{{ old('store_category_id', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->store_category_id : '') }}">
                                 </div>
                             </div>
-
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="material" name="raw_material_id" class="select2 form-select" data-placeholder="Select Material" disabled>
@@ -99,7 +89,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="row mb-4" id="single_item_fields">
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
@@ -115,7 +104,6 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', $stockEntry ? $stockEntry->stockEntryItems->sum('qty_in') : '') }}" step="1" min="1" />
@@ -134,9 +122,7 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <input type="hidden" name="qty_out" value="0">
-
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="store_location" name="store_location_id" class="select2 form-select" data-placeholder="Select Location/Store">
@@ -152,8 +138,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- REMARKS & REFERENCE -->
                         <div class="row mb-4">
                             <div class="col-md-4 mb-4">
                                 <div class="form-floating form-floating-outline">
@@ -164,7 +148,6 @@
                                     @enderror
                                 </div>
                             </div>
-
                             <div class="col-lg-4 mb-4">
                                 <label for="formFile" class="form-label">Reference Document</label>
                                 <input type="file" class="form-control" id="formFile" name="reference_document">
@@ -192,31 +175,24 @@
 
 <script>
     $(document).ready(function() {
-
         $('.stock_date').flatpickr({
             dateFormat: 'd-m-Y',
             defaultDate: 'today',
             allowInput: true
         });
-
         const savedItems = @json($savedItems);
         const stockEntry = @json($stockEntry);
-
         let grnItemsData = [];
         $('#grn_entry_id').on('change', function() {
             let grnId = $(this).val();
-
             if (grnId) {
                 $.get("{{ url('stock_entries/get-grn-items') }}/" + grnId + "?stock_entry_id=" + (stockEntry ? stockEntry.id : ''), function(res) {
                     if (res.success && res.items.length > 0) {
-                        grnItemsData = res.items;
-                        
+                        grnItemsData = res.items;                    
                         $('#raw_material_section').show();
-                        
                         let itemSelect = $('#grn_entry_item_id');
                         itemSelect.empty();
-                        itemSelect.append('<option value="">Select GRN Item</option>');
-                        
+                        itemSelect.append('<option value="">Select GRN Item</option>');                        
                         let hasSelection = false;
                         res.items.forEach((item) => {
                             let isSelected = '';
@@ -229,10 +205,7 @@
                             }
                             itemSelect.append(`<option value="${item.id}" ${isSelected}>${item.raw_material_name} (Qty Available: ${item.qty_accepted})</option>`);
                         });
-
                         $('#single_item_fields').show();
-                        toggleManualRequired(true);
-
                         if (hasSelection) {
                             setTimeout(() => {
                                 itemSelect.trigger('change');
@@ -243,42 +216,34 @@
             } else {
                 $('#grn_entry_item_id').empty().append('<option value="">Select GRN Item</option>');
                 grnItemsData = [];
-                
                 $('#store_category, #material').prop('disabled', false).find('option').prop('disabled', false);
                 $('.select2').trigger('change.select2');
 
                 $('#store_category, #material, #uom, #qty_in, #store_location, #price').val('').trigger('change');
             }
         });
-
         $('#grn_entry_item_id').on('change', function() {
             let itemId = $(this).val();
-            
             if (itemId) {
                 let item = grnItemsData.find(i => i.id == itemId);
                 if (item) {
                     $('#store_category').val(item.store_category_id).trigger('change');
                     $('#store_category_val').val(item.store_category_id);
-                    
                     setTimeout(() => {
                         $('#material').val(item.raw_material_id).trigger('change');
                         $('#material_val').val(item.raw_material_id);
                         $('.select2').trigger('change.select2');
                     }, 100);
-
                     $('#uom').val(item.uom_id).trigger('change');
-                    
                     if (!$('#qty_in').val() || !stockEntry) {
                         $('#qty_in').val(item.qty_accepted);
                     }
                     $('#qty_in').attr('max', item.qty_accepted);
-
                     $('#price').val(item.rate);
                     $('#store_location').val(item.store_location_id).trigger('change');
                 }
             }
         });
-
         $('#qty_in').on('input', function() {
             let max = parseFloat($(this).attr('max'));
             let current = parseFloat($(this).val());
@@ -287,16 +252,9 @@
                 alert('Quantity cannot be greater than available quantity (' + max + ')');
             }
         });
-        
-        function toggleManualRequired(enable) {
-            $('#uom, #qty_in, #store_location, #price').prop('required', enable);
-        }
-
-        if (stockEntry) {
+        if (stockEntry || $('#grn_entry_id').val()) {
             $('#grn_entry_id').trigger('change');
         }
     });
 </script>
-
-
 @endsection

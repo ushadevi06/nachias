@@ -44,7 +44,7 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div id="show_item_det" class="{{ ($grn || old('purchase_invoice_id')) ? '' : 'd-none' }} col-lg-12">
+                            <div id="show_item_det" class="{{ old('purchase_invoice_id', $grn->purchase_invoice_id ?? '') ? '' : 'd-none' }} col-lg-12">
                                 <div class="row g-4">
                                     <div class="col-md-6 col-xl-4">
                                         <div class="form-floating form-floating-outline">
@@ -148,7 +148,7 @@
                                                             <td>
                                                                 <input type="file" name="items[{{$idx}}][item_image]" class="form-control" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
                                                                 @if(isset($itemObj->image) && $itemObj->image)
-                                                                    <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
+                                                                    <input type=l"hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
                                                                     <a href="{{ url('uploads/grn_items/' . $itemObj->image) }}" target="_blank">
                                                                         <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded">
                                                                     </a>

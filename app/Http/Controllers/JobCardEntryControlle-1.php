@@ -233,27 +233,25 @@ class JobCardEntryController extends Controller
                 }
 
                 if ($request->article_matrix) {
-                    if (!$id) {
-                        foreach ($request->article_matrix as $index => $matrix) {
-                            $artNo = $matrix['art_no'] ?? null;
-                            if (!$artNo) continue;
+                    foreach ($request->article_matrix as $index => $matrix) {
+                        $artNo = $matrix['art_no'] ?? null;
+                        if (!$artNo) continue;
 
-                            $fabric = collect($request->fabrics)->where('art_no', $artNo)->first() ?? ($request->fabrics[$index] ?? null);
-                            $issuedQty = floatval($fabric['mtr'] ?? 0);
-                            
-                            $required = 0;
-                            foreach ($matrix as $key => $val) {
-                                if (str_starts_with($key, 'fs_') || str_starts_with($key, 'hs_')) {
-                                    $required += floatval($val);
-                                }
+                        $fabric = collect($request->fabrics)->where('art_no', $artNo)->first() ?? ($request->fabrics[$index] ?? null);
+                        $issuedQty = floatval($fabric['mtr'] ?? 0);
+                        
+                        $required = 0;
+                        foreach ($matrix as $key => $val) {
+                            if (str_starts_with($key, 'fs_') || str_starts_with($key, 'hs_')) {
+                                $required += floatval($val);
                             }
+                        }
 
-                            $required = round($required, 3);
-                            $issuedQty = round($issuedQty, 3);
-                            
-                            if ($required > $issuedQty) {
-                                return redirect()->back()->withErrors(['error' => "Stock Error for Art {$artNo}: Required {$required} exceeds Issued {$issuedQty}"])->withInput();
-                            }
+                        $required = round($required, 3);
+                        $issuedQty = round($issuedQty, 3);
+                        
+                        if ($required > $issuedQty) {
+                            return redirect()->back()->withErrors(['error' => "Stock Error for Art {$artNo}: Required {$required} exceeds Issued {$issuedQty}"])->withInput();
                         }
                     }
 
@@ -573,7 +571,7 @@ class JobCardEntryController extends Controller
                                 $stockCandidates = $revertedItems->merge($stockCandidates)->unique('id');
                             }
 
-                            $remainingToDeduct = $qtyUsed;
+                            $remainingToDeduct = $qtyIssue;
                             $weightedCost = 0;
                             
                             $totalAvailable = $stockCandidates->sum(function($item) {
@@ -599,7 +597,7 @@ class JobCardEntryController extends Controller
                                 throw new \Exception("Insufficient stock for Art No: $artNo. Unable to deduct used quantity. Shortage: " . $remainingToDeduct);
                             }
 
-                            $unitPrice = ($qtyUsed > 0) ? ($weightedCost / $qtyUsed) : 0;
+                            $unitPrice = ($qtyIssue > 0) ? ($weightedCost / $qtyIssue) : 0;
                         }
                         
                         if (isset($itemData['is_manual_price']) && $itemData['is_manual_price'] == 1 && isset($itemData['unit_price'])) {
@@ -706,7 +704,7 @@ class JobCardEntryController extends Controller
             ->with(['purchaseInvoiceItem.uom', 'purchaseInvoiceItem.rawMaterial.uom', 'grnEntry', 'stockEntryItems'])
             ->get()
             ->groupBy('art_no')
-            ->map(function ($items, $artNo) {
+            ->map(function ($items, $artNo) use ($grnIds) {
                 $firstItem = $items->first();
                 $uom = $firstItem->purchaseInvoiceItem->uom->uom_code 
                     ?? ($firstItem->purchaseInvoiceItem->rawMaterial->uom->uom_code ?? null);
@@ -717,12 +715,17 @@ class JobCardEntryController extends Controller
                 $actualStock = 0;
                 if ($rawMaterial) {
                     $actualStock = \App\Models\StockEntryItem::where('raw_material_id', $rawMaterial->id)
+                        ->whereHas('grnEntryItem', function($q) use ($artNo, $grnIds) {
+                            $q->where('art_no', $artNo)
+                              ->whereIn('grn_entry_id', $grnIds);
+                        })
                         ->sum(\Illuminate\Support\Facades\DB::raw('qty_in - qty_out'));
+                    
+                    \Log::info("Stock Check Main: Art $artNo, RM {$rawMaterial->id}, Stock $actualStock, GRNs: " . $grnIds->implode(','));
                 }
 
                 return [
                     'art_no' => $artNo,
-                    'art_name' => $firstItem->purchaseInvoiceItem->rawMaterial->name ?? ($firstItem->fabricType->name ?? null),
                     'mtr' => $actualStock,
                     'uom_code' => $uom,
                     'store_category_id' => $catId,
@@ -733,7 +736,7 @@ class JobCardEntryController extends Controller
 
         if ($artData->isEmpty()) {
             $po->load(['items.uom', 'items.rawMaterial.uom']); 
-            $artData = $po->items->map(function($item) {
+            $artData = $po->items->map(function($item) use ($grnIds) {
                 $uom = null;
                 if ($item->uom) {
                     $uom = $item->uom->uom_code;
@@ -746,6 +749,10 @@ class JobCardEntryController extends Controller
                 $fallbackStock = 0;
                 if ($item->rawMaterial) {
                     $fallbackStock = \App\Models\StockEntryItem::where('raw_material_id', $item->raw_material_id)
+                        ->whereHas('grnEntryItem', function($q) use ($item, $grnIds) {
+                            $q->where('art_no', $item->art_no)
+                              ->whereIn('grn_entry_id', $grnIds);
+                        })
                         ->sum(\Illuminate\Support\Facades\DB::raw('qty_in - qty_out'));
                 }
 
@@ -780,7 +787,7 @@ class JobCardEntryController extends Controller
             ->with(['purchaseInvoiceItem.rawMaterial', 'grnEntry'])
             ->get()
             ->groupBy('art_no')
-            ->map(function ($items, $artNo) {
+            ->map(function ($items, $artNo) use ($grnIds) {
                 $firstItem = $items->first();
                 $rawMaterial = $firstItem->purchaseInvoiceItem->rawMaterial ?? null;
                 
@@ -788,13 +795,7 @@ class JobCardEntryController extends Controller
                 $actualStock = 0;
 
                 if ($rawMaterial) {
-                    $actualStock = \App\Models\StockEntryItem::where('raw_material_id', $rawMaterial->id)
-                        ->whereHas('grnEntryItem', function($q) use ($artNo) {
-                            $q->where('art_no', $artNo);
-                        })
-                        ->sum(\Illuminate\Support\Facades\DB::raw('qty_in - qty_out'));
-                    
-                    \Log::info("Stock Check Main: Art $artNo, RM {$rawMaterial->id}, Stock $actualStock");
+                    $actualStock = \App\Models\StockEntryItem::where('raw_material_id', $rawMaterial->id)->sum(\Illuminate\Support\Facades\DB::raw('qty_in - qty_out'));
                 }
                 $catId = $rawMaterial ? $rawMaterial->store_category_id : 1;
 
@@ -810,12 +811,13 @@ class JobCardEntryController extends Controller
             })->values();
 
         if ($artData->isEmpty()) {
-            $artData = $po->items->map(function($item) {
+            $artData = $po->items->map(function($item) use ($grnIds) {
                 $fallbackStock = 0;
                 if ($item->raw_material_id) {
                     $fallbackStock = \App\Models\StockEntryItem::where('raw_material_id', $item->raw_material_id)
-                        ->whereHas('grnEntryItem', function($q) use ($item) {
-                            $q->where('art_no', $item->art_no);
+                        ->whereHas('grnEntryItem', function($q) use ($item, $grnIds) {
+                            $q->where('art_no', $item->art_no)
+                              ->whereIn('grn_entry_id', $grnIds);
                         })
                         ->sum(\Illuminate\Support\Facades\DB::raw('qty_in - qty_out'));
                 }

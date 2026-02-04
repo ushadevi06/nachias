@@ -83,37 +83,47 @@
 @section('scripts')
 <script>
     $(function() {
-        $('.datatables-logs').DataTable({
-            responsive: true,
-            order: [[1, 'desc']], // Sort by date desc
-            pageLength: 25,
-            dom: '<"card-header border-bottom p-1"<"head-label"><"dt-action-buttons text-end"B>><"d-flex justify-content-between align-items-center mx-0 row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>t<"d-flex justify-content-between mx-0 row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-            buttons: [
-                {
-                    extend: 'collection',
-                    className: 'btn btn-label-secondary dropdown-toggle mx-3',
-                    text: '<i class="ri-external-link-line me-sm-1"></i> <span class="d-none d-sm-inline-block">Export</span>',
-                    buttons: [
-                        {
-                            extend: 'print',
-                            text: '<i class="ri-printer-line me-1"></i>Print',
-                            className: 'dropdown-item'
-                        },
-                        {
-                            extend: 'csv',
-                            text: '<i class="ri-file-text-line me-1"></i>Csv',
-                            className: 'dropdown-item'
-                        },
-                        {
-                            extend: 'excel',
-                            text: '<i class="ri-file-excel-line me-1"></i>Excel',
-                            className: 'dropdown-item'
-                        }
-                    ]
-                }
-            ]
-        });
-        $('div.head-label').html('<h6 class="mb-0">History of Adjustments</h6>');
+        const $table = $('.datatables-logs');
+        const hasData = $table.find('tbody tr').length > 0 && !$table.find('tbody tr td[colspan]').length;
+        
+        if (hasData) {
+            $table.DataTable({
+                responsive: true,
+                serverSide: false, 
+                ajax: null,     
+                paging: true,
+                searching: true,
+                order: [[1, 'desc']],
+                pageLength: 25,
+                buttons: [
+                    {
+                        extend: 'collection',
+                        className: 'btn btn-label-secondary dropdown-toggle mx-3',
+                        text: '<i class="ri-external-link-line me-sm-1"></i> <span class="d-none d-sm-inline-block">Export</span>',
+                        buttons: [
+                            {
+                                extend: 'print',
+                                text: '<i class="ri-printer-line me-1"></i>Print',
+                                className: 'dropdown-item'
+                            },
+                            {
+                                extend: 'csv',
+                                text: '<i class="ri-file-text-line me-1"></i>Csv',
+                                className: 'dropdown-item'
+                            },
+                            {
+                                extend: 'excel',
+                                text: '<i class="ri-file-excel-line me-1"></i>Excel',
+                                className: 'dropdown-item'
+                            }
+                        ]
+                    }
+                ]
+            });
+            $('div.head-label').html('<h6 class="mb-0">History of Adjustments</h6>');
+        } else {
+            console.log('No adjustment logs found - DataTable not initialized');
+        }
     });
 </script>
 <style>

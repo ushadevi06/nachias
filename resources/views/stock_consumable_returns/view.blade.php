@@ -34,13 +34,20 @@
                         </div>
                     </div>
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table id="consumablesInventoryTable" class="table">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Issue No.</th>
-                                    <th>Issue Date</th>
-                                    <th>Production</th>
+                                    <th>Production ID</th>
+                                    <th>Job Card ID</th>
+                                    <th>Production Stage</th>
+                                    <th>Art No</th>
+                                    <th>Material Name</th>
+                                    <th>UOM</th>
+                                    <th>F/S Qty</th>
+                                    <th>H/S Qty</th>
+                                    <th>Total Issue Qty</th>
+                                    <th>Issued Date</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -57,7 +64,10 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
-        $('#consumablesTable').DataTable({
+        if ($.fn.DataTable.isDataTable('#consumablesInventoryTable')) {
+            $('#consumablesInventoryTable').DataTable().destroy();
+        }
+        $('#consumablesInventoryTable').DataTable({
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -70,12 +80,18 @@
             ajax: "{{ url('stock_consumables_returns') }}",
             columns: [
                 { data: 'DT_RowIndex', name: 'DT_RowIndex' },
-                { data: 'issue_no', name: 'issue_no' },
-                { data: 'issue_date', name: 'issue_date' },
-                { data: 'production', name: 'production' },
+                { data: 'production_no', name: 'production_no' },
+                { data: 'job_card_no', name: 'job_card_no' },
+                { data: 'production_stage', name: 'production_stage' },
+                { data: 'art_no', name: 'art_no' },
+                { data: 'material_name', name: 'material_name' },
+                { data: 'uom', name: 'uom' },
+                { data: 'fs_qty', name: 'fs_qty' },
+                { data: 'hs_qty', name: 'hs_qty' },
+                { data: 'total_issue_qty', name: 'total_issue_qty' },
+                { data: 'issued_date', name: 'issued_date' },
                 { data: 'action', name: 'action', orderable: false, searchable: false },
             ],
-            order: [[0, 'desc']]
         });
     });
 </script>

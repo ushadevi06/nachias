@@ -30,21 +30,10 @@ class OperationStageController extends Controller
                 </label>
                 <div class="status_msg_' . $stage->id . '"></div>';
 
-                $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('edit operation-stages')) {
-                    $action .= '
-                        <a href="' . url('operation_stages/add/' . $stage->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
-                }
-                // if (auth()->id() == 1 || auth()->user()->can('delete operation-stages')) {
-                //     $action .= '
-                //         <a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('operation_stages/delete/' . $stage->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                // }
-                $action .= '</div>';
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'operation_stage_name' => $stage->operation_stage_name,
                     'status' => $status,
-                    'action' => $action,
                 ];
             }
             return response()->json(['data' => $data]);

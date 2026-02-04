@@ -1,7 +1,5 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
-TRUNCATE `brand_categories`;
-TRUNCATE `brands`;
 TRUNCATE `charges`;
 TRUNCATE `cities`;
 TRUNCATE `collar_types`;
@@ -12,13 +10,11 @@ TRUNCATE `places`;
 TRUNCATE `customers`;
 TRUNCATE `purchase_commission_agents`;
 TRUNCATE `raw_materials`;
-TRUNCATE `items`;
 TRUNCATE `role_has_permissions`;
 TRUNCATE `sales_agents`;
 TRUNCATE `service_providers`;
 TRUNCATE `size_ratios`;
 TRUNCATE `states`;
-TRUNCATE `store_categories`;
 TRUNCATE `store_locations`;
 TRUNCATE `suppliers`;
 TRUNCATE `taxes`;
@@ -37,6 +33,10 @@ TRUNCATE `cuff_types`;
 TRUNCATE `pocket_types`;
 TRUNCATE `bottom_cuts`;
 
+TRUNCATE `brand_categories`;
+TRUNCATE `brands`;
+TRUNCATE `store_categories`;
+TRUNCATE `items`;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- =========================
@@ -96,6 +96,9 @@ ALTER TABLE job_card_images AUTO_INCREMENT = 1;
 DELETE FROM job_card_entries;
 ALTER TABLE job_card_entries AUTO_INCREMENT = 1;
 
+DELETE FROM job_card_issue_stock_details;
+ALTER TABLE job_card_issue_stock_details AUTO_INCREMENT = 1;
+
 -- =========================
 -- GRN / STOCK
 -- =========================
@@ -143,5 +146,51 @@ ALTER TABLE debit_note_items AUTO_INCREMENT = 1;
 
 DELETE FROM debit_notes;
 ALTER TABLE debit_notes AUTO_INCREMENT = 1;
+
+DELETE FROM process_groups;
+ALTER TABLE process_groups AUTO_INCREMENT = 1;
+
+DELETE FROM process_schedule_services;
+ALTER TABLE process_schedule_services AUTO_INCREMENT = 1;
+
+DELETE FROM process_schedules;
+ALTER TABLE process_schedules AUTO_INCREMENT = 1;
+
+DELETE FROM production_receipt_items;
+ALTER TABLE production_receipt_items AUTO_INCREMENT = 1;
+
+DELETE FROM production_receipts;
+ALTER TABLE production_receipts AUTO_INCREMENT = 1;
+
+DELETE FROM production_services;
+ALTER TABLE production_services AUTO_INCREMENT = 1;
+
+DELETE FROM production_stage_consumables;
+ALTER TABLE production_stage_consumables AUTO_INCREMENT = 1;
+
+DELETE FROM productions;
+ALTER TABLE productions AUTO_INCREMENT = 1;
+
+DELETE FROM stock_consumable_issue_items;
+ALTER TABLE stock_consumable_issue_items AUTO_INCREMENT = 1;
+
+DELETE FROM stock_consumable_issues;
+ALTER TABLE stock_consumable_issues AUTO_INCREMENT = 1;
+
+DELETE FROM stock_consumable_stock_details;
+ALTER TABLE stock_consumable_stock_details AUTO_INCREMENT = 1;
+
+DELETE FROM stock_entry_adjustments;
+ALTER TABLE stock_entry_adjustments AUTO_INCREMENT = 1;
+
+DELETE FROM task_adjustment_items;
+ALTER TABLE task_adjustment_items AUTO_INCREMENT = 1;
+
+DELETE FROM task_adjustments;
+ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
+
+DELETE FROM task_receives;
+ALTER TABLE task_receives AUTO_INCREMENT = 1;
+
 
 SET FOREIGN_KEY_CHECKS = 1;

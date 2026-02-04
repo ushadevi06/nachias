@@ -61,7 +61,7 @@ class PurchaseOrder extends Model
 
     public function purchaseCommissionAgent()
     {
-        return $this->belongsTo(SalesAgent::class, 'purchase_commission_agent_id');
+        return $this->belongsTo(PurchaseCommissionAgent::class, 'purchase_commission_agent_id');
     }
 
     public function supplier()

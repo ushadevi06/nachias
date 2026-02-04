@@ -11,10 +11,21 @@ class ProductionStageConsumable extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'job_card_id',
+        'production_id',
+        'production_stage_id',
         'stage',
+        'art_no',
+        'item_type',
         'raw_material_id',
         'quantity_per_unit',
+        'planned_qty',
+        'fs_qty',
+        'hs_qty',
+        'total_qty',
+        'actual_qty',
         'uom_id',
+        'sleeve_type',
         'status',
         'remarks',
         'created_by',
@@ -39,5 +50,20 @@ class ProductionStageConsumable extends Model
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function production()
+    {
+        return $this->belongsTo(Production::class, 'production_id');
+    }
+
+    public function jobCard()
+    {
+        return $this->belongsTo(JobCardEntry::class, 'job_card_id');
+    }
+
+    public function operationStage()
+    {
+        return $this->belongsTo(OperationStage::class, 'production_stage_id');
     }
 }

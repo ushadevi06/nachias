@@ -389,6 +389,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('job_card_entries/delete/{id}', [JobCardEntryController::class, 'destroy']);
     Route::get('job_card_entries/get-size-ratio/{id}', [JobCardEntryController::class, 'getSizeRatioDetails']);
     Route::get('job_card_entries/get-po-details/{id}', [JobCardEntryController::class, 'getPoDetails']);
+    Route::get('job_card_entries/check-stock/{id}', [JobCardEntryController::class, 'checkStock']);
     Route::get('job_card_entries/get_items_by_store_category', [JobCardEntryController::class, 'getItemsByStoreCategory']);
     Route::get('job_card_entries/get_items_by_brand_category', [JobCardEntryController::class, 'getItemsByBrandCategory']);
     Route::delete('job_card_entries/delete-image/{id}', [JobCardEntryController::class, 'deleteImage']);

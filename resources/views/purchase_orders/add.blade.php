@@ -34,7 +34,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <select id="purchase_commission_agent_id" name="purchase_commission_agent_id" class="select2 form-select @error('purchase_commission_agent_id') is-invalid @enderror" data-placeholder="Select Purchase Commission Agent">
                                         <option value="">Select Purchase Commission Agent</option>
-                                        @foreach($salesAgents as $agent)
+                                        @foreach($purchaseCommissionAgents as $agent)
                                         <option value="{{ $agent->id }}" {{ old('purchase_commission_agent_id', $purchaseOrder->purchase_commission_agent_id ?? '') == $agent->id ? 'selected' : '' }}>
                                             {{ $agent->name }} ({{ $agent->code }})
                                         </option>

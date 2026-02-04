@@ -84,27 +84,6 @@
                                     <label for="base_quantity_source">Base Quantity Source <span class="text-danger">*</span></label>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" class="form-control @error('multiplier') is-invalid @enderror" id="multiplier" name="multiplier" value="{{ old('multiplier', $service->multiplier ?? '1.00') }}">
-                                    <label for="multiplier">Multiplier <span class="text-danger">*</span></label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select name="uom" id="uom" class="select2 form-select @error('uom') is-invalid @enderror">
-                                        <option value="">Select UOM</option>
-                                        @foreach($uoms as $uom)
-                                            <option value="{{ $uom->uom_code }}" {{ old('uom', $service->uom ?? '') == $uom->uom_code ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="uom">UOM <span class="text-danger">*</span></label>
-                                </div>
-                                @error('uom')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
                             <div class="col-lg-12 text-end mt-4">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 <a href="{{ url('production_services') }}" class="btn btn-secondary">Cancel</a>

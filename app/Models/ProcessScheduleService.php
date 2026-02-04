@@ -10,7 +10,7 @@ class ProcessScheduleService extends Model
     use HasFactory;
 
     protected $fillable = [
-        'process_schedule_id', 'service_id', 'applies_to', 'calculated_qty', 'uom'
+        'process_schedule_id', 'service_id', 'applies_to', 'calculated_qty'
     ];
 
     public function processSchedule()

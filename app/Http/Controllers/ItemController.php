@@ -9,6 +9,7 @@ use App\Models\FabricType;
 use App\Models\Uom;
 use App\Models\SizeRatio;
 use App\Models\Color;
+use App\Models\Style;
 use App\Models\StoreCategory;
 use App\Models\RawMaterial;
 use App\Models\ServiceProvider;
@@ -224,19 +225,23 @@ class ItemController extends Controller
             }
         }
 
-        return view('items.add', [
-            'item'            => $item,
-            'brands'          => Brand::where('status', 'Active')->get(),
-            'brandCategories' => BrandCategory::where('status', 'Active')->get(),
-            'fabricTypes'     => FabricType::where('status', 'Active')->get(),
-            'uoms'            => Uom::where('status', 'Active')->get(),
-            'sizeRatios'      => SizeRatio::where('status', 'Active')->get(),
-            'colors'          => Color::get(),
-            'storeCategories' => StoreCategory::where('status', 'Active')->get(),
-            'materials'       => RawMaterial::where('status', 'Active')->get(),
-            'serviceProviders' => ServiceProvider::where('status', 'Active')->get(),
-            'operationStages'  => OperationStage::where('status', 'Active')->get(),
-        ]);
+        $brands = Brand::where('status', 'Active')->get();
+        $brandCategories = BrandCategory::where('status', 'Active')->get();
+        $fabricTypes = FabricType::where('status', 'Active')->get();
+        $uoms = Uom::where('status', 'Active')->get();
+        $sizeRatios = SizeRatio::where('status', 'Active')->get();
+        $colors = Color::where('status', 'Active')->get();
+        $styles = Style::active()->get();
+        $storeCategories = StoreCategory::active()->get();
+        $materials = RawMaterial::all();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
+        $operationStages = OperationStage::where('status', 'Active')->get();
+
+        return view('items.add', compact(
+            'item', 'brands', 'brandCategories', 'fabricTypes', 'uoms',
+            'sizeRatios', 'colors', 'styles', 'storeCategories', 'materials',
+            'serviceProviders', 'operationStages'
+        ));
     }
 
     public function view($id)

@@ -28,11 +28,15 @@ class StockEntryController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory']);
+            $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem']);
             if ($request->material_category) {
                 $query->whereHas('stockEntryItems', function($q) use ($request) {
                     $q->where('store_category_id', $request->material_category);
                 });
+            }
+
+            if ($request->entry_type) {
+                $query->where('entry_type', $request->entry_type);
             }
 
             if ($request->material) {
@@ -41,40 +45,103 @@ class StockEntryController extends Controller
                 });
             }
 
-            $stockEntries = $query->orderBy('id', 'desc')->get();
+            if ($request->art_no) {
+                $query->whereHas('stockEntryItems.grnEntryItem', function($q) use ($request) {
+                    $q->where('art_no', $request->art_no);
+                });
+            }
+
+            if ($request->grn_no) {
+                $query->whereHas('grnEntry', function($q) use ($request) {
+                    $q->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
+                });
+            }
+            // Eager load productionReceipt relationship for Finished Goods PO Number
+            $stockEntries = $query->with('productionReceipt.jobCard.purchaseOrder')->orderBy('id', 'desc')->get();
             $data = [];
             $count = 1;
 
             foreach ($stockEntries as $entry) {
-                $totalQtyIn = $entry->stockEntryItems->sum('qty_in');
-                $totalQtyOut = $entry->stockEntryItems->sum('qty_out');
+                $itemsToShow = $entry->stockEntryItems;
+                $isFinishedGoods = ($entry->entry_type === 'Finished Goods');
 
-                $firstItem = $entry->stockEntryItems->first();
-                $categoryDisplay = $firstItem && $firstItem->storeCategory 
-                    ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>'
-                    : '-';
-                $materialDisplay = $firstItem && $firstItem->rawMaterial 
-                    ? $firstItem->rawMaterial->name . ' <span class="mini-title">(' . $firstItem->rawMaterial->code . ')</span>'
-                    : ($firstItem && $firstItem->finished_item_code ? $firstItem->finished_item_code : '-');
+                if ($isFinishedGoods) {
+                    foreach ($itemsToShow as $item) {
+                        $materialDisplay = $item->finished_item_code ?: '-';
+                        if ($item->size) {
+                            $materialDisplay .= ' <span class="badge bg-label-secondary mx-1">' . $item->size . '</span>';
+                        }
 
-                $action = '<div class="button-box">';
-                $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
-                $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
-                if (auth()->id() == 1 || auth()->user()->can('edit stock entries')) {
-                    $action .= '<a href="' . url('stock_entries/add/' . $entry->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                        $action = '<div class="button-box">';
+                        $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
+                        /* if (auth()->id() == 1 || auth()->user()->can('edit stock entries')) {
+                            $action .= '<a href="' . url('stock_entries/add/' . $entry->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                        } */
+                        $action .= '</div>';
+
+                        $poNumber = '-';
+                        if ($entry->productionReceipt 
+                            && $entry->productionReceipt->jobCard 
+                            && $entry->productionReceipt->jobCard->purchaseOrder) {
+                            $poNumber = $entry->productionReceipt->jobCard->purchaseOrder->po_number;
+                        }
+
+                        $data[] = [
+                            'DT_RowIndex' => $count++,
+                            'stock_entry_no' => $entry->stock_entry_no,
+                            'stock_date' => $entry->stock_date->format('d-m-Y'),
+                            'material_category' => '<span class="badge bg-label-info">Finished Goods</span>',
+                            'art_no' => '-',
+                            'material' => $materialDisplay,
+                            'grn_no' => $poNumber,
+                            'total_qty' => '+' . number_format($item->qty_in, 2),
+                            'action' => $action,
+                        ];
+                    }
+                } else {
+                    $totalQtyIn = $entry->stockEntryItems->sum('qty_in');
+                    $totalQtyOut = $entry->stockEntryItems->sum('qty_out');
+
+                    $firstItem = $entry->stockEntryItems->first();
+                    if ($request->art_no) {
+                        $matchedItem = $entry->stockEntryItems->first(function($item) use ($request) {
+                            return $item->grnEntryItem && $item->grnEntryItem->art_no === $request->art_no;
+                        });
+                        if ($matchedItem) {
+                            $firstItem = $matchedItem;
+                        }
+                    }
+
+                    $categoryDisplay = $firstItem && $firstItem->storeCategory 
+                        ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>'
+                        : '-';
+                    
+                    $artNo = $firstItem && $firstItem->grnEntryItem ? $firstItem->grnEntryItem->art_no : '-';
+                    
+                    $materialDisplay = $firstItem && $firstItem->rawMaterial 
+                        ? $firstItem->rawMaterial->name . ' <span class="mini-title">(' . $firstItem->rawMaterial->code . ')</span>'
+                        : ($firstItem && $firstItem->finished_item_code ? $firstItem->finished_item_code : '-');
+
+                    $action = '<div class="button-box">';
+                    $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-art-no="' . $artNo . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
+                    $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
+                    if (auth()->id() == 1 || auth()->user()->can('edit stock entries')) {
+                        $action .= '<a href="' . url('stock_entries/add/' . $entry->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                    }
+                    $action .= '</div>';
+
+                    $data[] = [
+                        'DT_RowIndex' => $count++,
+                        'stock_entry_no' => $entry->stock_entry_no,
+                        'stock_date' => $entry->stock_date->format('d-m-Y'),
+                        'material_category' => $categoryDisplay,
+                        'art_no' => $artNo,
+                        'material' => $materialDisplay,
+                        'grn_no' => $entry->grnEntry->grn_number ?? '-',
+                        'total_qty' => $totalQtyIn > 0 ? '+' . number_format($totalQtyIn, 2) : '-' . number_format($totalQtyOut, 2),
+                        'action' => $action,
+                    ];
                 }
-                $action .= '</div>';
-
-                $data[] = [
-                    'DT_RowIndex' => $count++,
-                    'stock_entry_no' => $entry->stock_entry_no,
-                    'stock_date' => $entry->stock_date->format('d-m-Y'),
-                    'material_category' => $categoryDisplay,
-                    'material' => $materialDisplay,
-                    'grn_no' => $entry->grnEntry->grn_number ?? '-',
-                    'total_qty' => $totalQtyIn > 0 ? '+' . number_format($totalQtyIn, 2) : '-' . number_format($totalQtyOut, 2),
-                    'action' => $action,
-                ];
             }
             return response()->json(['data' => $data]);
         }
@@ -158,6 +225,7 @@ class StockEntryController extends Controller
                 $headerData = [
                     'stock_date' => Carbon::createFromFormat('d-m-Y', $request->stock_date)->format('Y-m-d'),
                     'grn_entry_id' => $request->grn_entry_id,
+                    'entry_type' => 'Raw Material',
                     'from_store_location_id' => $request->from_store_location_id ?? null,
                     'to_store_location_id' => $request->store_location_id,
                     'remarks' => $request->remarks,

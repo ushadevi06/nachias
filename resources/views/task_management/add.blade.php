@@ -482,7 +482,7 @@
                                                     @foreach($adjItems as $index => $item)
                                                         <tr class="item-row">
                                                             <td>
-                                                                <select class="select2 form-select material-select" name="items[{{ $index }}][raw_material_id]" data-placeholder="Choose Material">
+                                                                <select class="select2 form-select material-select" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Material">
                                                                     <option value="">Select Material</option>
                                                                     @if(isset($item['raw_material_id']) && $item['raw_material_id'])
                                                                         @php $rm = \App\Models\RawMaterial::find($item['raw_material_id']); @endphp
@@ -493,7 +493,7 @@
                                                                 </select>
                                                             </td>
                                                             <td>
-                                                                <select class="form-select" name="items[{{ $index }}][adjustment_type]">
+                                                                <select class="form-select select2" name="items[{{ $index }}][adjustment_type]">
                                                                     <option value="Loss" {{ ($item['adjustment_type'] ?? '') == 'Loss' ? 'selected' : '' }}>Loss / Damage (-)</option>
                                                                     <option value="Rework" {{ ($item['adjustment_type'] ?? '') == 'Rework' ? 'selected' : '' }}>Rework (Consum.) (-)</option>
                                                                     <option value="Excess" {{ ($item['adjustment_type'] ?? '') == 'Excess' ? 'selected' : '' }}>Excess Found (+)</option>

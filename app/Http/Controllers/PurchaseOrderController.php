@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
-use App\Models\SalesAgent;
+use App\Models\PurchaseCommissionAgent;
 use App\Models\Supplier;
 use App\Models\StoreType;
 use App\Models\StoreCategory;
@@ -143,7 +143,7 @@ class PurchaseOrderController extends Controller
             $rules = [
                 'po_number' => 'required|string|max:50|unique:purchase_orders,po_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'po_date' => 'required|date',
-                'purchase_commission_agent_id' => 'nullable|exists:sales_agents,id',
+                'purchase_commission_agent_id' => 'nullable|exists:purchase_commission_agents,id',
                 'commission' => 'nullable|numeric|min:0|max:100',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'reference_no' => 'required|string|max:100', 
@@ -216,7 +216,6 @@ class PurchaseOrderController extends Controller
                     'reference_date' => Carbon::createFromFormat('d-m-Y', $request->reference_date)->format('Y-m-d'),
                     'due_date'       => Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d'),
                     'store_type_id' => $request->store_type_id,
-    
                     'payment_terms' => $request->payment_terms,
                     'status' => $request->status,
                     'total_qty' => $request->total_qty ?? 0,
@@ -310,7 +309,7 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        $salesAgents = SalesAgent::active()->get();
+        $purchaseCommissionAgents = PurchaseCommissionAgent::active()->get();
         $suppliers = Supplier::active()->get();
         $storeTypes = StoreType::get();
         $storeCategories = StoreCategory::active()->get();
@@ -339,7 +338,7 @@ class PurchaseOrderController extends Controller
                 $nextPoNumber = $prefix . $nextNumber;
             }
         }
-        return view('purchase_orders.add', compact('purchaseOrder', 'salesAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'brands', 'sizeRatios', 'nextPoNumber'));
+        return view('purchase_orders.add', compact('purchaseOrder', 'purchaseCommissionAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'brands', 'sizeRatios', 'nextPoNumber'));
     }
 
     public function view($id)

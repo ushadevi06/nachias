@@ -12,6 +12,7 @@ use App\Models\OperationStage;
 use App\Models\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ProductionStageConsumable;
 
 class ProductionController extends Controller
 {
@@ -145,14 +146,13 @@ class ProductionController extends Controller
             } elseif ($service->applies_to == 'Half Sleeve') {
                 $qty = $hsQty;
             }
-            $qty = (float)$qty * (float)($service->multiplier ?? 1);
+            
             return [
                 'id' => $service->id,
                 'service_code' => $service->service_code,
                 'service_name' => $service->service_name,
                 'applies_to' => $service->applies_to,
-                'qty' => $qty,
-                'uom' => $service->uom
+                'qty' => $qty
             ];
         });
 
@@ -164,21 +164,37 @@ class ProductionController extends Controller
         $rules = [
             'job_card_entry_id' => 'required|exists:job_card_entries,id',
             'plant_id' => 'required',
-            'planned_start_date' => 'required',
-            'planned_end_date' => 'required',
-            'expected_completion_date' => 'required',
-            'status' => 'required',
+            'planned_start_date' => 'required|date_format:d-m-Y',
+            'planned_end_date' => 'required|date_format:d-m-Y|after_or_equal:planned_start_date',
+            'expected_completion_date' => 'required|date_format:d-m-Y|after_or_equal:planned_end_date',
+            'status' => 'required|in:Draft,Confirmed,Closed',
             'schedules.*.planned_qty' => 'nullable|numeric|min:1',
-            'schedules.*.start_date' => 'required_with:schedules.*.planned_qty',
-            'schedules.*.end_date' => 'required_with:schedules.*.planned_qty',
+            'schedules.*.start_date' => 'required_with:schedules.*.planned_qty|nullable|date_format:d-m-Y',
+            'schedules.*.end_date' => 'required_with:schedules.*.planned_qty|nullable|date_format:d-m-Y|after_or_equal:schedules.*.start_date',
+            'schedules.*.due_date' => 'nullable|date_format:d-m-Y|after_or_equal:schedules.*.end_date',
             'schedules.*.scheduled_to' => 'required_with:schedules.*.planned_qty',
         ];
 
         $messages = [
             'required' => 'This field is required.',
+            'required_with' => 'This field is required.',
+            'date_format' => 'Invalid date format (must be DD-MM-YYYY).',
+            'planned_end_date.after_or_equal' => 'Must be after or equal to Start Date',
+            'expected_completion_date.after_or_equal' => 'Must be after or equal to End Date',
+            'schedules.*.end_date.after_or_equal' => 'Must be after or equal to Start Date',
+            'schedules.*.due_date.after_or_equal' => 'Must be after or equal to End Date',
         ];
 
         $request->validate($rules, $messages);
+
+        $totalPlanned = $request->input('total_planned_qty');
+        if ($request->has('schedules')) {
+            foreach ($request->input('schedules') as $key => $schedule) {
+                if (!empty($schedule['planned_qty']) && $schedule['planned_qty'] > $totalPlanned) {
+                    return back()->withErrors(['schedules.'.$key.'.planned_qty' => 'Cannot exceed Total Planned Qty (' . $totalPlanned . ')'])->withInput();
+                }
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -214,9 +230,7 @@ class ProductionController extends Controller
             if ($request->has('schedules')) {
                 foreach ($request->input('schedules') as $stageId => $scheduleData) {
                     if (empty($scheduleData['planned_qty'])) continue;
-
                     $stageName = OperationStage::find($stageId)->operation_stage_name ?? 'Unknown';
-
                     $schedule = ProcessSchedule::create([
                         'production_id' => $productionId,
                         'stage' => $stageName, 
@@ -234,27 +248,153 @@ class ProductionController extends Controller
                     if (isset($scheduleData['services'])) {
                         foreach ($scheduleData['services'] as $service) {
                             if (isset($service['selected']) && $service['selected'] == 1) {
-                                \Log::info("Attempting to create ProcessScheduleService", [
-                                    'process_schedule_id' => $schedule->id,
-                                    'service_id' => $service['service_id'] ?? 'MISSING',
-                                    'applies_to' => $service['applies_to'] ?? 'MISSING',
-                                    'qty' => $service['qty'] ?? '0'
-                                ]);
-
-                                if (!\App\Models\ProductionService::where('id', $service['service_id'])->exists()) {
-                                    \Log::error("Production Service ID does not exist: " . $service['service_id']);
-                                    continue;
-                                }
-
                                 ProcessScheduleService::create([
                                     'process_schedule_id' => $schedule->id,
                                     'service_id' => $service['service_id'],
                                     'applies_to' => $service['applies_to'],
-                                    'calculated_qty' => $service['qty'],
-                                    'uom' => $service['uom']
+                                    'calculated_qty' => $service['qty']
                                 ]);
                             }
                         }
+                    }
+
+                    if ($data['status'] == 'Confirmed') {
+                        ProductionStageConsumable::where('production_id', $productionId)->forceDelete();
+
+                        $fsQty = $data['full_sleeve_qty'] ?? 0;
+                        $hsQty = $data['half_sleeve_qty'] ?? 0;
+                        
+                        $jobCard = JobCardEntry::with(['fabricDetails', 'sleeveMeters', 'issueItems.fabricDetail'])->find($data['job_card_entry_id']);
+                        
+                        if ($jobCard) {
+                            if ($jobCard->fabricDetails) {
+                                foreach ($jobCard->fabricDetails as $fabricDetail) {
+                                    $consumption = \App\Models\JobCardFabricConsumption::where('job_card_fabric_detail_id', $fabricDetail->id)->first();
+                                    
+                                    $fsRate = 0;
+                                    $hsRate = 0;
+
+                                    if ($consumption) {
+                                        $fsRate = $consumption->fs_cons;
+                                        $hsRate = $consumption->hs_cons;
+                                    } elseif ($fabricDetail->fs_qty > 0 || $fabricDetail->hs_qty > 0) {
+                                        $fsRate = $fabricDetail->fs_qty;
+                                        $hsRate = $fabricDetail->hs_qty;
+                                    } else {
+                                        $fsSleeve = $jobCard->sleeveMeters->where('sleeve_type', 'Full Sleeve')->first();
+                                        $hsSleeve = $jobCard->sleeveMeters->where('sleeve_type', 'Half Sleeve')->first();
+                                        $fsRate = $fsSleeve ? $fsSleeve->meter : 0;
+                                        $hsRate = $hsSleeve ? $hsSleeve->meter : 0;
+                                    }
+                                    
+                                    $fsConsumption = $fsQty * $fsRate;
+                                    $hsConsumption = $hsQty * $hsRate;
+                                    $totalActual = $fsConsumption + $hsConsumption;
+
+                                    if ($totalActual > 0) {
+                                        $rawMaterialId = null;
+                                        $uomId = null;
+                                        $artNo = trim($fabricDetail->art_no);
+                                        
+                                        $stockItem = \DB::table('stock_entry_items')
+                                            ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
+                                            ->where('grn_entry_items.art_no', $artNo)
+                                            ->select('stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')
+                                            ->first();
+                                        
+                                        if ($stockItem) {
+                                            $rawMaterialId = $stockItem->raw_material_id;
+                                            $uomId = $stockItem->uom_id;
+                                        }
+                                        
+                                        $sleeveType = 'All';
+                                        if ($fsConsumption > 0 && $hsConsumption == 0) {
+                                            $sleeveType = 'F/S';
+                                        } elseif ($hsConsumption > 0 && $fsConsumption == 0) {
+                                            $sleeveType = 'H/S';
+                                        }
+
+                                        ProductionStageConsumable::create([
+                                            'job_card_id' => $data['job_card_entry_id'],
+                                            'production_id' => $productionId,
+                                            'production_stage_id' => $stageId, 
+                                            'stage' => $stageName,
+                                            'art_no' => $artNo,
+                                            'item_type' => 'Consumable',
+                                            'raw_material_id' => $rawMaterialId,
+                                            'planned_qty' => ($scheduleData['planned_qty'] ?? 0),
+                                            'fs_qty' => $fsConsumption,
+                                            'hs_qty' => $hsConsumption,
+                                            'total_qty' => $totalActual,
+                                            'actual_qty' => $totalActual,
+                                            'uom_id' => $uomId,
+                                            'sleeve_type' => $sleeveType,
+                                            'status' => 'Active',
+                                            'remarks' => "Article: {$artNo}, FS: ".number_format($fsConsumption, 2)." ({$fsQty} x {$fsRate}), HS: ".number_format($hsConsumption, 2)." ({$hsQty} x {$hsRate})",
+                                            'created_by' => Auth::id()
+                                        ]);
+                                    }
+                                }
+                            }
+
+                            if ($jobCard->issueItems) {
+                                foreach ($jobCard->issueItems as $issueItem) {
+                                    $rate = $issueItem->average ?? 0;
+                                    $totalConsumption = $data['total_planned_qty'] * $rate;
+
+                                    if ($totalConsumption > 0) {
+                                        $artNo = null;
+                                        $rawMaterialId = null;
+                                        $uomId = null;
+
+                                        if ($issueItem->stock_entry_item_id) {
+                                            $stockInfo = \DB::table('stock_entry_items')
+                                                ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
+                                                ->where('stock_entry_items.id', $issueItem->stock_entry_item_id)
+                                                ->select('grn_entry_items.art_no', 'stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')
+                                                ->first();
+                                            
+                                            if ($stockInfo) {
+                                                $artNo = $stockInfo->art_no;
+                                                $rawMaterialId = $stockInfo->raw_material_id;
+                                                $uomId = $stockInfo->uom_id;
+                                            }
+                                        }
+
+                                        $fs_comp = ($data['full_sleeve_qty'] ?? 0) * $rate;
+                                        $hs_comp = ($data['half_sleeve_qty'] ?? 0) * $rate;
+
+                                        $sleeveType = 'All';
+                                        if ($fs_comp > 0 && $hs_comp == 0) {
+                                            $sleeveType = 'F/S';
+                                        } elseif ($hs_comp > 0 && $fs_comp == 0) {
+                                            $sleeveType = 'H/S';
+                                        }
+
+                                        ProductionStageConsumable::create([
+                                            'job_card_id' => $data['job_card_entry_id'],
+                                            'production_id' => $productionId,
+                                            'production_stage_id' => $stageId,
+                                            'stage' => $stageName,
+                                            'art_no' => $artNo,
+                                            'item_type' => 'Consumable',
+                                            'raw_material_id' => $rawMaterialId,
+                                            'planned_qty' => ($scheduleData['planned_qty'] ?? 0),
+                                            'fs_qty' => $fs_comp,
+                                            'hs_qty' => $hs_comp,
+                                            'total_qty' => $totalConsumption,
+                                            'actual_qty' => $totalConsumption,
+                                            'uom_id' => $uomId,
+                                            'sleeve_type' => $sleeveType,
+                                            'status' => 'Active',
+                                            'remarks' => "Consumable: {$artNo}, Rate: {$rate}",
+                                            'created_by' => Auth::id()
+                                        ]);
+                                    }
+                                }
+                            }
+                        }
+                        break; 
                     }
                 }
             }
@@ -271,7 +411,7 @@ class ProductionController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view production')) {
             return unauthorizedRedirect();
         }
-        $production = Production::with(['processSchedules.services.productionService', 'processSchedules.serviceProvider', 'jobCard.purchaseOrder', 'plant', 'processGroup'])->findOrFail($id);
+        $production = Production::with(['processSchedules.services.productionService', 'processSchedules.serviceProvider', 'jobCard.purchaseOrder', 'plant', 'processGroup', 'consumables.rawMaterial', 'consumables.uom'])->findOrFail($id);
         return view('productions/view_details', compact('production'));
     }
 }

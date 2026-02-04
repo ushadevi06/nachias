@@ -2,6 +2,28 @@
 @section('title', 'Production Planning - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
+   @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="alert alert-warning alert-dismissible fade show">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+    @if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show">
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
     <div class="row justify-content-center">
         <div class="col-lg-12 col-xl-11">
             <form action="{{ url('productions/add' . ($production ? '/' . $production->id : '')) }}" method="POST" class="common-form">
@@ -38,7 +60,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="po_no_display" value="{{ optional($production)->purchase_order_no }}" readonly>
+                                    <input type="text" class="form-control" id="po_no_display" value="{{ old('purchase_order_no', optional($production)->purchase_order_no) }}" readonly>
                                     <input type="hidden" name="purchase_order_id" id="purchase_order_id" value="{{ old('purchase_order_id', optional($production)->purchase_order_id) }}">
                                     <input type="hidden" name="purchase_order_no" id="purchase_order_no" value="{{ old('purchase_order_no', optional($production)->purchase_order_no) }}">
                                     <label>Purchase Order No</label>
@@ -60,7 +82,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="process_group_display" value="{{ optional($production)->processGroup ? $production->processGroup->name : '' }}" readonly>
+                                    <input type="text" class="form-control" id="process_group_display" name="process_group_name" value="{{ old('process_group_name', optional($production)->processGroup ? $production->processGroup->name : '') }}" readonly>
                                     <input type="hidden" name="process_group_id" id="process_group_id" value="{{ old('process_group_id', optional($production)->process_group_id) }}">
                                     <label>Process Group</label>
                                 </div>
@@ -140,7 +162,7 @@
                     <div class="card-header border-bottom py-3 bg-light">
                         <div class="d-flex align-items-center justify-content-between">
                             <h5 class="mb-0 fw-bold d-flex align-items-center">
-                                <i class="ri ri-node-tree me-2 text-info"></i> Module 2: Process Schedule
+                                <i class="icon-base ri ri-node-tree me-2"></i> Module 2: Process Schedule
                             </h5>
                         </div>
                     </div>
@@ -212,7 +234,7 @@
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="form-floating form-floating-outline">
-                                                    <select class="form-select select2 schedule-input" name="schedules[{{ $stage->id }}][scheduled_to]" data-field="scheduled_to" data-plac>
+                                                    <select class="form-select select2 schedule-input" name="schedules[{{ $stage->id }}][scheduled_to]" data-field="scheduled_to" data-placeholder="Select Unit">
                                                         <option value="">Select Unit</option>
                                                         @foreach($plants as $plant)
                                                             <option value="{{ $plant->name }}">{{ $plant->name }}</option>
@@ -235,7 +257,6 @@
                                                                 <th>Service Name</th>
                                                                 <th>Applies To</th>
                                                                 <th class="text-end">Qty</th>
-                                                                <th>UOM</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody id="services-tbody-{{ $stage->id }}">
@@ -269,9 +290,7 @@
                 </div>
                  <div class="mt-4">
                     <div class="text-end">
-                        <button type="submit" class="btn btn-primary px-4 me-2">
-                            <i class="ri ri-save-line me-1"></i> Submit
-                        </button>
+                        <button type="submit" class="btn btn-primary px-4 me-2">Submit</button>
                         <a href="{{ url('productions') }}" class="btn btn-secondary px-4">Cancel</a>
                     </div>
                 </div>
@@ -325,7 +344,63 @@
     @endif
 
     $(document).ready(function() {
-        $('.date-picker').flatpickr({ dateFormat: 'd-m-Y' });
+        const startDate = $("#start_date").flatpickr({
+            dateFormat: 'd-m-Y',
+            onChange: function(selectedDates, dateStr, instance) {
+                endDate.set('minDate', dateStr);
+                if(completionDate.selectedDates[0] < selectedDates[0]) {
+                    completionDate.clear();
+                }
+            }
+        });
+
+        const endDate = $("#end_date").flatpickr({
+            dateFormat: 'd-m-Y',
+            onChange: function(selectedDates, dateStr, instance) {
+                completionDate.set('minDate', dateStr);
+                if(startDate.selectedDates.length > 0) {
+                    this.set('minDate', startDate.element.value);
+                }
+            }
+        });
+
+        const completionDate = $("#completion_date").flatpickr({
+            dateFormat: 'd-m-Y',
+             onChange: function(selectedDates, dateStr, instance) {
+                 if(endDate.selectedDates.length > 0) {
+                    this.set('minDate', endDate.element.value);
+                }
+            }
+        });
+
+        if($("#start_date").val()) endDate.set('minDate', $("#start_date").val());
+        if($("#end_date").val()) completionDate.set('minDate', $("#end_date").val());
+        
+        function initScheduleDatePickers() {
+            $('.date-picker').not('#start_date, #end_date, #completion_date').flatpickr({ dateFormat: 'd-m-Y' });
+        }
+        initScheduleDatePickers();
+
+         $(document).on('change', '.schedule-input[data-field="start_date"]', function() {
+            let val = $(this).val();
+            let parentRow = $(this).closest('.row'); 
+            let endInput = parentRow.find('.schedule-input[data-field="end_date"]');
+            
+            if(endInput.length && endInput[0]._flatpickr) {
+                endInput[0]._flatpickr.set('minDate', val);
+            }
+         });
+
+         $(document).on('change', '.schedule-input[data-field="end_date"]', function() {
+            let val = $(this).val();
+            let parentRow = $(this).closest('.row');
+            let dueInput = parentRow.find('.schedule-input[data-field="due_date"]');
+            
+            if(dueInput.length && dueInput[0]._flatpickr) {
+                dueInput[0]._flatpickr.set('minDate', val);
+            }
+         });
+
         $('.select2').each(function() {
             if (!$(this).data('select2')) {
                 $(this).select2({ placeholder: "Select", allowClear: true, width: '100%' });
@@ -367,8 +442,8 @@
             
             $('.step').each(function() {
                 if ($(this).hasClass('completed')) {
-                    $(this).find('.bs-stepper-circle').html('<i class="ri-check-line"></i>');
-                    $(this).find('.bs-stepper-circle').html('<i class="ri-check-line"></i>');
+                    $(this).find('.bs-stepper-circle').html('<i class="ri ri-check-line"></i>');
+                    $(this).find('.bs-stepper-circle').html('<i class="ri ri-check-line"></i>');
                 } else if($(this).hasClass('active')) {
                     const num = $(this).index('.step') + 1;
                     $(this).find('.bs-stepper-circle').html(num);
@@ -403,11 +478,10 @@
                 $(`select[name="schedules[${stageId}][scheduled_to]"]`).val(data.scheduled_to).trigger('change');
             } else {
                 const inputQty = $(`input[name="schedules[${stageId}][planned_qty]"]`);
-                if(inputQty.val() === '' && $('#planned_qty').val()) {
+                if($('#planned_qty').val()) {
                     inputQty.val($('#planned_qty').val());
                 }
             }
-
             fetchServicesForStage(stageId, stageName, jobCardId);
         }
 
@@ -441,12 +515,10 @@
                                         <input type="hidden" name="schedules[${stageId}][services][${index}][service_id]" value="${service.id}">
                                         <input type="hidden" name="schedules[${stageId}][services][${index}][applies_to]" value="${service.applies_to}">
                                         <input type="hidden" name="schedules[${stageId}][services][${index}][qty]" value="${service.qty}">
-                                        <input type="hidden" name="schedules[${stageId}][services][${index}][uom]" value="${service.uom}">
                                     </td>
                                     <td>${service.service_name}</td>
                                     <td><span class="badge bg-label-info">${service.applies_to}</span></td>
                                     <td class="text-end fw-bold">${service.qty}</td>
-                                    <td>${service.uom}</td>
                                 </tr>
                             `);
                         });

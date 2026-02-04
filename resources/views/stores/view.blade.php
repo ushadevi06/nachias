@@ -5,7 +5,7 @@
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Stores (Production)</h4>
+                <h4>Stores</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create stores'))
                 <a class="btn btn-primary" href="{{ url('stores/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add

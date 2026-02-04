@@ -30,7 +30,6 @@
                                     <th>#</th>
                                     <th>Operation Stage Name</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -72,11 +71,6 @@
                 },
                 {
                     data: 'status',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'action',
                     orderable: false,
                     searchable: false
                 }
