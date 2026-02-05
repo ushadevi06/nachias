@@ -220,6 +220,7 @@ class ProductionController extends Controller
                 $production = Production::find($id); 
                 addLog('update', 'Production', 'productions', $id, $oldData, $production->toArray());
                 ProcessSchedule::where('production_id', $productionId)->delete();
+                ProductionStageConsumable::where('production_id', $productionId)->forceDelete();
             } else {
                 $data['created_by'] = Auth::id();
                 $production = Production::create($data);
@@ -259,8 +260,6 @@ class ProductionController extends Controller
                     }
 
                     if ($data['status'] == 'Confirmed') {
-                        ProductionStageConsumable::where('production_id', $productionId)->forceDelete();
-
                         $fsQty = $data['full_sleeve_qty'] ?? 0;
                         $hsQty = $data['half_sleeve_qty'] ?? 0;
                         
@@ -296,11 +295,7 @@ class ProductionController extends Controller
                                         $uomId = null;
                                         $artNo = trim($fabricDetail->art_no);
                                         
-                                        $stockItem = \DB::table('stock_entry_items')
-                                            ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
-                                            ->where('grn_entry_items.art_no', $artNo)
-                                            ->select('stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')
-                                            ->first();
+                                        $stockItem = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('grn_entry_items.art_no', $artNo)->select('stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')->first();
                                         
                                         if ($stockItem) {
                                             $rawMaterialId = $stockItem->raw_material_id;
@@ -394,7 +389,6 @@ class ProductionController extends Controller
                                 }
                             }
                         }
-                        break; 
                     }
                 }
             }

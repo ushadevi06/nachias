@@ -324,9 +324,7 @@
                                     <select id="collar_type" name="collar_type" class="form-select select2" data-placeholder="Select Collar Type">
                                         <option value="">Select Collar Type</option>
                                         @foreach($collarTypes as $type)
-                                            <option value="{{ $type->collar_type_name }}" {{ (old('collar_type', $jobCard ? $jobCard->collar_type : '') == $type->collar_type_name) ? 'selected' : '' }}>
-                                                {{ $type->collar_type_name }}
-                                            </option>
+                                            <option value="{{ $type->collar_type_name }}" {{ (old('collar_type', $jobCard ? $jobCard->collar_type : '') == $type->collar_type_name) ? 'selected' : '' }}>{{ $type->collar_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="collar_type">Collar Type</label>
@@ -379,9 +377,11 @@
                                 <div class="form-floating form-floating-outline">
                                     <select id="cutting_issue_unit" name="cutting_issue_unit" class="form-select select2" data-placeholder="Select Cutting Issue Unit">
                                         <option value="">Select Cutting Issue Unit</option>
-                                        <option value="Nachias Fashion Private Limited" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Nachias Fashion Private Limited') ? 'selected' : '' }}>Nachias Fashion Private Limited</option>
-                                        <option value="Samayanallur" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Samayanallur') ? 'selected' : '' }}>Samayanallur</option>
-                                        <option value="Kalavasal" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == 'Kalavasal') ? 'selected' : '' }}>Kalavasal</option>
+                                        @foreach($plants as $plant)
+                                            <option value="{{ $plant->id }}" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == $plant->id) ? 'selected' : '' }}>
+                                                {{ $plant->name }}
+                                            </option>
+                                        @endforeach
                                     </select>
                                     <label for="cutting_issue_unit">Cutting Issue Unit *</label>
                                 </div>
@@ -718,12 +718,6 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="mt-4 mb-4">
-                        <label for="stock_error_notes" class="form-label fw-bold text-secondary extra-small text-uppercase mb-2" style="letter-spacing: 1px;">Internal Validation Notes</label>
-                        <div style="background: #fcfcfc; border: 1.5px solid #eee; border-radius: 16px; padding: 4px; transition: all 0.3s ease-in-out;" onfocusin="this.style.borderColor='#ff5252'; this.style.boxShadow='0 0 0 4px rgba(255, 82, 82, 0.1)'" onfocusout="this.style.borderColor='#eee'; this.style.boxShadow='none'">
-                            <textarea class="form-control border-0 bg-transparent py-3 px-3 shadow-none" id="stock_error_notes" name="stock_error_notes" rows="2" style="border-radius: 12px; font-size: 0.95rem;" placeholder="Briefly explain the reason for ignoring this check if submitting anyway..."></textarea>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -731,19 +725,10 @@
                 <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold px-4 hover-lift" data-bs-dismiss="modal" style="font-size: 0.9rem;">
                     CANCEL
                 </button>
-                
-                <a href="{{ url('stock_entries') }}" id="modal_adjustment_btn" target="_blank" class="btn px-4 py-2 fw-bolder d-flex align-items-center justify-content-center gap-2" style="background: #f0f4f8; color: #1a73e8; border: 1px solid #d2e3fc; border-radius: 12px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); min-width: 180px;">
-                    <i class="ri ri-database-2-line fs-5"></i>
-                    ADJUSTMENT
-                </a>
 
                 <button type="button" class="btn px-4 py-2 fw-bolder d-flex align-items-center justify-content-center gap-2" id="btn-recheck-stock" style="background: #fff; color: #6200ee; border: 1px solid #6200ee; border-radius: 12px; transition: all 0.2s; min-width: 150px;">
                     <i class="ri ri-refresh-line fs-5"></i>
                     RE-CHECK STOCK
-                </button>
-
-                <button type="button" class="btn px-5 py-2 text-white fw-bolder text-uppercase shadow-lg hover-glow" style="background: linear-gradient(135deg, #6200ee 0%, #3700b3 100%); border: none; border-radius: 12px; letter-spacing: 0.5px; font-size: 0.9rem; transition: all 0.2s ease-in-out;" onclick="$('form.common-form').attr('data-skip-validation', 'true').submit();">
-                    IGNORE & PROCEED
                 </button>
             </div>
         </div>
@@ -799,7 +784,7 @@
 
         function performStockCheck(isRecheck = false) {
             const form = $('form.common-form');
-            if (isEditMode || form.attr('data-skip-validation') === 'true') return true;
+            if (form.attr('data-skip-validation') === 'true') return true;
 
             let isValid = true;
             let errors = [];
@@ -886,14 +871,33 @@
 
                 if ($matrixRow.length > 0) {
                     if (data.is_mtr) {
+                        let hasProcessedSizeWise = false;
                         for (const sz in data.size_wise_cons) {
                             const cons = data.size_wise_cons[sz];
                             const piecesFs = parseFloat($matrixRow.find('input').filter(function() { return (this.name || "").includes(`[fs_${sz}]`); }).val()) || 0;
                             const piecesHs = parseFloat($matrixRow.find('input').filter(function() { return (this.name || "").includes(`[hs_${sz}]`); }).val()) || 0;
-                            required += (cons.fs * piecesFs) + (cons.hs * piecesHs);
-                            if ((cons.fs > 0 || cons.hs > 0) && (piecesFs > 0 || piecesHs > 0)) {
-                                calcDetails += (calcDetails ? " + " : "") + `${sz}: (${cons.fs}*${piecesFs} F/S + ${cons.hs}*${piecesHs} H/S)`;
+                            if (piecesFs > 0 || piecesHs > 0) {
+                                required += (cons.fs * piecesFs) + (cons.hs * piecesHs);
+                                if (cons.fs > 0 || cons.hs > 0) {
+                                    calcDetails += (calcDetails ? " + " : "") + `${sz}: (${cons.fs}*${piecesFs} F/S + ${cons.hs}*${piecesHs} H/S)`;
+                                    hasProcessedSizeWise = true;
+                                }
                             }
+                        }
+
+                        // Handle global/default consumption for MTR items (like thread)
+                        if (!hasProcessedSizeWise && (data.default_fs_cons > 0 || data.default_hs_cons > 0)) {
+                            let totalFs = 0;
+                            let totalHs = 0;
+                            // Sum pieces from the FIRST row of the matrix (the master pieces row)
+                            const $masterRow = $('tr.cat1-row').first();
+                            $masterRow.find('input').each(function() {
+                                const name = $(this).attr('name') || "";
+                                if (name.includes('[fs_')) totalFs += parseFloat($(this).val()) || 0;
+                                else if (name.includes('[hs_')) totalHs += parseFloat($(this).val()) || 0;
+                            });
+                            required = (data.default_fs_cons * totalFs) + (data.default_hs_cons * totalHs);
+                            calcDetails = `Global: (${data.default_fs_cons} * ${totalFs} F/S) + (${data.default_hs_cons} * ${totalHs} H/S)`;
                         }
                     } else {
                         let totalPieces = 0;
@@ -1031,17 +1035,17 @@
         $('form.common-form').on('submit', function(e) {
             if ($(this).attr('data-skip-validation') === 'true') return;
 
+            e.preventDefault(); // Prevent automatic reload/submit until validation is done
+
             const grandTotal1 = $('#article-qty-matrix-1-grand-total').text().trim();
             const grandTotal2 = $('#article-qty-matrix-2-grand-total').text().trim();
             const total1 = parseFloat(grandTotal1) || 0;
             const total2 = parseFloat(grandTotal2) || 0;
 
             if (total1 <= 0 && total2 <= 0) {
-                $(this).attr('data-skip-validation', 'true');
+                $(this).attr('data-skip-validation', 'true').submit();
                 return; 
             }
-
-            e.preventDefault();
 
             const $form = $(this);
             const $btn = $form.find('[type="submit"]');
@@ -1363,7 +1367,7 @@
                             colSums[col] = (colSums[col] || 0) + val;
                             tableGrandTotal += val;
                             
-                            if (isMtr) {
+                            if (id === '#article-qty-matrix-1') {
                                 if (col.startsWith('fs')) totalFS += val;
                                 else if (col.startsWith('hs')) totalHS += val;
                             }
@@ -1983,6 +1987,31 @@
                 }
             });
         };
+
+        $('#cutting_issue_unit').on('change', function() {
+            const plantId = $(this).val();
+            const $masterSelect = $('#cutting_master');
+            
+            $masterSelect.empty().append('<option value="">Select Cutting Master</option>');
+            
+            if (plantId) {
+                $.ajax({
+                    url: `{{ url('get-employees-by-plant') }}/${plantId}?department_id=1`,
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.success && response.employees) {
+                            response.employees.forEach(function(emp) {
+                                $masterSelect.append(`<option value="${emp.id}">${emp.name}</option>`);
+                            });
+                            $masterSelect.trigger('change');
+                        }
+                    },
+                    error: function() {
+                        console.error('Error fetching employees');
+                    }
+                });
+            }
+        });
     });
 </script>
 <style>

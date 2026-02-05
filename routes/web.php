@@ -36,7 +36,6 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TaskCreationController;
 use App\Http\Controllers\TaskAssignmentController;
-use App\Http\Controllers\TaskTrackingMonitoringController;
 use App\Http\Controllers\TaskStatusUpdateController;
 use App\Http\Controllers\TaskManagementController;
 use App\Http\Controllers\DocumentRepositoryController;
@@ -74,7 +73,6 @@ use App\Http\Controllers\ProductionServiceController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ProductionReceiptController;
-use App\Http\Controllers\StockAdjustmentController;
 
 
 /*
@@ -423,12 +421,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     /* Task Adjustment */
     Route::post('task_adjustments/add/{id?}', [TaskManagementController::class, 'adjustment_add'])->name('task_adjustments.add');
 
-    /* Stock Adjustment (Standalone) */
-    Route::get('stock_adjustments', [StockAdjustmentController::class, 'index'])->name('stock_adjustments.index');
-    Route::get('stock_adjustments/edit/{id}', [StockAdjustmentController::class, 'edit'])->name('stock_adjustments.edit');
-    Route::post('stock_adjustments/add/{id?}', [StockAdjustmentController::class, 'store'])->name('stock_adjustments.store');
-    Route::delete('stock_adjustments/delete/{id}', [StockAdjustmentController::class, 'destroy'])->name('stock_adjustments.delete');
-    Route::get('stock_adjustments/get-task-materials/{taskId}', [StockAdjustmentController::class, 'get_task_materials'])->name('stock_adjustments.get_task_materials');
 
     /* Production Receipts */
     Route::get('production_receipts', [ProductionReceiptController::class, 'index']);
@@ -481,10 +473,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('add_task_assignment', [TaskAssignmentController::class, 'add']);
     Route::get('view_task_assignment', [TaskAssignmentController::class, 'view']);
 
-    /* Task Tracking & Monitoring */
-    Route::get('task_tracking_monitoring', [TaskTrackingMonitoringController::class, 'index']);
-    Route::get('add_task_tracking_monitoring', [TaskTrackingMonitoringController::class, 'add']);
-    Route::get('view_task_tracking_monitoring/{id}', [TaskTrackingMonitoringController::class, 'view']);
 
     /* Task Status Update */
     Route::get('task_status_updates', [TaskStatusUpdateController::class, 'index']);

@@ -439,7 +439,7 @@ class TaskManagementController extends Controller
 
     public function getStageConsumables($id)
     {
-        $schedule = \App\Models\ProcessSchedule::with(['operationStage', 'production.jobCard.fabricDetails'])->find($id);
+        $schedule = \App\Models\ProcessSchedule::with(['operationStage', 'production.jobCard.fabricDetails', 'production.jobCard.item'])->find($id);
         if (!$schedule) return response()->json(['success' => false]);
         
         $stageName = $schedule->operationStage->operation_stage_name ?? ($schedule->stage ?? '');
@@ -449,26 +449,39 @@ class TaskManagementController extends Controller
         $jobCard = $schedule->production->jobCard ?? null;
         $rmIdsFromArt = [];
         $rmIdsFromIssues = [];
+        $rmIdsFromItemMaster = [];
+
         if ($jobCard) {
-            $artNumbers = $jobCard->fabricDetails->pluck('art_no')->filter()->toArray();
-            $rmIdsFromArt = RawMaterial::where(function($q) use ($artNumbers) {
+            $artNumbers = $jobCard->fabricDetails->pluck('art_no')->filter()->map(function($val) { return trim($val); })->toArray();
+            
+            $rmIdsDirect = RawMaterial::where(function($q) use ($artNumbers) {
                 $q->whereIn('code', $artNumbers)->orWhereIn('name', $artNumbers);
             })->pluck('id')->toArray();
             
+            $rmIdsFromGrn = \App\Models\StockEntryItem::whereIn('grn_entry_item_id', function($query) use ($artNumbers) {
+                $query->select('id')
+                    ->from('grn_entry_items')
+                    ->whereIn('art_no', $artNumbers);
+            })->pluck('raw_material_id')->toArray();
+
             $rmIdsFromIssues = \App\Models\StockEntryItem::whereIn('id', function($q) use ($jobCard) {
                 $q->select('stock_entry_item_id')
                 ->from('job_card_issue_items')
                 ->where('job_card_entry_id', $jobCard->id)
                 ->whereNotNull('stock_entry_item_id');
             })->pluck('raw_material_id')->toArray();
+
+            if ($jobCard->item && !empty($jobCard->item->related_materials)) {
+                $rmIdsFromItemMaster = (array) $jobCard->item->related_materials;
+            }
+
+            $rmIdsFromArt = array_unique(array_merge($rmIdsDirect, $rmIdsFromGrn));
         }
 
-        $allRelatedRmIds = array_unique(array_merge($rmIdsFromArt, $rmIdsFromIssues, $consumableConfigs));
+        $allRelatedRmIds = array_unique(array_merge($rmIdsFromArt, $rmIdsFromIssues, $consumableConfigs, $rmIdsFromItemMaster));
         $materials = collect([]);
         if (!empty($allRelatedRmIds)) {
-            $materials = RawMaterial::whereIn('id', $allRelatedRmIds)
-                ->where('status', 'Active')
-                ->get();
+            $materials = RawMaterial::whereIn('id', $allRelatedRmIds)->where('status', 'Active')->get();
         }
 
         $formatted = $materials->map(function($m) {

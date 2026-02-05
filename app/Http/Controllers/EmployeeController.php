@@ -348,6 +348,10 @@ class EmployeeController extends Controller
             $query->where('service_provider_id', $plantId);
         }
         
+        if (request()->has('department_id')) {
+            $query->where('department_id', request()->department_id);
+        }
+
         if (request()->has('q')) {
             $query->where('name', 'like', '%' . request()->q . '%');
         }

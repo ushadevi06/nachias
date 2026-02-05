@@ -9,7 +9,6 @@ TRUNCATE `fabric_types`;
 TRUNCATE `places`;
 TRUNCATE `customers`;
 TRUNCATE `purchase_commission_agents`;
-TRUNCATE `raw_materials`;
 TRUNCATE `role_has_permissions`;
 TRUNCATE `sales_agents`;
 TRUNCATE `service_providers`;
@@ -34,6 +33,7 @@ TRUNCATE `pocket_types`;
 TRUNCATE `bottom_cuts`;
 
 TRUNCATE `brand_categories`;
+TRUNCATE `raw_materials`;
 TRUNCATE `brands`;
 TRUNCATE `store_categories`;
 TRUNCATE `items`;

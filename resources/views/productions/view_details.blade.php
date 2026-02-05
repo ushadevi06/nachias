@@ -107,7 +107,7 @@
                         </div>
                         <div class="col-md-3">
                             <label class="fw-bold small text-muted">Scheduled To</label>
-                            <div>{{ $schedule->scheduled_to ?? '-' }} ({{ $schedule->serviceProvider->code ?? '-' }})</div>
+                            <div>{{ $schedule->serviceProvider->name ?? $schedule->scheduled_to }} ({{ $schedule->serviceProvider->code ?? '-' }})</div>
                         </div>
                         <div class="col-md-6">
                             <label class="fw-bold small text-muted">Timeline</label>

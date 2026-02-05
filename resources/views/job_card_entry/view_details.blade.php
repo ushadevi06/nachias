@@ -66,12 +66,12 @@
                     <div class="text-center py-2 border-bottom" style="border-color: #eeeeee !important;">
                         <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                             <tr>
-                                <td class="fw-bold" style="font-size: 0.9rem; letter-spacing: 1px;">NACHIAS FASHION PVT LTD</td>
+                                <td class="fw-bold" style="font-size: 0.9rem; letter-spacing: 1px;">JOB CARD</td>
                             </tr>
                         </table>
                         <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                             <tr>
-                                <td style="width:20%;" class="fw-bold">JOB CARD</td>
+                                <td style="width:20%;" class="fw-bold"></td>
                                 <td style="width:60%;" class="fw-bold text-center">{{ strtoupper($jobCard->brand->brand_name ?? '') }}</td>
                                 <td style="width:10%;"></td>
                                 <td style="width:10%;">MARK CHECKER</td>
@@ -126,7 +126,7 @@
                                 <td class="fw-bold py-1">BOT.CUT</td>
                                 <td class="py-1 text-center">{{ strtoupper($jobCard->bottom_cut) ?: '-' }}</td>
                                 <td class="fw-bold py-1">CUTTING ISSUE UNIT</td>
-                                <td class="py-1">{{ $jobCard->cutting_issue_unit ?: '' }}</td>
+                                <td class="py-1">{{ $jobCard->cuttingIssueUnitMapping->name ?? $jobCard->cutting_issue_unit }}</td>
                                 <td class="fw-bold py-1"></td>
                             </tr>
 

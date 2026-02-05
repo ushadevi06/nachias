@@ -150,7 +150,7 @@
             <td class="fw-bold">AERO CUT</td>
             <td class="text-center"></td>
             <td class="fw-bold">CUTTING ISSUE UNIT</td>
-            <td>{{ $jobCard->cutting_issue_unit ?: '' }}</td>
+            <td>{{ $jobCard->cuttingIssueUnitMapping->name ?? $jobCard->cutting_issue_unit }}</td>
         </tr>
         {{-- Row 4 --}}
         <tr>

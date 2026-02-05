@@ -2,7 +2,7 @@
 @section('title', 'Production Planning - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
-   @if(session('success'))
+    {{-- @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">
         {{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -23,7 +23,7 @@
         </ul>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-    @endif
+    @endif --}}
     <div class="row justify-content-center">
         <div class="col-lg-12 col-xl-11">
             <form action="{{ url('productions/add' . ($production ? '/' . $production->id : '')) }}" method="POST" class="common-form">
@@ -237,7 +237,7 @@
                                                     <select class="form-select select2 schedule-input" name="schedules[{{ $stage->id }}][scheduled_to]" data-field="scheduled_to" data-placeholder="Select Unit">
                                                         <option value="">Select Unit</option>
                                                         @foreach($plants as $plant)
-                                                            <option value="{{ $plant->name }}">{{ $plant->name }}</option>
+                                                            <option value="{{ $plant->id }}">{{ $plant->name }}</option>
                                                         @endforeach
                                                     </select>
                                                     <label>Scheduled To <span class="text-danger">*</span></label>

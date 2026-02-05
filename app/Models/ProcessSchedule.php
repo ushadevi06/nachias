@@ -28,7 +28,7 @@ class ProcessSchedule extends Model
 
     public function serviceProvider()
     {
-        return $this->belongsTo(ServiceProvider::class, 'scheduled_to', 'name');
+        return $this->belongsTo(ServiceProvider::class, 'scheduled_to');
     }
 
     public function operationStage()

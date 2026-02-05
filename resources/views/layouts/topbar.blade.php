@@ -634,7 +634,7 @@ $isSuper = $user->id == 1;
 
                                 {{-- Production --}}
                                 @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card') || $user->can('view task-management') || $user->can('view stock-adjustment')))
-                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('production_receipts*') || request()->is('add_production*') || request()->is('view_production*') || request()->is('task_management*') || request()->is('stock_adjustments*')) ? 'active' : '' }}">
+                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('production_receipts*') || request()->is('add_production*') || request()->is('view_production*') || request()->is('task_management*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-inbox-line"></i>
                                         <div>Production</div>
