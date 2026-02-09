@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\FabricType;
+use App\Models\Item;
+use App\Models\RawMaterial;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -14,11 +16,9 @@ class FabricTypeController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-
             $fabricTypes = FabricType::orderBy('id','desc')->get();
             $data = [];
             $count = 1;
-
             foreach ($fabricTypes as $fabricType) {
                 $checked = $fabricType->status === 'Active' ? 'checked' : '';
                 $status = '
@@ -33,16 +33,13 @@ class FabricTypeController extends Controller
                     </span>
                 </label>
                 <div class="status_msg_' . $fabricType->id . '"></div>';
-
                 $action = '<div class="button-box">';
-
                 if (auth()->id() == 1 || auth()->user()->can('edit fabric-type')) {
                     $action .= '
                         <a href="' . url('fabric_type/add/' . $fabricType->id) . '" class="btn btn-edit">
                             <i class="icon-base ri ri-edit-box-line"></i>
                         </a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('delete fabric-type')) {
                     $action .= '
                         <a href="javascript:;" class="btn btn-delete"
@@ -50,9 +47,7 @@ class FabricTypeController extends Controller
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
                 }
-
                 $action .= '</div>';
-
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'fabric_type' => $fabricType->fabric_type,
@@ -60,7 +55,6 @@ class FabricTypeController extends Controller
                     'action' => $action,
                 ];
             }
-
             return response()->json(['data' => $data]);
         }
 
@@ -80,16 +74,12 @@ class FabricTypeController extends Controller
         }
         $fabricType = null;
         $oldData = null;
-
         if ($id) {
             $fabricType = FabricType::findOrFail($id);
             $oldData = $fabricType->toArray();
         }
-
         if (request()->isMethod('post')) {
-
             $request = request();
-
             $rules = [
                 'fabric_type' => [
                     'required',
@@ -101,31 +91,25 @@ class FabricTypeController extends Controller
                 ],
                 'status' => 'required|in:Active,Inactive'
             ];
-
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This Field already exists.',
             ];
-
             $request->validate($rules, $messages);
-
             $data = [
                 'fabric_type' => $request->fabric_type,
                 'status'      => $request->status
             ];
-
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 FabricType::where('id', $id)->update($data);
                 $newData = FabricType::find($id)->toArray();
-
                 addLog('update', 'Fabric Type', 'fabric_types', $id, $oldData, $newData);
                 $message = 'Fabric Type updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $fabricType = FabricType::create($data);
                 $newData = $fabricType->toArray();
-
                 addLog('create', 'Fabric Type', 'fabric_types', $fabricType->id, null, $newData);
                 $message = 'Fabric Type added successfully';
             }
@@ -142,12 +126,20 @@ class FabricTypeController extends Controller
             return unauthorizedRedirect();
         }
         $fabricType = FabricType::findOrFail($id);
+        $references = [
+            [Item::class, 'fabric_type_id', 'Items'],
+            [RawMaterial::class, 'fabric_type_id', 'Raw Materials'],
+        ];
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
+                session()->flash('danger', "This fabric type is currently referenced in {$label} and cannot be deleted.");
+                return redirect('fabric_type');
+            }
+        }
+
         $oldData = $fabricType->toArray();
-
         $fabricType->delete();
-
         addLog('delete', 'Fabric Type', 'fabric_types', $id, $oldData, null);
-
         return redirect('fabric_type')->with('success', 'Fabric Type deleted successfully');
     }
 
@@ -155,14 +147,10 @@ class FabricTypeController extends Controller
     {
         $fabricType = FabricType::findOrFail($id);
         $oldData = $fabricType->toArray();
-
         $fabricType->status = $request->status;
         $fabricType->save();
-
         $newData = $fabricType->toArray();
-
         addLog('update_status', 'Fabric Type Status', 'fabric_types', $id, $oldData, $newData);
-
         return response()->json([
             'success' => true,
             'status'  => $fabricType->status

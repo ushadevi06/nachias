@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
@@ -12,16 +13,11 @@ class DepartmentController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view departments')) {
             return unauthorizedRedirect();
         }
-
         if ($request->ajax()) {
-
             $departments = Department::latest()->get();
-
             $data = [];
             $i = 1;
-
             foreach ($departments as $row) {
-
                 $status = '
                 <label class="switch switch-success switch-lg">
                     <input type="checkbox" class="switch-input department-status-toggle"
@@ -32,23 +28,18 @@ class DepartmentController extends Controller
                     </span>
                 </label>
                 <div class="status_msg_' . $row->id . ' mt-1"></div>';
-
                 $action = '<div class="button-box">';
-
                 if (auth()->id() == 1 || auth()->user()->can('edit departments')) {
                     $action .= '<a href="' . url('departments/add/' . $row->id) . '" class="btn btn-edit">
                                     <i class="icon-base ri ri-edit-box-line"></i>
                                 </a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('delete departments')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('department/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
                 }
-
                 $action .= '</div>';
-
                 $data[] = [
                     'DT_RowIndex' => $i++,
                     'department' => $row->department,
@@ -110,6 +101,11 @@ class DepartmentController extends Controller
             return unauthorizedRedirect();
         }
         $department = Department::findOrFail($id);
+        if (Employee::where('department_id', $id)->exists()) {
+            session()->flash('danger', "This department is currently referenced in Employees and cannot be deleted.");
+            return redirect('departments');
+        }
+
         $oldData = $department->toArray();   
         $department->delete();             
         addLog('delete', 'Department', 'departments', $id, $oldData, null);

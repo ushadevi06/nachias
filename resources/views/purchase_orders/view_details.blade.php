@@ -69,7 +69,7 @@
                                         $attachment = $purchaseOrder->additional_attachments;
                                         $extension = pathinfo($attachment, PATHINFO_EXTENSION);
                                         $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                        $url = asset('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
+                                        $url = url('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
                                     @endphp
 
                                     @if($isImage)
@@ -147,7 +147,7 @@
                                             <td>{{ $item->remarks ?? '-' }}</td>
                                             <td>
                                                 @if($item->attached_file)
-                                                <a href="javascript:void(0)" class="view-image" data-image="{{ asset('uploads/purchase_orders/' . $item->attached_file) }}">
+                                                <a href="javascript:void(0)" class="view-image" data-image="{{ url('uploads/purchase_orders/' . $item->attached_file) }}">
                                                     <i class="ri ri-image-line"></i> View
                                                 </a>
                                                 @else

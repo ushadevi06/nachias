@@ -4,13 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductionService;
 use App\Models\OperationStage;
+use App\Models\ProcessScheduleService;
+use App\Models\TaskAdjustment;
 use Illuminate\Http\Request;
 
 class ProductionServiceController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view production services')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view production-services')) {
             return unauthorizedRedirect();
         }
 
@@ -34,13 +36,13 @@ class ProductionServiceController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit production services')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit production-services')) {
                     $action .= '<a href="' . url('production_services/add/' . $row->id) . '" class="btn btn-edit">
                                     <i class="icon-base ri ri-edit-box-line"></i>
                                 </a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete production services')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete production-services')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('production_services/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
@@ -68,11 +70,11 @@ class ProductionServiceController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit production services')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit production-services')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create production services')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create production-services')) {
                 return unauthorizedRedirect();
             }
         }
@@ -122,11 +124,20 @@ class ProductionServiceController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete production services')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete production-services')) {
             return unauthorizedRedirect();
         }
 
         $service = ProductionService::findOrFail($id);
+
+        if (ProcessScheduleService::where('service_id', $id)->exists()) {
+            return redirect('production_services')->with('danger', 'This service is currently referenced in Process Schedule Services and cannot be deleted.');
+        }
+
+        if (TaskAdjustment::where('service_id', $id)->exists()) {
+            return redirect('production_services')->with('danger', 'This service is currently referenced in Task Adjustments and cannot be deleted.');
+        }
+
         $oldData = $service->toArray();
         $service->delete();
         addLog('delete', 'Production Service', 'production_services', $id, $oldData, null);

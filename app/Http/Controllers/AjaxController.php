@@ -8,6 +8,7 @@ use App\Models\Charge;
 use App\Models\City;
 use App\Models\Place;
 use App\Models\RawMaterial;
+use App\Models\User;
 
 class AjaxController extends Controller
 {
@@ -42,5 +43,28 @@ class AjaxController extends Controller
         }
         $materials = RawMaterial::where('store_category_id', $categoryId)->whereNull('deleted_at')->select('id', 'name', 'code', 'uom_id')->get();
         return response()->json(['materials' => $materials]);
+    }
+    public function getEmployeesByPlant($plantId = null)
+    {
+        $query = User::where('status', 'Active')->where('id', '!=', 1);
+        if ($plantId && $plantId != 'null' && $plantId != 'undefined' && $plantId != 'all') {
+            $query->where('service_provider_id', $plantId);
+        }
+        
+        if (request()->has('department_id')) {
+            $query->where('department_id', request()->department_id);
+        }
+
+        if (request()->has('q')) {
+            $query->where('name', 'like', '%' . request()->q . '%');
+        }
+
+        $employees = $query->get(['id', 'name']);
+        
+        $formatted = $employees->map(function($e) {
+            return ['id' => $e->id, 'text' => $e->name];
+        });
+
+        return response()->json(['success' => true, 'employees' => $employees, 'results' => $formatted]);
     }
 }

@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\StoreLocation;
+use App\Models\StockEntryItem;
+use App\Models\StockEntry;
+use App\Models\ProductionReceipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -76,9 +79,7 @@ class StorelocationController extends Controller
         }
         $storeLocation = $id ? StoreLocation::findOrFail($id) : null;
         $oldData = $storeLocation ? $storeLocation->toArray() : null;
-
         if ($request->isMethod('post')) {
-
             $request->validate([
                 'store_location' => 'required|string|max:255|unique:store_locations,store_location,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive'
@@ -93,20 +94,15 @@ class StorelocationController extends Controller
                 $data['updated_by'] = auth()->id();
                 StoreLocation::where('id', $id)->update($data);
                 $newData = StoreLocation::find($id)->toArray();
-
                 addLog('update', 'Store Location', 'store_locations', $id, $oldData, $newData);
-
                 $msg = 'Store Location updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $storeLocation = StoreLocation::create($data);
                 $newData = $storeLocation->toArray();
-
                 addLog('create', 'Store Location', 'store_locations', $storeLocation->id, null, $newData);
-
                 $msg = 'Store Location added successfully';
             }
-
             return redirect('store_location')->with('success', $msg);
         }
 
@@ -120,27 +116,17 @@ class StorelocationController extends Controller
             return unauthorizedRedirect();
         }
         $storeLocation = StoreLocation::findOrFail($id);
-
-        $checks = [
-            ['table' => 'stock_entry_items', 'column' => 'store_location_id', 'label' => 'Stock Entry Items'],
-            ['table' => 'grn_entry_items', 'column' => 'store_location_id', 'label' => 'GRN Entry Items'],
+        $references = [
+            [StockEntryItem::class, 'store_location_id', 'Stock Entry Items'],
+            [StockEntry::class, 'from_store_location_id', 'Stock Entries (From Location)'],
+            [StockEntry::class, 'to_store_location_id', 'Stock Entries (To Location)'],
+            [ProductionReceipt::class, 'store_location_id', 'Production Receipts'],
         ];
-
-        foreach ($checks as $check) {
-            $table = $check['table'];
-            $column = $check['column'];
-            $label = $check['label'];
-
-            $query = \Illuminate\Support\Facades\DB::table($table)->where($column, $id);
-            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
-                $query->whereNull('deleted_at');
-            }
-
-            if ($query->exists()) {
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
                 return redirect('store_location')->with('danger', "This store location is currently referenced in {$label} and cannot be deleted.");
             }
         }
-
         $oldData = $storeLocation->toArray();
         $storeLocation->delete();
         addLog('delete', 'Store Location', 'store_locations', $id, $oldData, null);

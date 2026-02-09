@@ -104,9 +104,9 @@
             <td class="fw-bold" style="width: 10%;">CUTTING NO</td>
             <td style="width: 12%;">{{ $jobCard->job_card_no }}</td>
             <td class="fw-bold" style="width: 5%;">FIT</td>
-            <td class="text-center" style="width: 25%;">{{ strtoupper($jobCard->fit) ?: '-' }}</td>
+            <td class="text-center" style="width: 25%;">{{ strtoupper($jobCard->fit->fit_name ?? '-') }}</td>
             <td class="fw-bold" style="width: 5%;">CUFF</td>
-            <td class="text-center" style="width: 10%;">{{ strtoupper($jobCard->cuff_type) ?: '-' }}</td>
+            <td class="text-center" style="width: 10%;">{{ strtoupper($jobCard->cuffType->cuff_type_name ?? '-') }}</td>
             <td class="fw-bold" style="width: 5%;">CROSS</td>
             <td class="text-center" style="width: 10%;"></td>
             <td class="fw-bold" style="width: 10%;">CUTTING MASTER</td>
@@ -126,9 +126,9 @@
             <td class="fw-bold">ISSUE DATE</td>
             <td>{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
             <td class="fw-bold">N.PATTI</td>
-            <td class="text-center">{{ strtoupper($jobCard->patti_type) ?: '-' }}</td>
+            <td class="text-center">{{ strtoupper($jobCard->pattiType->patti_type_name ?? '-') }}</td>
             <td class="fw-bold">POCKET</td>
-            <td class="text-center">{{ strtoupper($jobCard->pocket_type) ?: '-' }}</td>
+            <td class="text-center">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? '-') }}</td>
             <td class="fw-bold">CROSS</td>
             <td class="text-center"></td>
             <td class="fw-bold">CUTTING DATE</td>
@@ -144,9 +144,9 @@
             <td class="fw-bold">DELIVERY DATE</td>
             <td>{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
             <td class="fw-bold">COLLAR</td>
-            <td class="text-center">{{ strtoupper($jobCard->collar_type) ?: '-' }}</td>
+            <td class="text-center">{{ strtoupper($jobCard->collarType->collar_type_name ?? '-') }}</td>
             <td class="fw-bold">BOT.CUT</td>
-            <td class="text-center">{{ strtoupper($jobCard->bottom_cut) ?: '-' }}</td>
+            <td class="text-center">{{ strtoupper($jobCard->bottomCut->bottom_cut_name ?? '-') }}</td>
             <td class="fw-bold">AERO CUT</td>
             <td class="text-center"></td>
             <td class="fw-bold">CUTTING ISSUE UNIT</td>

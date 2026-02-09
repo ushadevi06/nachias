@@ -73,6 +73,8 @@ use App\Http\Controllers\ProductionServiceController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ProductionReceiptController;
+use App\Http\Controllers\ProcessGroupController;
+use App\Http\Controllers\SeasonController;
 
 
 /*
@@ -110,6 +112,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/raw-materials-by-category/{categoryId}', [AjaxController::class, 'getRawMaterialsByCategory']);
     Route::get('/get_charges', [AjaxController::class, 'getCharges']);
     Route::get('get-materials-by-category/{category_id}', [AjaxController::class, 'getMaterialsByCategory']);
+    Route::get('get-employees-by-plant/{plantId?}', [AjaxController::class, 'getEmployeesByPlant']);
+
 
     /* Employees */
     Route::get('employees', [EmployeeController::class, 'index']);
@@ -117,7 +121,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('employees/add/{id?}', [EmployeeController::class, 'add']);
     Route::post('employees/status/{id}', [EmployeeController::class, 'updateStatus']);
     Route::get('employees/delete/{id}', [EmployeeController::class, 'destroy']);
-    Route::get('get-employees-by-plant/{plantId?}', [EmployeeController::class, 'getEmployeesByPlant']);
 
     /* States */
     Route::get('/states', [StateController::class, 'index']);
@@ -173,7 +176,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['GET', 'POST'], '/purchase_commission_agent/add/{id?}', [PurchaseCommissionAgentController::class, 'add']);
     Route::get('view_purchase_commission_agent/{id}', [PurchaseCommissionAgentController::class, 'view']);
     Route::post('purchase_commission_agent/status/{id}', [PurchaseCommissionAgentController::class, 'updateStatus']);
-    Route::delete('purchase_commission_agent/delete/{id}', [PurchaseCommissionAgentController::class, 'destroy']);
+    Route::get('purchase_commission_agent/delete/{id}', [PurchaseCommissionAgentController::class, 'destroy']);
 
     /* Store location */
     Route::get('/store_location', [StorelocationController::class, 'index']);
@@ -235,6 +238,18 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/bottom_cuts/delete/{id}', [BottomCutController::class, 'destroy']);
     Route::post('/bottom_cuts/status/{id}', [BottomCutController::class, 'updateStatus']);
 
+    /* Process Groups */
+    Route::get('/process_groups', [ProcessGroupController::class, 'index']);
+    Route::match(['GET', 'POST'], '/process_groups/add/{id?}', [ProcessGroupController::class, 'add']);
+    Route::get('/process_groups/delete/{id}', [ProcessGroupController::class, 'destroy']);
+    Route::post('/process_groups/status/{id}', [ProcessGroupController::class, 'updateStatus']);
+
+    /* Seasons */
+    Route::get('/seasons', [SeasonController::class, 'index']);
+    Route::match(['GET', 'POST'], '/seasons/add/{id?}', [SeasonController::class, 'add']);
+    Route::get('/seasons/delete/{id}', [SeasonController::class, 'destroy']);
+    Route::post('/seasons/status/{id}', [SeasonController::class, 'updateStatus']);
+
     /* Brands */
     Route::get('brands', [BrandController::class, 'index']);
     Route::match(['GET', 'POST'], 'brands/add/{id?}', [BrandController::class, 'add']);
@@ -274,7 +289,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['get','post'],'service_providers/add', [ServiceProviderController::class, 'add']);
     Route::post('/service_provider/status/{id}', [ServiceProviderController::class, 'updateStatus']);
     Route::match(['get','post'],'service_providers/add/{id}', [ServiceProviderController::class, 'add']);
-    Route::delete('service_provider/delete/{id}', [ServiceProviderController::class, 'destroy']);
+    Route::get('service_provider/delete/{id}', [ServiceProviderController::class, 'destroy']);
 
     /* Sales Agents */
     Route::get('sales_agents', [SalesAgentController::class, 'index']);

@@ -47,7 +47,7 @@
                                     @enderror
                                     @if(isset($setting) && $setting->logo)
                                     <div class="mt-2">
-                                        <img src="{{ asset('uploads/logo/' . $setting->logo) }}"
+                                        <img src="{{ url('uploads/logo/' . $setting->logo) }}"
                                             alt="Current Logo"
                                             style="max-width: 100px; max-height: 100px;">
                                     </div>

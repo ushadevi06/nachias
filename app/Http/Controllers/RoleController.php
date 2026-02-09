@@ -23,32 +23,20 @@ class RoleController extends Controller
 
             foreach ($roles as $role) {
                 $checked = $role->status === 'Active' ? 'checked' : '';
-
                 $statusSwitch = '
                 <label class="switch switch-success switch-lg">
-                    <input type="checkbox"
-                        class="switch-input role-status-toggle"
-                        data-id="' . $role->id . '"
-                        ' . $checked . '>
-                    <span class="switch-toggle-slider">
-                        <span class="switch-on"></span>
-                        <span class="switch-off"></span>
-                    </span>
+                    <input type="checkbox" class="switch-input role-status-toggle" data-id="' . $role->id . '" ' . $checked . '><span class="switch-toggle-slider"><span class="switch-on"></span><span class="switch-off"></span></span>
                 </label>
                 <div class="status_msg_' . $role->id . '"></div>';
 
                 $actionBtn = '<div class="button-box">';
 
                 if (auth()->id() == 1 || auth()->user()->can('edit roles')) {
-                    $actionBtn .= '<a href="' . url('roles/add/' . $role->id) . '" class="btn btn-edit">
-                                        <i class="icon-base ri ri-edit-box-line"></i>
-                                    </a>';
+                    $actionBtn .= '<a href="' . url('roles/add/' . $role->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete roles')) {
-                    $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('roles/delete/' . $role->id) . '\')">
-                                        <i class="icon-base ri ri-delete-bin-line"></i>
-                                    </a>';
+                    $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('roles/delete/' . $role->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $actionBtn .= '</div>'; 
@@ -113,11 +101,10 @@ class RoleController extends Controller
                 addLog('create', 'Role', 'roles', $role->id, null, $newData);
                 $message = 'Role added successfully!';
             }
-            return redirect('/roles')->with('success', 'Role saved successfully!');
+            return redirect('roles')->with('success', $message);
         }
 
         $rolePermissions = $id ? $role->permissions->pluck('name')->toArray() : [];
-
         $permissions = Permission::all()->groupBy(function ($perm) {
             return explode(' ', $perm->name, 2)[1] ?? $perm->name;
         });

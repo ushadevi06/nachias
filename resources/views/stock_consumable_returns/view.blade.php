@@ -6,9 +6,9 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Stock Consumables & Return Management</h4>
-                <a class="btn btn-primary" href="{{ url('add_stock_consumables_return') }}">
+                {{-- <a class="btn btn-primary" href="{{ url('add_stock_consumables_return') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
+                </a> --}}
             </div>
             <div class="card">
                 <div class="card-body">

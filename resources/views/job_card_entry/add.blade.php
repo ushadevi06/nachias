@@ -221,10 +221,10 @@
                                         <i class="ri ri-search-line"></i>
                                     </button>
                                 </div>
-                                @error('process_group_id') <span class="text-danger">{{ $message }}</span> @enderror
                                 @if($jobCard)
-                                    <small class="text-muted"><i class="ri ri-information-line"></i> Process Group is read-only when editing</small>
+                                <small class="text-muted"><i class="ri ri-information-line"></i> Process Group is read-only when editing</small>
                                 @endif
+                                @error('process_group_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -294,84 +294,84 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="fit" name="fit" class="form-select select2" data-placeholder="Select Fit">
+                                    <select id="fit" name="fit_id" class="form-select select2" data-placeholder="Select Fit">
                                         <option value="">Select Fit</option>
                                         @foreach($fits as $fit)
-                                            <option value="{{ $fit->fit_name }}" {{ (old('fit', $jobCard ? $jobCard->fit : '') == $fit->fit_name) ? 'selected' : '' }}>{{ $fit->fit_name }}
+                                            <option value="{{ $fit->id }}" {{ (old('fit_id', $jobCard ? $jobCard->fit_id : '') == $fit->id) ? 'selected' : '' }}>{{ $fit->fit_name }}
                                             </option>
                                         @endforeach
                                     </select>
                                     <label for="fit">Fit</label>
                                 </div>
-                                @error('fit') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('fit_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="patti_type" name="patti_type" class="form-select select2" data-placeholder="Select Patti Type">
+                                    <select id="patti_type" name="patti_type_id" class="form-select select2" data-placeholder="Select Patti Type">
                                         <option value="">Select Patti Type</option>
                                         @foreach($pattiTypes as $type)
-                                            <option value="{{ $type->patti_type_name }}" {{ (old('patti_type', $jobCard ? $jobCard->patti_type : '') == $type->patti_type_name) ? 'selected' : '' }}>
+                                            <option value="{{ $type->id }}" {{ (old('patti_type_id', $jobCard ? $jobCard->patti_type_id : '') == $type->id) ? 'selected' : '' }}>
                                                 {{ $type->patti_type_name }}
                                             </option>
                                         @endforeach
                                     </select>
                                     <label for="patti_type">Patti Type</label>
                                 </div>
-                                @error('patti_type') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('patti_type_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="collar_type" name="collar_type" class="form-select select2" data-placeholder="Select Collar Type">
+                                    <select id="collar_type" name="collar_type_id" class="form-select select2" data-placeholder="Select Collar Type">
                                         <option value="">Select Collar Type</option>
                                         @foreach($collarTypes as $type)
-                                            <option value="{{ $type->collar_type_name }}" {{ (old('collar_type', $jobCard ? $jobCard->collar_type : '') == $type->collar_type_name) ? 'selected' : '' }}>{{ $type->collar_type_name }}</option>
+                                            <option value="{{ $type->id }}" {{ (old('collar_type_id', $jobCard ? $jobCard->collar_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->collar_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="collar_type">Collar Type</label>
                                 </div>
-                                @error('collar_type') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('collar_type_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="cuff_type" name="cuff_type" class="form-select select2" data-placeholder="Select Cuff Type">
+                                    <select id="cuff_type" name="cuff_type_id" class="form-select select2" data-placeholder="Select Cuff Type">
                                         <option value="">Select Cuff Type</option>
                                         @foreach($cuffTypes as $type)
-                                            <option value="{{ $type->cuff_type_name }}" {{ (old('cuff_type', $jobCard ? $jobCard->cuff_type : '') == $type->cuff_type_name) ? 'selected' : '' }}>
+                                            <option value="{{ $type->id }}" {{ (old('cuff_type_id', $jobCard ? $jobCard->cuff_type_id : '') == $type->id) ? 'selected' : '' }}>
                                                 {{ $type->cuff_type_name }}
                                             </option>
                                         @endforeach
                                     </select>
                                     <label for="cuff_type">Cuff Type</label>
                                 </div>
-                                @error('cuff_type') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('cuff_type_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="pocket_type" name="pocket_type" class="form-select select2" data-placeholder="Select Pocket Type">
+                                    <select id="pocket_type" name="pocket_type_id" class="form-select select2" data-placeholder="Select Pocket Type">
                                         <option value="">Select Pocket Type</option>
                                         @foreach($pocketTypes as $type)
-                                            <option value="{{ $type->pocket_type_name }}" {{ (old('pocket_type', $jobCard ? $jobCard->pocket_type : '') == $type->pocket_type_name) ? 'selected' : '' }}>
+                                            <option value="{{ $type->id }}" {{ (old('pocket_type_id', $jobCard ? $jobCard->pocket_type_id : '') == $type->id) ? 'selected' : '' }}>
                                                 {{ $type->pocket_type_name }}
                                             </option>
                                         @endforeach
                                     </select>
                                     <label for="pocket_type">Pocket Type</label>
                                 </div>
-                                @error('pocket_type') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('pocket_type_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="bottom_cut" name="bottom_cut" class="form-select select2" data-placeholder="Select Bottom Cut">
+                                    <select id="bottom_cut" name="bottom_cut_id" class="form-select select2" data-placeholder="Select Bottom Cut">
                                         <option value="">Select Bottom Cut</option>
                                         @foreach($bottomCuts as $type)
-                                            <option value="{{ $type->bottom_cut_name }}" {{ (old('bottom_cut', $jobCard ? $jobCard->bottom_cut : '') == $type->bottom_cut_name) ? 'selected' : '' }}>
+                                            <option value="{{ $type->id }}" {{ (old('bottom_cut_id', $jobCard ? $jobCard->bottom_cut_id : '') == $type->id) ? 'selected' : '' }}>
                                                 {{ $type->bottom_cut_name }}
                                             </option>
                                         @endforeach
                                     </select>
                                     <label for="bottom_cut">Bottom Cut</label>
                                 </div>
-                                @error('bottom_cut') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('bottom_cut_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -652,7 +652,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary">
-                <h5 class="modal-title text-white" id="processGroupModalLabel">{{ $jobCard ? 'View Process Group (Read-Only)' : 'Select Process Group' }}</h5>
+                <h5 class="modal-title text-white" id="processGroupModalLabel">{{ $jobCard ? 'view process-groups (Read-Only)' : 'Select Process Group' }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -1966,7 +1966,6 @@
 
         window.deleteImage = function(imageId) {
             if (!confirm('Are you sure you want to delete this image?')) return;
-            
             $.ajax({
                 url: `{{ url('job_card_entries/delete-image') }}/${imageId}`,
                 type: 'DELETE',
@@ -1991,9 +1990,7 @@
         $('#cutting_issue_unit').on('change', function() {
             const plantId = $(this).val();
             const $masterSelect = $('#cutting_master');
-            
             $masterSelect.empty().append('<option value="">Select Cutting Master</option>');
-            
             if (plantId) {
                 $.ajax({
                     url: `{{ url('get-employees-by-plant') }}/${plantId}?department_id=1`,

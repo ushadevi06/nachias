@@ -6,6 +6,14 @@ use App\Models\RawMaterial;
 use App\Models\StoreCategory;
 use App\Models\Uom;
 use App\Models\FabricType;
+use App\Models\TaskAdjustmentItem;
+use App\Models\StockEntryItem;
+use App\Models\StockEntryAdjustment;
+use App\Models\StockConsumableIssueItem;
+use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseInvoiceItem;
+use App\Models\ProductionStageConsumable;
+use App\Models\DebitNoteItem;
 use Illuminate\Http\Request;
 
 class RawMaterialController extends Controller
@@ -113,12 +121,12 @@ class RawMaterialController extends Controller
                 'code' => 'required|string|max:50|unique:raw_materials,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'name' => 'required|string|max:150',
                 'supplier_design_name' => 'nullable|string|max:150',
-                'size_width' => 'nullable|numeric|min:0',
+                'size_width' => 'nullable|numeric|min:0|max:1000',
                 'uom_id' => 'required|exists:uoms,id',
                 'fabric_type_id' => 'nullable|exists:fabric_types,id',
-                'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1024',
                 'specification' => 'nullable|string|max:255',
-                'min_stock' => 'nullable|numeric|min:0',
+                'min_stock' => 'nullable|numeric|min:0|max:999999999',
                 'status' => 'required|in:Active,Inactive',
             ];
 
@@ -160,22 +168,15 @@ class RawMaterialController extends Controller
                 }
                 $data['updated_by'] = auth()->id();
                 $oldData = RawMaterial::find($id)->toArray();
-
                 RawMaterial::where('id', $id)->update($data);
-
                 $newData = RawMaterial::find($id)->toArray();
-
                 addLog('update', 'Raw Material', 'raw_materials', $id, $oldData, $newData);
-
                 $message = 'Raw Material updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $material = RawMaterial::create($data);
-
                 $newData = $material->toArray();
-
                 addLog('create', 'Raw Material', 'raw_materials', $material->id, null, $newData);
-
                 $message = 'Raw Material added successfully';
             }
 
@@ -185,7 +186,6 @@ class RawMaterialController extends Controller
         $storeCategories = StoreCategory::where('status', 'Active')->get();
         $uoms = Uom::where('status', 'Active')->get();
         $fabricTypes = FabricType::where('status', 'Active')->get();
-
         return view('raw_materials.add', compact('rawMaterial', 'storeCategories', 'uoms', 'fabricTypes'));
     }
 
@@ -194,14 +194,35 @@ class RawMaterialController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete raw-materials')) {
             return unauthorizedRedirect();
         }
+
         $material = RawMaterial::findOrFail($id);
-
+        if (PurchaseOrderItem::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Purchase Order Items and cannot be deleted.');
+        }
+        if (TaskAdjustmentItem::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Task Adjustment Items and cannot be deleted.');
+        }
+        if (StockEntryItem::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Stock Entry Items and cannot be deleted.');
+        }
+        if (StockEntryAdjustment::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Stock Entry Adjustments and cannot be deleted.');
+        }
+        if (StockConsumableIssueItem::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Stock Consumable Issue Items and cannot be deleted.');
+        }
+        if (PurchaseInvoiceItem::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Purchase Invoice Items and cannot be deleted.');
+        }
+        if (ProductionStageConsumable::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Production Stage Consumables and cannot be deleted.');
+        }
+        if (DebitNoteItem::where('raw_material_id', $id)->exists()) {
+            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Debit Note Items and cannot be deleted.');
+        }
         $oldData = $material->toArray();
-
         $material->delete();
-
         addLog('delete', 'Raw Material', 'raw_materials', $id, $oldData, null);
-
         return response()->json([
             'status'  => true,
             'message' => 'Raw Material deleted successfully'
@@ -211,16 +232,11 @@ class RawMaterialController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $material = RawMaterial::findOrFail($id);
-
         $oldData = $material->toArray();
-
         $material->status = $request->status;
         $material->save();
-
         $newData = $material->toArray();
-
         addLog('update_status', 'Raw Material Status', 'raw_materials', $id, $oldData, $newData);
-
         return response()->json([
             'status'  => true,
             'message' => 'Status updated successfully'

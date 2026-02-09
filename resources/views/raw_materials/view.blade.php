@@ -12,20 +12,13 @@
                 </a>
                 @endif
             </div>
-
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
-
             <div class="card">
                 <div class="card-body">
-                    <!-- ✅ FILTER -->
                     <div class="filter-box mb-3">
                         <div class="row g-3">
-
                             <div class="col-md-3">
                                 <select id="filter_category" class="form-select select2" data-placeholder="Select Store Category">
                                     <option value="">Select Store Category</option>
@@ -136,23 +129,16 @@
                 }
             ]
         });
-
-        // ✅ FILTER BUTTON
         $('#filter-btn').click(function() {
             table.ajax.reload();
         });
-
-        // ✅ RESET BUTTON
         $('#reset-btn').click(function() {
             $('#filter_category').val('').trigger('change');
             $('#filter_fabric_type').val('').trigger('change');
             $('#filter_status').val('').trigger('change');
             table.ajax.reload();
         });
-
-        // ✅ STATUS TOGGLE
         $(document).on('change', '.raw-material-status-toggle', function() {
-
             let id = $(this).data('id');
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
 

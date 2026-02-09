@@ -137,7 +137,7 @@
                                             <div class="col-md-12">
                                                 <label class="detail-title d-block">Additional Attachments:</label>
                                                 <div class="mt-2">
-                                                    <img src="{{ asset('assets/img/illustrations/page-pricing-basic.png') }}" alt="Attachment Preview" class="img-fluid rounded border shadow-sm" style="max-height: 200px; cursor: pointer;">
+                                                    <img src="{{ url('assets/img/illustrations/page-pricing-basic.png') }}" alt="Attachment Preview" class="img-fluid rounded border shadow-sm" style="max-height: 200px; cursor: pointer;">
                                                 </div>
                                             </div>
                                         </div>

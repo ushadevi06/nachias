@@ -151,7 +151,7 @@ class CustomerController extends Controller
                     'unique:customers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'payment_terms' => 'nullable|string|max:500',
-                'credit_limit' => 'nullable|numeric|min:0',
+                'credit_limit' => 'nullable|numeric|min:0|max:20',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'box_discount' => 'nullable|numeric|min:0|max:100',
                 'bank_name' => 'nullable|string|max:255',
@@ -237,7 +237,7 @@ class CustomerController extends Controller
         $cities = [];
         $places = [];
         $taxes = Tax::active()->get();
-        $store_types = StoreType::where('status', 'Active')->get();
+        $store_types = StoreType::active()->get();
 
         $stateId = old('state_id') ?? ($customer->state_id ?? null);
         $cityId  = old('city_id')  ?? ($customer->city_id ?? null);

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\StoreType;
+use App\Models\JobCardEntry;
+use App\Models\TaskAdjustmentItem;
 use Illuminate\Http\Request;
 
 class StoreController extends Controller
@@ -125,6 +127,19 @@ class StoreController extends Controller
             return unauthorizedRedirect();
         }
         $storeType = StoreType::findOrFail($id);
+        
+        if (JobCardEntry::where('issue_store_id', $id)->exists()) {
+            return redirect('stores')->with('danger', 'This store is currently referenced in Job Card Entries (Issue Store) and cannot be deleted.');
+        }
+        
+        if (JobCardEntry::where('receipt_store_id', $id)->exists()) {
+            return redirect('stores')->with('danger', 'This store is currently referenced in Job Card Entries (Receipt Store) and cannot be deleted.');
+        }
+        
+        if (TaskAdjustmentItem::where('store_id', $id)->exists()) {
+            return redirect('stores')->with('danger', 'This store is currently referenced in Task Adjustment Items and cannot be deleted.');
+        }
+        
         $oldData = $storeType->toArray();
         $storeType->delete();
         addLog('delete', 'Store Type', 'store_types', $id, $oldData, null);

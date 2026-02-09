@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Brand;
+use App\Models\PurchaseOrderItem;
+use App\Models\JobCardEntry;
+use App\Models\Item;
 use Illuminate\Http\Request;
 
 class BrandController extends Controller
@@ -131,30 +134,29 @@ class BrandController extends Controller
             return unauthorizedRedirect();
         }
         $brand = Brand::findOrFail($id);
+        if (PurchaseOrderItem::where('brand_id', $id)->exists()) {
+            return redirect('brands')->with('danger', 'This brand is currently referenced in Purchase Order Items and cannot be deleted.');
+        }
+        if (JobCardEntry::where('brand_id', $id)->exists()) {
+            return redirect('brands')->with('danger', 'This brand is currently referenced in Job Card Entries and cannot be deleted.');
+        }
+        if (Item::where('brand_id', $id)->exists()) {
+            return redirect('brands')->with('danger', 'This brand is currently referenced in Items and cannot be deleted.');
+        }
         $oldData = $brand->toArray();
-
         $brand->delete();
-
         addLog('delete', 'Brand', 'brands', $id, $oldData, null);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Brand deleted successfully'
-        ]);
+        return redirect('brands')->with('success', 'Brand deleted successfully');
     }
 
     public function updateStatus(Request $request, $id)
     {
         $brand = Brand::findOrFail($id);
         $oldData = $brand->toArray();
-
         $brand->status = $request->status;
         $brand->save();
-
         $newData = $brand->toArray();
-
         addLog('update_status', 'Brand Status', 'brands', $id, $oldData, $newData);
-
         return response()->json(['success' => true]);
     }
 }

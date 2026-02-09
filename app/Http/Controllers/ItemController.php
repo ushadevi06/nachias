@@ -14,6 +14,8 @@ use App\Models\StoreCategory;
 use App\Models\RawMaterial;
 use App\Models\ServiceProvider;
 use App\Models\OperationStage;
+use App\Models\JobCardEntry;
+use App\Models\ProductionReceiptItem;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -286,11 +288,19 @@ class ItemController extends Controller
             return unauthorizedRedirect();
         }
         $item = Item::findOrFail($id);
+
+        if (JobCardEntry::where('item_id', $id)->exists()) {
+            return redirect('items')->with('danger', 'This item is currently referenced in Job Card Entries and cannot be deleted.');
+        }
+
+        if (ProductionReceiptItem::where('item_id', $id)->exists()) {
+            return redirect('items')->with('danger', 'This item is currently referenced in Production Receipt Items and cannot be deleted.');
+        }
+
         $oldData = $item->toArray();
         $item->delete();
-        addLog(
-            'delete', 'Item', 'items', $id, $oldData, null         
-        );
+        addLog('delete', 'Item', 'items', $id, $oldData, null);
+
         return redirect('items')->with('success', 'Item deleted successfully');
     }
 

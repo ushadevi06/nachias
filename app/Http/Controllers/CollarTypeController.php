@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\CollarType;
+use App\Models\JobCardEntry;
 use Illuminate\Http\Request;
 
 class CollarTypeController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view collar types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view collar-types')) {
             return unauthorizedRedirect();
         }
 
@@ -33,13 +34,13 @@ class CollarTypeController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit collar types')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit collar-types')) {
                     $action .= '<a href="' . url('collar_types/add/' . $row->id) . '" class="btn btn-edit">
                                     <i class="icon-base ri ri-edit-box-line"></i>
                                 </a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete collar types')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete collar-types')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('collar_types/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
@@ -64,11 +65,11 @@ class CollarTypeController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit collar types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit collar-types')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create collar types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create collar-types')) {
                 return unauthorizedRedirect();
             }
         }
@@ -108,11 +109,15 @@ class CollarTypeController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete collar types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete collar-types')) {
             return unauthorizedRedirect();
         }
 
         $collarType = CollarType::findOrFail($id);
+        if (JobCardEntry::where('collar_type_id', $id)->exists()) {
+            return redirect('collar_types')->with('danger', 'This collar type is currently referenced in Job Card Entries and cannot be deleted.');
+        }
+        
         $oldData = $collarType->toArray();
         $collarType->delete();
         addLog('delete', 'Collar Type', 'collar_types', $id, $oldData, null);

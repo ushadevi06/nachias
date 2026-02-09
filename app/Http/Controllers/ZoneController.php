@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Zone;
 use App\Models\State;
 use App\Models\City;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -151,12 +152,18 @@ class ZoneController extends Controller
             return unauthorizedRedirect();
         }
         $zone = Zone::findOrFail($id);
+        $references = [
+            [Customer::class, 'zone_id', 'Customers'],
+        ];
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
+                session()->flash('danger', "This zone is currently referenced in {$label} and cannot be deleted");
+                return redirect('zones');
+            }
+        }
         $oldData = $zone->toArray();
-
         $zone->delete();
-
         addLog('delete', 'Zone', 'zones', $id, $oldData, null);
-
         return redirect('zones')->with('success', 'Zone deleted successfully');
     }
 

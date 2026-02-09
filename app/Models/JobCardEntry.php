@@ -26,8 +26,8 @@ class JobCardEntry extends Model
     protected $fillable = [
         'job_card_no', 'reference_no', 'purchase_order_id', 'service_provider_id', 'issue_store_id', 'receipt_store_id',
         'brand_id', 'season_id', 'process_group_id', 'job_card_date', 'delivery_date', 'washing', 'width', 'mrp',
-        'fs_qty', 'hs_qty', 'receipt_store', 'fit', 'patti_type', 'collar_type',
-        'cuff_type', 'pocket_type', 'bottom_cut', 'cutting_master_id',
+        'fs_qty', 'hs_qty', 'receipt_store', 'fit_id', 'patti_type_id', 'collar_type_id',
+        'cuff_type_id', 'pocket_type_id', 'bottom_cut_id', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',
         'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'average', 'remarks', 'status', 
         'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label', 'brand_category_id', 'item_id'
@@ -116,5 +116,35 @@ class JobCardEntry extends Model
     public function sleeveMeters()
     {
         return $this->hasMany(JobCardSleeveMeter::class, 'job_card_id');
+    }
+
+    public function fit()
+    {
+        return $this->belongsTo(Fit::class, 'fit_id');
+    }
+
+    public function pattiType()
+    {
+        return $this->belongsTo(PattiType::class, 'patti_type_id');
+    }
+
+    public function collarType()
+    {
+        return $this->belongsTo(CollarType::class, 'collar_type_id');
+    }
+
+    public function cuffType()
+    {
+        return $this->belongsTo(CuffType::class, 'cuff_type_id');
+    }
+
+    public function pocketType()
+    {
+        return $this->belongsTo(PocketType::class, 'pocket_type_id');
+    }
+
+    public function bottomCut()
+    {
+        return $this->belongsTo(BottomCut::class, 'bottom_cut_id');
     }
 }

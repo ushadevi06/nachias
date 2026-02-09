@@ -123,7 +123,7 @@
                                 </div>
                                 @if($rawMaterial && $rawMaterial->reference_image)
                                 <div class="mt-2">
-                                    <img src="{{ asset($rawMaterial->reference_image) }}" alt="Reference Image" style="max-width: 100px; max-height: 100px;">
+                                    <img src="{{ url($rawMaterial->reference_image) }}" alt="Reference Image" style="max-width: 100px; max-height: 100px;">
                                 </div>
                                 @endif
                                 @error('reference_image')

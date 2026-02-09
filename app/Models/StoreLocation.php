@@ -10,4 +10,8 @@ class StoreLocation extends Model
     use SoftDeletes;
 
     protected $fillable = ['store_location', 'status','created_by','updated_by'];
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 }

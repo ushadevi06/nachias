@@ -14,4 +14,8 @@ class FabricType extends Model
         'created_by',
         'updated_by',
     ];
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 }

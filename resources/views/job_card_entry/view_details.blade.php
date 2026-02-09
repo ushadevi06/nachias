@@ -86,9 +86,9 @@
                                 <td class="fw-bold py-1" style="width: 9%;">CUTTING NO</td>
                                 <td class="py-1" style="width: 11%;">{{ $jobCard->job_card_no }}</td>
                                 <td class="fw-bold py-1" style="width: 6%;">FIT</td>
-                                <td class="py-1 text-center" style="width: 18%;">{{ strtoupper($jobCard->fit) ?: '-' }}</td>
+                                <td class="py-1 text-center" style="width: 18%;">{{ strtoupper($jobCard->fit->fit_name ?? '-') }}</td>
                                 <td class="fw-bold py-1" style="width: 6%;">CUFF</td>
-                                <td class="py-1 text-center" style="width: 10%;">{{ strtoupper($jobCard->cuff_type) ?: '-' }}</td>
+                                <td class="py-1 text-center" style="width: 10%;">{{ strtoupper($jobCard->cuffType->cuff_type_name ?? '-') }}</td>
                                 <td class="fw-bold py-1" style="width: 12%;">CUTTING MASTER</td>
                                 <td class="py-1" style="width: 18%;">{{ $jobCard->cuttingMaster->name ?? '' }}</td>
                                 <td class="fw-bold py-1" style="width: 10%;"></td>
@@ -109,9 +109,9 @@
                                 <td class="fw-bold py-1">F.ISSUE DATE</td>
                                 <td class="py-1">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
                                 <td class="fw-bold py-1">N.PATTI</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->patti_type) ?: '-' }}</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->pattiType->patti_type_name ?? '-') }}</td>
                                 <td class="fw-bold py-1">POCKET</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->pocket_type) ?: '-' }}</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? '-') }}</td>
                                 <td class="fw-bold py-1">CUTTING DATE</td>
                                 <td class="py-1">{{ $jobCard->cutting_date ? date('d-m-Y', strtotime($jobCard->cutting_date)) : '' }}</td>
                                 <td class="">H.O.D.C NO</td>
@@ -122,9 +122,9 @@
                                 <td class="fw-bold py-1">DELIVERY DATE</td>
                                 <td class="py-1">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
                                 <td class="fw-bold py-1">COLLAR</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->collar_type) ?: '-' }}</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->collarType->collar_type_name ?? '-') }}</td>
                                 <td class="fw-bold py-1">BOT.CUT</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->bottom_cut) ?: '-' }}</td>
+                                <td class="py-1 text-center">{{ strtoupper($jobCard->bottomCut->bottom_cut_name ?? '-') }}</td>
                                 <td class="fw-bold py-1">CUTTING ISSUE UNIT</td>
                                 <td class="py-1">{{ $jobCard->cuttingIssueUnitMapping->name ?? $jobCard->cutting_issue_unit }}</td>
                                 <td class="fw-bold py-1"></td>
@@ -219,7 +219,7 @@
                         @foreach($jobCard->images as $image)
                             <div class="col text-center p-3 border-end">
                                 <div class="border rounded p-2" style="min-height: 120px; display: flex; align-items: center; justify-content: center;">
-                                    <img src="{{ asset($image->image) }}" alt="Swatch" style="max-width: 100%; max-height: 100px; object-fit: contain;">
+                                    <img src="{{ url($image->image) }}" alt="Swatch" style="max-width: 100%; max-height: 100px; object-fit: contain;">
                                 </div>
                             </div>
                         @endforeach

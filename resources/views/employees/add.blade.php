@@ -95,8 +95,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="date" class="form-control" id="date_of_joining" name="date_of_joining" placeholder="Date of Joining" value="{{ old('date_of_joining', \Carbon\Carbon::parse($employee?->date_of_joining)->format('Y-m-d')) }}">
-                                    <label for="date_of_joining">Date of Joining</label>
+                                    <input type="text" class="form-control" id="doj" name="date_of_joining" placeholder="Date of Joining" value="{{ old('date_of_joining', $employee?->date_of_joining ? \Carbon\Carbon::parse($employee->date_of_joining)->format('d-m-Y') : '') }}">
+                                    <label for="doj">Date of Joining</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
@@ -129,7 +129,7 @@
                                 </div>
                                 @if($employee && $employee->profile_image)
                                 <div class="file-preview">
-                                    <a href="{{ asset('uploads/employee/' . $employee->id . '/' . $employee->profile_image) }}" target="_blank"><i class="ri-file-line"></i> View Profile Image</a>
+                                    <a href="{{ url('uploads/employee/' . $employee->id . '/' . $employee->profile_image) }}" target="_blank"><i class="ri-file-line"></i> View Profile Image</a>
                                 </div>
                                 @endif
                                 @error('image')
@@ -336,7 +336,7 @@
                                 @enderror
                                 @if($employee && $employee->esi_document)
                                 <div class="file-preview">
-                                    <a href="{{ asset('uploads/employee/' . $employee->id . '/' . $employee->esi_document) }}" target="_blank"><i class="ri-file-line"></i> View ESI Document</a>
+                                    <a href="{{ url('uploads/employee/' . $employee->id . '/' . $employee->esi_document) }}" target="_blank"><i class="ri ri-image-line"></i> View</a>
                                 </div>
                                 @endif
                             </div>
@@ -350,7 +350,7 @@
                                 @enderror
                                 @if($employee && $employee->pf_document)
                                 <div class="file-preview">
-                                    <a href="{{ asset('uploads/employee/' . $employee->id . '/' . $employee->pf_document) }}" target="_blank"><i class="ri-file-line"></i> View PF Document</a>
+                                    <a href="{{ url('uploads/employee/' . $employee->id . '/' . $employee->pf_document) }}" target="_blank"><i class="ri ri-image-line"></i> View</a>
                                 </div>
                                 @endif
                             </div>
@@ -364,7 +364,7 @@
                                 @enderror
                                 @if($employee && $employee->aadhaar_document)
                                 <div class="file-preview">
-                                    <a href="{{ asset('uploads/employee/' . $employee->id . '/' . $employee->aadhaar_document) }}" target="_blank"><i class="ri-file-line"></i> View Aadhaar</a>
+                                    <a href="{{ url('uploads/employee/' . $employee->id . '/' . $employee->aadhaar_document) }}" target="_blank"><i class="ri ri-image-line"></i> View</a>
                                 </div>
                                 @endif
                             </div>
@@ -378,7 +378,7 @@
                                 @enderror
                                 @if($employee && $employee->pan_document)
                                 <div class="file-preview">
-                                    <a href="{{ asset('uploads/employee/' . $employee->id . '/' . $employee->pan_document) }}" target="_blank"><i class="ri-file-line"></i> View PAN</a>
+                                    <a href="{{ url('uploads/employee/' . $employee->id . '/' . $employee->pan_document) }}" target="_blank"><i class="ri ri-image-line"></i> View</a>
                                 </div>
                                 @endif
                             </div>

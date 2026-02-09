@@ -106,7 +106,7 @@
                             </div>
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', $stockEntry ? $stockEntry->stockEntryItems->sum('qty_in') : '') }}" step="1" min="1" />
+                                    <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', $stockEntry ? $stockEntry->stockEntryItems->sum('qty_in') : '') }}" />
                                     <label for="qty_in">Quantity In <span class="text-danger">*</span></label>
                                     @error('qty_in')
                                         <div class="text-danger small">{{ $message }}</div>

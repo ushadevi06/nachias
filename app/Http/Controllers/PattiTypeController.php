@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\PattiType;
+use App\Models\JobCardEntry;
 use Illuminate\Http\Request;
 
 class PattiTypeController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view patti types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view patti-types')) {
             return unauthorizedRedirect();
         }
 
@@ -33,13 +34,13 @@ class PattiTypeController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit patti types')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit patti-types')) {
                     $action .= '<a href="' . url('patti_types/add/' . $row->id) . '" class="btn btn-edit">
                                     <i class="icon-base ri ri-edit-box-line"></i>
                                 </a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete patti types')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete patti-types')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('patti_types/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
@@ -64,11 +65,11 @@ class PattiTypeController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit patti types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit patti-types')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create patti types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create patti-types')) {
                 return unauthorizedRedirect();
             }
         }
@@ -108,11 +109,17 @@ class PattiTypeController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete patti types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete patti-types')) {
             return unauthorizedRedirect();
         }
 
         $pattiType = PattiType::findOrFail($id);
+        
+        // Check if patti type is referenced in Job Card Entries
+        if (JobCardEntry::where('patti_type_id', $id)->exists()) {
+            return redirect('patti_types')->with('danger', 'This patti type is currently referenced in Job Card Entries and cannot be deleted.');
+        }
+        
         $oldData = $pattiType->toArray();
         $pattiType->delete();
         addLog('delete', 'Patti Type', 'patti_types', $id, $oldData, null);

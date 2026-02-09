@@ -37,7 +37,7 @@
                                 @enderror
                             </div>
                             <div class="col-md-6 col-xl-12">
-                                <div class="form-floating form-floating-outline mb-6">
+                                <div class="form-floating form-floating-outline">
                                     <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description"
                                         placeholder="Enter Description">{{ old('description', $uom->description ?? '') }}</textarea>
                                     <label for="description">Description</label>

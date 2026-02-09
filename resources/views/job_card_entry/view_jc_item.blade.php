@@ -90,7 +90,7 @@
                                 <table class="table table-hover table-bordered table-sm align-middle text-nowrap issue-items-table" id="issue-items-table-fs">
                                     <thead class="bg-primary">
                                         <tr>
-                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Supplier</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Unit Price</th><th>Total Cost</th><th style="min-width: 100px;">Cost/Pc</th><th>Status</th><th>Modified By</th><th>Modified On</th>
+                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Supplier</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Unit Price</th>{{-- <th>Total Cost</th><th style="min-width: 100px;">Cost/Pc</th> --}}<th>Status</th><th>Modified By</th><th>Modified On</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -102,8 +102,8 @@
                                                 $poItem = $jobCard->purchaseOrder->items->where('art_no', $item->art_no)->first();
                                                 $uomName = ($poItem && $poItem->uom) ? $poItem->uom->uom_code : (($poItem && $poItem->rawMaterial && $poItem->rawMaterial->uom) ? $poItem->rawMaterial->uom->uom_code : ($artUomMap[$item->art_no] ?? '-'));
                                                 
-                                                $total_qty = $item->quantities->sum('total_qty'); // Total quantity for this specific art no
-                                                $produced_qty = $total_qty; // Use art-specific quantity, not grand total
+                                                $total_qty = $item->quantities->sum('total_qty'); 
+                                                $produced_qty = $total_qty; 
                                                 $savedItem = $issueItemMap[$item->id] ?? null;
                                                 $itemDisplayName = $jobCard->item->code ?: $jobCard->item->name;
                                                 $itemDescription = $jobCard->item->name;
@@ -138,18 +138,19 @@
                                                 <td class="fw-bold col-art">{{ $item->art_no }}</td>
                                                 <td>{{ $jobCard->purchaseOrder->supplier->name ?? '-' }}</td>
                                                 <td>1</td><td>{{ $uomName }}</td>
-                                                <td><input type="number" step="0.01" name="items[{{ $item->id }}][qty_issue]" class="form-control form-control-sm text-end col-qty-issue" value="{{ $savedItem->qty_issue ?? $item->mtr }}" readonly>
+                                                <td>
+                                                    <p class="mb-0 col-qty-issue text-end">{{ $savedItem->qty_issue ?? $item->mtr }}</p>
                                                     <input type="hidden" name="items[{{ $item->id }}][bit]" class="col-bit" value="{{ $savedItem->bit ?? '0.00' }}">
                                                     <input type="hidden" name="items[{{ $item->id }}][balance]" class="col-balance" value="{{ $savedItem->balance ?? '0.00' }}">
                                                     <input type="hidden" name="items[{{ $item->id }}][average]" class="col-average" value="{{ $savedItem->average ?? '0.00' }}">
                                                 </td>
-                                                <td><input type="number" step="0.01" name="items[{{ $item->id }}][qty_wastage]" class="form-control form-control-sm text-end col-qty-wastage" value="{{ $savedItem->qty_wastage ?? '0.00' }}" readonly></td>
-                                                <td><input type="number" step="0.01" name="items[{{ $item->id }}][qty_used]" class="form-control form-control-sm text-end col-qty-used" value="{{ $savedItem->qty_used ?? '0.00' }}"></td>
-                                                <td><input type="number" step="0.01" name="items[{{ $item->id }}][qty_adjusted]" class="form-control form-control-sm text-end col-qty-adjusted" value="{{ $savedItem->qty_adjusted ?? '0.00' }}"></td>
-                                                <td><input type="number" step="0.01" name="items[{{ $item->id }}][produced_qty]" class="form-control form-control-sm text-end col-produced-qty" value="{{ $produced_qty }}" readonly></td>
-                                                <td><input type="number" step="0.01" name="items[{{ $item->id }}][unit_price]" class="form-control form-control-sm text-end col-unit-price" value="{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : (isset($artPriceMap[$item->art_no]) ? number_format($artPriceMap[$item->art_no], 2, '.', '') : '0.00') }}"></td>
-                                                <td><input type="number" step="0.01" name="items[{{ $item->id }}][total_cost]" class="form-control form-control-sm text-end col-total-cost" value="{{ (isset($savedItem->total_cost) && $savedItem->total_cost > 0) ? number_format($savedItem->total_cost, 2, '.', '') : '0.00' }}"></td>
-                                                <td><input type="number" step="0.01" class="form-control form-control-sm text-end col-cost-per-pc fw-bold bg-light" value="{{ (isset($savedItem->cost_per_pc) && $savedItem->cost_per_pc > 0) ? number_format($savedItem->cost_per_pc, 2, '.', '') : '0.00' }}" readonly tabindex="-1"></td>
+                                                <td><p class="mb-0 col-qty-wastage text-end">{{ $savedItem->qty_wastage ?? '0.00' }}</p></td>
+                                                <td><p class="mb-0 col-qty-used text-end">{{ $savedItem->qty_used ?? '0.00' }}</p></td>
+                                                <td><p class="mb-0 col-qty-adjusted text-end">{{ $savedItem->qty_adjusted ?? '0.00' }}</p></td>
+                                                <td><p class="mb-0 col-produced-qty text-end">{{ $produced_qty }}</p></td>
+                                                <td><p class="mb-0 col-unit-price text-end">{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : (isset($artPriceMap[$item->art_no]) ? number_format($artPriceMap[$item->art_no], 2, '.', '') : '0.00') }}</p></td>
+                                                {{-- <td><input type="hidden" name="items[{{ $item->id }}][total_cost]" class="col-total-cost" value="{{ (isset($savedItem->total_cost) && $savedItem->total_cost > 0) ? number_format($savedItem->total_cost, 2, '.', '') : '0.00' }}"></td>
+                                                <td><input type="hidden" class="col-cost-per-pc" value="{{ (isset($savedItem->cost_per_pc) && $savedItem->cost_per_pc > 0) ? number_format($savedItem->cost_per_pc, 2, '.', '') : '0.00' }}"></td> --}}
                                                 <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
                                                 <td>{{ $jobCard->creator->name ?? 'N/A' }}</td><td>{{ $jobCard->created_at->format('d/m/Y H:i') }}</td>
                                             </tr>
@@ -235,14 +236,14 @@
                                     <label>Wastage</label>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            {{-- <div class="col-md-3">
                                 <div class="form-floating form-floating-outline mb-3">
                                     <input type="number" step="0.0001" id="modal_consumption" class="form-control border-primary bg-light-warning" placeholder="Qty/Pc">
                                     <label class="text-primary fw-bold font-weight-bold">
                                         <i class="ri-ruler-2-line"></i> Qty/Pc
                                     </label>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline mb-3">
                                     <input type="number" step="0.01" id="modal_qty_adjusted" class="form-control border-primary" placeholder="Adjusted">
@@ -296,13 +297,13 @@ $(document).ready(function() {
         const otherUsage = 0;
         $('#modal_other_usage').val(otherUsage.toFixed(2));
         
-        const qtyAdjusted = button.attr('data-qty-adjusted') || currentRow.find('.col-qty-adjusted').val() || '0.00';
-        const qtyWastage = button.attr('data-qty-wastage') || currentRow.find('.col-qty-wastage').val() || '0.00';
-        const qtyUsed = button.attr('data-qty-used') || currentRow.find('.col-qty-used').val() || '0.00';
+        const qtyAdjusted = button.attr('data-qty-adjusted') || currentRow.find('.col-qty-adjusted').text() || '0.00';
+        const qtyWastage = button.attr('data-qty-wastage') || currentRow.find('.col-qty-wastage').text() || '0.00';
+        const qtyUsed = button.attr('data-qty-used') || currentRow.find('.col-qty-used').text() || '0.00';
         const bit = button.attr('data-bit') || currentRow.find('.col-bit').val() || '0.00';
         const balance = button.attr('data-balance') || currentRow.find('.col-balance').val() || '0.00';
         const average = button.attr('data-average') || currentRow.find('.col-average').val() || '0.00';
-        const producedQty = button.attr('data-produced-qty') || currentRow.find('.col-produced-qty').val() || '0.00';
+        const producedQty = button.attr('data-produced-qty') || currentRow.find('.col-produced-qty').text() || '0.00';
 
         $('#store').val(store);
         $('#modal_store').val(store);
@@ -319,7 +320,7 @@ $(document).ready(function() {
         $('#modal_avg').val(average);
         $('#modal_produced_qty').val(producedQty);
         
-        const unitPrice = button.attr('data-unit-price') || currentRow.find('.col-unit-price').val() || '0.00';
+        const unitPrice = button.attr('data-unit-price') || currentRow.find('.col-unit-price').text() || '0.00';
         const totalCost = button.attr('data-total-cost') || currentRow.find('.col-total-cost').val() || '0.00';
         $('#modal_unit_price').val(unitPrice);
         $('#modal_total_cost').val(totalCost);
@@ -445,19 +446,19 @@ $(document).ready(function() {
                 data: formData,
                 success: function(response) {
                     if(response.success) {
-                        currentRow.find('.col-qty-adjusted').val(adj);
-                        currentRow.find('.col-qty-wastage').val(was);
-                        currentRow.find('.col-qty-used').val(use);
+                        currentRow.find('.col-qty-adjusted').text(adj);
+                        currentRow.find('.col-qty-wastage').text(was);
+                        currentRow.find('.col-qty-used').text(use);
                         currentRow.find('.col-bit').val(bit);
                         currentRow.find('.col-balance').val(bal);
                         currentRow.find('.col-average').val(avg);
-                        currentRow.find('.col-produced-qty').val(pro);
+                        currentRow.find('.col-produced-qty').text(pro);
 
                         if (response.updated_items && response.updated_items[matrixId]) {
                             var itemData = response.updated_items[matrixId];
-                            currentRow.find('.col-unit-price').val(parseFloat(itemData.unit_price).toFixed(2));
-                            currentRow.find('.col-total-cost').val(parseFloat(itemData.total_cost).toFixed(2));
-                            currentRow.find('.col-cost-per-pc').val(parseFloat(itemData.cost_per_pc).toFixed(2));
+                            currentRow.find('.col-unit-price').text(parseFloat(itemData.unit_price).toFixed(2));
+                            // currentRow.find('.col-total-cost').text(parseFloat(itemData.total_cost).toFixed(2));
+                            // currentRow.find('.col-cost-per-pc').text(parseFloat(itemData.cost_per_pc).toFixed(2));
                             currentRow.find('.status-badge').removeClass('bg-label-info').addClass('bg-label-success').text('COMPLETED');
                             
                             if (response.total_price !== undefined) {

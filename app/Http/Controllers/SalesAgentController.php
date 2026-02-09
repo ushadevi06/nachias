@@ -15,28 +15,16 @@ class SalesAgentController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view sales-agents')) {
             return unauthorizedRedirect();
         }
-        $canViewDetail   = true;
-        $canEdit   = true;
-        $canDelete = true;
-        $canAdd    = true;
-
         if ($request->ajax()) {
-
             $query = SalesAgent::with(['state', 'city']);
-
             if (!empty($request->agent_type)) {
                 $query->where('agent_type', $request->agent_type);
             }
-
             $agents = $query->orderBy('id', 'desc')->get();
-
             $count = 1;
             $data = [];
-
             foreach ($agents as $agent) {
-
                 $checked = $agent->status === 'Active' ? 'checked' : '';
-
                 $status = '
                 <label class="switch switch-success switch-lg">
                     <input type="checkbox"
@@ -45,23 +33,19 @@ class SalesAgentController extends Controller
                     <span class="switch-toggle-slider"></span>
                 </label>
                 <div class="status_msg_' . $agent->id . '"></div>';
-
                 $action = '<div class="button-box">';
-
                 if (auth()->id() == 1 || auth()->user()->can('view_details sales-agents')) {
                     $action .= '
                     <a href="' . url('sales_agent/' . $agent->id) . '" class="btn btn-view">
                         <i class="icon-base ri ri-eye-line"></i>
                     </a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('edit sales-agents')) {
                     $action .= '
                     <a href="' . url('sales_agents/add/' . $agent->id) . '" class="btn btn-edit">
                         <i class="icon-base ri ri-edit-box-line"></i>
                     </a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('delete sales-agents')) {
 
                     $action .= '
@@ -70,19 +54,11 @@ class SalesAgentController extends Controller
                         <i class="icon-base ri ri-delete-bin-line"></i>
                     </a>';
                 }
-
                 $action .= '</div>';
-
                 $contactInfo = '
                 <div class="contact-info">
-                    <div>
-                        <i class="ri ri-mail-line icon-email"></i>
-                        ' . ($agent->email ?? '-') . '
-                    </div>
-                    <div>
-                        <i class="ri ri-phone-line icon-phone"></i>
-                        ' . ($agent->mobile_no ?? '-') . '
-                    </div>
+                    <div><i class="ri ri-mail-line icon-email"></i>' . ($agent->email ?? '-') . '</div>
+                    <div><i class="ri ri-phone-line icon-phone"></i>' . ($agent->mobile_no ?? '-') . '</div>
                 </div>';
 
                 $data[] = [
@@ -99,7 +75,7 @@ class SalesAgentController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        return view('sales_agent.view', compact('canAdd'));
+        return view('sales_agent.view');
     }
 
     public function add($id = null)
@@ -154,6 +130,7 @@ class SalesAgentController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format'
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -184,29 +161,22 @@ class SalesAgentController extends Controller
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 $oldData = SalesAgent::find($id)->toArray();
-
                 SalesAgent::where('id', $id)->update($data);
-
                 $newData = SalesAgent::find($id)->toArray();
-
                 addLog('update', 'Sales Agent', 'sales_agents', $id, $oldData, $newData);
-
                 $message = 'Sales Agent updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $agent = SalesAgent::create($data);
-
                 $newData = $agent->toArray();
-
                 addLog('create', 'Sales Agent', 'sales_agents', $agent->id, null, $newData);
-
                 $message = 'Sales Agent added successfully';
             }
 
             return redirect('sales_agents')->with('success', $message);
         }
 
-        $states = State::where('status', 'Active')->get();
+        $states = State::active()->get();
         $cities = [];
         $places = [];
 
@@ -214,10 +184,10 @@ class SalesAgentController extends Controller
         $cityId = old('city_id', $salesAgent->city_id ?? null);
 
         if ($stateId) {
-            $cities = City::where('state_id', $stateId)->where('status', 'Active')->get();
+            $cities = City::active()->where('state_id', $stateId)->get();
         }
         if ($cityId) {
-            $places = Place::where('city_id', $cityId)->where('status', 'Active')->get();
+            $places = Place::active()->where('city_id', $cityId)->get();
         }
 
         return view('sales_agent.add', compact('salesAgent', 'states', 'cities', 'places'));
@@ -237,11 +207,8 @@ class SalesAgentController extends Controller
         }
         $agent = SalesAgent::findOrFail($id);
         $oldData = $agent->toArray();
-
         $agent->delete();
-
         addLog('delete', 'Sales Agent', 'sales_agents', $id, $oldData, null);
-
         return redirect('sales_agents')->with('success', 'Sales Agent deleted successfully');
     }
 
@@ -249,14 +216,10 @@ class SalesAgentController extends Controller
     {
         $agent = SalesAgent::findOrFail($id);
         $oldData = $agent->toArray();
-
         $agent->status = $request->status;
         $agent->save();
-
         $newData = $agent->toArray();
-
         addLog('update_status', 'Sales Agent Status', 'sales_agents', $id, $oldData, $newData);
-
         return response()->json(['success' => true]);
     }
 }

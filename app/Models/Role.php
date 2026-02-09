@@ -13,6 +13,6 @@ class Role extends SpatieRole
     protected $fillable = ['name', 'guard_name', 'status'];
     public function scopeActive($query)
     {
-        return $query->where('status', 'active');
+        return $query->where('status', 'Active');
     }
 }

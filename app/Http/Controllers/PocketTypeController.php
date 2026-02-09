@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\PocketType;
+use App\Models\JobCardEntry;
 use Illuminate\Http\Request;
 
 class PocketTypeController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view pocket types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view pocket -types')) {
             return unauthorizedRedirect();
         }
 
@@ -33,13 +34,13 @@ class PocketTypeController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit pocket types')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit pocket-types')) {
                     $action .= '<a href="' . url('pocket_types/add/' . $row->id) . '" class="btn btn-edit">
                                     <i class="icon-base ri ri-edit-box-line"></i>
                                 </a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete pocket types')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete pocket-types')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('pocket_types/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
@@ -64,11 +65,11 @@ class PocketTypeController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit pocket types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit pocket-types')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create pocket types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create pocket-types')) {
                 return unauthorizedRedirect();
             }
         }
@@ -108,11 +109,13 @@ class PocketTypeController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete pocket types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete pocket-types')) {
             return unauthorizedRedirect();
         }
-
         $pocketType = PocketType::findOrFail($id);
+        if (JobCardEntry::where('pocket_type_id', $id)->exists()) {
+            return redirect('pocket_types')->with('danger', 'This pocket type is currently referenced in Job Card Entries and cannot be deleted.');
+        }
         $oldData = $pocketType->toArray();
         $pocketType->delete();
         addLog('delete', 'Pocket Type', 'pocket_types', $id, $oldData, null);

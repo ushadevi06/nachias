@@ -15,12 +15,9 @@
                 @endif
             </div>
 
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
 
             <div class="card mb-3">
                 <div class="card-body">

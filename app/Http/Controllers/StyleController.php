@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Style;
+use App\Models\PurchaseOrderItem;
+use App\Models\Item;
 use Illuminate\Http\Request;
 
 class StyleController extends Controller
@@ -73,9 +75,7 @@ class StyleController extends Controller
                 return unauthorizedRedirect();
             }
         }
-
         $style = $id ? Style::findOrFail($id) : null;
-
         if ($request->isMethod('post')) {
             $rules = [
                 'style_name' => 'required|string|max:255|unique:styles,style_name,' . $id . ',id,deleted_at,NULL',
@@ -104,7 +104,6 @@ class StyleController extends Controller
 
             return redirect('styles')->with('success', $msg);
         }
-
         return view('styles.add', compact('style'));
     }
 
@@ -113,8 +112,16 @@ class StyleController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete styles')) {
             return unauthorizedRedirect();
         }
-
         $style = Style::findOrFail($id);
+        $references = [
+            [PurchaseOrderItem::class, 'style_id', 'Purchase Order Items'],
+            
+        ];
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
+                return redirect('styles')->with('danger', "This style is currently referenced in {$label} and cannot be deleted.");
+            }
+        }
         $oldData = $style->toArray();
         $style->delete();
         addLog('delete', 'Style', 'styles', $id, $oldData, null);

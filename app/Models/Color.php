@@ -11,4 +11,8 @@ class Color extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = ['color_name', 'description', 'status', 'created_by', 'updated_by'];
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 }

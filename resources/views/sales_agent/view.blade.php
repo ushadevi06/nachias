@@ -14,22 +14,15 @@
                 </a>
                 @endif
             </div>
-
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
-
             <div class="card">
                 <div class="card-body">
-
-                    <!-- ✅ FILTER -->
                     <div class="filter-box mb-3">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <select name="agent_type" id="agent_type" class="form-select select2">
+                                <select name="agent_type" id="agent_type" class="form-select select2" data-placeholder="Select Agent Type">
                                     <option value="">Select Agent Type</option>
                                     <option value="Direct Sales Agent">Direct Sales Agent</option>
                                     <option value="Commission Agent">Commission Agent</option>

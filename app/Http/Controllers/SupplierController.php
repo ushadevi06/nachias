@@ -7,6 +7,10 @@ use App\Models\State;
 use App\Models\City;
 use App\Models\Place;
 use App\Models\Tax;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseInvoice;
+use App\Models\GrnEntry;
+use App\Models\DebitNote;
 use Illuminate\Http\Request;
 use App\Models\PurchaseCommissionAgent;
 
@@ -147,7 +151,7 @@ class SupplierController extends Controller
                     'unique:suppliers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'ecc_no' => 'nullable|string|max:20',
-                'credit_limit' => 'nullable|numeric|min:0',
+                'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'payment_terms' => 'nullable|string|max:500',
                 'bank_name' => 'nullable|string|max:255',
                 'branch' => 'nullable|string|max:255',
@@ -165,6 +169,7 @@ class SupplierController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format'
             ];
             $validated = $request->validate($rules,$messages);
 
@@ -237,8 +242,6 @@ class SupplierController extends Controller
         if ($cityId) {
             $places = Place::where('city_id', $cityId)->get();
         }
-
-        // Auto-generate next supplier code
         $latestSupplier = Supplier::orderByRaw('CAST(code AS UNSIGNED) DESC')->first();
         $nextCode = $latestSupplier && is_numeric($latestSupplier->code) ? ((int)$latestSupplier->code + 1) : 1000;
 
@@ -259,7 +262,25 @@ class SupplierController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete suppliers')) {
             return unauthorizedRedirect();
         }
+
         $supplier = Supplier::findOrFail($id);
+
+        if (PurchaseOrder::where('supplier_id', $id)->exists()) {
+            return redirect('suppliers')->with('danger', 'This supplier is referenced in Purchase Orders and cannot be deleted.');
+        }
+
+        if (PurchaseInvoice::where('supplier_id', $id)->exists()) {
+            return redirect('suppliers')->with('danger', 'This supplier is referenced in Purchase Invoices and cannot be deleted.');
+        }
+
+        if (GrnEntry::where('supplier_id', $id)->exists()) {
+            return redirect('suppliers')->with('danger', 'This supplier is referenced in GRN Entries and cannot be deleted.');
+        }
+
+        if (DebitNote::where('supplier_id', $id)->exists()) {
+            return redirect('suppliers')->with('danger', 'This supplier is referenced in Debit Notes and cannot be deleted.');
+        }
+
         $oldData = $supplier->toArray();
         $supplier->delete();
         addLog('delete', 'Supplier', 'suppliers', $id, $oldData, null);

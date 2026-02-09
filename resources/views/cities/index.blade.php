@@ -12,6 +12,9 @@
                 </a>
                 @endif
             </div>
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card">
                 <div class="card-body">
                     <div class="filter-box">
@@ -40,8 +43,8 @@
                                 <tr>
                                     <th>#</th>
                                     <th>State</th>
-                                    <th>City Name</th>
                                     <th>City Code</th>
+                                    <th>City Name</th>
                                     <th>Status</th>
                                     <th width="150">Actions</th>
                                 </tr>
@@ -85,10 +88,10 @@
                     data: 'state'
                 },
                 {
-                    data: 'city_name'
+                    data: 'city_code'
                 },
                 {
-                    data: 'city_code'
+                    data: 'city_name'
                 },
                 {
                     data: 'status',
@@ -118,7 +121,7 @@
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
 
             $.ajax({
-                url: "/cities/status/" + id,
+                url: "{{ url('cities/status') }}/" + id,
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",

@@ -664,7 +664,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary">
-                <h5 class="modal-title text-white" id="processGroupModalLabel">{{ $jobCard ? 'View Process Group (Read-Only)' : 'Select Process Group' }}</h5>
+                <h5 class="modal-title text-white" id="processGroupModalLabel">{{ $jobCard ? 'view process-groups (Read-Only)' : 'Select Process Group' }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">

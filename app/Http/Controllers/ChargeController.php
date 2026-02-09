@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Charge;
+use App\Models\PurchaseInvoiceCharge;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 
@@ -84,11 +85,8 @@ class ChargeController extends Controller
             $charge = Charge::findOrFail($id);
             $oldData = $charge->toArray();
         }
-
         if (request()->isMethod('post')) {
-
             $request = request();
-
             $rules = [
                 'charge_name' => ['required','string','max:255',
                     Rule::unique('charges', 'charge_name')->ignore($id)->whereNull('deleted_at')],
@@ -143,17 +141,14 @@ class ChargeController extends Controller
             return unauthorizedRedirect();
         }
         $charge = Charge::findOrFail($id);
-
-        $tables = [
-            'purchase_invoice_charges' => 'Purchase Invoice Charges',
+        $references = [
+            [PurchaseInvoiceCharge::class, 'charge_id', 'Purchase Invoice Charges'],
         ];
-
-        foreach ($tables as $table => $label) {
-            $query = \Illuminate\Support\Facades\DB::table($table)->where('charge_id', $id);
-            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
-                $query->whereNull('deleted_at');
-            }
-            if ($query->exists()) {
+        foreach ($references as $reference) {
+            $model = $reference[0];
+            $column = $reference[1];
+            $label = $reference[2];
+            if ($model::where($column, $id)->exists()) {
                 return redirect('charges')->with('danger', "This charge is currently referenced in {$label} and cannot be deleted.");
             }
         }
@@ -163,5 +158,4 @@ class ChargeController extends Controller
         addLog('delete', 'Charge', 'charges', $id, $oldData, null);
         return redirect('charges')->with('success', 'Charge deleted successfully');
     }
-
 }

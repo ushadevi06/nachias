@@ -1,0 +1,46 @@
+-- PROCESS GROUPS TABLE
+ALTER TABLE `process_groups`
+ADD COLUMN `created_by` BIGINT UNSIGNED NULL AFTER `status`,
+ADD COLUMN `updated_by` BIGINT UNSIGNED NULL AFTER `created_by`;
+
+-- SEASONS TABLE
+ALTER TABLE `seasons`
+ADD COLUMN `created_by` BIGINT UNSIGNED NULL AFTER `status`,
+ADD COLUMN `updated_by` BIGINT UNSIGNED NULL AFTER `created_by`;
+
+
+ALTER TABLE `job_card_entries`
+DROP COLUMN `fit`,
+ADD COLUMN `fit_id` BIGINT UNSIGNED NULL AFTER `receipt_store_id`,
+ADD CONSTRAINT `fk_job_card_entries_fit`
+    FOREIGN KEY (`fit_id`) REFERENCES `fits`(`id`) ON DELETE SET NULL,
+
+DROP COLUMN `patti_type`,
+ADD COLUMN `patti_type_id` BIGINT UNSIGNED NULL AFTER `fit_id`,
+ADD CONSTRAINT `fk_job_card_entries_patti_type`
+    FOREIGN KEY (`patti_type_id`) REFERENCES `patti_types`(`id`) ON DELETE SET NULL,
+
+DROP COLUMN `collar_type`,
+ADD COLUMN `collar_type_id` BIGINT UNSIGNED NULL AFTER `patti_type_id`,
+ADD CONSTRAINT `fk_job_card_entries_collar_type`
+    FOREIGN KEY (`collar_type_id`) REFERENCES `collar_types`(`id`) ON DELETE SET NULL,
+
+DROP COLUMN `cuff_type`,
+ADD COLUMN `cuff_type_id` BIGINT UNSIGNED NULL AFTER `collar_type_id`,
+ADD CONSTRAINT `fk_job_card_entries_cuff_type`
+    FOREIGN KEY (`cuff_type_id`) REFERENCES `cuff_types`(`id`) ON DELETE SET NULL,
+
+DROP COLUMN `pocket_type`,
+ADD COLUMN `pocket_type_id` BIGINT UNSIGNED NULL AFTER `cuff_type_id`,
+ADD CONSTRAINT `fk_job_card_entries_pocket_type`
+    FOREIGN KEY (`pocket_type_id`) REFERENCES `pocket_types`(`id`) ON DELETE SET NULL,
+
+DROP COLUMN `bottom_cut`,
+ADD COLUMN `bottom_cut_id` BIGINT UNSIGNED NULL AFTER `pocket_type_id`,
+ADD CONSTRAINT `fk_job_card_entries_bottom_cut`
+    FOREIGN KEY (`bottom_cut_id`) REFERENCES `bottom_cuts`(`id`) ON DELETE SET NULL;
+
+
+ALTER TABLE `store_categories`
+ADD COLUMN `created_by` BIGINT UNSIGNED NULL AFTER `status`,
+ADD COLUMN `updated_by` BIGINT UNSIGNED NULL AFTER `created_by`;

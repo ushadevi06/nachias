@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\File;
 use Spatie\Permission\Models\Role;
 use Illuminate\Validation\Rule;
 use App\Models\ServiceProvider;
+use App\Models\JobCardEntry;
+use App\Models\JobCardOperation;
+use App\Models\Task;
+use App\Models\TaskReceive;
+use App\Models\TaskAdjustment;
 
 class EmployeeController extends Controller
 {
@@ -43,41 +48,20 @@ class EmployeeController extends Controller
                 $actionBtn = '<div class="button-box">';
 
                 if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('edit employee'))) {
-                    $actionBtn .= '
-                    <a href="' . url('employees/add/' . $emp->id) . '" class="btn btn-edit">
-                        <i class="icon-base ri ri-edit-box-line"></i>
-                    </a>';
+                    $actionBtn .= '<a href="' . url('employees/add/' . $emp->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('delete employee'))) {
-                    $actionBtn .= '
-                    <a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('employees/delete/' . $emp->id) . '\')" data-id="' . $emp->id . '">
-                        <i class="icon-base ri ri-delete-bin-line"></i>
-                    </a>';
+                    $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('employees/delete/' . $emp->id) . '\')" data-id="' . $emp->id . '"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $actionBtn .= '</div>';
 
                 $checked = $emp->status === 'Active' ? 'checked' : '';
 
-                $statusSwitch = '
-                    <label class="switch switch-success switch-lg">
-                        <input type="checkbox"
-                            class="switch-input employee-status-toggle"
-                            data-id="' . $emp->id . '"
-                            ' . $checked . '>
+                $statusSwitch = '<label class="switch switch-success switch-lg"><input type="checkbox" class="switch-input employee-status-toggle" data-id="' . $emp->id . '" ' . $checked . '><span class="switch-toggle-slider"><span class="switch-on"></span><span class="switch-off"></span></span></label><div class="status_msg_' . $emp->id . '"></div>';
 
-                        <span class="switch-toggle-slider">
-                            <span class="switch-on"></span>
-                            <span class="switch-off"></span>
-                        </span>
-                    </label>
-                    <div class="status_msg_' . $emp->id . '"></div>
-                ';
-
-                $image = $emp->profile_image
-                    ? url('uploads/employee/' . $emp->id . '/' . $emp->profile_image)
-                    : url('assets/images/user.jpg');
+                $image = $emp->profile_image ? url('uploads/employee/' . $emp->id . '/' . $emp->profile_image) : url('assets/images/user.jpg');
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -122,9 +106,9 @@ class EmployeeController extends Controller
         }
         $employee = $id ? User::findOrFail($id) : null;
         $departments = Department::active()->get();
-        $roles = Role::where('status','Active')->get();
+        $roles = Role::where('status', 'Active')->get();
         $bloodGroups = BloodGroup::get();
-        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
+        $serviceProviders = ServiceProvider::active()->get();
         $states = State::active()->get();
         $cities = [];
 
@@ -170,12 +154,12 @@ class EmployeeController extends Controller
                 'contact_person_name' => 'nullable|string|max:255',
                 'contact_person_phone' => 'nullable|string|max:15',
                 'contact_person_email' => 'nullable|email|max:255',
-                'basic_salary' => 'nullable|numeric|min:0',
-                'hra' => 'nullable|numeric|min:0',
-                'allowances' => 'nullable|numeric|min:0',
-                'deductions' => 'nullable|numeric|min:0',
-                'gross_salary' => 'nullable|numeric|min:0',
-                'net_salary' => 'nullable|numeric|min:0',
+                'basic_salary'   => 'nullable|numeric|min:0|max:9999999',
+                'hra'            => 'nullable|numeric|min:0|max:9999999',
+                'allowances'     => 'nullable|numeric|min:0|max:9999999',
+                'deductions'     => 'nullable|numeric|min:0|max:9999999',
+                'gross_salary'   => 'nullable|numeric|min:0|max:9999999',
+                'net_salary'     => 'nullable|numeric|min:0|max:9999999',
                 'bank_name' => 'nullable|string|max:255',
                 'account_number' => [
                     'nullable',
@@ -185,13 +169,15 @@ class EmployeeController extends Controller
                 'ifsc_code' => [
                     'nullable',
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
-                    'unique:users,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                    'unique:users,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                    'max:255'
                 ],
             ];
 
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format.',
             ];
 
             if (!$id) {
@@ -341,35 +327,41 @@ class EmployeeController extends Controller
         return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities', 'serviceProviders'));
     }
 
-    public function getEmployeesByPlant($plantId = null)
-    {
-        $query = User::where('status', 'Active')->where('id', '!=', 1);
-        if ($plantId && $plantId != 'null' && $plantId != 'undefined' && $plantId != 'all') {
-            $query->where('service_provider_id', $plantId);
-        }
-        
-        if (request()->has('department_id')) {
-            $query->where('department_id', request()->department_id);
-        }
 
-        if (request()->has('q')) {
-            $query->where('name', 'like', '%' . request()->q . '%');
-        }
-
-        $employees = $query->get(['id', 'name']);
-        
-        $formatted = $employees->map(function($e) {
-            return ['id' => $e->id, 'text' => $e->name];
-        });
-
-        return response()->json(['success' => true, 'employees' => $employees, 'results' => $formatted]);
-    }
 
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete employee')) {
             return unauthorizedRedirect();
         }
+
+        if ($id == 1) {
+            return redirect('employees')->with('danger', 'The super administrator cannot be deleted.');
+        }
+
+        if (JobCardEntry::where('cutting_master_id', $id)->exists()) {
+            return redirect('employees')->with('danger', 'Cannot delete This employee is a Cutting Master in Job Cards.');
+        }
+
+        if (JobCardOperation::where('employee_id', $id)->orWhere('received_by', $id)->exists()) {
+            return redirect('employees')->with('danger', 'Cannot delete This employee has operations recorded in Job Cards.');
+        }
+        if (JobCardOperation::where('employee_id', $id)->orWhere('received_by', $id)->exists()) {
+            return redirect('employees')->with('danger', 'Cannot delete This employee has operations recorded in Job Cards.');
+        }
+
+        if (Task::where('issued_to', $id)->exists()) {
+            return redirect('employees')->with('danger', 'Cannot delete This employee has tasks issued to them.');
+        }
+
+        if (TaskReceive::where('received_from', $id)->exists()) {
+            return redirect('employees')->with('danger', 'Cannot delete This employee has recorded task receipts.');
+        }
+
+        if (TaskAdjustment::where('approved_by', $id)->exists()) {
+            return redirect('employees')->with('danger', 'Cannot delete This employee has approved task adjustments.');
+        }
+
         $employee = User::findOrFail($id);
 
         $uploadPath = public_path('uploads/employee/' . $id);

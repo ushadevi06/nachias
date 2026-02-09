@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Fit;
+use App\Models\JobCardEntry;
 use Illuminate\Http\Request;
 
 class FitController extends Controller
@@ -111,8 +112,10 @@ class FitController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete fits')) {
             return unauthorizedRedirect();
         }
-
         $fit = Fit::findOrFail($id);
+        if (JobCardEntry::where('fit_id', $id)->exists()) {
+            return redirect('fits')->with('danger', 'This fit is currently referenced in Job Card Entries and cannot be deleted.');
+        }
         $oldData = $fit->toArray();
         $fit->delete();
         addLog('delete', 'Fit', 'fits', $id, $oldData, null);

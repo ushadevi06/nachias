@@ -14,14 +14,9 @@
                 </a>
                 @endif
             </div>
-
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
-
             <div class="card">
                 <div class="card-body">
                     <table class="table" id="taxTable">
@@ -43,12 +38,9 @@
     </div>
 </div>
 @endsection
-
-
 @section('scripts')
 <script>
     $(function() {
-
         let table = $('#taxTable').DataTable({
             responsive: true,
             paging: true,
@@ -80,10 +72,7 @@
                 },
             ]
         });
-
-        // ✅ STATUS TOGGLE AJAX
         $(document).on('change', '.tax-status-toggle', function() {
-
             let id = $(this).data('id');
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
 
@@ -95,7 +84,6 @@
                     status: status
                 },
                 success: function(res) {
-
                     let msg = status === 'Active' ?
                         '<span class="text-success">Activated</span>' :
                         '<span class="text-danger">Deactivated</span>';

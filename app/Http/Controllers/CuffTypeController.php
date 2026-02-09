@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\CuffType;
+use App\Models\JobCardEntry;
 use Illuminate\Http\Request;
 
 class CuffTypeController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view cuff types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view cuff-types')) {
             return unauthorizedRedirect();
         }
 
@@ -33,13 +34,13 @@ class CuffTypeController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit cuff types')) {
+                if (auth()->id() == 1 || auth()->user()->can('create cuff-types')) {
                     $action .= '<a href="' . url('cuff_types/add/' . $row->id) . '" class="btn btn-edit">
                                     <i class="icon-base ri ri-edit-box-line"></i>
                                 </a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete cuff types')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete cuff-types')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('cuff_types/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
@@ -64,11 +65,11 @@ class CuffTypeController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit cuff types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create cuff-types')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create cuff types')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create cuff-types')) {
                 return unauthorizedRedirect();
             }
         }
@@ -108,11 +109,14 @@ class CuffTypeController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete cuff types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete cuff-types')) {
             return unauthorizedRedirect();
         }
 
         $cuffType = CuffType::findOrFail($id);
+        if (JobCardEntry::where('cuff_type_id', $id)->exists()) {
+            return redirect('cuff_types')->with('danger', 'This cuff type is currently referenced in Job Card Entries and cannot be deleted.');
+        }
         $oldData = $cuffType->toArray();
         $cuffType->delete();
         addLog('delete', 'Cuff Type', 'cuff_types', $id, $oldData, null);

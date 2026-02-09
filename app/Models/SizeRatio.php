@@ -40,4 +40,8 @@ class SizeRatio extends Model
 
         return $sizeCount === $ratioCount;
     }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 }

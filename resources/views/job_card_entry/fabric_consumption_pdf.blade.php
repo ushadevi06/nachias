@@ -124,10 +124,10 @@
                 <th>Qty Adjusted</th>
                 <th>Qty Consumed</th>
                 <th>Qty Balance</th>
-                <th>Qty/PC</th>
+                {{-- <th>Qty/PC</th>
                 <th>Unit Price</th>
                 <th>Cost</th>
-                <th>Cost/PC</th>
+                <th>Cost/PC</th> --}}
             </tr>
         </thead>
         <tbody>
@@ -167,10 +167,10 @@
                     <td class="text-end">{{ number_format($item->qty_adjusted, 2) }}</td>
                     <td class="text-end">{{ number_format($qtyConsumed, 2) }}</td>
                     <td class="text-end">{{ number_format($item->balance, 2) }}</td>
-                    <td class="text-end">{{ number_format($qtyPerPc, 2) }}</td>
+                    {{-- <td class="text-end">{{ number_format($qtyPerPc, 2) }}</td>
                     <td class="text-end">{{ number_format($item->unit_price, 2) }}</td>
                     <td class="text-end">{{ number_format($item->total_cost, 2) }}</td>
-                    <td class="text-end">{{ number_format($costPerPc, 2) }}</td>
+                    <td class="text-end">{{ number_format($costPerPc, 2) }}</td> --}}
                 </tr>
             @endforeach
         </tbody>
@@ -184,10 +184,10 @@
                 <td class="text-end">{{ number_format($totalQtyAdjusted, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyConsumed, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyBalance, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalQtyConsumed / $totalQtyProduced, 2) : '-' }}</td>
+                {{-- <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalQtyConsumed / $totalQtyProduced, 2) : '-' }}</td>
                 <td class="text-end">-</td>
                 <td class="text-end">{{ number_format($totalCost, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td>
+                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td> --}}
             </tr>
         </tfoot>
     </table>

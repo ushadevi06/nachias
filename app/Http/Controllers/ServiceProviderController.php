@@ -7,6 +7,10 @@ use App\Models\OperationStage;
 use App\Models\State;
 use App\Models\City;
 use App\Models\Place;
+use App\Models\User;
+use App\Models\Resource;
+use App\Models\JobCardEntry;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 
 class ServiceProviderController extends Controller
@@ -22,20 +26,14 @@ class ServiceProviderController extends Controller
             if (!empty($request->operation_stage_id)) {
                 $query->where('operation_stage_id', $request->operation_stage_id);
             }
-
             if (!empty($request->service_rate)) {
                 $query->where('service_rate', $request->service_rate);
             }
-
             $providers = $query->orderBy('id', 'desc')->get();
             $data = [];
             $count = 1;
-            
-
             foreach ($providers as $provider) {
-
                 $checked = $provider->status === 'Active' ? 'checked' : '';
-
                 $status = '
                     <label class="switch switch-success switch-lg">
                         <input type="checkbox"
@@ -44,7 +42,6 @@ class ServiceProviderController extends Controller
                         <span class="switch-toggle-slider"></span>
                     </label>
                     <div class="status_msg_' . $provider->id . '"></div>';
-
                 $action = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('edit service-providers')) {
                     $action .= '<a href="' . url('service_providers/add/' . $provider->id) . '" class="btn btn-edit">
@@ -60,7 +57,6 @@ class ServiceProviderController extends Controller
 
                 }
                 $action .= '</div>';
-
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'name'   => $provider->name . ' (' . $provider->code . ')',
@@ -128,18 +124,31 @@ class ServiceProviderController extends Controller
                 'designation' => 'nullable|string|max:255',
                 'phone_number' => 'nullable|string|max:20',
                 'contact_email' => 'nullable|email|max:255',
-                'pan_no' => 'nullable|string|max:20',
-                'gst_no' => 'nullable|string|max:20',
+                'pan_no' => [
+                    'nullable',
+                    'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
+                    'unique:service_providers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
+                'gst_no' => [
+                    'nullable',
+                    'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
+                    'unique:service_providers,gst_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
                 'remarks' => 'nullable|string|max:1000',
                 'bank_name' => 'nullable|string|max:255',
                 'bank_acc_no' => 'nullable|string|max:50|unique:service_providers,bank_acc_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'ifsc_code' => 'nullable|string|max:20|unique:service_providers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'ifsc_code' => [
+                    'nullable',
+                    'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
+                    'unique:service_providers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
                 'payment_terms' => 'nullable|string|max:1000',
             ];
 
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format'
             ];
             $validated = $request->validate($rules, $messages);
             
@@ -198,10 +207,10 @@ class ServiceProviderController extends Controller
         $stateId = old('state_id', $serviceProvider->state_id ?? null);
         $cityId = old('city_id', $serviceProvider->city_id ?? null);
         if ($stateId) {
-            $cities = City::where('state_id', $stateId)->where('status', 'Active')->get();
+            $cities = City::where('state_id', $stateId)->active()->get();
         }
         if ($cityId) {
-            $places = Place::where('city_id', $cityId)->where('status', 'Active')->get();
+            $places = Place::where('city_id', $cityId)->active()->get();
         }
 
         return view('service_providers.add', compact('serviceProvider', 'operation_stages', 'states', 'cities', 'places'));
@@ -212,13 +221,24 @@ class ServiceProviderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete service-providers')) {
             return unauthorizedRedirect();
         }
+
         $provider = ServiceProvider::findOrFail($id);
+
+        if (User::where('service_provider_id', $id)->exists()) {
+            return redirect('service_providers')->with('danger', 'This service provider is referenced in Employees and cannot be deleted.');
+        }
+
+        if (Resource::where('service_provider_id', $id)->exists()) {
+            return redirect('service_providers')->with('danger', 'This service provider is referenced in Resources and cannot be deleted.');
+        }
+
+        if (JobCardEntry::where('service_provider_id', $id)->exists()) {
+            return redirect('service_providers')->with('danger', 'This service provider is referenced in Job Card Entries and cannot be deleted.');
+        }
+
         $oldData = $provider->toArray();
-
         $provider->delete();
-
         addLog('delete', 'Service Provider', 'service_providers', $id, $oldData, null);
-
         return redirect('service_providers')->with('success', 'Service Provider deleted successfully');
     }
 

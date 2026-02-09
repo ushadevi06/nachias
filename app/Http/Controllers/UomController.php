@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Uom;
+use App\Models\StockEntryItem;
+use App\Models\PurchaseInvoiceItem;
+use App\Models\PurchaseOrderItem;
+use App\Models\Item;
+use App\Models\RawMaterial;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -102,13 +107,14 @@ class UomController extends Controller
                         ->ignore($id)
                         ->whereNull('deleted_at')
                 ],
-                'description' => 'nullable|string',
+                'description' => ['nullable', 'string', 'max:255', 'regex:/^[^<>]*$/'],
                 'status' => 'required|in:Active,Inactive'
             ];
 
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format.',
             ];
 
             $validated = $request->validate($rules,$messages);
@@ -150,20 +156,17 @@ class UomController extends Controller
         }
         $uom = Uom::findOrFail($id);
 
-        $tables = [
-            'stock_entry_items' => 'Stock Entry Items',
-            'purchase_invoice_items' => 'Purchase Invoice Items',
-            'purchase_order_items' => 'Purchase Order Items',
-            'items' => 'Items',
-            'raw_materials' => 'Raw Materials',
+        // Model-based validation
+        $references = [
+            [StockEntryItem::class, 'uom_id', 'Stock Entry Items'],
+            [PurchaseInvoiceItem::class, 'uom_id', 'Purchase Invoice Items'],
+            [PurchaseOrderItem::class, 'uom_id', 'Purchase Order Items'],
+            [Item::class, 'uom_id', 'Items'],
+            [RawMaterial::class, 'uom_id', 'Raw Materials'],
         ];
 
-        foreach ($tables as $table => $label) {
-            $query = \Illuminate\Support\Facades\DB::table($table)->where('uom_id', $id);
-            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
-                $query->whereNull('deleted_at');
-            }
-            if ($query->exists()) {
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
                 return redirect('uoms')->with('danger', "This uom is currently referenced in {$label} and cannot be deleted.");
             }
         }

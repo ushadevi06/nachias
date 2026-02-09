@@ -130,37 +130,37 @@ class User extends Authenticatable
     public function getProfileImageUrlAttribute()
     {
         if ($this->profile_image) {
-            return asset('uploads/employee/' . $this->id . '/' . $this->profile_image);
+            return url('uploads/employee/' . $this->id . '/' . $this->profile_image);
         }
 
-        return asset('assets/images/user.jpg');
+        return url('assets/images/user.jpg');
     }
 
     public function getEsiDocumentUrlAttribute()
     {
         return $this->esi_document
-            ? asset('uploads/employee/' . $this->id . '/' . $this->esi_document)
+            ? url('uploads/employee/' . $this->id . '/' . $this->esi_document)
             : null;
     }
 
     public function getPfDocumentUrlAttribute()
     {
         return $this->pf_document
-            ? asset('uploads/employee/' . $this->id . '/' . $this->pf_document)
+            ? url('uploads/employee/' . $this->id . '/' . $this->pf_document)
             : null;
     }
 
     public function getAadhaarDocumentUrlAttribute()
     {
         return $this->aadhaar_document
-            ? asset('uploads/employee/' . $this->id . '/' . $this->aadhaar_document)
+            ? url('uploads/employee/' . $this->id . '/' . $this->aadhaar_document)
             : null;
     }
 
     public function getPanDocumentUrlAttribute()
     {
         return $this->pan_document
-            ? asset('uploads/employee/' . $this->id . '/' . $this->pan_document)
+            ? url('uploads/employee/' . $this->id . '/' . $this->pan_document)
             : null;
     }
 

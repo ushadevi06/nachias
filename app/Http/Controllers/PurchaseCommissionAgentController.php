@@ -7,6 +7,8 @@ use App\Models\PurchaseCommissionAgent;
 use App\Models\State;
 use App\Models\City;
 use App\Models\Place;
+use App\Models\Supplier;
+use App\Models\PurchaseOrder;
 
 class PurchaseCommissionAgentController extends Controller
 {
@@ -112,53 +114,43 @@ class PurchaseCommissionAgentController extends Controller
             }
         }
         $agent = null;
-
         if ($id) {
             $agent = PurchaseCommissionAgent::with(['state', 'city', 'servicePoint'])->findOrFail($id);
         }
-
         if (request()->isMethod('post')) {
-
             $request = request();
-
             $rules = [
                 'name'        => 'required|string|max:255',
                 'code'        => 'required|string|max:50|unique:purchase_commission_agents,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'email'       => 'nullable|email|max:255|unique:purchase_commission_agents,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'mobile_no'   => 'nullable|string|max:20|unique:purchase_commission_agents,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'status'      => 'required|in:Active,Inactive',
-
                 'state_id'    => 'required|exists:states,id',
                 'city_id'     => 'required|exists:cities,id',
                 'place_id'    => 'required|exists:places,id',
-
                 'address_line_1'      => 'nullable|string|max:255',
                 'address_line_2'      => 'nullable|string|max:255',
                 'zipcode'             => 'nullable|string|max:20',
-
                 'contact_person_name' => 'nullable|string|max:255',
                 'designation'         => 'nullable|string|max:255',
                 'phone_number'        => 'nullable|string|max:20',
                 'contact_email'       => 'nullable|email|max:255',
-
                 'pan_no' => [
                     'nullable',
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                     'unique:purchase_commission_agents,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-
                 'gst_no' => [
                     'nullable',
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
                     'unique:purchase_commission_agents,gst_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-
                 'remarks' => 'nullable|string',
             ];
-
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format'
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -169,48 +161,35 @@ class PurchaseCommissionAgentController extends Controller
                 'email'               => $request->email,
                 'mobile_no'           => $request->mobile_no,
                 'status'              => $request->status,
-
                 'state_id'            => $request->state_id,
                 'city_id'             => $request->city_id,
                 'place_id'            => $request->place_id,
-
                 'address_line_1'      => $request->address_line_1,
                 'address_line_2'      => $request->address_line_2,
                 'zipcode'             => $request->zipcode,
-
                 'contact_person_name' => $request->contact_person_name,
                 'designation'         => $request->designation,
                 'phone_number'        => $request->phone_number,
                 'contact_email'       => $request->contact_email,
-
                 'pan_no'              => $request->pan_no,
                 'gst_no'              => $request->gst_no,
-
                 'remarks'             => $request->remarks,
             ];
 
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 $oldData = PurchaseCommissionAgent::find($id)->toArray();
-
                 PurchaseCommissionAgent::where('id', $id)->update($data);
-
                 $newData = PurchaseCommissionAgent::find($id)->toArray();
-
                 addLog('update', 'Purchase Commission Agent', 'purchase_commission_agents', $id, $oldData, $newData);
-
                 $message = 'Purchase Commission Agent updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $agent = PurchaseCommissionAgent::create($data);
-
                 $newData = $agent->toArray();
-
                 addLog('create', 'Purchase Commission Agent', 'purchase_commission_agents', $agent->id, null, $newData);
-
                 $message = 'Purchase Commission Agent added successfully';
             }
-
             return redirect('purchase_commission_agent')->with('success', $message);
         }
 
@@ -238,16 +217,11 @@ class PurchaseCommissionAgentController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $agent = PurchaseCommissionAgent::findOrFail($id);
-
         $oldData = $agent->toArray();
-
         $agent->status = $request->status;
         $agent->save();
-
         $newData = $agent->toArray();
-
         addLog('update_status', 'Purchase Commission Agent Status', 'purchase_commission_agents', $id, $oldData, $newData);
-
         return response()->json([
             'status'  => true,
             'message' => 'Status updated successfully'
@@ -261,21 +235,21 @@ class PurchaseCommissionAgentController extends Controller
             return unauthorizedRedirect();
         }
         $agent = PurchaseCommissionAgent::findOrFail($id);
-
+        if (Supplier::where('purchase_commission_agent_id', $id)->exists()) {
+            return redirect('purchase_commission_agent')->with('danger', 'This agent is referenced in Suppliers and cannot be deleted.');
+        }
+        if (PurchaseOrder::where('purchase_commission_agent_id', $id)->exists()) {
+            return redirect('purchase_commission_agent')->with('danger', 'This agent is referenced in Purchase Orders and cannot be deleted.');
+        }
         $oldData = $agent->toArray();
-
         $agent->delete(); 
-
         addLog('delete', 'Purchase Commission Agent', 'purchase_commission_agents', $id, $oldData, null);
-
         if (request()->ajax()) {
             return response()->json([
                 'status'  => true,
                 'message' => 'Purchase Commission Agent deleted successfully'
             ]);
         }
-
-        return redirect('purchase_commission_agent')
-            ->with('success', 'Purchase Commission Agent deleted successfully');
+        return redirect('purchase_commission_agent')->with('success', 'Purchase Commission Agent deleted successfully');
     }
 }

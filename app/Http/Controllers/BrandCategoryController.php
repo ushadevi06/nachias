@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\BrandCategory;
+use App\Models\Item;
+use App\Models\JobCardEntry;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -145,16 +147,19 @@ class BrandCategoryController extends Controller
         }
         $brandCategory = BrandCategory::findOrFail($id);
 
+        if (Item::where('brand_category_id', $id)->exists()) {
+            return redirect('brand_categories')->with('danger', 'This brand category is currently referenced in Items and cannot be deleted.');
+        }
+
+        if (JobCardEntry::where('brand_category_id', $id)->exists()) {
+            return redirect('brand_categories')->with('danger', 'This brand category is currently referenced in Job Card Entries and cannot be deleted.');
+        }
+
         $oldData = $brandCategory->toArray();
-
         $brandCategory->delete();
+        addLog('delete', 'Brand Category', 'brand_categories', $id, $oldData, null);
 
-        addLog('delete','Brand Category','brand_categories', $id,$oldData,null);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Brand Category deleted successfully'
-        ]);
+        return redirect('brand_categories')->with('success', 'Brand Category deleted successfully');
     }
 
 

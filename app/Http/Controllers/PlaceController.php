@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Place;
 use App\Models\State;
 use App\Models\City;
+use App\Models\Supplier;
+use App\Models\Customer;
+use App\Models\ServiceProvider;
+use App\Models\SalesAgent;
+use App\Models\PurchaseCommissionAgent;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -157,6 +162,20 @@ class PlaceController extends Controller
             return unauthorizedRedirect();
         }
         $place = Place::findOrFail($id);
+        $references = [
+            [Supplier::class, 'place_id', 'Suppliers'],
+            [Customer::class, 'place_id', 'Customers'],
+            [ServiceProvider::class, 'place_id', 'Service Providers'],
+            [SalesAgent::class, 'place_id', 'Sales Agents'],
+            [PurchaseCommissionAgent::class, 'place_id', 'Purchase Commission Agents'],
+        ];
+
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
+                session()->flash('danger', "This place is currently referenced in {$label} and cannot be deleted.");
+                return redirect('places');
+            }
+        }
         $oldData = $place->toArray();
         $place->delete();
         addLog('delete', 'Place', 'places', $id, $oldData, null);

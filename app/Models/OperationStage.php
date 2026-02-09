@@ -17,6 +17,7 @@ class OperationStage extends Model
         'updated_by',
     ];
     protected $dates = ['deleted_at'];
+    
     public function scopeActive($query)
     {
         return $query->where('status', 'Active');

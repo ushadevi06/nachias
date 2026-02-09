@@ -15,9 +15,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('fit_name') is-invalid @enderror" id="fit_name"
-                                        placeholder="Enter Fit Name" name="fit_name"
-                                        value="{{ old('fit_name', $fit->fit_name ?? '') }}">
+                                    <input type="text" class="form-control @error('fit_name') is-invalid @enderror" id="fit_name" placeholder="Enter Fit Name" name="fit_name" value="{{ old('fit_name', $fit->fit_name ?? '') }}">
                                     <label for="fit_name">Fit Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('fit_name')
@@ -26,15 +24,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $fit->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $fit->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $fit->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $fit->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

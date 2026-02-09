@@ -4,35 +4,18 @@
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
-
-        <div class="col-lg-12">
-            @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            @endif
-
-            @if (session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                {{ session('error') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            @endif
-        </div>
-
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Store Locations</h4>
-
                 @if(auth()->id() == 1 || auth()->user()->can('create store-location'))
-
                 <a class="btn btn-primary" href="{{ url('store_location/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
                 @endif
             </div>
-
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
@@ -60,7 +43,6 @@
 @section('scripts')
 <script>
     $(function() {
-
         $('#storeLocationTable').DataTable({
             responsive: true,
             paging: true,
@@ -116,13 +98,5 @@
         });
 
     });
-
-
-    // ✅ COMMON DELETE FUNCTION
-    function delete_data(url) {
-        if (confirm('Are you sure you want to delete this Store Location?')) {
-            window.location.href = url;
-        }
-    }
 </script>
 @endsection

@@ -3,19 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\BottomCut;
+use App\Models\JobCardEntry;
 use Illuminate\Http\Request;
 
 class BottomCutController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view bottom cuts')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view bottom-cuts')) {
             return unauthorizedRedirect();
         }
 
         if ($request->ajax()) {
             $bottomCuts = BottomCut::latest()->get();
-
             $data = [];
             $i = 1;
 
@@ -33,13 +33,13 @@ class BottomCutController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit bottom cuts')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit bottom-cuts')) {
                     $action .= '<a href="' . url('bottom_cuts/add/' . $row->id) . '" class="btn btn-edit">
                                     <i class="icon-base ri ri-edit-box-line"></i>
                                 </a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete bottom cuts')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete bottom-cuts')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('bottom_cuts/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
@@ -64,11 +64,11 @@ class BottomCutController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit bottom cuts')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit bottom-cuts')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create bottom cuts')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create bottom-cuts')) {
                 return unauthorizedRedirect();
             }
         }
@@ -108,11 +108,13 @@ class BottomCutController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete bottom cuts')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete bottom-cuts')) {
             return unauthorizedRedirect();
         }
-
         $bottomCut = BottomCut::findOrFail($id);
+        if (JobCardEntry::where('bottom_cut_id', $id)->exists()) {
+            return redirect('bottom_cuts')->with('danger', 'This bottom cut is currently referenced in Job Card Entries and cannot be deleted.');
+        }
         $oldData = $bottomCut->toArray();
         $bottomCut->delete();
         addLog('delete', 'Bottom Cut', 'bottom_cuts', $id, $oldData, null);

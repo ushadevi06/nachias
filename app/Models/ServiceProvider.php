@@ -60,4 +60,8 @@ class ServiceProvider extends Model
     {
         return $this->belongsTo(Place::class);
     }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 }

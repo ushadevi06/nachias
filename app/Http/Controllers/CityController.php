@@ -8,6 +8,15 @@ use Illuminate\Http\RedirectResponse;
 use App\Models\City;
 use App\Models\State;
 use App\Models\Place;
+use App\Models\Supplier;
+use App\Models\Customer;
+use App\Models\Employee;
+use App\Models\Zone;
+use App\Models\SalesAgent;
+use App\Models\PurchaseCommissionAgent;
+use App\Models\ServiceProvider;
+use App\Models\User;
+use App\Models\Setting;
 use Illuminate\Validation\Rule;
 
 class CityController extends Controller
@@ -63,8 +72,8 @@ class CityController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'state'      => $city->state->state_name ?? '-',
-                    'city_name'  => $city->city_name ?? '-',
                     'city_code'  => $city->city_code ?? '-',
+                    'city_name'  => $city->city_name ?? '-',
                     'status'     => $statusSwitch,
                     'action'     => $actionBtn,
                 ];
@@ -154,28 +163,33 @@ class CityController extends Controller
             return unauthorizedRedirect();
         }
         $city = City::findOrFail($id);
-        $tables = [
-            'suppliers' => 'Suppliers',
-            'customers' => 'Customers',
-            'employees' => 'Employees',
-            'zones' => 'Zones',
-            'sales_agents' => 'Sales Agents',
-            'purchase_commission_agents' => 'Purchase Commission Agents',
-            'service_providers' => 'Service Providers',
-            'places' => 'Places',
-            'users' => 'Users',
-            'settings' => 'Settings',
+        $references = [
+            [Supplier::class, 'city_id', 'Suppliers'],
+            [Customer::class, 'city_id', 'Customers'],
+            [Employee::class, 'city_id', 'Employees'],
+            [SalesAgent::class, 'city_id', 'Sales Agents'],
+            [PurchaseCommissionAgent::class, 'city_id', 'Purchase Commission Agents'],
+            [ServiceProvider::class, 'city_id', 'Service Providers'],
+            [Place::class, 'city_id', 'Places'],
+            [User::class, 'city_id', 'Users'],
+            [Setting::class, 'city_id', 'Settings'],
         ];
 
-        foreach ($tables as $table => $label) {
-            $query = \Illuminate\Support\Facades\DB::table($table)->where('city_id', $id);
-            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
-                $query->whereNull('deleted_at');
-            }
-            if ($query->exists()) {
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
                 session()->flash('danger', "This city is currently referenced in {$label} and cannot be deleted.");
                 return redirect('cities');
             }
+        }
+
+        if (Zone::where(function($q) use ($id) {
+            $q->where('city_ids', 'LIKE', '%,' . $id . ',%')
+              ->orWhere('city_ids', 'LIKE', $id . ',%')
+              ->orWhere('city_ids', 'LIKE', '%,' . $id)
+              ->orWhere('city_ids', '=', $id);
+        })->exists()) {
+            session()->flash('danger', "This city is currently referenced in Zones and cannot be deleted.");
+            return redirect('cities');
         }
 
         $oldData = $city->toArray();

@@ -10,7 +10,7 @@ class ProcessGroup extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'status'];
+    protected $fillable = ['name', 'status', 'created_by', 'updated_by'];
 
     public function scopeActive($query)
     {

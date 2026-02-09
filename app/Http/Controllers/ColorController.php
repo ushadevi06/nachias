@@ -91,13 +91,14 @@ class ColorController extends Controller
                     'max:255',
                     Rule::unique('colors', 'color_name')->ignore($id)->whereNull('deleted_at')
                 ],
-                'description' => 'nullable|string',
+                'description' => 'nullable|string|max:255|regex:/^[^<>]*$/',
                 'status' => 'required|in:Active,Inactive'
             ];
 
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format.',
             ];
 
             $validated = $request->validate($rules,$messages);

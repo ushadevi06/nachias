@@ -12,12 +12,9 @@
                 </a>
                 @endif
             </div>
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
 
             <div class="card">
                 <div class="card-body">
@@ -140,7 +137,7 @@
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
 
             $.ajax({
-                url: "/places/status/" + id,
+                url: "{{ url('places/status') }}/" + id,
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",

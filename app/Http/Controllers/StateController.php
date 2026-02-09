@@ -5,6 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\State;
 use App\Models\City;
+use App\Models\Supplier;
+use App\Models\Customer;
+use App\Models\Employee;
+use App\Models\Zone;
+use App\Models\SalesAgent;
+use App\Models\PurchaseCommissionAgent;
+use App\Models\ServiceProvider;
+use App\Models\Place;
+use App\Models\User;
+use App\Models\Setting;
 
 class StateController extends Controller
 {
@@ -69,9 +79,7 @@ class StateController extends Controller
 
         return view('states.index');
     }
-
-
-
+    
     public function add(Request $request, $id = null)
     {
         if ($id) {
@@ -143,27 +151,23 @@ class StateController extends Controller
             return unauthorizedRedirect();
         }
         $state = State::findOrFail($id);
-        $tables = [
-            'cities' => 'Cities',
-            'suppliers' => 'Suppliers',
-            'customers' => 'Customers',
-            'employees' => 'Employees',
-            'zones' => 'Zones',
-            'sales_agents' => 'Sales Agents',
-            'purchase_commission_agents' => 'Purchase Commission Agents',
-            'service_providers' => 'Service Providers',
-            'places' => 'Places',
-            'users' => 'Users',
-            'settings' => 'Settings',
+        $references = [
+            [City::class, 'state_id', 'Cities'],
+            [Supplier::class, 'state_id', 'Suppliers'],
+            [Customer::class, 'state_id', 'Customers'],
+            [Employee::class, 'state_id', 'Employees'],
+            [Zone::class, 'state_id', 'Zones'],
+            [SalesAgent::class, 'state_id', 'Sales Agents'],
+            [PurchaseCommissionAgent::class, 'state_id', 'Purchase Commission Agents'],
+            [ServiceProvider::class, 'state_id', 'Service Providers'],
+            [Place::class, 'state_id', 'Places'],
+            [User::class, 'state_id', 'Users'],
+            [Setting::class, 'state_id', 'Settings'],
         ];
 
-        foreach ($tables as $table => $label) {
-            $query = \Illuminate\Support\Facades\DB::table($table)->where('state_id', $id);
-            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'deleted_at')) {
-                $query->whereNull('deleted_at');
-            }
-            if ($query->exists()) {
-                session()->flash('danger', "This state is currently referenced in {$label} and cannot be deleted..");
+        foreach ($references as [$model, $column, $label]) {
+            if ($model::where($column, $id)->exists()) {
+                session()->flash('danger', "This state is currently referenced in {$label} and cannot be deleted");
                 return redirect('states');
             }
         }

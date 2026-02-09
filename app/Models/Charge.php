@@ -15,4 +15,8 @@ class Charge extends Model
     {
         return $this->hasMany(PurchaseInvoiceCharge::class);
     }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
+    }
 }

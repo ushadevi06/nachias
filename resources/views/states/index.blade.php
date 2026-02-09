@@ -1,10 +1,8 @@
 @extends('layouts.common')
 @section('title', 'States - ' . env('WEBSITE_NAME'))
 @section('content')
-<!-- / Menu -->
 <div class="container-xxl section-padding">
     <div class="row">
-        
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>States</h4>
@@ -12,8 +10,8 @@
                 <a class="btn btn-primary" href="{{ url('states/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
-            @endif
             <div class="col-lg-12">
                 @include('flash_messages')
             </div>
@@ -82,7 +80,7 @@
             let id = $(this).data('id');
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
             $.ajax({
-                url: "/state/status/" + id,
+                url: "{{ url('states/status') }}/" + id,
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",

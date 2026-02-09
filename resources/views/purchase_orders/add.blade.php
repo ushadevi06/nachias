@@ -396,7 +396,7 @@
                                         <td>
                                             <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
                                             @if($item->attached_file)
-                                            <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ asset('uploads/purchase_orders/' . $item->attached_file) }}">
+                                            <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ url('uploads/purchase_orders/' . $item->attached_file) }}">
                                                 <i class="ri ri-image-line"></i> View
                                             </a>
                                             @endif
@@ -555,7 +555,7 @@
                                                     $attachment = $purchaseOrder->additional_attachments;
                                                     $extension = pathinfo($attachment, PATHINFO_EXTENSION);
                                                     $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                                    $url = asset('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
+                                                    $url = url('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
                                                 @endphp
 
                                                 @if($isImage)
