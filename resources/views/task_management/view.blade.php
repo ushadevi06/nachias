@@ -65,7 +65,7 @@
 
 @section('scripts')
 <script src="{{ url('assets/js/jkanban.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<script src="{{ url('assets/js/quill.min.js') }}"></script>
 <script>
   window.csrfToken = "{{ csrf_token() }}";
   window.kanbanUpdateStatusUrl = "{{ route('task_management.update_status') }}";
@@ -83,12 +83,12 @@ $(document).ready(function() {
   const $addListCol = $('.kanban-add-new-board-column');
 
     const repositionNewList = () => {
-        const $container = $('.kanban-container');
-        if ($container.length) {
-          $container.append($addListCol);
-        } else {
-          setTimeout(repositionNewList, 100);
-        }
+      const $container = $('.kanban-container');
+      if ($container.length) {
+        $container.append($addListCol);
+      } else {
+        setTimeout(repositionNewList, 100);
+      }
     };
     repositionNewList();
 

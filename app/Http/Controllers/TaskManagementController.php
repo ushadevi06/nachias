@@ -241,21 +241,24 @@ class TaskManagementController extends Controller
         
         $relatedTasks = Task::where('job_card_entry_id', ($jobCard->id ?? 0))->get();
     
-        $taskReceive = null;
-        $taskAdjustment = null;
+        $taskReceives = collect([]);
+        $taskAdjustments = collect([]);
         if ($task) {
-            $taskReceive = TaskReceive::where('task_id', $task->id)->latest()->first();
+            $taskReceives = TaskReceive::where('task_id', $task->id)->latest()->get();
+            $taskAdjustments = TaskAdjustment::with(['items.rawMaterial', 'items.uom'])->where('task_id', $task->id)->latest()->get();
+            
+            $taskReceive = $taskReceives->first();
             if ($taskReceive) {
                 $nextTRNo = $taskReceive->task_receive_no;
             }
 
-            $taskAdjustment = TaskAdjustment::where('task_id', $task->id)->latest()->first();
+            $taskAdjustment = $taskAdjustments->first();
             if ($taskAdjustment) {
                 $nextAdjNo = $taskAdjustment->adjustment_no;
             }
         }
 
-        return view('task_management/add', compact('task', 'production', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses', 'nextTRNo', 'nextAdjNo', 'relatedTasks', 'taskReceive', 'taskAdjustment', 'shifts'));
+        return view('task_management/add', compact('task', 'production', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses', 'nextTRNo', 'nextAdjNo', 'relatedTasks', 'taskReceive', 'taskAdjustment', 'shifts', 'taskReceives', 'taskAdjustments'));
     }
 
     public function view($id)
@@ -263,7 +266,7 @@ class TaskManagementController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view task')) {
             return unauthorizedRedirect();
         }
-        $task = Task::findOrFail($id);
+        $task = Task::with(['receives', 'adjustments.items.rawMaterial', 'adjustments.items.uom'])->findOrFail($id);
         return view('task_management/view_details', compact('task'));
     }
 

@@ -82,7 +82,8 @@
         });
         $('.po_date').flatpickr({
             dateFormat: 'd-m-Y',
-            allowInput: true
+            allowInput: true,
+            defaultDate: 'today',
         });
 
         $('#doj').flatpickr({

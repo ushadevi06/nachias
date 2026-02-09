@@ -429,7 +429,7 @@
                 let color_id = $(this).val();
                 let qty = $(this).next().val();
                 selectedColors.push(color_id);
-                // Get name from option directly using ID
+
                 let colorName = $(`#variantColors option[value="${color_id}"]`).data('name') || 'Unknown';
                 tbody.append(`<tr data-color-id="${color_id}"><td>${colorName}</td><td><input type="number" step="0.01" class="form-control var-qty" value="${qty}" min="0"></td></tr>`);
             });
@@ -469,7 +469,7 @@
             let received = parseFloat(row.find('.qty-received').val()) || 0;
             let ordered = parseFloat($('#modal-qty-summary').data('ordered')) || 0;
             
-            updateModalSummary(total, received); // Use received as the label in summary
+            updateModalSummary(total, received);
             
             if (total > received) {
                 $('#variant-error').text(`Total variant quantity (${total.toFixed(2)}) cannot exceed received quantity (${received.toFixed(2)})`).show();

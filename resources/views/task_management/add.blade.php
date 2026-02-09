@@ -372,13 +372,76 @@
                                     </div>
                                     <div class="col-12 text-end mt-3">
                                         <button type="submit" class="btn btn-primary fw-bold px-4">
-                                            <i class="ri ri-save-3-line me-1"></i> {{ $taskReceive ? 'Update Task Receipt' : 'Save Task Receipt' }}
+                                            <i class="ri ri-save-3-line me-1"></i> {{ (isset($taskReceive) && $taskReceive) ? 'Update Task Receipt' : 'Save Task Receipt' }}
                                         </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </form>
+
+                    {{-- 📜 RECEIPT HISTORY LOG --}}
+                    @if(isset($task) && isset($taskReceives) && $taskReceives->count() > 0)
+                        <div class="card border-0 shadow-sm mt-4 section-card">
+                            <div class="card-header border-bottom py-3 bg-label-success bg-opacity-10 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold text-success"><i class="ri-history-line me-2"></i>Task Receipt History</h5>
+                                <span class="badge bg-success">{{ $taskReceives->count() }} Receipts</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="bg-light extra-small fw-bold text-uppercase">
+                                            <tr>
+                                                <th class="ps-3">Receipt No/Date</th>
+                                                <th>Service Detailed Entry</th>
+                                                <th class="text-center">QC</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($taskReceives as $receipt)
+                                                <tr class="border-bottom">
+                                                    <td class="ps-3 py-3" style="width: 180px;">
+                                                        <div class="fw-bold text-dark">{{ $receipt->task_receive_no }}</div>
+                                                        <small class="text-muted"><i class="ri-calendar-line me-1"></i>{{ \Carbon\Carbon::parse($receipt->received_date)->format('d-m-Y') }}</small>
+                                                    </td>
+                                                    <td class="py-3">
+                                                        @if($receipt->received_services && is_array($receipt->received_services))
+                                                            <div class="d-flex flex-column gap-2">
+                                                                @foreach($receipt->received_services as $svcId => $qtyData)
+                                                                    @php $svc = \App\Models\ProductionService::find($svcId); @endphp
+                                                                    <div class="bg-light p-2 rounded-2 border-start border-primary border-3">
+                                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                            <span class="fw-bold small text-primary">{{ $svc->service_name ?? 'Service ID: '.$svcId }}</span>
+                                                                        </div>
+                                                                        <div class="d-flex gap-3 small">
+                                                                            <span class="text-success">Good: <b>{{ $qtyData['good_qty'] }}</b></span>
+                                                                            <span class="text-warning">Rework: <b>{{ $qtyData['rework_qty'] }}</b></span>
+                                                                            <span class="text-danger">Waste: <b>{{ $qtyData['wastage_qty'] }}</b></span>
+                                                                        </div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+                                                        @if($receipt->remarks)
+                                                            <div class="mt-2 small text-muted italic"><i class="ri-chat-1-line me-1"></i> {{ $receipt->remarks }}</div>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center py-3">
+                                                        @php
+                                                            $qcColor = 'secondary';
+                                                            if($receipt->qc_status == 'Pass') $qcColor = 'success';
+                                                            if($receipt->qc_status == 'Fail') $qcColor = 'danger';
+                                                        @endphp
+                                                        <span class="badge bg-label-{{ $qcColor }} rounded-pill">{{ $receipt->qc_status }}</span>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
                 <div class="tab-pane fade" id="content-adjustment" role="tabpanel">
                     <form action="{{ $taskAdjustment ? route('task_adjustments.add', $taskAdjustment->id) : route('task_adjustments.add') }}" method="POST" class="common-form">
@@ -533,6 +596,65 @@
                             </div>
                         </div>
                     </form>
+
+                    {{-- 🛠 ADJUSTMENT HISTORY LOG --}}
+                    @if(isset($task) && isset($taskAdjustments) && $taskAdjustments->count() > 0)
+                        <div class="card border-0 shadow-sm mt-4 section-card">
+                            <div class="card-header border-bottom py-3 bg-label-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold text-warning"><i class="ri-settings-5-line me-2"></i>Task Adjustment History</h5>
+                                <span class="badge bg-warning">{{ $taskAdjustments->count() }} Adjustments</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="bg-light extra-small fw-bold text-uppercase">
+                                            <tr>
+                                                <th class="ps-3">Adj No / Date</th>
+                                                <th>Material Adjustments</th>
+                                                <th class="text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($taskAdjustments as $adj)
+                                                <tr class="border-bottom">
+                                                    <td class="ps-3 py-3" style="width: 180px;">
+                                                        <div class="fw-bold text-dark">{{ $adj->adjustment_no }}</div>
+                                                        <small class="text-muted"><i class="ri-calendar-line me-1"></i>{{ $adj->created_at->format('d-m-Y') }}</small>
+                                                    </td>
+                                                    <td class="py-3">
+                                                        <div class="d-flex flex-column gap-2">
+                                                            @foreach($adj->items as $item)
+                                                                <div class="bg-light p-2 rounded-2 border-start border-warning border-3">
+                                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                        <span class="fw-bold small text-dark">{{ $item->rawMaterial->name ?? 'N/A' }}</span>
+                                                                        <span class="badge bg-label-{{ $item->adjustment_type == 'Excess' ? 'success' : 'danger' }} small">{{ $item->adjustment_type }}</span>
+                                                                    </div>
+                                                                    <div class="d-flex gap-3 small">
+                                                                        <span>Qty: <b>{{ $item->qty }} {{ $item->uom->uom_code ?? '' }}</b></span>
+                                                                        @if($item->remarks)
+                                                                            <span class="text-muted italic"><i class="ri-chat-1-line me-1"></i>{{ $item->remarks }}</span>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                        @if($adj->overall_reason)
+                                                            <div class="mt-2 small text-muted italic p-2 bg-light rounded">
+                                                                <i class="ri-question-line me-1"></i> Reason: {{ $adj->overall_reason }}
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-center py-3">
+                                                        <span class="badge bg-label-primary rounded-pill">{{ $adj->status }}</span>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

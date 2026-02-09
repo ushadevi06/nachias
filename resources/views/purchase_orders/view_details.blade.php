@@ -114,11 +114,13 @@
                                             <th>S.No</th>
                                             <th>Store Category</th>
                                             <th>Brand</th>
-                                            <th>Raw Material (Code)</th>
+                                            <th>Raw Material</th>
+                                            <th>Style</th>
                                             <th>Fabric Width</th>
-                                            <th>Supplier Design Name</th>
-                                            <th>Quantity</th>
                                             <th>UOM</th>
+                                            <th>Qty</th>
+                                            <th>Supplier Design Name</th>
+                                            <th>Color</th>
                                             <th>Rate</th>
                                             <th>Amount</th>
                                             <th>Remarks</th>
@@ -132,6 +134,7 @@
                                             <td>{{ $item->storeCategory->category_name ?? '-' }}</td>
                                             <td>{{ $item->brand->brand_name ?? '-' }}</td>
                                             <td>{{ $item->rawMaterial->name ?? '-' }} <span class="mini-title">({{ $item->rawMaterial->code ?? '-' }})</span></td>
+                                            <td>{{ $item->style->style_name ?? '-' }}</td>
                                             <td>
                                                 @if($item->fabricWidth)
                                                     {{ $item->fabricWidth->size }} - ({{ $item->fabricWidth->ratio }})
@@ -139,9 +142,10 @@
                                                     -
                                                 @endif
                                             </td>
-                                            <td>{{ $item->art_no ?? '-' }}</td>
-                                            <td>{{ number_format($item->quantity, 2) }}</td>
                                             <td>{{ $item->uom->uom_code ?? '-' }}</td>
+                                            <td>{{ number_format($item->quantity, 2) }}</td>
+                                            <td>{{ $item->art_no ?? '-' }}</td>
+                                            <td>{{ $item->color->color_name ?? '-' }}</td>
                                             <td>₹{{ number_format($item->rate, 2) }}</td>
                                             <td>₹{{ number_format($item->amount, 2) }}</td>
                                             <td>{{ $item->remarks ?? '-' }}</td>
@@ -157,8 +161,9 @@
                                         </tr>
                                         @endforeach
                                         <tr>
-                                            <td colspan="11" class="text-end"><strong>Subtotal</strong></td>
-                                            <td><strong>₹{{ number_format($purchaseOrder->sub_total, 2) }}</strong></td>
+                                            <td colspan="11" class="text-end border-end-0"><strong>Subtotal</strong></td>
+                                            <td class="text-end border-start-0"><strong>₹{{ number_format($purchaseOrder->sub_total, 2) }}</strong></td>
+                                            <td colspan="2"></td>
                                         </tr>
                                     </tbody>
                                 </table>

@@ -310,9 +310,7 @@
                                     <select id="patti_type" name="patti_type_id" class="form-select select2" data-placeholder="Select Patti Type">
                                         <option value="">Select Patti Type</option>
                                         @foreach($pattiTypes as $type)
-                                            <option value="{{ $type->id }}" {{ (old('patti_type_id', $jobCard ? $jobCard->patti_type_id : '') == $type->id) ? 'selected' : '' }}>
-                                                {{ $type->patti_type_name }}
-                                            </option>
+                                            <option value="{{ $type->id }}" {{ (old('patti_type_id', $jobCard ? $jobCard->patti_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->patti_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="patti_type">Patti Type</label>
@@ -1758,7 +1756,6 @@
             calculateMatrixTotals();
         }
 
-        // Clear validation errors on input/change
         $(document).on('input change', 'input, select, textarea', function() {
             const $el = $(this);
             $el.removeClass('is-invalid');
@@ -1792,12 +1789,12 @@
                 $('.qty-direct-input[data-type="fs"]').each(function() {
                     const val = parseFloat($(this).val()) || 0;
                     const size = String($(this).data('size'));
-                    if (val > 0 && !activeFsSizes.includes(size)) activeFsSizes.push(size);
+                    if (!activeFsSizes.includes(size)) activeFsSizes.push(size);
                 });
                 $('.qty-direct-input[data-type="hs"]').each(function() {
                     const val = parseFloat($(this).val()) || 0;
                     const size = String($(this).data('size'));
-                    if (val > 0 && !activeHsSizes.includes(size)) activeHsSizes.push(size);
+                    if (!activeHsSizes.includes(size)) activeHsSizes.push(size);
                 });
 
                 $('.qty-input').each(function() {

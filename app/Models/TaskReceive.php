@@ -47,4 +47,9 @@ class TaskReceive extends Model
     {
         return $this->belongsTo(Shift::class, 'shift_id');
     }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

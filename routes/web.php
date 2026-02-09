@@ -304,6 +304,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/purchase_orders/add/{id?}', [PurchaseOrderController::class, 'add'])->name('purchase_orders.add');
     Route::post('/purchase_orders/add/{id?}', [PurchaseOrderController::class, 'add']);
     Route::get('/purchase_orders/view/{id}', [PurchaseOrderController::class, 'view'])->name('purchase_orders.view');
+    Route::get('purchase_orders/download-pdf/{id}', [PurchaseOrderController::class, 'downloadPdf']);
     Route::get('/purchase_orders/delete/{id}', [PurchaseOrderController::class, 'destroy'])->name('purchase_orders.delete');
     Route::post('/purchase_orders/status/{id}', [PurchaseOrderController::class, 'updateStatus'])->name('purchase_orders.status');
 

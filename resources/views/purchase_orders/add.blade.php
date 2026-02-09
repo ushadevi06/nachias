@@ -4,7 +4,7 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <form action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form">
+            <form action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
                 @csrf
                 <div class="card mb-4">
                     <div class="card-body">
@@ -108,8 +108,7 @@
                                     <select id="store_type_id" name="store_type_id" class="select2 form-select @error('store_type_id') is-invalid @enderror" data-placeholder="Select Store Type">
                                         <option value="">Select Store Type</option>
                                         @foreach($storeTypes as $storeType)
-                                        <option value="{{ $storeType->id }}"
-                                            {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>
+                                        <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>
                                             {{ $storeType->store_type_name }}
                                         </option>
                                         @endforeach
@@ -143,10 +142,10 @@
                                         <th style="min-width: 150px;">Style</th>
                                         <th style="min-width: 150px;">Fabric Width</th>
                                         <th style="min-width: 100px;">UOM *</th>
-                                        <th style="min-width: 120px;">Qty *</th>
-                                        <th style="min-width: 130px;">Supplier Design Name</th>
+                                        <th style="min-width: 150px;">Qty *</th>
+                                        <th style="min-width: 180px;">Supplier Design Name</th>
                                         <th style="min-width: 150px;">Color</th>
-                                        <th style="min-width: 120px;">Rate *</th>
+                                        <th style="min-width: 150px;">Rate *</th>
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 150px;">Remarks</th>
                                         <th style="min-width: 100px;">File</th>
@@ -271,6 +270,7 @@
                                         </td>
                                         <td>
                                             <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                            <input type="hidden" name="items[{{ $index }}][existing_file]" value="{{ $item['existing_file'] ?? '' }}">
                                             @error('items.'.$index.'.attached_file')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
@@ -395,6 +395,7 @@
                                         </td>
                                         <td>
                                             <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                            <input type="hidden" name="items[{{ $index }}][existing_file]" value="{{ $item->attached_file }}">
                                             @if($item->attached_file)
                                             <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ url('uploads/purchase_orders/' . $item->attached_file) }}">
                                                 <i class="ri ri-image-line"></i> View
@@ -466,10 +467,10 @@
                                             <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
                                         </td>
                                         <td>
-                                            <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01">
+                                            <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control art_no" name="items[0][art_no]">
+                                            <input type="text" class="form-control art_no" name="items[0][art_no]" placeholder="Enter Supplier Design Name">
                                         </td>
                                         <td>
                                             <select class="select2 form-select color" name="items[0][color_id]" data-placeholder="Select Color">
@@ -480,16 +481,17 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <input type="number" class="form-control rate" name="items[0][rate]" step="0.01" min="0">
+                                            <input type="number" class="form-control rate" name="items[0][rate]" step="0.01" min="0" placeholder="Enter Rate">
                                         </td>
                                         <td>
                                             <input type="text" class="form-control amount" readonly>
                                         </td>
                                         <td>
-                                            <textarea class="form-control remarks" name="items[0][remarks]" style="height: 58px;"></textarea>
+                                            <textarea class="form-control remarks" name="items[0][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
                                         </td>
                                         <td>
                                             <input type="file" class="form-control file-input" name="items[0][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                            <input type="hidden" name="items[0][existing_file]" value="">
                                         </td>
                                         <td>
                                             <button type="button" class="btn btn-primary add_item">
@@ -637,8 +639,6 @@
                                             </div>
                                         </div>
                                         <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') }}">
-
-                                        <!-- Tax Fields -->
                                         <div class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="igst_percent" class="fw-medium">IGST :</label>
@@ -780,10 +780,10 @@
                     <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
                 </td>
                 <td>
-                    <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01">
+                    <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
                 </td>
                 <td>
-                    <input type="text" class="form-control art_no" name="items[${itemIndex}][art_no]">
+                    <input type="text" class="form-control art_no" name="items[${itemIndex}][art_no]" placeholder="Enter Supplier Design Name">
                 </td>
                 <td>
                     <select class="select2 form-select color" name="items[${itemIndex}][color_id]" data-placeholder="Select Color">
@@ -794,16 +794,17 @@
                     </select>
                 </td>
                 <td>
-                    <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="0.01" min="0">
+                    <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="0.01" min="0" placeholder="Enter Rate">
                 </td>
                 <td>
                     <input type="text" class="form-control amount" readonly>
                 </td>
                 <td>
-                    <textarea class="form-control remarks" name="items[${itemIndex}][remarks]" style="height: 58px;"></textarea>
+                    <textarea class="form-control remarks" name="items[${itemIndex}][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
                 </td>
                 <td>
                     <input type="file" class="form-control file-input" name="items[${itemIndex}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                    <input type="hidden" name="items[${itemIndex}][existing_file]" value="">
                 </td>
                 <td>
                     <button type="button" class="btn btn-danger delete_item">
@@ -871,7 +872,6 @@
                         placeholder: materialSelect.data('placeholder'),
                         width: '100%'
                     });
-
 
                 },
                 error: function () {
@@ -1018,11 +1018,10 @@
         $('#imageModal').modal('show');
     });
 
-    $(document).on('change', '.file-input', function () {
+    /* $(document).on('change', '.file-input', function () {
         let file = this.files[0];
         let $container = $(this).closest('td, .file-container');
         
-        // Remove ONLY dynamic previews (added by JS), keeping the server-rendered "View" link
         $container.find('.js-preview').remove();
 
         if (file) {
@@ -1030,24 +1029,24 @@
             let fileType = file.type;
 
             if (fileType.startsWith('image/')) {
-                 $container.append(`
+                $container.append(`
                     <a href="javascript:void(0)" class="view-image mt-1 d-block js-preview" data-image="${fileUrl}">
                         <i class="ri ri-image-line"></i> View Selected Image
                     </a>
                 `);
             } else if (fileType === 'application/pdf') {
-                 $container.append(`
+                $container.append(`
                     <a href="${fileUrl}" class="view-file mt-1 d-block js-preview" target="_blank">
                         <i class="ri ri-file-pdf-line"></i> View Selected PDF
                     </a>
                 `);
             } else {
-                 $container.append(`
+                $container.append(`
                     <span class="text-muted small mt-1 d-block text-truncate js-preview">Selected: ${file.name}</span>
                 `);
             }
         }
-    });
+    }); */
     calculateTotals();
 });
 </script>

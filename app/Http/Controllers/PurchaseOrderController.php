@@ -161,7 +161,7 @@ class PurchaseOrderController extends Controller
                 'items.*.art_no' => 'nullable|string|max:100',
                 'items.*.rate' => 'required|numeric|min:0',
                 'items.*.remarks' => 'nullable|string|max:500',
-                'items.*.attached_file' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+                'items.*.attached_file' => 'nullable|file|mimes:jpeg,jpg,png,webp|max:2048',
                 'items.*.color_id' => 'nullable|exists:colors,id',
                 'items.*.style_id' => 'nullable|exists:styles,id',
                 'items.*.brand_id' => 'nullable|exists:brands,id',
@@ -283,9 +283,10 @@ class PurchaseOrderController extends Controller
                         'style_id' => $item['style_id'] ?? null,
                         'brand_id' => $item['brand_id'] ?? null,
                         'fabric_width_id' => $item['fabric_width_id'] ?? null,
+                        'attached_file' => $item['existing_file'] ?? null,
                     ];
 
-                    if (isset($item['attached_file']) && $request->hasFile("items.{$index}.attached_file")) {
+                    if ($request->hasFile("items.{$index}.attached_file")) {
                         $file = $request->file("items.{$index}.attached_file");
                         $fileName = time() . '_' . $index . '_' . $file->getClientOriginalName();
 
@@ -297,7 +298,6 @@ class PurchaseOrderController extends Controller
                         $file->move($uploadPath, $fileName);
                         $itemData['attached_file'] = $fileName;
                     }
-
                     PurchaseOrderItem::create($itemData);
                 }
 
@@ -324,9 +324,7 @@ class PurchaseOrderController extends Controller
             $setting = \App\Models\Setting::first();
             if ($setting && $setting->po_prefix) {
                 $prefix = $setting->po_prefix;
-                $lastPo = PurchaseOrder::where('po_number', 'like', $prefix . '%')
-                    ->orderBy('id', 'desc')
-                    ->first();
+                $lastPo = PurchaseOrder::where('po_number', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
                 
                 if ($lastPo) {
                     $lastNumberStr = substr($lastPo->po_number, strlen($prefix));
@@ -346,7 +344,7 @@ class PurchaseOrderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
             return unauthorizedRedirect();
         }
-        $purchaseOrder = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType', 'items.storeCategory', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $purchaseOrder = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType', 'items.storeCategory', 'items.rawMaterial', 'items.uom', 'items.style', 'items.color'])->findOrFail($id);
         return view('purchase_orders.view_details', compact('purchaseOrder'));
     }
 

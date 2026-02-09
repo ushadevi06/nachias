@@ -42,4 +42,9 @@ class TaskAdjustment extends Model
     {
         return $this->hasMany(TaskAdjustmentItem::class, 'task_adjustment_id');
     }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

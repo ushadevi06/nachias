@@ -1605,42 +1605,42 @@
         });
 
         // File Input Change Handler (New Uploads)
-        $('#auth_sign, #attachments').on('change', function () {
-            let file = this.files[0];
-            let $container = $(this).parent(); // Adjust based on HTML structure if needed
+        // $('#auth_sign, #attachments').on('change', function () {
+        //     let file = this.files[0];
+        //     let $container = $(this).parent(); // Adjust based on HTML structure if needed
             
-            // Remove ONLY dynamic previews (added by JS), keeping any server-rendered "View" link
-            $container.find('.js-preview').remove();
+        //     // Remove ONLY dynamic previews (added by JS), keeping any server-rendered "View" link
+        //     $container.find('.js-preview').remove();
 
-            if (file) {
-                let fileUrl = URL.createObjectURL(file);
-                let fileType = file.type;
+        //     if (file) {
+        //         let fileUrl = URL.createObjectURL(file);
+        //         let fileType = file.type;
 
-                if (fileType.startsWith('image/')) {
-                     $container.append(`
-                        <div class="mt-2 js-preview">
-                            <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="${fileUrl}">
-                                <i class="ri ri-image-line"></i> View Selected Image
-                            </a>
-                        </div>
-                    `);
-                } else if (fileType === 'application/pdf') {
-                     $container.append(`
-                        <div class="mt-2 js-preview">
-                            <a href="${fileUrl}" class="mt-1 d-block" target="_blank">
-                                <i class="ri ri-file-pdf-line"></i> View Selected PDF
-                            </a>
-                        </div>
-                    `);
-                } else {
-                     $container.append(`
-                        <div class="mt-2 js-preview">
-                            <span class="text-muted small mt-1 d-block text-truncate">Selected: ${file.name}</span>
-                        </div>
-                    `);
-                }
-            }
-        });
+        //         if (fileType.startsWith('image/')) {
+        //              $container.append(`
+        //                 <div class="mt-2 js-preview">
+        //                     <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="${fileUrl}">
+        //                         <i class="ri ri-image-line"></i> View Selected Image
+        //                     </a>
+        //                 </div>
+        //             `);
+        //         } else if (fileType === 'application/pdf') {
+        //              $container.append(`
+        //                 <div class="mt-2 js-preview">
+        //                     <a href="${fileUrl}" class="mt-1 d-block" target="_blank">
+        //                         <i class="ri ri-file-pdf-line"></i> View Selected PDF
+        //                     </a>
+        //                 </div>
+        //             `);
+        //         } else {
+        //              $container.append(`
+        //                 <div class="mt-2 js-preview">
+        //                     <span class="text-muted small mt-1 d-block text-truncate">Selected: ${file.name}</span>
+        //                 </div>
+        //             `);
+        //         }
+        //     }
+        // });
         
     });
 </script>

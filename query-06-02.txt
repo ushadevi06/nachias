@@ -8,7 +8,6 @@ ALTER TABLE `seasons`
 ADD COLUMN `created_by` BIGINT UNSIGNED NULL AFTER `status`,
 ADD COLUMN `updated_by` BIGINT UNSIGNED NULL AFTER `created_by`;
 
-
 ALTER TABLE `job_card_entries`
 DROP COLUMN `fit`,
 ADD COLUMN `fit_id` BIGINT UNSIGNED NULL AFTER `receipt_store_id`,
