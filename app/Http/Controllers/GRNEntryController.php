@@ -317,7 +317,7 @@ class GrnEntryController extends Controller
                 'id' => $item->id,
                 'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
                 'art_no' => $item->purchaseOrderItem->art_no ?? '',
-                'uom' => $item->uom->uom_name ?? 'MTR',
+                'uom' => $item->uom->uom_code ?? 'MTR',
                 'qty_ordered' => $item->quantity,
                 'qty_already_received' => $already_received,
                 'rate' => $item->rate,

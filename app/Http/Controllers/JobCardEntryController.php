@@ -790,12 +790,24 @@ class JobCardEntryController extends Controller
                 $rawMaterial = $firstItem->purchaseInvoiceItem->rawMaterial ?? null;
                 $catId = $rawMaterial ? $rawMaterial->store_category_id : 1;
                 
+                $netStock = 0;
+                if ($rawMaterial) {
+                   $netStock = \App\Models\StockEntryItem::where('raw_material_id', $rawMaterial->id)
+                        ->sum(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)'));
+                } else {
+                     $netStock = $items->filter(function($item) {
+                        return $item->stockEntryItems->isNotEmpty();
+                    })->flatMap(function($item) {
+                        return $item->stockEntryItems;
+                    })->sum(function($stockItem) {
+                        return $stockItem->qty_in - ($stockItem->qty_out ?? 0);
+                    });
+                }
+
                 return [
                     'art_no' => $artNo,
                     'art_name' => $rawMaterial->name ?? ($firstItem->fabricType->name ?? null),
-                    'mtr' => (float)$items->filter(function($item) {
-                        return $item->stockEntryItems->isNotEmpty();
-                    })->sum('qty_accepted'),
+                    'mtr' => (float)$netStock,
                     'store_category_id' => $catId,
                     'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                     'grn_no' => $firstItem->grnEntry->grn_number ?? null,
@@ -805,17 +817,23 @@ class JobCardEntryController extends Controller
 
         if ($artData->isEmpty()) {
             $artData = $po->items->map(function($item) {
-                $acceptedQty = \App\Models\GrnEntryItem::where('art_no', $item->art_no)
-                    ->whereHas('grnEntry.purchaseInvoice', function($q) use ($item) {
-                        $q->where('purchase_order_id', $item->purchase_order_id);
-                    })
-                    ->whereHas('stockEntryItems')
-                    ->sum('qty_accepted');
+                $netStock = 0;
+                if ($item->raw_material_id) {
+                     $netStock = \App\Models\StockEntryItem::where('raw_material_id', $item->raw_material_id)
+                        ->sum(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)'));
+                } else {
+                    $netStock = \App\Models\GrnEntryItem::where('art_no', $item->art_no)
+                        ->whereHas('grnEntry.purchaseInvoice', function($q) use ($item) {
+                            $q->where('purchase_order_id', $item->purchase_order_id);
+                        })
+                        ->whereHas('stockEntryItems')
+                        ->sum('qty_accepted'); // Fallback to accepted if no RM ID
+                }
                 
                 return [
                     'art_no' => $item->art_no,
                     'art_name' => $item->rawMaterial->name ?? ($item->fabricType->name ?? null),
-                    'mtr' => (float)$acceptedQty,
+                    'mtr' => (float)$netStock,
                     'store_category_id' => $item->rawMaterial ? $item->rawMaterial->store_category_id : 1,
                     'raw_material_id' => $item->raw_material_id,
                     'grn_no' => $item->grn_no,
