@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\ProductionStageConsumable;
+use App\Models\OperationStage;
 use Illuminate\Support\Facades\DB;
 
 class StockConsumableReturnController extends Controller
@@ -35,18 +36,21 @@ class StockConsumableReturnController extends Controller
                     'hs_qty' => number_format($row->hs_qty, 3),
                     'total_issue_qty' => number_format($row->actual_qty, 3),
                     'issued_date' => $row->created_at->format('d-m-Y'),
-                    'action' => '<a href="' . url('view_stock_consumables_return/' . $row->id) . '" class="btn btn-sm btn-info"><i class="ri ri-eye-line"></i></a>',
+                    'action' => '<a href="' . url('stock_consumables_returns/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>',
                 ];
             }
 
             return response()->json(['data' => $data]);
         }
-        return view('stock_consumable_returns/view');
+        $stages = OperationStage::orderBy('id','desc')->get();
+        return view('stock_consumable_returns/view', compact('stages'));
     }
     public function add(){
         return view('stock_consumable_returns/add');
     }
-    public function view(){
-        return view('stock_consumable_returns/view_details');
+    public function view($id){
+        $consumable = ProductionStageConsumable::with(['production', 'jobCard', 'rawMaterial', 'uom'])
+            ->findOrFail($id);
+        return view('stock_consumable_returns/view_details', compact('consumable'));
     }
 }

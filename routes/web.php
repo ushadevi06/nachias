@@ -371,7 +371,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     /* Store */
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);
     Route::get('add_stock_consumables_return', [StockConsumableReturnController::class, 'add']);
-    Route::get('view_stock_consumables_return', [StockConsumableReturnController::class, 'view']);
+    Route::get('stock_consumables_returns/view/{id}', [StockConsumableReturnController::class, 'view']);
 
     /* Sales Order */
     Route::get('sales_order', [SaleOrderController::class, 'index']);

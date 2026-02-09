@@ -20,11 +20,9 @@
                             <div class="col-md-4 col-lg-3 state">
                                 <select name="production" id="production" class="form-select select2" data-placeholder="Select Production">
                                     <option value="">Select Production</option>
-                                    <option value="Cutting">Cutting</option>
-                                    <option value="Stitching">Stitching</option>
-                                    <option value="Stitching">Printing</option>
-                                    <option value="Ironing">Ironing</option>
-                                    <option value="Packing">Packing</option>
+                                    @foreach($stages as $stage)
+                                        <option value="{{ $stage->operation_name }}">{{ $stage->operation_name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-md-3">

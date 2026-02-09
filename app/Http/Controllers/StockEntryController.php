@@ -73,10 +73,7 @@ class StockEntryController extends Controller
                         }
 
                         $action = '<div class="button-box">';
-                        $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
-                        /* if (auth()->id() == 1 || auth()->user()->can('edit stock entries')) {
-                            $action .= '<a href="' . url('stock_entries/add/' . $entry->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
-                        } */
+                        $action .= '<a href="' . url('stock_entries/view/' . $entry->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
                         $action .= '</div>';
 
                         $poNumber = '-';
