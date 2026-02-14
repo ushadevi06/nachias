@@ -104,6 +104,7 @@ class StateController extends Controller
                 ],
                 'state_name' => [
                     'required',
+                    'min:5',
                     'max:100',
                     'unique:states,state_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
@@ -111,6 +112,8 @@ class StateController extends Controller
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
             ]);
 
             if ($id) {

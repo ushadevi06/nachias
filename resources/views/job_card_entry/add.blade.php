@@ -57,28 +57,6 @@
         <div class="col-lg-12">
             <form action="{{ url('job_card_entries/add/'. ($jobCard ?  $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                 @csrf
-                @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    @endif
-    @if(session('error'))
-    <div class="alert alert-warning alert-dismissible fade show">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    @endif
-    @if ($errors->any())
-    <div class="alert alert-danger alert-dismissible fade show">
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    @endif
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -620,10 +598,18 @@
                     <div class="card-body">
                         <div class="card-header-box">
                             <h4>Fabric Details</h4>
+                            <div id="fabric-details-error" class="text-danger small fw-bold mb-2" style="display: none;"></div>
+                            @error('fabric_details') <div class="text-danger small fw-bold mb-2 backend-error">{{ $message }}</div> @enderror
                         </div>
                         <div class="table-responsive">
                             <table class="table table-bordered text-center align-middle" id="fabric-details-table">
                                 <thead id="fabric-details-head">
+                                    @if(session('error'))
+                                        <div class="alert alert-warning alert-dismissible fade show">
+                                            {{ session('error') }}
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        </div>
+                                    @endif
                                     @if(!empty($fabrics))
                                         <tr>
                                             @foreach($fabrics as $index => $fabric)
@@ -706,6 +692,8 @@
                     <div class="card-body">
                         <div class="card-header-box mb-3">
                             <h4>Article Quantity Matrix</h4>
+                            <div id="article-matrix-error" class="text-danger small fw-bold mb-2" style="display: none;"></div>
+                            @error('article_matrix') <div class="text-danger small fw-bold mb-2 backend-error">{{ $message }}</div> @enderror
                         </div>
                         <div class="mb-4">
                             <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3">1. Fabric Pieces (Source)</h6>
@@ -970,6 +958,7 @@
                         if (d.raw_material_id) artDataMap[art].mat_id = d.raw_material_id;
                         if (d.grn_no) artDataMap[art].grn_no = d.grn_no;
                         if (d.uom_code) artDataMap[art].is_mtr = (String(d.uom_code).trim().toUpperCase() === 'MTR');
+                        artDataMap[art].already_issued = parseFloat(d.already_issued) || 0;
                         
                         $('.mtr-input[data-art]').filter(function() {
                             return clean($(this).data('art')) === fuzzyArt;
@@ -1030,7 +1019,8 @@
                     isValid = false;
                     errors.push({
                         art: art, required: finalRequired, issued: finalIssued, calc: calcDetails,
-                        cat_id: data.cat_id || '', mat_id: data.mat_id || '', grn_no: data.grn_no || ''
+                        cat: data.cat_id || '', mat_id: data.mat_id || '', grn_no: data.grn_no || '',
+                        already_issued: data.already_issued || 0
                     });
                 }
             }
@@ -1049,7 +1039,8 @@
                         calc: err.calc,
                         cat: err.cat_id || '',
                         mat: err.mat_id || '',
-                        grn: err.grn_no || ''
+                        grn: err.grn_no || '',
+                        already_issued: err.already_issued || 0
                     });
                 });
             }
@@ -1066,12 +1057,16 @@
                     $tbody.append(`
                         <tr class="align-middle border-bottom">
                             <td class="py-4 px-4 text-start">
-                                <div class="d-flex flex-column">
-                                    <a href="${searchUrl}" target="_blank" class="text-primary fw-bolder fs-5 text-decoration-none group">
+                                <div class="d-flex flex-column text-start">
+                                    <a href="${searchUrl}" target="_blank" class="text-primary fw-bolder fs-5 text-decoration-underline d-inline-flex align-items-center gap-1">
                                         ${err.art}
-                                        <i class="ri ri-external-link-line small opacity-0 group-hover-opacity-100 transition-all"></i>
+                                        <i class="ri ri-external-link-line small"></i>
                                     </a>
                                     <span class="extra-small text-secondary fw-bold text-uppercase">${err.name}</span>
+                                    ${err.already_issued > 0 ? `<span class="extra-small text-success mt-1" style="font-size: 10px;"><i class="ri ri-check-double-line me-1"></i>Already Issued: ${err.already_issued}</span>` : ''}
+                                    <span class="extra-small text-muted mt-1" style="font-size: 10px;">
+                                        <i class="ri ri-information-line me-1"></i>Click Art No to view stock entries
+                                    </span>
                                 </div>
                             </td>
                             <td class="text-center py-4">
@@ -1130,8 +1125,9 @@
                     reject('No Purchase Order ID found');
                     return;
                 }
+                const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
                 $.ajax({
-                    url: `{{ url('job_card_entries/check-stock') }}/${poId}`,
+                    url: `{{ url('job_card_entries/check-stock') }}/${poId}?job_card_id=${jobCardId}`,
                     type: 'GET',
                     cache: false, 
                     success: function(data) {
@@ -1153,14 +1149,48 @@
 
             e.preventDefault(); 
 
+            $('.text-danger.small.fw-bold, .backend-error').hide();
+
             const grandTotal1 = $('#article-qty-matrix-1-grand-total').text().trim();
             const grandTotal2 = $('#article-qty-matrix-2-grand-total').text().trim();
             const total1 = parseFloat(grandTotal1) || 0;
             const total2 = parseFloat(grandTotal2) || 0;
 
+            const $matrixError = $('#article-matrix-error');
             if (total1 <= 0 && total2 <= 0) {
-                $(this).attr('data-skip-validation', 'true').submit();
-                return; 
+                $matrixError.text('Please enter at least one quantity in the Article Quantity Matrix.').show();
+                $('html, body').animate({
+                    scrollTop: $("#article-matrix-card").offset().top - 100
+                }, 500);
+                return;
+            } else {
+                $matrixError.hide();
+            }
+
+            let missingFabricArtNos = [];
+            $('.art-no-input').each(function() {
+                const $row = $(this).closest('tr'); 
+                const artNo = $(this).val();
+                
+                let rowQty = 0;
+                $(`.sleeve-qty-input[data-art="${artNo}"]`).each(function() {
+                    rowQty += parseFloat($(this).val()) || 0;
+                });
+
+                if (rowQty <= 0) {
+                    missingFabricArtNos.push(artNo);
+                }
+            });
+
+            const $fabricError = $('#fabric-details-error');
+            if (missingFabricArtNos.length > 0) {
+                $fabricError.text('Please enter Sleeve Wise Qty for Art No: ' + missingFabricArtNos.join(', ')).show();
+                $('html, body').animate({
+                    scrollTop: $("#fabric-details-card").offset().top - 100
+                }, 500);
+                return;
+            } else {
+                $fabricError.hide();
             }
 
             const $form = $(this);

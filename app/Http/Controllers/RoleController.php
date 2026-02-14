@@ -77,12 +77,14 @@ class RoleController extends Controller
                 'name' => [
                     'required',
                     'min:3',
-                    'max:150',
+                    'max:100',
                     Rule::unique('roles', 'name')->ignore($id)->whereNull('deleted_at'),
                 ],
             ], [
                 'name.required' => 'This field is required.',
                 'name.unique'   => 'This role already exists.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
             ]);
 
             $role->name = $request->name;

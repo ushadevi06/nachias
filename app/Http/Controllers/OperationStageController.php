@@ -64,7 +64,8 @@ class OperationStageController extends Controller
                 'operation_stage_name' => [
                     'required',
                     'string',
-                    'max:255',
+                    'min:3',
+                    'max:100',
                     Rule::unique('operation_stages', 'operation_stage_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')
@@ -74,6 +75,8 @@ class OperationStageController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $validated = $request->validate($rules, $messages);
             $data = [

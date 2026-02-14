@@ -120,7 +120,7 @@ class CustomerController extends Controller
                 'address_line_3' => 'nullable|string|min:3|max:150',
                 'zip_code' => 'nullable|string|min:3|max:10',
                 'contact_person_name' => 'nullable|string|min:3|max:100',
-                'designation' => 'nullable|string|min:3|max:100',
+                'designation' => 'nullable|string|min:3|max:50',
                 'contact_mobile_no' => 'nullable|string|min:10|max:15',
                 'contact_email' => 'nullable|email|max:128',
                 'tax_type_id' => 'nullable|exists:taxes,id',

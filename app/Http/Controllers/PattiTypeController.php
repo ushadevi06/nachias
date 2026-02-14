@@ -78,12 +78,14 @@ class PattiTypeController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'patti_type_name' => 'required|string|max:255|unique:patti_types,patti_type_name,' . $id . ',id,deleted_at,NULL',
+                'patti_type_name' => 'required|string|min:3|max:50|unique:patti_types,patti_type_name,' . $id . ',id,deleted_at,NULL',
                 'status'         => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
 
@@ -114,12 +116,9 @@ class PattiTypeController extends Controller
         }
 
         $pattiType = PattiType::findOrFail($id);
-        
-        // Check if patti type is referenced in Job Card Entries
         if (JobCardEntry::where('patti_type_id', $id)->exists()) {
             return redirect('patti_types')->with('danger', 'This patti type is currently referenced in Job Card Entries and cannot be deleted.');
         }
-        
         $oldData = $pattiType->toArray();
         $pattiType->delete();
         addLog('delete', 'Patti Type', 'patti_types', $id, $oldData, null);

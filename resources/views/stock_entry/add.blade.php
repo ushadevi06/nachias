@@ -203,7 +203,7 @@
                                 isSelected = 'selected';
                                 hasSelection = true;
                             }
-                            itemSelect.append(`<option value="${item.id}" ${isSelected}>${item.raw_material_name} [Art No: ${item.art_no}] (Qty Available: ${item.qty_accepted})</option>`);
+                            itemSelect.append(`<option value="${item.id}" ${isSelected}>${item.raw_material_name} (Qty Available: ${item.qty_accepted})</option>`);
                         });
                         $('#single_item_fields').show();
                         if (hasSelection) {
@@ -227,7 +227,6 @@
             if (itemId) {
                 let item = grnItemsData.find(i => i.id == itemId);
                 if (item) {
-                    $('#art_no_display').val(item.art_no);
                     $('#store_category').val(item.store_category_id).trigger('change');
                     $('#store_category_val').val(item.store_category_id);
                     setTimeout(() => {

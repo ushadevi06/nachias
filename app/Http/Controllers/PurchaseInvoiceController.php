@@ -119,15 +119,20 @@ class PurchaseInvoiceController extends Controller
             $request = request();
 
             $rules = [
-                'invoice_no' => ($id ? 'nullable' : 'required') . '|string|max:50|unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'invoice_no' => ($id ? 'nullable' : 'required') . '|string|min:3|max:50|unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'invoice_date' => 'required|date',
                 'purchase_order_id' => 'required|exists:purchase_orders,id',
                 'supplier_id' => 'required|exists:suppliers,id',
+                'po_reference' => 'nullable|string|min:3|max:50',
                 'invoice_status' => 'required|in:Draft,Unpaid/Credit,Paid,Partially Paid',
                 'items' => 'required|array|min:1',
                 'items.*.raw_material_id' => 'required|exists:raw_materials,id',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'required|numeric|min:0',
+                'hsn_code' => [
+                    'nullable',
+                    'digits_between:4,8'
+                ],
                 'other_state' => ($id ? 'nullable' : 'required') . '|in:Y,N',
                 'igst_percent' => 'nullable|numeric|min:0|max:100',
                 'cgst_percent' => 'nullable|numeric|min:0|max:100',
@@ -140,6 +145,7 @@ class PurchaseInvoiceController extends Controller
                 'charges_select' => 'nullable',
                 'charge_amount' => 'nullable|numeric|min:0',
                 'charges.amount.*' => 'nullable|numeric|min:0',
+                'transaction_id' => 'nullable|max:100',
             ];
 
             $messages = [
@@ -160,6 +166,8 @@ class PurchaseInvoiceController extends Controller
                 'charges_select.required' => 'Please select a charge.',
                 'charge_amount.numeric' => 'Charge amount must be a number.',
                 'charges.amount.*.numeric' => 'Charge amount must be a number.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -240,14 +248,12 @@ class PurchaseInvoiceController extends Controller
                 }
 
                 if ($request->hasFile('auth_sign')) {
-                    // Start: Unlink Old File
                     if ($id && !empty($invoice->auth_signature)) {
                         $oldFilePath = public_path('uploads/purchase_invoices/' . $invoice->auth_signature);
                         if (file_exists($oldFilePath)) {
                             @unlink($oldFilePath);
                         }
                     }
-                    // End: Unlink Old File
                     
                     $file = $request->file('auth_sign');
                     $fileName = time() . '_auth_' . $file->getClientOriginalName();
@@ -256,15 +262,12 @@ class PurchaseInvoiceController extends Controller
                 }
 
                 if ($request->hasFile('attachments')) {
-                     // Start: Unlink Old File
                      if ($id && !empty($invoice->attachments)) {
                         $oldFilePath = public_path('uploads/purchase_invoices/' . $invoice->attachments);
                         if (file_exists($oldFilePath)) {
                             @unlink($oldFilePath);
                         }
                     }
-                    // End: Unlink Old File
-
                     $file = $request->file('attachments');
                     $fileName = time() . '_attach_' . $file->getClientOriginalName();
                     $file->move($uploadPath, $fileName);

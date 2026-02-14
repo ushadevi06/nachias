@@ -9,7 +9,7 @@
                     <div class="card-header-box">
                         <h4>{{ $shift ? 'Edit' : 'Add' }} Shift</h4>
                     </div>
-                    <form action="{{ url('shifts/add' . ($shift ? '/' . $shift->id : '')) }}" method="POST" class="common-form">
+                    <form action="{{ url('shifts/add' . ($shift ? '/' . $shift->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-12">

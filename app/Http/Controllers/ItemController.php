@@ -31,7 +31,7 @@ class ItemController extends Controller
 
         if ($request->ajax()) {
 
-            $query = Item::with(['brand', 'brandCategory', 'uom'])->latest();
+            $query = Item::with(['brand', 'brandCategory', 'uom', 'style'])->latest();
 
             if ($request->brand_category_id) {
                 $query->where('brand_category_id', $request->brand_category_id);
@@ -82,15 +82,7 @@ class ItemController extends Controller
 
                 $action .= '</div>';
 
-                $colors = collect($item->color_id)
-                    ->map(fn($id) => $colorMap[$id] ?? null)
-                    ->filter()
-                    ->implode(', ');
-
-                $pricing =
-                    number_format($item->wholesale_price ?? 0) . ' / ' .
-                    number_format($item->retail_price ?? 0) . ' / ' .
-                    number_format($item->export_price ?? 0);
+                $colors = collect($item->color_id)->map(fn($id) => $colorMap[$id] ?? null)->filter()->implode(', ');
 
                 $data[] = [
                     'DT_RowIndex'   => $count++,
@@ -101,7 +93,6 @@ class ItemController extends Controller
                     'brand'         => $item->brand->brand_name ?? '-',
                     'color'         => $colors,
                     'uom'           => $item->uom->uom_code ?? '-',
-                    'pricing'       => $pricing,
                     'created_by'    => createdByName($item->created_by),
                     'status'        => $status,
                     'action'        => $action,
@@ -134,30 +125,28 @@ class ItemController extends Controller
         if (request()->isMethod('post')) {
 
             $request = request();
-            // dd($request->color_id);
 
             $rules = [
                 'brand_id'            => 'required|exists:brands,id',
                 'brand_category_id'   => 'required|exists:brand_categories,id',
-                // 'entry_type'          => 'required|in:raw_material,items',
-                'name'                => 'required|string|max:255|unique:items,name,' . ($id ?? '0'),
-                'code'                => 'required|string|max:50|unique:items,code,' . ($id ?? '0'),
-                'style'               => 'nullable|string|max:100',
+                'name'                => 'required|string|min:3|max:100|unique:items,name,' . ($id ?? '0'),
+                'code'                => 'required|string|min:3|max:50|unique:items,code,' . ($id ?? '0'),
+                'style_id'            => 'nullable|exists:styles,id',
                 'fabric_type_id'      => 'nullable|exists:fabric_types,id',
-                'design_art_no'       => 'nullable|string|max:100',
+                'design_art_no'       => 'nullable|string|min:3|max:50',
                 'uom_id'              => 'required|exists:uoms,id',
                 'size_ratio_id'       => 'nullable|exists:size_ratios,id',
                 'color_id'            => 'nullable|array',
                 'color_id.*'          => 'exists:colors,id',
-                'standard_costing'    => 'nullable|numeric|min:0',
+                'standard_costing'    => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
                 'store_category_id'   => 'nullable|exists:store_categories,id',
                 'related_materials'   => 'nullable',
                 'operation_stages'    => 'nullable|array',
                 'service_providers'   => 'nullable|array',
                 'service_providers.*' => 'nullable|exists:service_providers,id',
-                'wholesale_price'     => 'nullable|numeric|min:0',
-                'retail_price'        => 'nullable|numeric|min:0',
-                'export_price'        => 'nullable|numeric|min:0',
+                'wholesale_price'     => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
+                'retail_price'        => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
+                'export_price'        => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
                 'status'              => 'required|in:Active,Inactive',
             ];
 
@@ -167,6 +156,9 @@ class ItemController extends Controller
                 '*.exists'   => 'The selected value is invalid.',
                 '*.numeric'  => 'This field must be a valid number.',
                 '*.array'    => 'This field must be an array.',
+                '*.regex'    => 'This field must be a valid format.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -178,10 +170,9 @@ class ItemController extends Controller
                 $data = [
                     'brand_id'          => $request->brand_id,
                     'brand_category_id' => $request->brand_category_id,
-                    'entry_type'        => $request->entry_type,
                     'name'              => $request->name,
                     'code'              => $request->code,
-                    'style'             => $request->style,
+                    'style_id'          => $request->style_id,
                     'fabric_type_id'    => $request->fabric_type_id,
                     'design_art_no'     => $request->design_art_no,
                     'uom_id'            => $request->uom_id,
@@ -192,7 +183,6 @@ class ItemController extends Controller
 
                     'standard_costing'  => $request->standard_costing,
                     'store_category_id' => $request->store_category_id,
-                    // 'related_materials' => $request->related_materials ? json_encode($request->related_materials) : null,
                     'related_materials' => $request->related_materials,
                     'operation_stages' => $request->operation_stages,
                     'service_providers' => $request->service_providers,
@@ -227,17 +217,17 @@ class ItemController extends Controller
             }
         }
 
-        $brands = Brand::where('status', 'Active')->get();
-        $brandCategories = BrandCategory::where('status', 'Active')->get();
-        $fabricTypes = FabricType::where('status', 'Active')->get();
-        $uoms = Uom::where('status', 'Active')->get();
-        $sizeRatios = SizeRatio::where('status', 'Active')->get();
-        $colors = Color::where('status', 'Active')->get();
+        $brands = Brand::active()->get();
+        $brandCategories = BrandCategory::active()->get();
+        $fabricTypes = FabricType::active()->get();
+        $uoms = Uom::active()->get();
+        $sizeRatios = SizeRatio::active()->get();
+        $colors = Color::active()->get();
         $styles = Style::active()->get();
         $storeCategories = StoreCategory::active()->get();
-        $materials = RawMaterial::all();
-        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
-        $operationStages = OperationStage::where('status', 'Active')->get();
+        $materials = RawMaterial::active()->get();
+        $serviceProviders = ServiceProvider::active()->get();
+        $operationStages = OperationStage::active()->get();
 
         return view('items.add', compact(
             'item', 'brands', 'brandCategories', 'fabricTypes', 'uoms',
@@ -256,6 +246,7 @@ class ItemController extends Controller
             'brandCategory',
             'fabricType',
             'uom',
+            'style',
             'sizeRatio',
             'storeCategory'
         ])->findOrFail($id);

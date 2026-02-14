@@ -49,20 +49,6 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            {{-- <div class="col-lg-6 col-xl-4 mb-4">
-                                <label class="form-label d-block">Select Type <span class="text-danger">*</span></label>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input @error('entry_type') is-invalid @enderror" type="radio" name="entry_type" id="raw_material" value="raw_material" {{ old('entry_type', $item->entry_type ?? '') == 'raw_material' ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="raw_material">Raw Material</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input @error('entry_type') is-invalid @enderror" type="radio" name="entry_type" id="items" value="items" {{ old('entry_type', $item->entry_type ?? 'items') == 'items' ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="items">Items</label>
-                                    </div>
-                                    @error('entry_type')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                            </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" placeholder="Enter Name" name="name"
@@ -85,17 +71,17 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="style" id="style" class="select2 form-select @error('style') is-invalid @enderror" data-placeholder="Select Style">
+                                    <select name="style_id" id="style_id" class="select2 form-select @error('style_id') is-invalid @enderror" data-placeholder="Select Style">
                                         <option value="">Select Style</option>
                                         @foreach($styles as $s)
-                                        <option value="{{ $s->style_name }}" {{ old('style', $item->style ?? '') == $s->style_name ? 'selected' : '' }}>
+                                        <option value="{{ $s->id }}" {{ old('style_id', $item->style_id ?? '') == $s->id ? 'selected' : '' }}>
                                             {{ $s->style_name }}
                                         </option>
                                         @endforeach
                                     </select>
-                                    <label for="style">Style</label>
+                                    <label for="style_id">Style</label>
                                 </div>
-                                @error('style')
+                                @error('style_id')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -172,15 +158,15 @@
                                         $selectedColors = [];
                                         $colorIdValue = old('color_id', $item->color_id ?? '');
                                         if (!empty($colorIdValue)) {
-                                            if (is_string($colorIdValue) && str_contains($colorIdValue, ',')) {
+                                            if (is_array($colorIdValue)) {
+                                                $selectedColors = $colorIdValue;
+                                            } elseif (is_string($colorIdValue) && str_contains($colorIdValue, ',')) {
                                                 $selectedColors = explode(',', $colorIdValue);
                                             } elseif (is_string($colorIdValue)) {
-                                                $selectedColors = json_decode($item->color_id, true) ?? [];
-                                            } elseif (is_array($item->color_id)) {
-                                                $selectedColors = $item->color_id;
+                                                $selectedColors = json_decode($colorIdValue, true) ?? [];
                                             }
                                         }
-                                        $selectedColors = array_map('intval', $selectedColors);
+                                        $selectedColors = array_map('intval', (array)$selectedColors);
                                     @endphp
 
                                     <select name="color_id[]" class="select2 form-select @error('color_id') is-invalid @enderror" multiple data-placeholder="Select Color">
@@ -194,12 +180,12 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="product_barcode" placeholder="Product Barcode" name="product_barcode" value="{{ $item->product_barcode ?? 'Auto Generated' }}" disabled>
                                     <label for="product_barcode">Product Barcode</label>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" step="0.01" class="form-control @error('standard_costing') is-invalid @enderror" id="standard_costing" placeholder="Enter Standard Costing" name="standard_costing" value="{{ old('standard_costing', $item->standard_costing ?? '') }}">

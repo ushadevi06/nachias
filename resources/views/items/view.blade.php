@@ -66,7 +66,6 @@
                                     <th>Brand</th>
                                     <th>Color</th>
                                     <th>UOM</th>
-                                    <th>Pricing (W / R / E)</th>
                                     <th>Created By</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -118,9 +117,6 @@
                     data: 'uom'
                 },
                 {
-                    data: 'pricing'
-                },
-                {
                     data: 'created_by'
                 },
                 {
@@ -135,25 +131,17 @@
                 }
             ]
         });
-
-        // ✅ FILTER
         $('#filterBtn').click(function() {
             table.ajax.reload();
         });
-
-        // ✅ RESET
         $('#resetBtn').click(function() {
             $('#filter_brand_category').val('');
             $('#filter_brand').val('');
             table.ajax.reload();
         });
-
-        // ✅ STATUS TOGGLE (AJAX)
         $(document).on('change', '.item-status-toggle', function() {
-
             let id = $(this).data('id');
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
-
             $.ajax({
                 url: "{{ url('items/status') }}/" + id,
                 type: "POST",
@@ -162,11 +150,7 @@
                     status: status
                 },
                 success: function() {
-
-                    let msg = status === 'Active' ?
-                        '<span class="text-success">Activated</span>' :
-                        '<span class="text-danger">Deactivated</span>';
-
+                    let msg = status === 'Active' ? '<span class="text-success">Activated</span>' : '<span class="text-danger">Deactivated</span>';
                     $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
                 }
             });

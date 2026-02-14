@@ -4,7 +4,7 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <form action="{{ $invoice ? url('purchase_invoices/add/' . $invoice->id) : url('purchase_invoices/add') }}" method="POST" enctype="multipart/form-data" class="common-form">
+            <form action="{{ $invoice ? url('purchase_invoices/add/' . $invoice->id) : url('purchase_invoices/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
                 @csrf
                 <input type="hidden" id="isEditMode" value="{{ isset($invoice) ? 1 : 0 }}">
                 <div class="card mb-4">

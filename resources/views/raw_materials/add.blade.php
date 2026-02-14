@@ -10,7 +10,7 @@
                         <h4>{{ $rawMaterial ? 'Edit' : 'Add' }} Raw Material</h4>
                     </div>
                     <form action="{{ url('raw_materials/add' . ($rawMaterial ? '/' . $rawMaterial->id : '')) }}"
-                        method="POST" class="common-form" enctype="multipart/form-data">
+                        method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                         @csrf
                         <div class="row g-4">
                             <!-- Store Category -->
@@ -20,14 +20,10 @@
                                         data-placeholder="Select Store Category">
                                         <option value="">Select Store Category</option>
                                         @foreach($storeCategories as $category)
-                                        <option value="{{ $category->id }}"
-                                            {{ old('store_category_id', $rawMaterial->store_category_id ?? '') == $category->id ? 'selected' : '' }}>
-                                            {{ $category->category_name }}
-                                        </option>
+                                        <option value="{{ $category->id }}" {{ old('store_category_id', $rawMaterial->store_category_id ?? '') == $category->id ? 'selected' : '' }}>{{ $category->category_name }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="store_category_id">Store Category <span
-                                            class="text-danger">*</span></label>
+                                    <label for="store_category_id">Store Category <span class="text-danger">*</span></label>
                                 </div>
                                 @error('store_category_id')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -37,8 +33,7 @@
                             <!-- Name -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" placeholder="Enter Name"
-                                        name="name" value="{{ old('name', $rawMaterial->name ?? '') }}">
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" placeholder="Enter Name" name="name" value="{{ old('name', $rawMaterial->name ?? '') }}">
                                     <label for="name">Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('name')
@@ -59,9 +54,7 @@
                             <!-- Supplier Design Name -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('supplier_design_name') is-invalid @enderror" id="supplier_design_name"
-                                        placeholder="Enter Supplier Design Name" name="supplier_design_name"
-                                        value="{{ old('supplier_design_name', $rawMaterial->supplier_design_name ?? '') }}">
+                                    <input type="text" class="form-control @error('supplier_design_name') is-invalid @enderror" id="supplier_design_name" placeholder="Enter Supplier Design Name" name="supplier_design_name" value="{{ old('supplier_design_name', $rawMaterial->supplier_design_name ?? '') }}">
                                     <label for="supplier_design_name">Supplier Design Name</label>
                                 </div>
                                 @error('supplier_design_name')
@@ -73,9 +66,7 @@
                             <!-- Size / Width -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('size_width') is-invalid @enderror" id="size_width"
-                                        placeholder="Enter Width" name="size_width"
-                                        value="{{ old('size_width', $rawMaterial->size_width ?? '') }}">
+                                    <input type="text" class="form-control @error('size_width') is-invalid @enderror" id="size_width" placeholder="Enter Width" name="size_width" value="{{ old('size_width', $rawMaterial->size_width ?? '') }}">
                                     <label for="size_width">Width</label>
                                 </div>
                                 @error('size_width')
@@ -167,8 +158,6 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
-                            <!-- Buttons -->
                             <div class="col-lg-12 text-end">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 <a href="{{ url('raw_materials') }}" class="btn btn-secondary">Cancel</a>

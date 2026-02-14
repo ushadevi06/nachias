@@ -25,7 +25,6 @@ class StockEntryItem extends Model
         'price',
     ];
 
-    // Relationships
     public function stockEntry()
     {
         return $this->belongsTo(StockEntry::class);

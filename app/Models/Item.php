@@ -15,8 +15,7 @@ class Item extends Model
         'brand_id',
         'name',
         'code',
-        'entry_type',
-        'style',
+        'style_id',
         'fabric_type_id',
         'design_art_no',
         'uom_id',
@@ -86,6 +85,12 @@ class Item extends Model
     {
         return $this->belongsTo(SizeRatio::class, 'size_ratio_id');
     }
+
+    public function style()
+    {
+        return $this->belongsTo(Style::class, 'style_id');
+    }
+
     public function storeCategory()
     {
         return $this->belongsTo(StoreCategory::class, 'store_category_id');

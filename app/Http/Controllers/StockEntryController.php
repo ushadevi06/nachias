@@ -107,10 +107,10 @@ class StockEntryController extends Controller
                             $firstItem = $matchedItem;
                         }
                     }
-
+                    
                     $categoryDisplay = $firstItem && $firstItem->storeCategory 
-                        ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>'
-                        : '-';
+                    ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>'
+                    : '-';
                     
                     $artNo = $firstItem && $firstItem->grnEntryItem ? $firstItem->grnEntryItem->art_no : '-';
                     

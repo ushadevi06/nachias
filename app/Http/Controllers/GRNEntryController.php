@@ -128,6 +128,7 @@ class GrnEntryController extends Controller
                 '*.required' => 'This field is required',
                 '*.numeric' => 'This field must be a number',
                 '*.min' => 'This field must be at least :min',
+                '*.max' => 'This field should not be more than :max characters.',
                 '*.exists' => 'This field is invalid',
             ];
 

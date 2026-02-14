@@ -78,12 +78,14 @@ class SeasonController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'name'   => 'required|string|max:255|unique:seasons,name,' . $id . ',id,deleted_at,NULL',
+                'name'   => 'required|string|min:3|max:100|unique:seasons,name,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
 

@@ -23,12 +23,8 @@ class RawMaterialController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view raw-materials')) {
             return unauthorizedRedirect();
         }
-        $canAdd    = true;
-        $canEdit   = true;
-        $canDelete = true;
 
         if ($request->ajax()) {
-
             $query = RawMaterial::with('storeCategory', 'uom', 'fabricType');
 
             if ($request->category_id) {
@@ -93,7 +89,7 @@ class RawMaterialController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        return view('raw_materials.view', compact('canAdd'));
+        return view('raw_materials.view');
     }
 
 
@@ -118,15 +114,15 @@ class RawMaterialController extends Controller
 
             $rules = [
                 'store_category_id' => 'required|exists:store_categories,id',
-                'code' => 'required|string|max:50|unique:raw_materials,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'name' => 'required|string|max:150',
-                'supplier_design_name' => 'nullable|string|max:150',
-                'size_width' => 'nullable|numeric|min:0|max:1000',
+                'code' => 'required|string|min:3|max:50|unique:raw_materials,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => 'required|string|min:3|max:150',
+                'supplier_design_name' => 'nullable|string|min:3|max:150',
+                'size_width' => 'nullable|numeric|min:0|max:100',
                 'uom_id' => 'required|exists:uoms,id',
                 'fabric_type_id' => 'nullable|exists:fabric_types,id',
                 'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1024',
-                'specification' => 'nullable|string|max:255',
-                'min_stock' => 'nullable|numeric|min:0|max:999999999',
+                'specification' => 'nullable|string|min:5|max:255',
+                'min_stock' => 'nullable|numeric|min:0',
                 'status' => 'required|in:Active,Inactive',
             ];
 
@@ -134,6 +130,8 @@ class RawMaterialController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 'size_width' => 'Width must be a number.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules, $messages);

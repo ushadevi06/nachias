@@ -116,7 +116,8 @@ class PlaceController extends Controller
                 'city_id' => 'required|exists:cities,id',
                 'place_name' => [
                     'required',
-                    'max:255',
+                    'min:3',
+                    'max:100',
                     Rule::unique('places', 'place_name')->ignore($id)->whereNull('deleted_at')
                 ],
                 'place_type' => 'required|max:100',
@@ -126,6 +127,8 @@ class PlaceController extends Controller
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ]);
 
             if ($id) {

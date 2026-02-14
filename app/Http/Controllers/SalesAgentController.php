@@ -97,22 +97,22 @@ class SalesAgentController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'agent_type' => 'required|string|max:255',
-                'name' => 'required|string|max:255',
-                'code' => 'required|string|max:50|unique:sales_agents,code,' . $id . ',id,deleted_at,NULL',
-                'email' => 'nullable|email|unique:sales_agents,email,' . $id . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|digits:10|unique:sales_agents,mobile_no,' . $id . ',id,deleted_at,NULL',
+                'agent_type' => 'required|string|max:100',
+                'name' => 'required|string|min:3|max:100',
+                'code' => 'required|string|min:3|max:50|unique:sales_agents,code,' . $id . ',id,deleted_at,NULL',
+                'email' => 'nullable|email|max:128|unique:sales_agents,email,' . $id . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|min:10|max:15|unique:sales_agents,mobile_no,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
-                'address_line_1' => 'required|string|max:500',
-                'address_line_2' => 'nullable|string|max:500',
-                'zip_code' => 'nullable|digits:6',
-                'contact_person_name' => 'nullable|string|max:255',
-                'designation' => 'nullable|string|max:255',
-                'contact_phone_number' => 'nullable|string|digits:10',
-                'contact_email' => 'nullable|email|max:255',
+                'address_line_1' => 'required|string|max:150',
+                'address_line_2' => 'nullable|string|max:150',
+                'zip_code' => 'nullable|min:3|max:10',
+                'contact_person_name' => 'nullable|string|max:100',
+                'designation' => 'nullable|string|max:100',
+                'contact_phone_number' => 'nullable|string|min:10|max:15',
+                'contact_email' => 'nullable|email|max:128',
                 'gst_no' => [
                     'nullable',
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
@@ -130,7 +130,9 @@ class SalesAgentController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format'
+                '*.regex' => 'This field is an invalid format',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules, $messages);

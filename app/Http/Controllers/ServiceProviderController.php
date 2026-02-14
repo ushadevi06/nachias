@@ -107,10 +107,10 @@ class ServiceProviderController extends Controller
 
             $rules = [
                 'operation_stage_id' => 'required|exists:operation_stages,id',
-                'name' => 'required|string|max:255',
+                'name' => 'required|string|max:100',
                 'code' => 'required|string|max:50|unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'email' => 'nullable|email|max:255|unique:service_providers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|string|max:20|unique:service_providers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'email' => 'nullable|email|max:128|unique:service_providers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|string|min:10|max:15|unique:service_providers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'zip_code' => 'nullable|string|max:10',
                 'website_url' => 'nullable|url|max:255',
                 'service_rate' => 'required|in:Per Agent,Job Type',
@@ -118,12 +118,12 @@ class ServiceProviderController extends Controller
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
-                'address_line_1' => 'required|string|max:500',
-                'address_line_2' => 'nullable|string|max:500',
-                'contact_person_name' => 'nullable|string|max:255',
-                'designation' => 'nullable|string|max:255',
-                'phone_number' => 'nullable|string|max:20',
-                'contact_email' => 'nullable|email|max:255',
+                'address_line_1' => 'required|string|max:150',
+                'address_line_2' => 'nullable|string|max:150',
+                'contact_person_name' => 'nullable|string|max:100',
+                'designation' => 'nullable|string|max:100',
+                'phone_number' => 'nullable|string|min:10|max:15',
+                'contact_email' => 'nullable|email|max:128',
                 'pan_no' => [
                     'nullable',
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
@@ -134,21 +134,23 @@ class ServiceProviderController extends Controller
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
                     'unique:service_providers,gst_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'remarks' => 'nullable|string|max:1000',
-                'bank_name' => 'nullable|string|max:255',
-                'bank_acc_no' => 'nullable|string|max:50|unique:service_providers,bank_acc_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'remarks' => 'nullable|string|min:5|max:255',
+                'bank_name' => 'nullable|string|min:5|max:100',
+                'bank_acc_no' => 'nullable|string|min:5|max:50|unique:service_providers,bank_acc_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'ifsc_code' => [
                     'nullable',
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
                     'unique:service_providers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'payment_terms' => 'nullable|string|max:1000',
+                'payment_terms' => 'nullable|string|min:5|max:255',
             ];
 
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format'
+                '*.regex' => 'This field is an invalid format',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
             ];
             $validated = $request->validate($rules, $messages);
             

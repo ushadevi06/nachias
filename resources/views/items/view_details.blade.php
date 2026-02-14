@@ -31,12 +31,8 @@
                             <div class="text-muted">{{ $item->name }}({{ $item->code }})</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Entry Type:</label>
-                            <div class="text-muted">{{ ucfirst(str_replace('_', ' ', $item->entry_type ?? '-')) }}</div>
-                        </div>
-                        <div class="col-md-4">
                             <label class="detail-title">Style:</label>
-                            <div class="text-muted">{{ $item->style ?? '-' }}</div>
+                            <div class="text-muted">{{ $item->style->style_name ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Fabric Type:</label>

@@ -18,7 +18,7 @@ if (!function_exists('createdByName')) {
     }
 }
 if (!function_exists('addLog')) {
-    function addLog($action, $module, $table, $recordId, $oldData = null, $newData = null)
+    function addLog($action, $module, $table, $recordId, $oldData = null, $newData = null, $description = null)
     {
         \App\Models\Log::create([
             'user_id'     => auth()->id(),
@@ -28,6 +28,7 @@ if (!function_exists('addLog')) {
             'record_id'   => $recordId,
             'old_values'  => $oldData ? json_encode($oldData) : null,
             'new_values'  => $newData ? json_encode($newData) : null,
+            'description' => $description,
             'ip_address'  => request()->ip(),
             'user_agent'  => request()->userAgent(),
             'created_at'  => now(),

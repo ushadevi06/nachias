@@ -37,6 +37,12 @@ TRUNCATE `raw_materials`;
 TRUNCATE `brands`;
 TRUNCATE `store_categories`;
 TRUNCATE `items`;
+DELETE FROM process_groups;
+ALTER TABLE process_groups AUTO_INCREMENT = 1;
+DELETE FROM production_services;
+ALTER TABLE production_services AUTO_INCREMENT = 1;
+DELETE FROM task_status;
+ALTER TABLE task_status AUTO_INCREMENT = 1;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- =========================
@@ -48,8 +54,7 @@ ALTER TABLE task_receives AUTO_INCREMENT = 1;
 DELETE FROM task_adjustments;
 ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
 
-DELETE FROM task_status;
-ALTER TABLE task_status AUTO_INCREMENT = 1;
+
 
 DELETE FROM tasks;
 ALTER TABLE tasks AUTO_INCREMENT = 1;
@@ -147,8 +152,7 @@ ALTER TABLE debit_note_items AUTO_INCREMENT = 1;
 DELETE FROM debit_notes;
 ALTER TABLE debit_notes AUTO_INCREMENT = 1;
 
-DELETE FROM process_groups;
-ALTER TABLE process_groups AUTO_INCREMENT = 1;
+
 
 DELETE FROM process_schedule_services;
 ALTER TABLE process_schedule_services AUTO_INCREMENT = 1;
@@ -162,8 +166,7 @@ ALTER TABLE production_receipt_items AUTO_INCREMENT = 1;
 DELETE FROM production_receipts;
 ALTER TABLE production_receipts AUTO_INCREMENT = 1;
 
-DELETE FROM production_services;
-ALTER TABLE production_services AUTO_INCREMENT = 1;
+
 
 DELETE FROM production_stage_consumables;
 ALTER TABLE production_stage_consumables AUTO_INCREMENT = 1;

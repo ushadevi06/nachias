@@ -98,17 +98,21 @@ class ProductionReceiptController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'job_card_id'   => 'required|exists:job_card_entries,id',
-                'receipt_no'    => 'required|unique:production_receipts,receipt_no,' . ($id ?? 'NULL'),
+                'receipt_no'    => 'required|min:3|max:50|unique:production_receipts,receipt_no,' . ($id ?? 'NULL'),
                 'receipt_date'  => 'required|date_format:d-m-Y',
                 'doc_date'      => 'required|date_format:d-m-Y',
                 'store_type_id' => 'required|exists:store_types,id',
                 'store_location_id' => 'required|exists:store_locations,id',
                 'status'        => 'required|in:Draft,Posted',
                 'items'         => 'required|array|min:1',
+                'remarks'       => 'nullable|min:5|max:255',
             ];
 
             $messages = [
                 'required' => 'This field is required.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
+                'unique'   => 'This field already exists.',
             ];
 
             $request->validate($rules, $messages);

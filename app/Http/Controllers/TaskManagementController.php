@@ -20,6 +20,7 @@ use App\Models\StockConsumableStockDetail;
 use App\Models\StockEntryItem;
 use App\Models\RawMaterial;
 use App\Models\TaskAssignEmployee;
+use App\Models\TaskLog;
 use Illuminate\Support\Facades\DB;
 
 use Carbon\Carbon;

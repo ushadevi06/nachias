@@ -36,15 +36,11 @@ class ProcessGroupController extends Controller
                 $action = '<div class="button-box">';
 
                 if (auth()->id() == 1 || auth()->user()->can('edit process-groups')) {
-                    $action .= '<a href="' . url('process_groups/add/' . $row->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
+                    $action .= '<a href="' . url('process_groups/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete process-groups')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('process_groups/delete/' . $row->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('process_groups/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $action .= '</div>';
@@ -77,12 +73,14 @@ class ProcessGroupController extends Controller
         $processGroup = $id ? ProcessGroup::findOrFail($id) : null;
         if ($request->isMethod('post')) {
             $rules = [
-                'name'   => 'required|string|max:255|unique:process_groups,name,' . $id . ',id,deleted_at,NULL',
+                'name'   => 'required|string|min:3|max:50|unique:process_groups,name,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
 

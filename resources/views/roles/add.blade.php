@@ -9,7 +9,7 @@
                     <h5 class="card-title mb-0">{{ $role->id ? 'Edit Role' : 'Add Role' }}</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ $role->id ? url('roles/add/'.$role->id) : url('roles/add') }}">
+                    <form method="POST" action="{{ $role->id ? url('roles/add/'.$role->id) : url('roles/add') }}" autocomplete="off">
                         @csrf
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">

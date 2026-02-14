@@ -120,21 +120,21 @@ class PurchaseCommissionAgentController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'name'        => 'required|string|max:255',
-                'code'        => 'required|string|max:50|unique:purchase_commission_agents,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'email'       => 'nullable|email|max:255|unique:purchase_commission_agents,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no'   => 'nullable|string|max:20|unique:purchase_commission_agents,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name'        => 'required|string|min:3|max:100',
+                'code'        => 'required|string|min:3|max:50|unique:purchase_commission_agents,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'email'       => 'nullable|email|max:128|unique:purchase_commission_agents,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no'   => 'nullable|string|min:10|max:15|unique:purchase_commission_agents,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'status'      => 'required|in:Active,Inactive',
                 'state_id'    => 'required|exists:states,id',
                 'city_id'     => 'required|exists:cities,id',
                 'place_id'    => 'required|exists:places,id',
-                'address_line_1'      => 'nullable|string|max:255',
-                'address_line_2'      => 'nullable|string|max:255',
-                'zipcode'             => 'nullable|string|max:20',
-                'contact_person_name' => 'nullable|string|max:255',
-                'designation'         => 'nullable|string|max:255',
-                'phone_number'        => 'nullable|string|max:20',
-                'contact_email'       => 'nullable|email|max:255',
+                'address_line_1'      => 'nullable|string|min:3|max:150',
+                'address_line_2'      => 'nullable|string|min:3|max:150',
+                'zipcode'             => 'nullable|string|min:3|max:10',
+                'contact_person_name' => 'nullable|string|min:3|max:100',
+                'designation'         => 'nullable|string|min:3|max:50',
+                'phone_number'        => 'nullable|string|min:10|max:15',
+                'contact_email'       => 'nullable|email|max:128',
                 'pan_no' => [
                     'nullable',
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
@@ -145,12 +145,14 @@ class PurchaseCommissionAgentController extends Controller
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
                     'unique:purchase_commission_agents,gst_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'remarks' => 'nullable|string',
+                'remarks' => 'nullable|string|min:5|max:255',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format'
+                '*.regex' => 'This field is an invalid format',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules, $messages);

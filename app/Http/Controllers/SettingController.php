@@ -31,9 +31,9 @@ class SettingController extends Controller
         $settingId = $setting ? $setting->id : null;
 
         $rules = [
-            'company_name' => 'required|string|max:255',
-            'email' => 'required|string|max:500', 
-            'logo' => 'nullable|image|mimes:jpeg,jpg,png,gif,svg|min:1024|max:5120',
+            'company_name' => 'required|string|min:3|max:100',
+            'email' => 'required|string|max:128', 
+            'logo' => 'nullable|image|mimes:jpeg,jpg,png,gif,svg|max:1024',
             'phone_number' => 'required|string|max:15|regex:/^[0-9+\-\s()]+$/',
             'toll_free_no' => 'nullable|string|max:500',
             'state_id' => 'required|exists:states,id',
@@ -54,7 +54,7 @@ class SettingController extends Controller
                 'nullable',
                 'regex:/^[A-Z]{1}[0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/',
             ],
-            'working_days' => 'nullable|string|max:255',
+            'working_days' => 'nullable|string|max:100',
             'opening_time' => 'nullable|string|max:255',
             'closing_time' => 'nullable|string|max:255',
             'po_prefix' => 'nullable|string|max:10',
@@ -64,7 +64,9 @@ class SettingController extends Controller
         $messages = [
             '*.required' => 'This field is required.',
             '*.unique'   => 'This field already exists.',
-            '*.regex' => 'This field is an invalid format'
+            '*.regex' => 'This field is an invalid format',
+            '*.min' => 'This field must be at least :min characters.',
+            '*.max' => 'This field should not be more than :max characters.',
         ];
 
         $validated = $request->validate($rules, $messages);

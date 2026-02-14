@@ -78,12 +78,14 @@ class PocketTypeController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'pocket_type_name' => 'required|string|max:255|unique:pocket_types,pocket_type_name,' . $id . ',id,deleted_at,NULL',
+                'pocket_type_name' => 'required|string|min:3|max:50|unique:pocket_types,pocket_type_name,' . $id . ',id,deleted_at,NULL',
                 'status'           => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
 
