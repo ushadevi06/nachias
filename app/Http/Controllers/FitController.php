@@ -35,15 +35,11 @@ class FitController extends Controller
                 $action = '<div class="button-box">';
 
                 if (auth()->id() == 1 || auth()->user()->can('edit fits')) {
-                    $action .= '<a href="' . url('fits/add/' . $row->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
+                    $action .= '<a href="' . url('fits/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete fits')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('fits/delete/' . $row->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('fits/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $action .= '</div>';
@@ -78,12 +74,14 @@ class FitController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'fit_name' => 'required|string|max:255|unique:fits,fit_name,' . $id . ',id,deleted_at,NULL',
+                'fit_name' => 'required|string|min:3|max:50|unique:fits,fit_name,' . $id . ',id,deleted_at,NULL',
                 'status'   => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
 

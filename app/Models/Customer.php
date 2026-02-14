@@ -21,7 +21,7 @@ class Customer extends Model
         'transport_name',
         'booking_office',
         'zone_id',
-        'stores',
+        'store_id',
         'status',
         'state_id',
         'city_id',
@@ -50,6 +50,11 @@ class Customer extends Model
     ];
 
     // Relationships
+    public function storeType()
+    {
+        return $this->belongsTo(StoreType::class, 'store_id');
+    }
+
     public function zone()
     {
         return $this->belongsTo(Zone::class);

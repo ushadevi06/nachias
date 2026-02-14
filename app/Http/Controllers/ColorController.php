@@ -14,7 +14,6 @@ class ColorController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-
             $colors = Color::latest()->get();
             $data = [];
             $count = 1;
@@ -33,23 +32,13 @@ class ColorController extends Controller
                     </span>
                 </label>
                 <div class="status_msg_' . $color->id . '"></div>';
-
                 $action = '<div class="button-box">';
-
                 if (auth()->id() == 1 || auth()->user()->can('edit colors')) {
-                    $action .= '
-                        <a href="' . url('colors/add/' . $color->id) . '" class="btn btn-edit">
-                            <i class="icon-base ri ri-edit-box-line"></i>
-                        </a>';
+                    $action .= '<a href="' . url('colors/add/' . $color->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('delete colors')) {
-                    $action .= '
-                        <a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('colors/delete/' . $color->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('colors/delete/' . $color->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
-
                 $action .= '</div>';
 
                 $data[] = [
@@ -59,7 +48,6 @@ class ColorController extends Controller
                     'action' => $action,
                 ];
             }
-
             return response()->json(['data' => $data]);
         }
 
@@ -85,13 +73,8 @@ class ColorController extends Controller
             $request = request();
 
             $rules = [
-                'color_name' => [
-                    'required',
-                    'string',
-                    'max:255',
-                    Rule::unique('colors', 'color_name')->ignore($id)->whereNull('deleted_at')
-                ],
-                'description' => 'nullable|string|max:255|regex:/^[^<>]*$/',
+                'color_name' => ['required','string','min:3','max:50',Rule::unique('colors', 'color_name')->ignore($id)->whereNull('deleted_at')],
+                'description' => 'nullable|string|min:3|max:255|regex:/^[^<>]*$/',
                 'status' => 'required|in:Active,Inactive'
             ];
 
@@ -99,6 +82,8 @@ class ColorController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules,$messages);

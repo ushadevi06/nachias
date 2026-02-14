@@ -119,15 +119,15 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="stores" id="stores" class="select2 form-select @error('stores') is-invalid @enderror" data-placeholder="Select Stores">
-                                        <option value="">Select Stores</option>
+                                    <select name="store_id" id="store_id" class="select2 form-select @error('store_id') is-invalid @enderror" data-placeholder="Select Store">
+                                        <option value="">Select Store</option>
                                         @foreach($store_types as $st)
-                                        <option value="{{ $st->store_type_name }}" {{ old('stores', $customer->stores ?? '') == $st->store_type_name ? 'selected' : '' }}>{{ $st->store_type_name }}</option>
+                                        <option value="{{ $st->id }}" {{ old('store_id', $customer->store_id ?? '') == $st->id ? 'selected' : '' }}>{{ $st->store_type_name }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="stores">Stores </label>
+                                    <label for="store_id">Store </label>
                                 </div>
-                                @error('stores')
+                                @error('store_id')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>

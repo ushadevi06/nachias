@@ -9,8 +9,7 @@
                     <div class="card-header-box">
                         <h4>{{ $fit ? 'Edit' : 'Add' }} Fit</h4>
                     </div>
-                    <form action="{{ url('fits/add' . ($fit ? '/' . $fit->id : '')) }}"
-                        method="POST" class="common-form">
+                    <form action="{{ url('fits/add' . ($fit ? '/' . $fit->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">

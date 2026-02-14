@@ -45,6 +45,20 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="operation_stage_id" name="operation_stage_id" class="form-select select2 @error('operation_stage_id') is-invalid @enderror" data-placeholder="Select Operation Stage">
+                                        <option value="">Select Operation Stage</option>
+                                        @foreach($operationStages as $stage)
+                                        <option value="{{ $stage->id }}" {{ old('operation_stage_id', $employee->operation_stage_id ?? '') == $stage->id ? 'selected' : '' }}>{{ $stage->operation_stage_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="operation_stage_id">Operation Stage</label>
+                                </div>
+                                @error('operation_stage_id')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <select id="role_id" name="role_id" class="form-select select2 @error('role_id') is-invalid @enderror" data-placeholder="Select Role">
                                         <option value="">Select Role</option>
                                         @foreach($roles as $role)

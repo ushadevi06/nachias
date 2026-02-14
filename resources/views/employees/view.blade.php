@@ -62,6 +62,7 @@
                                     <th>Role</th>
                                     <th>Department</th>
                                     <th>Service Provider</th>
+                                    <th>Operation Stage</th>
                                     <th>Contact Info</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -124,6 +125,9 @@
                 },
                 {
                     data: 'service_provider'
+                },
+                {
+                    data: 'operation_stage'
                 },
                 {
                     data: 'contact_info'

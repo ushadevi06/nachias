@@ -63,101 +63,130 @@
             </style>
             <div class="card shadow-sm">
                 <div class="card-body p-0">
-                    <div class="text-center py-2 border-bottom" style="border-color: #eeeeee !important;">
-                        <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
+                    <div class="text-center">
+                        <table class="table table-bordered table-sm mb-0 job-card-table text-center">
                             <tr>
-                                <td class="fw-bold" style="font-size: 0.9rem; letter-spacing: 1px;">JOB CARD</td>
+                                <!-- LEFT LOGO -->
+                                <td rowspan="2" style="width:15%; vertical-align:middle; background:#fff;">
+                                    <img src="{{ url('assets/images/jc_logo.png') }}" style="max-width:100%; height:auto;">
+                                </td>
+
+                                <!-- SEASON CODE -->
+                                <td style="width:8%; font-weight:bold; font-size:13px;">SEASON CODE</td>
+
+                                <!-- JOB CARD -->
+                                <td colspan="4" style="width:40%; font-weight:bold; font-size:20px;">
+                                    JOB CARD
+                                </td>
+
+                                <!-- JOB CARD TYPE -->
+                                <td colspan="2" style="width:25%; font-weight:bold; font-size:16px;">
+                                    JOB CARD TYPE
+                                </td>
+
+                                <!-- URGENT (Full Proper Cell) -->
+                                <td style="width:12%; font-weight:bold; background:#2f6fae; color:#fff; font-size:16px;">
+                                    URGENT
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <!-- SEASON VALUE -->
+                                <td style="font-weight:bold; font-size:16px;">B28</td>
+
+                                <!-- STYLE NAME -->
+                                <td colspan="4" style="font-weight:bold; font-size:18px;">
+                                    CASINO FORMAL
+                                </td>
+
+                                <!-- LOGO -->
+                                <td style="font-weight:bold; vertical-align:middle; font-size:18px;">LOGO</td>
+
+                                <!-- POCKET CENTER -->
+                                <td style="font-weight:bold; vertical-align:middle; font-size:15px;">
+                                    POCKET 
+                                    <img src="{{ url('assets/images/fav.jpeg') }}" style="height:30px; vertical-align:middle; margin:0 2px;">
+                                    CENTER
+                                </td>
+
+                                <!-- MARK CHECKER -->
+                                <td style="font-size:11px;">
+                                    MARK CHECKER'S<br>SIGN
+                                </td>
                             </tr>
                         </table>
-                        <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
-                            <tr>
-                                <td style="width:20%;" class="fw-bold"></td>
-                                <td style="width:60%;" class="fw-bold text-center">{{ strtoupper($jobCard->brand->brand_name ?? '') }}</td>
-                                <td style="width:10%;"></td>
-                                <td style="width:10%;">MARK CHECKER</td>
-                            </tr>
-                        </table>
+
                     </div>
 
                     <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                         <tbody>
                             {{-- Row 1 --}}
                             <tr>
-                                <td class="fw-bold py-1" style="width: 9%;">CUTTING NO</td>
-                                <td class="py-1" style="width: 11%;">{{ $jobCard->job_card_no }}</td>
-                                <td class="fw-bold py-1" style="width: 6%;">FIT</td>
-                                <td class="py-1 text-center" style="width: 18%;">{{ strtoupper($jobCard->fit->fit_name ?? '-') }}</td>
-                                <td class="fw-bold py-1" style="width: 6%;">CUFF</td>
-                                <td class="py-1 text-center" style="width: 10%;">{{ strtoupper($jobCard->cuffType->cuff_type_name ?? '-') }}</td>
-                                <td class="fw-bold py-1" style="width: 12%;">CUTTING MASTER</td>
-                                <td class="py-1" style="width: 18%;">{{ $jobCard->cuttingMaster->name ?? '' }}</td>
-                                <td class="fw-bold py-1" style="width: 10%;"></td>
-                            </tr>
-
-                            {{-- Row 1.5 (Plant & Stores) --}}
-                            <tr>
-                                <td class="fw-bold py-1">PLANT</td>
-                                <td class="py-1" colspan="3">{{ $jobCard->serviceProvider->name ?? '-' }}</td>
-                                <td class="fw-bold py-1">ISSUE STORE</td>
-                                <td class="py-1" colspan="2">{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
-                                <td class="fw-bold py-1">RECEIPT STORE</td>
-                                <td class="py-1">{{ $jobCard->receiptStoreMapping->store_type_name ?? ($jobCard->receipt_store ?: '-') }}</td>
+                                <td class="fw-bold p-3" style="width: 9%; vertical-align:middle;">CUTTING NO</td>
+                                <td class=" p-3" style="width: 11%; vertical-align:middle;">{{ $jobCard->job_card_no }}</td>
+                                <td class="p-3" style="width: 6%; vertical-align:middle;">FIT</td>
+                                <td class="fw-bold p-3 text-center" style="width: 18%; vertical-align:middle;">{{ strtoupper($jobCard->fit->fit_name ?? '-') }}</td>
+                                <td class="p-3" style="width: 6%; vertical-align:middle;">CUFF</td>
+                                <td class="fw-bold p-3 text-center" style="width: 10%; vertical-align:middle;">{{ strtoupper($jobCard->cuffType->cuff_type_name ?? '-') }}</td>
+                                <td class="fw-bold p-3" style="width: 12%;">CUTTING MASTER</td>
+                                <td class="p-3" style="width: 18%;">{{ $jobCard->cuttingMaster->name ?? '' }}</td>
+                                <td class="fw-bold p-3" style="width: 10%;"></td>
                             </tr>
 
                             {{-- Row 2 --}}
                             <tr>
-                                <td class="fw-bold py-1">F.ISSUE DATE</td>
-                                <td class="py-1">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
-                                <td class="fw-bold py-1">N.PATTI</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->pattiType->patti_type_name ?? '-') }}</td>
-                                <td class="fw-bold py-1">POCKET</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? '-') }}</td>
-                                <td class="fw-bold py-1">CUTTING DATE</td>
-                                <td class="py-1">{{ $jobCard->cutting_date ? date('d-m-Y', strtotime($jobCard->cutting_date)) : '' }}</td>
-                                <td class="">H.O.D.C NO</td>
+                                <td class="fw-bold p-3">ISSUE DATE</td>
+                                <td class="p-3">{{ $jobCard->job_card_date ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '' }}</td>
+                                <td class="p-3">N.PATTI</td>
+                                <td class="fw-bold p-3 text-center">{{ strtoupper($jobCard->pattiType->patti_type_name ?? '-') }}</td>
+                                <td class="p-3">POCKET</td>
+                                <td class="fw-bold p-3 text-center">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? '-') }}</td>
+                                <td class="fw-bold p-3">CUTTING DATE</td>
+                                <td class="p-3">{{ $jobCard->cutting_date ? date('d-m-Y', strtotime($jobCard->cutting_date)) : '' }}</td>
+                                <td class="fw-bold p-3 vertical-align:middle;">H.O/D.C/NO</td>
                             </tr>
 
                             {{-- Row 3 --}}
                             <tr>
-                                <td class="fw-bold py-1">DELIVERY DATE</td>
-                                <td class="py-1">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
-                                <td class="fw-bold py-1">COLLAR</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->collarType->collar_type_name ?? '-') }}</td>
-                                <td class="fw-bold py-1">BOT.CUT</td>
-                                <td class="py-1 text-center">{{ strtoupper($jobCard->bottomCut->bottom_cut_name ?? '-') }}</td>
-                                <td class="fw-bold py-1">CUTTING ISSUE UNIT</td>
-                                <td class="py-1">{{ $jobCard->cuttingIssueUnitMapping->name ?? $jobCard->cutting_issue_unit }}</td>
-                                <td class="fw-bold py-1"></td>
+                                <td class="fw-bold p-3">DELIVERY DATE</td>
+                                <td class="p-3">{{ $jobCard->delivery_date ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '' }}</td>
+                                <td class="p-3">COLLAR</td>
+                                <td class="fw-bold p-3 text-center">{{ strtoupper($jobCard->collarType->collar_type_name ?? '-') }}</td>
+                                <td class="p-3">BOT.CUT</td>
+                                <td class="fw-bold p-3 text-center">{{ strtoupper($jobCard->bottomCut->bottom_cut_name ?? '-') }}</td>
+                                <td class="fw-bold p-3">CUTTING ISSUE UNIT</td>
+                                <td class="p-3">{{ $jobCard->cuttingIssueUnitMapping->name ?? $jobCard->cutting_issue_unit }}</td>
+                                <td class="fw-bold p-3"></td>
                             </tr>
 
                             {{-- Row 4 --}}
                             <tr>
-                                <td class="fw-bold py-1">WASHING</td>
-                                <td class="py-1">{{ $jobCard->washing ?: 'NO' }}</td>
-                                <td colspan="4" class="text-center fw-bold py-1" style="font-size: 0.75rem; border-bottom: 2px solid #eeeeee;">CUTTING SIZE RATIO</td>
-                                <td colspan="2" class="text-center fw-bold py-1" style="font-size: 0.75rem; border-bottom: 2px solid #eeeeee;">CUTTING MARK AND LAY</td>  
-                                <td colspan="2" class="text-center fw-bold py-1" style="font-size: 0.75rem; border-bottom: 2px solid #eeeeee;">H.O.D.C DATE</td>
+                                <td class="fw-bold p-3">WITHIN DAYS</td>
+                                <td class="p-3">14</td>
+                                <td colspan="4" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING SIZE RATIO</td>
+                                <td colspan="2" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING MARK</td>  
+                                <td colspan="2" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">H.O.D.C DATE</td>
                             </tr>
 
                             {{-- Row 5 --}}
                             <tr>
-                                <td class="fw-bold py-1">WIDTH</td>
-                                <td class="py-1">{{ $jobCard->width ?: '-' }}</td>
-                                <td class="fw-bold py-1 text-center">SIZE</td>
+                                <td class="fw-bold p-3" style="font-size: 12px;">CAD MARK WITDTH</td>
+                                <td class="p-3">{{ $jobCard->width ?: '-' }}</td>
+                                <td class="fw-bold p-3 text-center">SIZE</td>
                                 <td colspan="3" class="p-0">
-                                    <table class="table table-bordered mb-0 job-card-table" style="border: 1px solid #eeeeee;">
+                                    <table class="table mb-0 job-card-table">
                                         <tr class="text-center fw-bold" style="font-size: 0.8rem;">
                                             @php $sizes = $allSizes; @endphp
                                             @foreach($sizes as $size)
-                                                <td class="py-1" style="width: 14.28%; border: 1px solid #eeeeee;">{{ $size }}</td>
+                                                <td class="p-3" style="width: 14.28%; border-right:1px solid #eeeeee;">{{ $size }}</td>
                                             @endforeach
                                         </tr>
                                     </table>
                                 </td>
                                 <td class="p-0" colspan="2">
                                     <div class="row g-0">
-                                        <div class="col-6 fw-bold text-center py-1 border-end" style="font-size: 0.7rem;">SIZE</div>
-                                        <div class="col-6 fw-bold text-center py-1" style="font-size: 0.7rem;">MARK</div>
+                                        <div class="col-6 fw-bold text-center p-3 border-end" style="font-size: 0.7rem;">SIZE</div>
+                                        <div class="col-6 fw-bold text-center p-3" style="font-size: 0.7rem;">MARK</div>
                                     </div>
                                 </td>
                             </tr>

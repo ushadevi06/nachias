@@ -539,13 +539,13 @@ $isSuper = $user->id == 1;
                                         </li>
                                         @endif
 
-                                        @if($isSuper || $user->can('view production'))
+                                        {{-- @if($isSuper || $user->can('view production'))
                                         <li class="menu-item {{ (request()->is('productions*') || request()->is('add_production*')) ? 'active' : '' }}">
                                             <a href="{{ url('productions') }}" class="menu-link">
                                                 <div>Production</div>
                                             </a>
                                         </li>
-                                        @endif
+                                        @endif --}}
 
                                         @if($isSuper || $user->can('view task-management'))
                                         <li class="menu-item {{ request()->is('task_management*') ? 'active' : '' }}">

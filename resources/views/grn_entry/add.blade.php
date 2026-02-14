@@ -9,13 +9,23 @@
                     <div class="card-header-box">
                         <h4>{{ $grn ? 'Edit' : 'Add' }} GRN Entry</h4>
                     </div>
-                    <form action="{{ url('grn_entries/add' . ($grn ? '/' . $grn->id : '')) }}" method="POST" id="grn-form" class="common-form" enctype="multipart/form-data">
+                    <form action="{{ url('grn_entries/add' . ($grn ? '/' . $grn->id : '')) }}" method="POST" id="grn-form" class="common-form" enctype="multipart/form-data" autocomplete="off">
                         @csrf
+
+                        @if($errors->any())
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                         
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" value="{{ $grn->grn_number ?? $nextGrnNo }}" readonly />
+                                    <input type="text" name="grn_no" class="form-control" value="{{ $grn->grn_number ?? $nextGrnNo }}" readonly />
                                     <label>GRN No * </label>
                                 </div>
                             </div>
@@ -148,7 +158,7 @@
                                                             <td>
                                                                 <input type="file" name="items[{{$idx}}][item_image]" class="form-control" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
                                                                 @if(isset($itemObj->image) && $itemObj->image)
-                                                                    <input type=l"hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
+                                                                    <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
                                                                     <a href="{{ url('uploads/grn_items/' . $itemObj->image) }}" target="_blank">
                                                                         <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded">
                                                                     </a>

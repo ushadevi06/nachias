@@ -35,15 +35,11 @@ class CollarTypeController extends Controller
                 $action = '<div class="button-box">';
 
                 if (auth()->id() == 1 || auth()->user()->can('edit collar-types')) {
-                    $action .= '<a href="' . url('collar_types/add/' . $row->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
+                    $action .= '<a href="' . url('collar_types/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete collar-types')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('collar_types/delete/' . $row->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('collar_types/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $action .= '</div>';
@@ -73,22 +69,22 @@ class CollarTypeController extends Controller
                 return unauthorizedRedirect();
             }
         }
-
         $collarType = $id ? CollarType::findOrFail($id) : null;
-
         if ($request->isMethod('post')) {
             $rules = [
-                'collar_type_name' => 'required|string|max:255|unique:collar_types,collar_type_name,' . $id . ',id,deleted_at,NULL',
+                'collar_type_name' => 'required|string|min:3|max:50|unique:collar_types,collar_type_name,' . $id . ',id,deleted_at,NULL',
                 'status'          => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
+
             $request->validate($rules, $messages);
-
             $data = $request->only(['collar_type_name', 'status']);
-
+            
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 CollarType::where('id', $id)->update($data);
@@ -100,7 +96,6 @@ class CollarTypeController extends Controller
                 addLog('create', 'Collar Type', 'collar_types', $newCollarType->id, null, $data);
                 $msg = 'Collar Type added successfully';
             }
-
             return redirect('collar_types')->with('success', $msg);
         }
 

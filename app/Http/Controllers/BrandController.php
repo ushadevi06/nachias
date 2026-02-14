@@ -15,36 +15,26 @@ class BrandController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view brands')) {
             return unauthorizedRedirect();
         }
-        $canAdd    = true;
-        $canEdit   = true;
-        $canDelete = true;
-
         if ($request->ajax()) {
-
             $brands = Brand::latest()->get();
             $data = [];
             $count = 1;
-
             foreach ($brands as $brand) {
-
                 $status = '
-                <label class="switch switch-success switch-lg">
-                    <input type="checkbox" class="switch-input brand-status-toggle"
-                        data-id="' . $brand->id . '" ' . ($brand->status == "Active" ? "checked" : "") . '>
-                    <span class="switch-toggle-slider"></span>
-                </label>
-                <div class="status_msg_' . $brand->id . ' mt-1"></div>
-            ';
-
+                    <label class="switch switch-success switch-lg">
+                        <input type="checkbox" class="switch-input brand-status-toggle"
+                            data-id="' . $brand->id . '" ' . ($brand->status == "Active" ? "checked" : "") . '>
+                        <span class="switch-toggle-slider"></span>
+                    </label>
+                    <div class="status_msg_' . $brand->id . ' mt-1"></div>
+                ';
                 $action = '<div class="button-box">';
-
                 if (auth()->id() == 1 || auth()->user()->can('edit brands')) {
                     $action .= '
                     <a href="' . url('brands/add/' . $brand->id) . '" class="btn btn-edit">
                         <i class="icon-base ri ri-edit-box-line"></i>
                     </a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('delete brands')) {
                     $action .= '
                     <button class="btn btn-delete"
@@ -52,9 +42,7 @@ class BrandController extends Controller
                         <i class="icon-base ri ri-delete-bin-line"></i>
                     </button>';
                 }
-
                 $action .= '</div>';
-
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'brand_name' => $brand->brand_name,
@@ -64,13 +52,10 @@ class BrandController extends Controller
                     'action' => $action,
                 ];
             }
-
             return response()->json(['data' => $data]);
         }
-
-        return view('brands.view', compact('canAdd'));
+        return view('brands.view');
     }
-
 
     public function add(Request $request, $id = null)
     {
@@ -84,47 +69,39 @@ class BrandController extends Controller
             }
         }
         $brand = $id ? Brand::findOrFail($id) : null;
-
         if ($request->isMethod('post')) {
-
             $rules = [
-                'brand_name' => 'required|string|max:255|unique:brands,brand_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'code' => 'required|string|max:50|unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'brand_name' => 'required|string|min:3|max:100|unique:brands,brand_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|min:3|max:50|unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
-
             $validated = $request->validate($rules, $messages);
-
             $data = [
                 'brand_name' => $request->brand_name,
                 'code' => $request->code,
                 'status' => $request->status,
                 'created_by' => auth()->id() ?? 1,
             ];
-
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 $oldData = $brand->toArray();
                 $brand->update($data);
                 $newData = $brand->fresh()->toArray();
-
                 addLog('update', 'Brand', 'brands', $id, $oldData, $newData);
-
                 return redirect('brands')->with('success', 'Brand updated successfully');
             } else {
                 $data['created_by'] = auth()->id();
                 $created = Brand::create($data);
-
                 addLog('create', 'Brand', 'brands', $created->id, null, $created->toArray());
-
                 return redirect('brands')->with('success', 'Brand added successfully');
             }
         }
-
         return view('brands.add', compact('brand'));
     }
 

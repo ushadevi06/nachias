@@ -10,14 +10,12 @@
                         <h4>{{ $department ? 'Edit' : 'Add' }} Department</h4>
                     </div>
                     <form action="{{ url('departments/add' . ($department ? '/' . $department->id : '')) }}"
-                        method="POST" class="common-form">
+                        method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('department') is-invalid @enderror" id="department"
-                                        placeholder="Enter Department" name="department"
-                                        value="{{ old('department', $department->department ?? '') }}">
+                                    <input type="text" class="form-control @error('department') is-invalid @enderror" id="department" placeholder="Enter Department" name="department" value="{{ old('department', $department->department ?? '') }}">
                                     <label for="department">Department <span class="text-danger">*</span></label>
                                 </div>
                                 @error('department')
@@ -26,15 +24,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $department->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $department->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $department->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $department->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

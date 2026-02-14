@@ -4,8 +4,7 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            
-            <form action="{{ url('debit_notes/add/' . ($debitNote->id ?? '')) }}" method="POST" class="common-form" enctype="multipart/form-data">
+            <form action="{{ url('debit_notes/add/' . ($debitNote->id ?? '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                 @csrf
                 <div class="card mb-4">
                     <div class="card-body">
@@ -15,21 +14,21 @@
                         <div class="row g-4">
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" id="debit_note_no" name="debit_note_no" class="form-control" placeholder="Enter Debit Note No" value="{{ old('debit_note_no', $debitNote->debit_note_no ?? $nextDebitNoteNo) }}" required {{ isset($debitNote) ? 'readonly' : '' }}>
+                                    <input type="text" id="debit_note_no" name="debit_note_no" class="form-control" placeholder="Enter Debit Note No" value="{{ old('debit_note_no', $debitNote->debit_note_no ?? $nextDebitNoteNo) }}" {{ isset($debitNote) ? 'readonly' : '' }}>
                                     <label for="debit_note_no">Debit Note No <span class="text-danger">*</span></label>
                                 </div>
                                 @error('debit_note_no') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="date" id="debit_note_date" name="debit_note_date" class="form-control" value="{{ old('debit_note_date', isset($debitNote) ? $debitNote->debit_note_date->format('Y-m-d') : date('Y-m-d')) }}" required>
+                                    <input type="date" id="debit_note_date" name="debit_note_date" class="form-control" value="{{ old('debit_note_date', isset($debitNote) ? $debitNote->debit_note_date->format('Y-m-d') : date('Y-m-d')) }}">
                                     <label for="debit_note_date">Debit Note Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('debit_note_date') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="purchase_invoice_id" name="purchase_invoice_id" class="form-select select2" data-placeholder="Select Invoice" required>
+                                    <select id="purchase_invoice_id" name="purchase_invoice_id" class="form-select select2" data-placeholder="Select Invoice">
                                         <option value="">Select Invoice</option>
                                         @foreach($purchaseInvoices as $invoice)
                                             <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>{{ $invoice->invoice_no }}</option>
@@ -42,7 +41,8 @@
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="hidden" id="supplier_id_hidden" name="supplier_id" value="{{ old('supplier_id', $debitNote->supplier_id ?? '') }}">
-                                    <input type="text" id="supplier_name" class="form-control" value="{{ $debitNote->supplier->name ?? '' }}" readonly placeholder="Supplier">
+                                    <input type="text" id="supplier_name" class="form-control" value="{{ old('supplier_id') ? \App\Models\Supplier::find(old('supplier_id'))?->name : ($debitNote->supplier->name ?? '') }}" readonly>
+
                                     <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
                                 </div>
                                 @error('supplier_id') <div class="text-danger">{{ $message }}</div> @enderror
@@ -52,6 +52,17 @@
                                     <input type="text" id="reason" name="reason" class="form-control" placeholder="Enter Reason" value="{{ old('reason', $debitNote->reason ?? '') }}">
                                     <label for="reason">Reason for Debit Note</label>
                                 </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="status" name="status" class="form-select">
+                                        <option value="Draft" {{ (old('status', $debitNote->status ?? 'Draft') == 'Draft') ? 'selected' : '' }} {{ (isset($debitNote) && $debitNote->status != 'Draft') ? 'disabled' : '' }}>Draft</option>
+                                        <option value="Approved" {{ (old('status', $debitNote->status ?? '') == 'Approved') ? 'selected' : '' }}>Approved</option>
+                                        <option value="Cancelled" {{ (old('status', $debitNote->status ?? '') == 'Cancelled') ? 'selected' : '' }}>Cancelled</option>
+                                    </select>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
+                                </div>
+                                @error('status') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
                         </div>
                     </div>
@@ -75,7 +86,59 @@
                                     </tr>
                                 </thead>
                                 <tbody id="items_tbody">
-                                    @if(isset($debitNote))
+                                    @if(old('items'))
+                                        @foreach(old('items') as $index => $item)
+                                            <tr class="item-row">
+                                                <td>
+                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1"
+                                                        class="form-check-input item-checkbox"
+                                                        {{ isset($item['selected']) ? 'checked' : '' }}>
+
+                                                    <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]"
+                                                        value="{{ $item['purchase_invoice_item_id'] ?? '' }}">
+
+                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]"
+                                                        value="{{ $item['raw_material_id'] ?? '' }}">
+                                                </td>
+
+                                                <td>
+                                                    {{ \App\Models\RawMaterial::find($item['raw_material_id'])?->name ?? '-' }}
+                                                </td>
+
+                                                <td>
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]"
+                                                        value="{{ $item['uom_id'] ?? '' }}">
+                                                    {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
+                                                </td>
+
+                                                <td>
+                                                    <input type="number"
+                                                        name="items[{{ $index }}][quantity]"
+                                                        class="form-control item-qty"
+                                                        value="{{ $item['quantity'] ?? 0 }}"
+                                                        step="0.01">
+                                                </td>
+
+                                                <td>
+                                                    <input type="number"
+                                                        name="items[{{ $index }}][rate]"
+                                                        class="form-control item-rate"
+                                                        value="{{ $item['rate'] ?? 0 }}"
+                                                        step="0.01"
+                                                        readonly>
+                                                </td>
+
+                                                <td>
+                                                    <input type="number"
+                                                        name="items[{{ $index }}][amount]"
+                                                        class="form-control item-amount"
+                                                        value="{{ $item['amount'] ?? 0 }}"
+                                                        step="0.01"
+                                                        readonly>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @elseif(isset($debitNote))
                                         @foreach($debitNote->items as $index => $item)
                                             <tr class="item-row">
                                                 <td>
@@ -127,7 +190,7 @@
                                             <input type="file" id="reference_document" name="reference_document" class="form-control">
                                             @if(isset($debitNote) && $debitNote->reference_document)
                                                 <div class="mt-1">
-                                                    <a href="{{ url('uploads/debit_notes/' . $debitNote->reference_document) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri-eye-line me-1"></i> View Attachment</a>
+                                                    <a href="{{ url('uploads/debit_notes/' . $debitNote->reference_document) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri ri-eye-line me-1"></i> View</a>
                                                 </div>
                                             @endif
                                         </div>
@@ -225,7 +288,7 @@
                     </div>
                 </div>
                 <div class="text-end mb-5 me-4 mt-5">
-                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
                     <a href="{{ url('debit_notes') }}" class="btn btn-secondary">Cancel</a>
                 </div>  
             </form>

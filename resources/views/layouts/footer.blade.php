@@ -124,6 +124,11 @@
             dateFormat: 'd-m-Y',
             allowInput: true
         });
+
+        // Global fix to disable browser autocomplete on all datepicker inputs
+        $(document).on('focus', '.flatpickr-input, .issue_date, .delivery_date, .cutting_date, .issue-date, .deadline-date, .po_date, .so_date', function() {
+            $(this).attr('autocomplete', 'off');
+        });
     });
 
     function delete_data(deleteUrl) {

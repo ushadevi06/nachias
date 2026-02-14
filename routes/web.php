@@ -112,8 +112,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('/raw-materials-by-category/{categoryId}', [AjaxController::class, 'getRawMaterialsByCategory']);
     Route::get('/get_charges', [AjaxController::class, 'getCharges']);
     Route::get('get-materials-by-category/{category_id}', [AjaxController::class, 'getMaterialsByCategory']);
-    Route::get('get-employees-by-plant/{plantId?}', [AjaxController::class, 'getEmployeesByPlant']);
-
+    Route::get('get-employees-by-plant/{plantId?}/{stageId?}', [AjaxController::class, 'getEmployeesByPlant']);
+    Route::get('get-service-providers-by-stage/{stageId}', [AjaxController::class, 'getServiceProvidersByStage']);
+    Route::get('get-services-by-stage/{stageId}', [AjaxController::class, 'getServicesByStage']);
 
     /* Employees */
     Route::get('employees', [EmployeeController::class, 'index']);
@@ -395,6 +396,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('debit_notes/view/{id}', [DebitNoteController::class, 'view']);
     Route::get('debit_notes/delete/{id}', [DebitNoteController::class, 'destroy']);
     Route::get('debit_notes/get-invoice-details/{id}', [DebitNoteController::class, 'getInvoiceDetails']);
+    Route::get('debit_notes/get-supplier-invoices/{id}', [DebitNoteController::class, 'getSupplierInvoices']);
+    Route::post('debit_notes/status/{id}', [DebitNoteController::class, 'updateStatus']);
 
     /* Job Card Entry */
     Route::get('job_card_entries', [JobCardEntryController::class, 'index']);
@@ -426,6 +429,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('task_management/view/{id}', [TaskManagementController::class, 'view']);
     Route::get('task_management/delete/{id}', [TaskManagementController::class, 'destroy']);
     Route::post('task_management/update-status', [TaskManagementController::class, 'updateStatus'])->name('task_management.update_status');
+    Route::post('task_management/update-assignment-progress', [TaskManagementController::class, 'update_task_progress'])->name('task_management.update_progress');
+    Route::get('task_management/get_logs/{id}', [AjaxController::class, 'getTaskLogs'])->name('task_management.get_logs');
 
     /* Task Receive */
     Route::get('task_receives', [TaskManagementController::class, 'receive_index'])->name('task_receives.index');
@@ -436,7 +441,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Task Adjustment */
     Route::post('task_adjustments/add/{id?}', [TaskManagementController::class, 'adjustment_add'])->name('task_adjustments.add');
-
 
     /* Production Receipts */
     Route::get('production_receipts', [ProductionReceiptController::class, 'index']);

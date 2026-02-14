@@ -30,14 +30,10 @@ class DepartmentController extends Controller
                 <div class="status_msg_' . $row->id . ' mt-1"></div>';
                 $action = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('edit departments')) {
-                    $action .= '<a href="' . url('departments/add/' . $row->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
+                    $action .= '<a href="' . url('departments/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('delete departments')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('department/delete/' . $row->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('department/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
                 $action .= '</div>';
                 $data[] = [
@@ -68,12 +64,14 @@ class DepartmentController extends Controller
         $department = $id ? Department::findOrFail($id) : null;
         if ($request->isMethod('post')) {
             $rules = [
-                'department' => 'required|string|max:255|unique:departments,department,' . $id . ',id,deleted_at,NULL',
+                'department' => 'required|string|min:3|max:50|unique:departments,department,' . $id . ',id,deleted_at,NULL',
                 'status'     => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
             $data = $request->only(['department', 'status']);

@@ -58,7 +58,15 @@
 
                         <div class="col-md-4">
                             <label class="detail-title">Art No:</label>
-                            <div class="text-muted">{{ $firstItem->grnEntryItem->art_no ?? '-' }}</div>
+                            <div class="text-muted">
+                                @if($firstItem->stock_type == 'raw_material')
+                                    {{ $firstItem->grnEntryItem->art_no ?? '-' }}
+                                @else
+                                    {{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard && $stockEntry->productionReceipt->jobCard->item) 
+                                        ? $stockEntry->productionReceipt->jobCard->item->design_art_no 
+                                        : '-' }}
+                                @endif
+                            </div>
                         </div>
 
                         <div class="col-md-4">

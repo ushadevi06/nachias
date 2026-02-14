@@ -1,0 +1,114 @@
+-- Add service_provider_id to job_card_operations
+ALTER TABLE job_card_operations
+ADD COLUMN service_provider_id BIGINT UNSIGNED NULL AFTER operation_stage_id;
+
+-- Add deadline_date to job_card_operations
+ALTER TABLE job_card_operations
+ADD COLUMN deadline_date DATE NULL AFTER assigned_date;
+
+-- Add operation_stage_id to users
+ALTER TABLE users
+ADD COLUMN operation_stage_id BIGINT UNSIGNED NULL AFTER service_provider_id;
+
+ALTER TABLE job_card_operations
+ADD COLUMN IF NOT EXISTS remarks TEXT NULL AFTER deadline_date;
+
+ALTER TABLE job_card_entries
+MODIFY COLUMN cutting_issue_unit BIGINT UNSIGNED NULL;
+
+ALTER TABLE job_card_entries
+MODIFY COLUMN cutting_master_id BIGINT UNSIGNED NULL;
+
+ALTER TABLE job_card_entries
+MODIFY COLUMN cutting_date DATE NULL;
+
+ALTER TABLE `tasks`
+ADD COLUMN `total_hrs` DECIMAL(10,2) NULL;
+
+ALTER TABLE `process_schedules`
+ADD COLUMN `job_card_entry_id` BIGINT UNSIGNED NULL AFTER `id`,
+MODIFY `production_id` BIGINT UNSIGNED NULL;
+
+
+ALTER TABLE `process_schedules`
+MODIFY `stage` VARCHAR(255) NOT NULL,
+ADD COLUMN `operation_stage_id` BIGINT UNSIGNED NULL AFTER `stage`;
+
+
+CREATE TABLE `task_assign_employees` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `task_id` BIGINT UNSIGNED NOT NULL,
+    `issued_to` BIGINT UNSIGNED NOT NULL,
+    `services` TEXT NULL,
+    `issue_date` DATE NULL,
+    `due_date` DATE NULL,
+    `issue_qty` DECIMAL(10,2) NULL,
+    `total_hrs` DECIMAL(10,2) NULL,
+    `status` VARCHAR(255) NOT NULL DEFAULT 'Open',
+    `remarks` TEXT NULL,
+    `created_by` BIGINT UNSIGNED NULL,
+    `updated_by` BIGINT UNSIGNED NULL,
+    `deleted_at` TIMESTAMP NULL DEFAULT NULL,
+    `created_at` TIMESTAMP NULL DEFAULT NULL,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `task_assign_employees`
+DROP COLUMN `services`,
+ADD COLUMN `service_id` BIGINT UNSIGNED NULL AFTER `issued_to`;
+
+
+ALTER TABLE `process_schedules` CHANGE `status` `status` VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `job_card_entries` DROP `mrp`;
+ALTER TABLE `job_card_entries` CHANGE `status` `status` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'Draft';
+ALTER TABLE `job_card_entries` DROP `receipt_store`;
+ALTER TABLE `job_card_entries` DROP `cutting_master_id`;
+ALTER TABLE `job_card_entries` DROP `cutting_date`;
+ALTER TABLE `job_card_entries` DROP `cutting_issue_unit`;
+ALTER TABLE `tasks` DROP `parent_task_id`;
+ALTER TABLE `tasks` DROP `is_rework`;
+ALTER TABLE `tasks` DROP `production_id`;
+ALTER TABLE `tasks` DROP `production_no`;
+
+ALTER TABLE `blood_groups` CHANGE `blood_grp_name` `blood_grp_name` VARCHAR(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `bottom_cuts` CHANGE `bottom_cut_name` `bottom_cut_name` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `brands` CHANGE `brand_name` `brand_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `brand_categories` CHANGE `name` `name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `charges` CHANGE `charge_name` `charge_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `cities` CHANGE `city_code` `city_code` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `cities` CHANGE `city_name` `city_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `collar_types` CHANGE `collar_type_name` `collar_type_name` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `colors` CHANGE `color_name` `color_name` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL;
+ALTER TABLE `colors` CHANGE `description` `description` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL;
+ALTER TABLE `cuff_types` CHANGE `cuff_type_name` `cuff_type_name` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `customers` CHANGE `mobile_no` `mobile_no` VARCHAR(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `customers` CHANGE `name` `name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `customers` CHANGE `code` `code` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `customers` CHANGE `transport_name` `transport_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `booking_office` `booking_office` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `address_line_1` `address_line_1` VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `customers` CHANGE `address_line_2` `address_line_2` VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `customers` CHANGE `address_line_3` `address_line_3` VARCHAR(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `customers` CHANGE `zip_code` `zip_code` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `contact_person_name` `contact_person_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `designation` `designation` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `contact_mobile_no` `contact_mobile_no` VARCHAR(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `contact_email` `contact_email` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `gst_no` `gst_no` VARCHAR(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `pan_no` `pan_no` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `payment_terms` `payment_terms` VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `bank_name` `bank_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `branch` `branch` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `account_number` `account_number` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `customers` CHANGE `ifsc_code` `ifsc_code` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `debit_notes` DROP `other_charges`;
+ALTER TABLE `debit_notes` CHANGE `debit_note_no` `debit_note_no` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `debit_notes` CHANGE `status` `status` ENUM('Draft','Approved','Cancelled') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Draft';
+ALTER TABLE `departments` CHANGE `department` `department` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `departments` CHANGE `status` `status` ENUM('Active','Inactive') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Active';
+DROP TABLE `employees`;
+ALTER TABLE `fabric_types` CHANGE `fabric_type` `fabric_type` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `fits` CHANGE `fit_name` `fit_name` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `grn_entries` CHANGE `grn_number` `grn_number` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+ALTER TABLE `grn_entries` CHANGE `status` `status` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `grn_entry_items` CHANGE `art_no` `art_no` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;

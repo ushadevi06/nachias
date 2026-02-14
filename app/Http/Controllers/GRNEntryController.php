@@ -120,7 +120,6 @@ class GrnEntryController extends Controller
                 'status' => 'required|in:Draft,Received,Partially Received,Invoiced,Cancelled',
             ];
 
-            // Only require supplier invoice date if purchase_invoice_id is provided
             if ($request->purchase_invoice_id) {
                 $headerRules['supplier_invoice_date'] = 'required|date_format:d-m-Y';
             }
@@ -312,7 +311,6 @@ class GrnEntryController extends Controller
         
         $items = $invoice->items->map(function($item) {
             $already_received = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_received');
-            
             return [
                 'id' => $item->id,
                 'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
@@ -359,14 +357,12 @@ class GrnEntryController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete grn-entry')) {
             return unauthorizedRedirect();
         }
-
         $grn = GrnEntry::findOrFail($id);
         $oldData = $grn->toArray();
         $grn->grnEntryItems()->each(function($item) {
             $item->variants()->delete();
             $item->delete(); 
         });
-
         $grn->delete();
         addLog('delete', 'GRN Entry', 'grn_entries', $id, $oldData, null);
 

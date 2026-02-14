@@ -48,8 +48,8 @@
                             <div class="text-muted">{{ $customer->zone->zone_name ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Stores:</label>
-                            <div class="text-muted">{{ $customer->stores ?? '-' }}</div>
+                            <label class="detail-title">Store:</label>
+                            <div class="text-muted">{{ $customer->storeType->store_type_name ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Status:</label>

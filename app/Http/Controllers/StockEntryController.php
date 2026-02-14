@@ -56,7 +56,6 @@ class StockEntryController extends Controller
                     $q->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
                 });
             }
-            // Eager load productionReceipt relationship for Finished Goods PO Number
             $stockEntries = $query->with('productionReceipt.jobCard.purchaseOrder')->orderBy('id', 'desc')->get();
             $data = [];
             $count = 1;

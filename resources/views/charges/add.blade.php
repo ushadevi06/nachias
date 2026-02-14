@@ -11,7 +11,7 @@
                     </div>
 
                     <form action="{{ url('charges/add' . ($charge ? '/' . $charge->id : '')) }}" method="POST"
-                        class="common-form">
+                        class="common-form" autocomplete="off">
                         @csrf
                         <div class="row justify-content-center g-4">
                             <div class="col-md-6 col-xl-12">

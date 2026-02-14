@@ -98,6 +98,33 @@
             $('#supplier_id').val('').trigger('change');
             table.ajax.reload();
         });
+
+        $(document).on('change', '.status-dropdown', function() {
+            let debitNoteId = $(this).data('id');
+            let status = $(this).val();
+            let statusMsg = $('.status_msg_' + debitNoteId);
+            
+            $.ajax({
+                url: "{{ url('debit_notes/status') }}/" + debitNoteId,
+                type: 'POST',
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    status: status
+                },
+                success: function(response) {
+                    if (response.success) {
+                        let msg = '<span class="text-success">Status Changed</span>';
+                        $('.status_msg_' + debitNoteId).html(msg).fadeIn().delay(1200).fadeOut();
+
+                        if (status !== 'Draft') {
+                            $(this).find('option[value="Draft"]').prop('disabled', true);
+                        }
+                    } else {
+                        alert('Status update failed');
+                    }
+                }.bind(this),
+            });
+        });
     });
 
     function delete_data(url) {

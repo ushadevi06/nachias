@@ -6,33 +6,6 @@
         <div class="col-lg-12">
             <form action="{{ url('production_receipts/add' . ($receipt ? '/' . $receipt->id : '')) }}" method="POST" class="common-form">
                 @csrf
-                {{-- @if ($errors->any())
-                    <div class="alert alert-danger shadow-sm border-0 mb-4">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="ri-error-warning-line fs-4 me-2"></i>
-                            <h6 class="mb-0 fw-bold">Please correct the following errors:</h6>
-                        </div>
-                        <ul class="mb-0 ps-3 text-danger">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                @if(session('success'))
-                    <div class="alert alert-success shadow-sm border-0 mb-4 d-flex align-items-center">
-                        <i class="ri-checkbox-circle-line fs-4 me-2 text-success"></i>
-                        <h6 class="mb-0 fw-bold text-success">{{ session('success') }}</h6>
-                    </div>
-                @endif
-
-                @if(session('error'))
-                    <div class="alert alert-danger shadow-sm border-0 mb-4 d-flex align-items-center">
-                        <i class="ri-error-warning-line fs-4 me-2 text-danger"></i>
-                        <h6 class="mb-0 fw-bold text-danger">{{ session('error') }}</h6>
-                    </div>
-                @endif --}}
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">

@@ -9,16 +9,12 @@
                     <div class="card-header-box">
                         <h4>{{ $color->id ? 'Edit' : 'Add' }} Color</h4>
                     </div>
-
-                    <form action="{{ url('colors/add' . ($color->id ? '/' . $color->id : '')) }}" method="POST"
-                        class="common-form">
+                    <form action="{{ url('colors/add' . ($color->id ? '/' . $color->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('color_name') is-invalid @enderror" id="color-name" name="color_name"
-                                        placeholder="Enter Color Name"
-                                        value="{{ old('color_name', $color->color_name ?? '') }}">
+                                    <input type="text" class="form-control @error('color_name') is-invalid @enderror" id="color-name" name="color_name" placeholder="Enter Color Name" value="{{ old('color_name', $color->color_name ?? '') }}">
                                     <label for="color-name">Color Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('color_name')
@@ -27,8 +23,7 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description"
-                                        placeholder="Enter Description">{{ old('description', $color->description ?? '') }}</textarea>
+                                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" placeholder="Enter Description">{{ old('description', $color->description ?? '') }}</textarea>
                                     <label for="description">Description</label>
                                 </div>
                                 @error('description')
@@ -37,15 +32,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $color->status ?? '') == 'Active' ? 'selected' : '' }}>Active
-                                        </option>
-                                        <option value="Inactive"
-                                            {{ old('status', $color->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $color->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $color->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

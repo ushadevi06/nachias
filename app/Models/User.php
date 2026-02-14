@@ -21,6 +21,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'service_provider_id',
+        'operation_stage_id',
         'department_id',
         'role_id',
         'emp_id',
@@ -121,6 +122,11 @@ class User extends Authenticatable
     public function serviceProvider()
     {
         return $this->belongsTo(ServiceProvider::class);
+    }
+
+    public function operationStage()
+    {
+        return $this->belongsTo(OperationStage::class);
     }
 
     /* ===========================

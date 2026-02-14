@@ -36,7 +36,6 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Production ID</th>
                                     <th>Job Card ID</th>
                                     <th>Production Stage</th>
                                     <th>Art No</th>
@@ -78,7 +77,6 @@
             ajax: "{{ url('stock_consumables_returns') }}",
             columns: [
                 { data: 'DT_RowIndex', name: 'DT_RowIndex' },
-                { data: 'production_no', name: 'production_no' },
                 { data: 'job_card_no', name: 'job_card_no' },
                 { data: 'production_stage', name: 'production_stage' },
                 { data: 'art_no', name: 'art_no' },

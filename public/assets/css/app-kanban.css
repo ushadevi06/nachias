@@ -188,7 +188,7 @@
 
 /* Dropdown Menu UI */
 .app-kanban .kanban-wrapper .kanban-container .kanban-board .kanban-item .kanban-tasks-item-dropdown {
-    opacity: 0;
+    opacity: 1;
     transition: all 0.2s ease;
 }
 

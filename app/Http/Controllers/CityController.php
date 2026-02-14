@@ -40,33 +40,26 @@ class CityController extends Controller
             foreach ($cities as $city) {
                 $checked = $city->status === 'Active' ? 'checked' : '';
                 $statusSwitch = '
-                <label class="switch switch-success switch-lg">
-                    <input type="checkbox"
-                        class="switch-input city-status-toggle"
-                        data-id="' . $city->id . '"
-                        ' . $checked . '>
-                    <span class="switch-toggle-slider">
-                        <span class="switch-on"></span>
-                        <span class="switch-off"></span>
-                    </span>
-                </label>
-                <div class="status_msg_' . $city->id . '"></div>
-            ';
+                    <label class="switch switch-success switch-lg">
+                        <input type="checkbox"
+                            class="switch-input city-status-toggle"
+                            data-id="' . $city->id . '"
+                            ' . $checked . '>
+                        <span class="switch-toggle-slider">
+                            <span class="switch-on"></span>
+                            <span class="switch-off"></span>
+                        </span>
+                    </label>
+                    <div class="status_msg_' . $city->id . '"></div>
+                ';
 
                 $actionBtn = '';
                 if (auth()->id() == 1 || auth()->user()->can('edit cities')) {
-                    $actionBtn .= '
-                        <a href="' . url('cities/add/' . $city->id) . '" class="btn btn-edit">
-                            <i class="icon-base ri ri-edit-box-line"></i>
-                        </a>
-                    ';
+                    $actionBtn .= '<a href="' . url('cities/add/' . $city->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete cities')) {
-                    $actionBtn .= '
-                    <a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('cities/delete/' . $city->id) . '\')">
-                        <i class="icon-base ri ri-delete-bin-line"></i>
-                    </a>';
+                    $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('cities/delete/' . $city->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $data[] = [
@@ -104,24 +97,14 @@ class CityController extends Controller
 
             $validated = $request->validate([
                 'state_id'   => 'required|exists:states,id',
-                'city_code' => [
-                    'nullable',
-                    'max:10',
-                    Rule::unique('cities', 'city_code')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
-                ],
-                'city_name' => [
-                    'required',
-                    'max:100',
-                    Rule::unique('cities', 'city_name')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
-                ],
+                'city_code' => ['nullable','min:2','max:10',Rule::unique('cities', 'city_code')->ignore($id)->whereNull('deleted_at')],
+                'city_name' => ['required','min:3','max:100',Rule::unique('cities', 'city_name')->ignore($id)->whereNull('deleted_at')],
                 'status'    => 'required|in:Active,Inactive',
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ]);
 
             if ($id) {
@@ -151,7 +134,6 @@ class CityController extends Controller
         $city->save();
         $newData = $city->toArray();
         addLog('update_status', 'City Status', 'cities', $city->id, $oldData, $newData);
-
         return response()->json([
             'success' => true,
             'message' => 'Status updated successfully'

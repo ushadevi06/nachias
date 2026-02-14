@@ -32,6 +32,16 @@ class DebitNoteController extends Controller
             $count = 1;
 
             foreach ($debitNotes as $note) {
+                $status_options = ['Draft', 'Approved', 'Cancelled'];
+                $status = '<select class="form-select status-dropdown" data-id="' . $note->id . '">';
+                foreach ($status_options as $option) {
+                    $selected = ($note->status == $option) ? 'selected' : '';
+                    $disabled = ($option == 'Draft' && $note->status != 'Draft') ? 'disabled' : '';
+                    $status .= '<option value="' . $option . '" ' . $selected . ' ' . $disabled . '>' . $option . '</option>';
+                }
+                $status .= '</select>';
+                $status .= '<div class="status_msg_' . $note->id . '"></div>';
+
                 $action = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('view debit-note')) {
                     $action .= '<a href="' . url('debit_notes/view/' . $note->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
@@ -51,7 +61,7 @@ class DebitNoteController extends Controller
                     'purchase_invoice_no' => $note->purchaseInvoice ? $note->purchaseInvoice->invoice_no : '-',
                     'supplier_name' => $note->supplier ? $note->supplier->name : '-',
                     'grand_total' => '₹' . number_format($note->grand_total, 2),
-                    'status' => $note->status,
+                    'status' => $status,
                     'action' => $action,
                 ];
             }
@@ -86,13 +96,23 @@ class DebitNoteController extends Controller
                 'debit_note_date' => 'required|date',
                 'purchase_invoice_id' => 'required|exists:purchase_invoices,id',
                 'supplier_id' => 'required|exists:suppliers,id',
+                'reason' => 'nullable|string|min:5|max:255',
                 'items' => 'required|array|min:1',
                 'sub_total' => 'required|numeric|min:0',
                 'grand_total' => 'required|numeric|min:0',
-                'reference_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
+                'status' => 'required|in:Draft,Approved,Cancelled',
+                'reference_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
             ];
 
-            $validated = $request->validate($rules);
+            $messages = [
+                '*.required' => 'This field is required.',
+                '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
+            ];
+
+            $validated = $request->validate($rules,$messages);
 
             DB::beginTransaction();
             try {
@@ -120,13 +140,12 @@ class DebitNoteController extends Controller
                     'sgst_percent' => $request->sgst_percent ?? 0,
                     'sub_total' => $request->sub_total,
                     'tax_amount' => $request->tax_amount ?? 0,
-                    'other_charges' => $request->other_charges ?? 0,
                     'round_off_type' => $request->round_off_type ?? 'Add',
                     'round_off' => $request->round_off ?? 0,
                     'grand_total' => $request->grand_total,
                     'remarks' => $request->remarks,
                     'reference_document' => $referenceDocument,
-                    'status' => 'Active',
+                    'status' => $request->status ?? 'Draft',
                 ];
 
                 if ($id) {
@@ -228,6 +247,30 @@ class DebitNoteController extends Controller
             'igst_percent' => $invoice->igst_percent,
             'cgst_percent' => $invoice->cgst_percent,
             'sgst_percent' => $invoice->sgst_percent,
+        ]);
+    }
+    public function getSupplierInvoices($supplierId)
+    {
+        $invoices = PurchaseInvoice::where('supplier_id', $supplierId)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'invoice_no']);
+        
+        return response()->json([
+            'success' => true,
+            'invoices' => $invoices
+        ]);
+    }
+    public function updateStatus(Request $request, $id)
+    {
+        $debitNote = DebitNote::findOrFail($id);
+        $oldData = $debitNote->toArray();
+        $debitNote->status = $request->status;
+        $debitNote->save();
+        $newData = $debitNote->toArray();
+        addLog('update_status', 'Debit Note Status', 'debit_notes', $id, $oldData, $newData);
+        return response()->json([
+            'success' => true,
+            'status'  => $debitNote->status
         ]);
     }
 }

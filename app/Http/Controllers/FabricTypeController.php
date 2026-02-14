@@ -81,19 +81,14 @@ class FabricTypeController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'fabric_type' => [
-                    'required',
-                    'string',
-                    'max:255',
-                    Rule::unique('fabric_types', 'fabric_type')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
-                ],
+                'fabric_type' => ['required','string','min:3','max:50',Rule::unique('fabric_types', 'fabric_type')->ignore($id)->whereNull('deleted_at')],
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This Field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
             $data = [

@@ -25,6 +25,7 @@ class Task extends Model
         'issue_store',
         'remarks',
         'status',
+        'total_hrs',
         'created_by',
         'updated_by'
     ];
@@ -61,5 +62,14 @@ class Task extends Model
     public function adjustments()
     {
         return $this->hasMany(TaskAdjustment::class, 'task_id');
+    }
+
+    public function assignments()
+    {
+        return $this->hasMany(TaskAssignEmployee::class, 'task_id');
+    }
+    public function operationStage()
+    {
+        return $this->belongsTo(OperationStage::class, 'stage_id');
     }
 }

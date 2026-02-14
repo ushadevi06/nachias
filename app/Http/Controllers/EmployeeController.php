@@ -18,6 +18,7 @@ use App\Models\JobCardOperation;
 use App\Models\Task;
 use App\Models\TaskReceive;
 use App\Models\TaskAdjustment;
+use App\Models\OperationStage;
 
 class EmployeeController extends Controller
 {
@@ -29,7 +30,7 @@ class EmployeeController extends Controller
 
         if ($request->ajax()) {
 
-            $query = User::with(['department', 'role', 'serviceProvider'])->orderBy('id', 'desc');
+            $query = User::with(['department', 'role', 'serviceProvider', 'operationStage'])->orderBy('id', 'desc');
 
             if (!empty($request->department)) {
                 $query->where('department_id', $request->department);
@@ -70,6 +71,7 @@ class EmployeeController extends Controller
                     'role'        => $emp->role->name ?? '-',
                     'department'  => $emp->department->department ?? '-',
                     'service_provider' => $emp->serviceProvider->name ?? '-',
+                    'operation_stage' => $emp->operationStage->operation_stage_name ?? '-',
                     'contact_info' => ' 
                         <div class="contact-info">
                             <div>
@@ -109,6 +111,7 @@ class EmployeeController extends Controller
         $roles = Role::where('status', 'Active')->get();
         $bloodGroups = BloodGroup::get();
         $serviceProviders = ServiceProvider::active()->get();
+        $operationStages = OperationStage::active()->get();
         $states = State::active()->get();
         $cities = [];
 
@@ -140,6 +143,7 @@ class EmployeeController extends Controller
                 ],
                 'department_id' => 'required|exists:departments,id',
                 'service_provider_id' => 'nullable|exists:service_providers,id',
+                'operation_stage_id' => 'nullable|exists:operation_stages,id',
                 'role_id' => 'required|exists:roles,id',
                 'blood_group_id' => 'nullable|exists:blood_groups,id',
                 'state_id' => 'required|exists:states,id',
@@ -195,6 +199,7 @@ class EmployeeController extends Controller
                 'emp_id' => $request->emp_id,
                 'service_provider_id' => $request->service_provider_id,
                 'department_id' => $request->department_id,
+                'operation_stage_id' => $request->operation_stage_id,
                 'role_id' => $request->role_id,
                 'blood_group_id' => $request->blood_group_id,
                 'status' => $request->status,
@@ -324,7 +329,7 @@ class EmployeeController extends Controller
             return redirect('employees')->with('success', $message);
         }
 
-        return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities', 'serviceProviders'));
+        return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities', 'serviceProviders', 'operationStages'));
     }
 
 

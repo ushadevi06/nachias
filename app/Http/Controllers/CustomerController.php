@@ -19,22 +19,16 @@ class CustomerController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-
             $query = Customer::with(['zone', 'state', 'city'])->orderBy('id', 'desc');
-
             if (!empty($request->category)) {
                 $query->where('category', $request->category);
             }
-
             $customers = $query->get();
-
             $data = [];
             $count = 1;
 
             foreach ($customers as $cust) {
-
                 $checked = $cust->status === 'Active' ? 'checked' : '';
-
                 $status = '
                 <label class="switch switch-success switch-lg">
                     <input type="checkbox"
@@ -46,25 +40,15 @@ class CustomerController extends Controller
 
                 $action = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('view_details customers')) {
-                    $action .= '
-                    <a href="' . url('view_customer/' . $cust->id) . '" class="btn btn-view">
-                        <i class="icon-base ri ri-eye-line"></i>
-                    </a>';
+                    $action .= '<a href="' . url('view_customer/' . $cust->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('edit customers')) {
-                    $action .= '
-                    <a href="' . url('customers/add/' . $cust->id) . '" class="btn btn-edit">
-                        <i class="icon-base ri ri-edit-box-line"></i>
-                    </a>';
+                    $action .= '<a href="' . url('customers/add/' . $cust->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete customers')) {
-                    $action .= '
-                    <a href="javascript:;" class="btn btn-delete"
-                    onclick="delete_data(\'' . url('customers/delete/' . $cust->id) . '\')">
-                        <i class="icon-base ri ri-delete-bin-line"></i>
-                    </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('customers/delete/' . $cust->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $action .= '</div>';
@@ -118,27 +102,27 @@ class CustomerController extends Controller
 
             $rules = [
                 'category' => 'required|in:Retailer,Wholesaler',
-                'name' => 'required|string|max:255',
-                'code' => 'required|string|max:50|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|string|max:15',
-                'email' => 'nullable|email|max:255|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => 'required|string|min:3|max:100',
+                'code' => 'required|string|min:3|max:50|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|string|min:10|max:15',
+                'email' => 'nullable|email|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
-                'transport_name' => 'nullable|string|max:255',
-                'booking_office' => 'nullable|string|max:255',
+                'transport_name' => 'nullable|string|min:3|max:100',
+                'booking_office' => 'nullable|string|min:3|max:100',
                 'zone_id' => 'required|exists:zones,id',
-                'stores' => 'nullable|string|max:255',
+                'store_id' => 'nullable|exists:store_types,id',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
-                'address_line_1' => 'required|string|max:500',
-                'address_line_2' => 'nullable|string|max:500',
-                'address_line_3' => 'nullable|string|max:500',
-                'zip_code' => 'nullable|string|max:10',
-                'contact_person_name' => 'nullable|string|max:255',
-                'designation' => 'nullable|string|max:255',
-                'contact_mobile_no' => 'nullable|string|max:15',
-                'contact_email' => 'nullable|email|max:255',
+                'address_line_1' => 'required|string|min:3|max:150',
+                'address_line_2' => 'nullable|string|min:3|max:150',
+                'address_line_3' => 'nullable|string|min:3|max:150',
+                'zip_code' => 'nullable|string|min:3|max:10',
+                'contact_person_name' => 'nullable|string|min:3|max:100',
+                'designation' => 'nullable|string|min:3|max:100',
+                'contact_mobile_no' => 'nullable|string|min:10|max:15',
+                'contact_email' => 'nullable|email|max:128',
                 'tax_type_id' => 'nullable|exists:taxes,id',
                 'gst_no' => [
                     'nullable',
@@ -150,12 +134,12 @@ class CustomerController extends Controller
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                     'unique:customers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'payment_terms' => 'nullable|string|max:500',
-                'credit_limit' => 'nullable|numeric|min:0|max:20',
+                'payment_terms' => 'nullable|string|min:3|max:255',
+                'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'box_discount' => 'nullable|numeric|min:0|max:100',
-                'bank_name' => 'nullable|string|max:255',
-                'branch' => 'nullable|string|max:255',
+                'bank_name' => 'nullable|string|min:3|max:100',
+                'branch' => 'nullable|string|min:3|max:100',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
@@ -164,13 +148,16 @@ class CustomerController extends Controller
                 'ifsc_code' => [
                     'nullable',
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
-                    'unique:customers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                    'unique:customers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                    'max:11'
                 ],
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format'
+                '*.regex' => 'This field is an invalid format',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules,$messages);
@@ -185,7 +172,7 @@ class CustomerController extends Controller
                 'transport_name' => $request->transport_name,
                 'booking_office' => $request->booking_office,
                 'zone_id' => $request->zone_id,
-                'stores' => $request->stores,
+                'store_id' => $request->store_id,
                 'status' => $request->status,
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
@@ -227,7 +214,6 @@ class CustomerController extends Controller
                 addLog('create', 'Customer', 'customers', $customer->id, null, $newData);
                 $message = 'Customer added successfully';
             }
-
 
             return redirect('customers')->with('success', $message);
         }

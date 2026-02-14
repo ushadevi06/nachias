@@ -13,6 +13,7 @@ class TaskAdjustmentItem extends Model
     protected $fillable = [
         'task_adjustment_id',
         'raw_material_id',
+        'service_id',
         'material_category',
         'adjustment_type',
         'qty',
@@ -26,6 +27,11 @@ class TaskAdjustmentItem extends Model
     public function adjustment()
     {
         return $this->belongsTo(TaskAdjustment::class, 'task_adjustment_id');
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(ProductionService::class, 'service_id');
     }
 
     public function rawMaterial()

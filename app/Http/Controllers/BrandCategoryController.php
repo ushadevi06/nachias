@@ -15,19 +15,12 @@ class BrandCategoryController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view brand-categories')) {
             return unauthorizedRedirect();
         }
-        $canAdd    = true;
-        $canEdit   = true;
-        $canDelete = true;
-
         if ($request->ajax()) {
-
             $categories = BrandCategory::latest()->get();
             $data = [];
             $count = 1;
-
             foreach ($categories as $category) {
                 $checked = $category->status === 'Active' ? 'checked' : '';
-
                 $status = '
                 <label class="switch switch-success switch-lg">
                     <input type="checkbox"
@@ -36,9 +29,7 @@ class BrandCategoryController extends Controller
                     <span class="switch-toggle-slider"></span>
                 </label>
                 <div class="status_msg_' . $category->id . ' mt-1"></div>';
-
                 $action = '<div class="button-box">';
-
                 if (auth()->id() == 1 || auth()->user()->can('edit brand-categories')) {
                     $action .= '
                     <a href="' . url('brand_categories/add/' . $category->id) . '" 
@@ -46,7 +37,6 @@ class BrandCategoryController extends Controller
                         <i class="icon-base ri ri-edit-box-line"></i>
                     </a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('delete brand-categories')) {
                     $action .= '
                     <button class="btn btn-delete"
@@ -64,7 +54,6 @@ class BrandCategoryController extends Controller
                     'action'     => $action,
                 ];
             }
-
             return response()->json(['data' => $data]);
         }
 
@@ -89,34 +78,25 @@ class BrandCategoryController extends Controller
 
         if (request()->isMethod('post')) {
             $request = request();
-
             $rules = [
-                'code' => [
-                    'required',
-                    'string',
-                    'max:50',
-                    Rule::unique('brand_categories', 'code')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
-                ],
-                'name' => 'required|string|max:255',
+                'code' => ['required','string','min:3','max:50',Rule::unique('brand_categories', 'code')->ignore($id)->whereNull('deleted_at')],
+                'name' => ['required','string','min:3','max:100',Rule::unique('brand_categories', 'name')->ignore($id)->whereNull('deleted_at')],
                 'description' => 'nullable|string',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
-
             $validated = $request->validate($rules, $messages);
-
             $data = [
                 'code' => $request->code,
                 'name' => $request->name,
                 'description' => $request->description,
                 'status' => $request->status,
             ];
-
             if ($id) {
                 $oldData = $brandCategory->toArray();
                 $data['updated_by'] = auth()->id();
@@ -124,16 +104,13 @@ class BrandCategoryController extends Controller
                 $newData = $brandCategory->fresh()->toArray();
                 BrandCategory::where('id', $id)->update($data);
                 addLog('update', 'Brand Category', 'brands_categories', $id, $oldData, $newData);
-
                 $message = 'Brand Category updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $created = BrandCategory::create($data);
-
                 addLog('create', 'Brand Category', 'brands_categories', $created->id, null, $created->toArray());
                 $message = 'Brand Category added successfully';
             }
-
             return redirect('brand_categories')->with('success', $message);
         }
 
@@ -158,7 +135,6 @@ class BrandCategoryController extends Controller
         $oldData = $brandCategory->toArray();
         $brandCategory->delete();
         addLog('delete', 'Brand Category', 'brand_categories', $id, $oldData, null);
-
         return redirect('brand_categories')->with('success', 'Brand Category deleted successfully');
     }
 
@@ -166,16 +142,11 @@ class BrandCategoryController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $brandCategory = BrandCategory::findOrFail($id);
-
         $oldData = $brandCategory->toArray();
-
         $brandCategory->status = $request->status;
         $brandCategory->save();
-
         $newData = $brandCategory->toArray();
-
         addLog('update_status', 'Brand Category Status', 'brand_categories', $id, $oldData, $newData);
-
         return response()->json([
             'success' => true,
             'message' => 'Status updated successfully'

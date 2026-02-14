@@ -200,9 +200,8 @@
             const taskId = itemData.task_no || 'TASK-000';
             const title = itemData.title || el.textContent || '';
             const badgeText = itemData['badge-text'] || '';
-            const startDate = itemData['start-date'] || 'N/A';
-            const dueDate = itemData['due-date'] || 'N/A';
-            const progress = itemData.progress || 0;
+            const jcStart = itemData['jc-start'] || 'N/A';
+            const jcEnd = itemData['jc-end'] || 'N/A';
 
             el.innerHTML = '';
 
@@ -218,12 +217,12 @@
             const datesHtml = `
                 <div class="kanban-item-dates">
                     <div class="date-box start-date">
-                        <small><i class="ri-calendar-line"></i> Start</small>
-                        <div class="date-value">${startDate}</div>
+                        <small style="color: #696cff; font-weight: 600;"><i class="ri-calendar-line"></i> START</small>
+                        <div class="date-value">${jcStart}</div>
                     </div>
                     <div class="date-box due-date">
-                        <small><i class="ri-flag-2-line"></i> End</small>
-                        <div class="date-value">${dueDate}</div>
+                        <small style="color: #696cff; font-weight: 600;"><i class="ri-flag-2-line"></i> END</small>
+                        <div class="date-value">${jcEnd}</div>
                     </div>
                 </div>
             `;
@@ -254,7 +253,10 @@
             */
             const progressHtml = ''; // Working level and progress hidden
 
-            el.insertAdjacentHTML('beforeend', headerHtml + badgeHtml + titleHtml + datesHtml + progressHtml);
+            const stageName = itemData.stage_name || 'No S+ badgeHtmltage';
+            const stageHtml = `<div class="text-xs mb-2 text-dark bg-label-warning p-1 rounded fw-bold text-center">${stageName}</div>`;
+
+            el.insertAdjacentHTML('beforeend', headerHtml + titleHtml + stageHtml + datesHtml + progressHtml);
         });
     }
 
@@ -318,8 +320,6 @@
                             if ($container.length && $addListCol.length) {
                                 $container.append($addListCol);
                             }
-
-                            // Move task to new status
                             window.kanban.moveElement(newStatus, taskId);
                         } else {
                             alert('Failed to add custom status: ' + (response.message || 'Unknown error'));
@@ -339,7 +339,6 @@
                     }
                 });
             } else {
-                // Status already exists, just move the task
                 window.kanban.moveElement(newStatus, taskId);
             }
         }

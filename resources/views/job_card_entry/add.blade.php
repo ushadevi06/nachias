@@ -55,8 +55,30 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <form action="{{ url('job_card_entries/add/'. ($jobCard ?  $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data">
+            <form action="{{ url('job_card_entries/add/'. ($jobCard ?  $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                 @csrf
+                @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+    @if(session('error'))
+    <div class="alert alert-warning alert-dismissible fade show">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+    @if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show">
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -146,27 +168,6 @@
                                 </div>
                                 @error('width') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
-                            {{-- <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="mrp" placeholder="Enter MRP" name="mrp" value="{{ old('mrp', $jobCard ? $jobCard->mrp : '') }}">
-                                    <label for="mrp">MRP</label>
-                                </div>
-                                @error('mrp') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" class="form-control" id="price_fs" placeholder="Enter Price of F/S" name="price_fs" value="{{ old('price_fs', $jobCard ? $jobCard->price_fs : '') }}">
-                                    <label for="price_fs">Price of F/S</label>
-                                </div>
-                                @error('price_fs') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" class="form-control" id="price_hs" placeholder="Enter Price of H/S" name="price_hs" value="{{ old('price_hs', $jobCard ? $jobCard->price_hs : '') }}">
-                                    <label for="price_hs">Price of H/S</label>
-                                </div>
-                                @error('price_hs') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div> --}}
                             <input type="hidden" id="total_qty_fs" name="total_qty_fs" value="{{ old('total_qty_fs', $jobCard ? $jobCard->total_qty_fs : '') }}">
                             <input type="hidden" id="total_qty_hs" name="total_qty_hs" value="{{ old('total_qty_hs', $jobCard ? $jobCard->total_qty_hs : '') }}">
                             <div class="col-md-6 col-xl-4">
@@ -348,9 +349,7 @@
                                     <select id="pocket_type" name="pocket_type_id" class="form-select select2" data-placeholder="Select Pocket Type">
                                         <option value="">Select Pocket Type</option>
                                         @foreach($pocketTypes as $type)
-                                            <option value="{{ $type->id }}" {{ (old('pocket_type_id', $jobCard ? $jobCard->pocket_type_id : '') == $type->id) ? 'selected' : '' }}>
-                                                {{ $type->pocket_type_name }}
-                                            </option>
+                                            <option value="{{ $type->id }}" {{ (old('pocket_type_id', $jobCard ? $jobCard->pocket_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->pocket_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="pocket_type">Pocket Type</label>
@@ -362,54 +361,147 @@
                                     <select id="bottom_cut" name="bottom_cut_id" class="form-select select2" data-placeholder="Select Bottom Cut">
                                         <option value="">Select Bottom Cut</option>
                                         @foreach($bottomCuts as $type)
-                                            <option value="{{ $type->id }}" {{ (old('bottom_cut_id', $jobCard ? $jobCard->bottom_cut_id : '') == $type->id) ? 'selected' : '' }}>
-                                                {{ $type->bottom_cut_name }}
-                                            </option>
+                                            <option value="{{ $type->id }}" {{ (old('bottom_cut_id', $jobCard ? $jobCard->bottom_cut_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->bottom_cut_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="bottom_cut">Bottom Cut</label>
                                 </div>
                                 @error('bottom_cut_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="cutting_issue_unit" name="cutting_issue_unit" class="form-select select2" data-placeholder="Select Cutting Issue Unit">
-                                        <option value="">Select Cutting Issue Unit</option>
-                                        @foreach($plants as $plant)
-                                            <option value="{{ $plant->id }}" {{ (old('cutting_issue_unit', $jobCard ? $jobCard->cutting_issue_unit : '') == $plant->id) ? 'selected' : '' }}>
-                                                {{ $plant->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <label for="cutting_issue_unit">Cutting Issue Unit *</label>
-                                </div>
-                                @error('cutting_issue_unit') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div> 
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="cutting_master" name="cutting_master_id" class="form-select select2" data-placeholder="Select Cutting Master">
-                                        <option value="">Select Cutting Master</option>
-                                        @foreach($cuttingMasters as $master)
-                                            <option value="{{ $master->id }}" {{ (old('cutting_master_id', $jobCard ? $jobCard->cutting_master_id : '') == $master->id) ? 'selected' : '' }}>
-                                                {{ $master->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <label for="cutting_master">Cutting Master *</label>
-                                </div>
-                                @error('cutting_master_id') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control cutting_date" id="cutting_date" name="cutting_date" placeholder="Select Cutting Date" value="{{ old('cutting_date', $jobCard ? date('d-m-Y', strtotime($jobCard->cutting_date)) : '') }}">
-                                    <label for="cutting_date">Cutting Date *</label>
-                                </div>
-                                @error('cutting_date') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
                         </div>
                     </div>
                 </div>
-        
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="card-header-box d-flex justify-content-between align-items-center">
+                            <h4>Production Stages</h4>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="add-stage-row">
+                                <i class="ri ri-add-line"></i> Add Stage
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table" id="production-stages-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Stage *</th>
+                                        <th>Issue Unit (Plant) *</th>
+                                        <th>Employee *</th>
+                                        <th>Issue Date *</th>
+                                        <th>Deadline Date *</th>
+                                        <th>Remarks</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php
+                                        $existingStages = old('production_stages', $jobCard ? $jobCard->operations->toArray() : []);
+                                    @endphp
+                                    @if(!empty($existingStages))
+                                        @foreach($existingStages as $index => $stage)
+                                            <tr class="stage-row">
+                                                <td>
+                                                    <select name="production_stages[{{ $index }}][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
+                                                        <option value="">Select Stage</option>
+                                                        @foreach($operationStages as $os)
+                                                            <option value="{{ $os->id }}" {{ ($stage['stage_id'] ?? $stage['operation_stage_id'] ?? '') == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('production_stages.' . $index . '.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit" data-selected="{{ $stage['service_provider_id'] ?? '' }}">
+                                                        <option value="">Select Unit</option>
+                                                    </select>
+                                                    @error('production_stages.' . $index . '.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <select name="production_stages[{{ $index }}][employee_id]" class="form-select select2 employee-select" data-placeholder="Select Employee" data-selected="{{ $stage['employee_id'] ?? '' }}">
+                                                        <option value="">Select Employee</option>
+                                                    </select>
+                                                    @error('production_stages.' . $index . '.employee_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="production_stages[{{ $index }}][issue_date]" class="form-control issue-date" value="{{ !empty($stage['issue_date']) ? $stage['issue_date'] : (!empty($stage['assigned_date']) ? date('d-m-Y', strtotime($stage['assigned_date'])) : '') }}" placeholder="Enter Issue Date">
+                                                    @error('production_stages.' . $index . '.issue_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="production_stages[{{ $index }}][deadline_date]" class="form-control deadline-date" value="{{ !empty($stage['deadline_date']) ? date('d-m-Y', strtotime($stage['deadline_date'])) : '' }}" placeholder="Enter Deadline Date">
+                                                    @error('production_stages.' . $index . '.deadline_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <textarea name="production_stages[{{ $index }}][remarks]" class="form-control" placeholder="Enter Remarks">{{ $stage['remarks'] ?? '' }}</textarea>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
+                                                    @if($jobCard)
+                                                    @php
+                                                        $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
+
+                                                        $taskData = $stageTaskStatus[$currentStageId] ?? null;
+                                                        $hasTask = !empty($taskData);
+
+                                                        $taskStatus = $taskData['status'] ?? null;
+                                                        $taskNo = $taskData['task_no'] ?? null;
+
+                                                        $buttonText = $hasTask 
+                                                            ? 'Assigned Task (Task: ' . $taskNo . ')' 
+                                                            : 'Assign Task';
+
+                                                        $buttonTitle = $hasTask 
+                                                            ? "Task already assigned (Status: $taskStatus)" 
+                                                            : 'Assign Task';
+                                                    @endphp
+                                                    <button type="button" class="btn btn-sm btn-outline-primary assign-task-btn ms-1" title="{{ $buttonTitle }}" {{ $hasTask ? 'disabled' : '' }}><i class="ri ri-task-line"></i> {{ $buttonText }}</button>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <tr class="stage-row">
+                                            <td>
+                                                <select name="production_stages[0][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
+                                                    <option value="">Select Stage</option>
+                                                    @foreach($operationStages as $os)
+                                                        <option value="{{ $os->id }}">{{ $os->operation_stage_name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                @error('production_stages.0.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                            </td>
+                                            <td>
+                                                <select name="production_stages[0][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
+                                                    <option value="">Select Unit</option>
+                                                </select>
+                                                @error('production_stages.0.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                            </td>
+                                            <td>
+                                                <select name="production_stages[0][employee_id]" class="form-select select2 employee-select" data-placeholder="Select Employee">
+                                                    <option value="">Select Employee</option>
+                                                </select>
+                                                @error('production_stages.0.employee_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                            </td>
+                                            <td>
+                                                <input type="text" name="production_stages[0][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
+                                                @error('production_stages.0.issue_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                            </td>
+                                            <td>
+                                                <input type="text" name="production_stages[0][deadline_date]" class="form-control deadline-date" value="" placeholder="Enter Deadline Date">
+                                                @error('production_stages.0.deadline_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                            </td>
+                                            <td>
+                                                <textarea name="production_stages[0][remarks]" class="form-control" placeholder="Enter Remarks"></textarea>
+                                                @error('production_stages.0.remarks') <span class="text-danger small">{{ $message }}</span> @enderror
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
+                                            </td>
+                                        </tr>
+                                    @endif
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -530,7 +622,7 @@
                             <h4>Fabric Details</h4>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-bordered text-center align-middle">
+                            <table class="table table-bordered text-center align-middle" id="fabric-details-table">
                                 <thead id="fabric-details-head">
                                     @if(!empty($fabrics))
                                         <tr>
@@ -740,6 +832,34 @@
     #stockErrorTable tbody tr { transition: all 0.2s; border-bottom: 1px solid #f8f9fa; }
     #stockErrorTable tbody tr:hover { background-color: #fbfbfb; }
     .stock-badge { padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; }
+    
+    #fabric-details-table td {
+        white-space: nowrap;
+    }
+    #fabric-details-table td.fw-bold {
+        min-width: 100px;
+        background-color: #f8f9fa;
+    }
+    .assign-task-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: #6c757d;
+    }
+    #fabric-details-table td:not(.fw-bold) {
+        min-width: 200px;
+    }
+    #cutting-size-table td:not(.fw-bold),
+    #article-qty-matrix-1 td:not(.fw-bold),
+    #article-qty-matrix-2 td:not(.fw-bold) {
+        min-width: 100px;
+    }
+    #cutting-size-table input,
+    #article-qty-matrix-1 input,
+    #article-qty-matrix-2 input {
+        width: 100% !important;
+    }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -778,7 +898,7 @@
         }
 
         const flatpickrConfig = { dateFormat: 'd-m-Y', allowInput: true };
-        $('.issue_date, .delivery_date, .cutting_date, .dynamic-stage-date').flatpickr(flatpickrConfig);
+        $('.issue_date, .delivery_date, .cutting_date, .dynamic-stage-date, .issue-date, .deadline-date').flatpickr(flatpickrConfig);
 
         function performStockCheck(isRecheck = false) {
             const form = $('form.common-form');
@@ -883,11 +1003,9 @@
                             }
                         }
 
-                        // Handle global/default consumption for MTR items (like thread)
                         if (!hasProcessedSizeWise && (data.default_fs_cons > 0 || data.default_hs_cons > 0)) {
                             let totalFs = 0;
                             let totalHs = 0;
-                            // Sum pieces from the FIRST row of the matrix (the master pieces row)
                             const $masterRow = $('tr.cat1-row').first();
                             $masterRow.find('input').each(function() {
                                 const name = $(this).attr('name') || "";
@@ -1033,7 +1151,7 @@
         $('form.common-form').on('submit', function(e) {
             if ($(this).attr('data-skip-validation') === 'true') return;
 
-            e.preventDefault(); // Prevent automatic reload/submit until validation is done
+            e.preventDefault(); 
 
             const grandTotal1 = $('#article-qty-matrix-1-grand-total').text().trim();
             const grandTotal2 = $('#article-qty-matrix-2-grand-total').text().trim();
@@ -1889,11 +2007,9 @@
             const $stdInput = $(`.sleeve-qty-input[data-art="${art}"][data-type="${type}"]:not(.size-cons-input)`);
             if ($stdInput.length) {
                 const val = parseFloat($stdInput.val());
-                if (!isNaN(val)) return val;
-                
+                if (!isNaN(val)) return val;   
                 return 0;
-            }
-            
+            } 
             return 0; 
         }
 
@@ -2006,6 +2122,153 @@
                 });
             }
         });
+        
+        let stageRowIndex = {{ !empty($existingStages) ? count($existingStages) : 1 }};
+        $('#add-stage-row').on('click', function() {
+            let newRow = `
+            <tr class="stage-row">
+                <td>
+                    <select name="production_stages[${stageRowIndex}][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
+                        <option value="">Select Stage</option>
+                        @foreach($operationStages as $os)
+                            <option value="{{ $os->id }}">{{ $os->operation_stage_name }}</option>
+                        @endforeach
+                    </select>
+                </td>
+                <td>
+                    <select name="production_stages[${stageRowIndex}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
+                        <option value="">Select Unit</option>
+                    </select>
+                </td>
+                <td>
+                    <select name="production_stages[${stageRowIndex}][employee_id]" class="form-select select2 employee-select" data-placeholder="Select Employee">
+                        <option value="">Select Employee</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="text" name="production_stages[${stageRowIndex}][issue_date]" class="form-control issue-date" value="">
+                </td>
+                <td>
+                    <input type="text" name="production_stages[${stageRowIndex}][deadline_date]" class="form-control deadline-date" value="">
+                </td>
+                <td>
+                    <input type="text" name="production_stages[${stageRowIndex}][remarks]" class="form-control" placeholder="Enter Remarks">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
+                </td>
+            </tr>`;
+            $('#production-stages-table tbody').append(newRow);
+            
+            $('#production-stages-table tbody tr:last .select2').each(function() {
+                $(this).select2({
+                    dropdownParent: $(this).parent(),
+                    placeholder: $(this).data('placeholder'),
+                    width: '100%'
+                });
+            });
+            $('#production-stages-table tbody tr:last .issue-date, #production-stages-table tbody tr:last .deadline-date').flatpickr({
+                dateFormat: 'd-m-Y'
+            });
+
+            stageRowIndex++;
+        });
+
+        $(document).on('click', '.remove-stage-row', function() {
+            if ($('#production-stages-table tbody tr').length > 1) {
+                $(this).closest('tr').remove();
+            } else {
+                alert('At least one row is required.');
+            }
+        });
+
+        $(document).on('change', '.stage-select', function() {
+            let $row = $(this).closest('tr');
+            let stageId = $(this).val();
+            let $providerSelect = $row.find('.provider-select');
+            let $employeeSelect = $row.find('.employee-select');
+
+            $providerSelect.html('<option value="">Select Unit</option>').trigger('change');
+            $employeeSelect.html('<option value="">Select Employee</option>').trigger('change');
+
+            if (stageId) {
+                $.ajax({
+                    url: `{{ url('get-service-providers-by-stage') }}/${stageId}`,
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            response.providers.forEach(p => {
+                                let selected = ($providerSelect.data('selected') == p.id) ? 'selected' : '';
+                                $providerSelect.append(`<option value="${p.id}" ${selected}>${p.name}</option>`);
+                            });
+                            $providerSelect.trigger('change');
+                        }
+                    }
+                });
+            }
+        });
+        $(document).on('change', '.provider-select', function() {
+            let $row = $(this).closest('tr');
+            let providerId = $(this).val();
+            let stageId = $row.find('.stage-select').val();
+            let $employeeSelect = $row.find('.employee-select');
+            $employeeSelect.html('<option value="">Select Employee</option>').trigger('change');
+
+            if (providerId) {
+                let url = `{{ url('get-employees-by-plant') }}/${providerId}`;
+                if (stageId) {
+                    url += `/${stageId}`;
+                }
+                url += '?role_id=5';
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            response.employees.forEach(e => {
+                                let selected = ($employeeSelect.data('selected') == e.id) ? 'selected' : '';
+                                $employeeSelect.append(`<option value="${e.id}" ${selected}>${e.name}</option>`);
+                            });
+                            $employeeSelect.trigger('change');
+                        }
+                    }
+                });
+            }
+        });
+
+        $('.stage-select').each(function() {
+            if ($(this).val()) {
+                $(this).trigger('change');
+            }
+        });
+
+        $(document).on('click', '.assign-task-btn', function() {
+            let $row = $(this).closest('tr');
+            let stageId = $row.find('.stage-select').val();
+            let employeeId = $row.find('.employee-select').val();
+            let issueDate = $row.find('.issue-date').val();
+            let deadlineDate = $row.find('.deadline-date').val();
+            let remarks = $row.find('textarea').val();
+            let jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
+
+            if (!stageId || !employeeId) {
+                alert('Please select BOTH Stage and Employee before assigning.');
+                return;
+            }
+
+            let employeeName = $row.find('.employee-select option:selected').text();
+            let baseUrl = '{{ route("task_management.add") }}';
+            let params = new URLSearchParams({
+                job_card_id: jobCardId,
+                stage_id: stageId,
+                issued_to: employeeId,
+                employee_name: employeeName,
+                issue_date: issueDate,
+                due_date: deadlineDate,
+                remarks: remarks
+            });
+            window.open(baseUrl + '?' + params.toString(), '_blank');
+        });
     });
 </script>
 <style>
@@ -2014,7 +2277,6 @@
         -webkit-appearance: none;
         margin: 0;
     }
-
     input[type=number] {
         -moz-appearance: textfield;
     }

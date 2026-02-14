@@ -11,7 +11,7 @@ class ProcessSchedule extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'production_id', 'stage', 'planned_qty', 'uom', 'scheduled_to',
+        'production_id', 'job_card_entry_id', 'operation_stage_id', 'stage', 'planned_qty', 'uom', 'scheduled_to',
         'service_provider_type', 'start_date', 'end_date', 'due_date', 'status',
         'created_by', 'updated_by'
     ];
@@ -19,6 +19,11 @@ class ProcessSchedule extends Model
     public function production()
     {
         return $this->belongsTo(Production::class);
+    }
+
+    public function jobCard()
+    {
+        return $this->belongsTo(JobCardEntry::class, 'job_card_entry_id');
     }
 
     public function services()
@@ -33,6 +38,6 @@ class ProcessSchedule extends Model
 
     public function operationStage()
     {
-        return $this->belongsTo(OperationStage::class, 'stage');
+        return $this->belongsTo(OperationStage::class, 'operation_stage_id');
     }
 }

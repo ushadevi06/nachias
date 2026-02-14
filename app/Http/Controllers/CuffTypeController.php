@@ -13,13 +13,10 @@ class CuffTypeController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view cuff-types')) {
             return unauthorizedRedirect();
         }
-
         if ($request->ajax()) {
             $cuffTypes = CuffType::latest()->get();
-
             $data = [];
             $i = 1;
-
             foreach ($cuffTypes as $row) {
                 $status = '
                 <label class="switch switch-success switch-lg">
@@ -31,23 +28,14 @@ class CuffTypeController extends Controller
                     </span>
                 </label>
                 <div class="status_msg_' . $row->id . ' mt-1"></div>';
-
                 $action = '<div class="button-box">';
-
                 if (auth()->id() == 1 || auth()->user()->can('create cuff-types')) {
-                    $action .= '<a href="' . url('cuff_types/add/' . $row->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
+                    $action .= '<a href="' . url('cuff_types/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-
                 if (auth()->id() == 1 || auth()->user()->can('delete cuff-types')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('cuff_types/delete/' . $row->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('cuff_types/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
-
                 $action .= '</div>';
-
                 $data[] = [
                     'DT_RowIndex'     => $i++,
                     'cuff_type_name'  => $row->cuff_type_name,
@@ -55,7 +43,6 @@ class CuffTypeController extends Controller
                     'action'          => $action,
                 ];
             }
-
             return response()->json(['data' => $data]);
         }
 
@@ -78,15 +65,17 @@ class CuffTypeController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'cuff_type_name' => 'required|string|max:255|unique:cuff_types,cuff_type_name,' . $id . ',id,deleted_at,NULL',
+                'cuff_type_name' => 'required|string|min:3|max:50|unique:cuff_types,cuff_type_name,' . $id . ',id,deleted_at,NULL',
                 'status'        => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
+            
             $request->validate($rules, $messages);
-
             $data = $request->only(['cuff_type_name', 'status']);
 
             if ($id) {
@@ -100,7 +89,6 @@ class CuffTypeController extends Controller
                 addLog('create', 'Cuff Type', 'cuff_types', $newCuffType->id, null, $data);
                 $msg = 'Cuff Type added successfully';
             }
-
             return redirect('cuff_types')->with('success', $msg);
         }
 

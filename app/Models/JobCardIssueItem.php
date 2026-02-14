@@ -39,9 +39,4 @@ class JobCardIssueItem extends Model
     {
         return $this->belongsTo(JobCardFabricDetail::class, 'job_card_article_matrix_id');
     }
-
-    public function stockDetails()
-    {
-        return $this->hasMany(JobCardIssueStockDetail::class);
-    }
 }
