@@ -148,8 +148,7 @@ class CustomerController extends Controller
                 'ifsc_code' => [
                     'nullable',
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
-                    'unique:customers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                    'max:11'
+                    'unique:customers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
             ];
             $messages = [

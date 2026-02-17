@@ -78,12 +78,14 @@ class StoreController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'store_type_name' => 'required|string|max:255|unique:store_types,store_type_name,' . $id,
+                'store_type_name' => 'required|string|min:3|max:100|unique:store_types,store_type_name,' . $id,
                 'status'   => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
             ];
             $request->validate($rules, $messages);
 

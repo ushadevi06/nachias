@@ -12,12 +12,13 @@ class TaskAdjustment extends Model
 
     protected $fillable = [
         'adjustment_no',
+        'reference_no',
         'task_id',
         'job_card_id',
         'affected_stage',
-        'service_id',
         'approved_by',
         'overall_reason',
+        'attachment',
         'status',
         'created_by',
         'updated_by'

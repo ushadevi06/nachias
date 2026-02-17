@@ -756,7 +756,6 @@ class TaskManagementController extends Controller
             $jobCard = $schedule->jobCard ?? ($schedule->production->jobCard ?? null);
         }
 
-        // Fallback to job_card_id if schedule not found or jobCard not linked
         if (!$jobCard && $request->has('job_card_id')) {
             $jobCard = \App\Models\JobCardEntry::with(['fabricDetails', 'item'])->find($request->job_card_id);
         }
@@ -895,7 +894,6 @@ class TaskManagementController extends Controller
                 $adjustedItems[] = "$materialName (" . $itemData['adjustment_type'] . ": " . (float)$diff . ")";
             }
 
-            // Log the adjustment
             $this->logActivity($task->id, 'Adjustment', "Adjustment **$nextAdjNo** posted for reason: " . $request->overall_reason . ". Items: " . implode(', ', $adjustedItems));
 
             $issueQty = (float)($task->issue_qty ?? 0);

@@ -13,6 +13,7 @@ use App\Models\GrnEntry;
 use App\Models\DebitNote;
 use Illuminate\Http\Request;
 use App\Models\PurchaseCommissionAgent;
+use App\Models\StoreType;
 
 
 class SupplierController extends Controller
@@ -25,7 +26,7 @@ class SupplierController extends Controller
 
         if ($request->ajax()) {
 
-            $query = Supplier::with(['state', 'city', 'place']);
+            $query = Supplier::with(['state', 'city', 'place', 'storeType']);
             $suppliers = $query->orderBy('id', 'desc')->get();
 
             $data = [];
@@ -110,34 +111,34 @@ class SupplierController extends Controller
         }
         $supplier = null;
         if ($id) {
-            $supplier = Supplier::with(['state', 'city', 'place', 'tax','purchaseCommissionAgent'])->findOrFail($id);
+            $supplier = Supplier::with(['state', 'city', 'place', 'tax','purchaseCommissionAgent', 'storeType'])->findOrFail($id);
         }
 
         if (request()->isMethod('post')) {
             $request = request();
 
             $rules = [
-                'name' => 'required|string|max:255',
-                'code' => 'required|string|max:50|unique:suppliers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|string|max:15|unique:suppliers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'email' => 'nullable|email|max:255|unique:suppliers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => 'required|string|min:3|max:100',
+                'code' => 'required|string|min:3|max:50|unique:suppliers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|string|min:10|max:15|unique:suppliers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'email' => 'nullable|email|max:128|unique:suppliers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
-                'transport_name' => 'nullable|string|max:255',
-                'booking_area' => 'nullable|string|max:255',
-                'stores' => 'nullable|string|max:255',
+                'transport_name' => 'nullable|string|min:3|max:100',
+                'booking_area' => 'nullable|string|min:3|max:100',
+                'stores' => 'nullable|string|min:3|max:100',
+                'store_id' => 'nullable|exists:store_types,id',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
-                'address_line_1' => 'required|string|max:500',
-                'address_line_2' => 'nullable|string|max:500',
-                'address_line_3' => 'nullable|string|max:500',
-                'zip_code' => 'nullable|string|max:10',
-                'contact_person_name' => 'nullable|string|max:255',
-                'designation' => 'nullable|string|max:255',
-                'contact_mobile_no' => 'nullable|string|max:15',
-                'contact_email' => 'nullable|email|max:255',
-                'purchase_commission_agent' => 'nullable|string|max:255',
+                'address_line_1' => 'required|string|min:5|max:150',
+                'address_line_2' => 'nullable|string|min:5|max:150',
+                'address_line_3' => 'nullable|string|min:5|max:150',
+                'zip_code' => 'nullable|string|min:6|max:10',
+                'contact_person_name' => 'nullable|string|min:3|max:100',
+                'designation' => 'nullable|string|min:3|max:100',
+                'contact_mobile_no' => 'nullable|string|min:10|max:15',
+                'contact_email' => 'nullable|email|max:128',
                 'commission' => 'nullable|numeric|min:0|max:100',
                 'tax_id' => 'nullable|exists:taxes,id',
                 'gst_no' => [
@@ -150,11 +151,11 @@ class SupplierController extends Controller
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                     'unique:suppliers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'ecc_no' => 'nullable|string|max:20',
+                'ecc_no' => 'nullable|string|max:15',
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
-                'payment_terms' => 'nullable|string|max:500',
-                'bank_name' => 'nullable|string|max:255',
-                'branch' => 'nullable|string|max:255',
+                'payment_terms' => 'nullable|string|max:255',
+                'bank_name' => 'nullable|string|min:3|max:100',
+                'branch' => 'nullable|string|min:3|max:100',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
@@ -169,7 +170,9 @@ class SupplierController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format'
+                '*.regex' => 'This field is an invalid format',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
             $validated = $request->validate($rules,$messages);
 
@@ -182,6 +185,7 @@ class SupplierController extends Controller
                 'transport_name' => $request->transport_name,
                 'booking_area' => $request->booking_area,
                 'stores' => $request->stores,
+                'store_id' => $request->store_id,
                 'status' => $request->status,
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
@@ -226,11 +230,12 @@ class SupplierController extends Controller
             return redirect('suppliers')->with('success', $message);
         }
 
-        $states = State::active()->get();
+        $states = State::active()->orderBy('id', 'desc')->get();
         $cities = [];
         $places = [];
-        $taxes = Tax::active()->get();
-        $purchase_commission_agents = PurchaseCommissionAgent::active()->get();
+        $taxes = Tax::active()->orderBy('id', 'desc')->get();
+        $purchase_commission_agents = PurchaseCommissionAgent::active()->orderBy('id', 'desc')->get();
+        $store_types = StoreType::active()->orderBy('id', 'desc')->get();
 
         $stateId = old('state_id', $supplier->state_id ?? null);
         $cityId = old('city_id', $supplier->city_id ?? null);
@@ -245,7 +250,7 @@ class SupplierController extends Controller
         $latestSupplier = Supplier::orderByRaw('CAST(code AS UNSIGNED) DESC')->first();
         $nextCode = $latestSupplier && is_numeric($latestSupplier->code) ? ((int)$latestSupplier->code + 1) : 1000;
 
-        return view('suppliers.add', compact('supplier', 'states', 'cities', 'places', 'taxes', 'purchase_commission_agents', 'nextCode'));
+        return view('suppliers.add', compact('supplier', 'states', 'cities', 'places', 'taxes', 'purchase_commission_agents', 'store_types', 'nextCode'));
     }
 
     public function view($id)

@@ -94,6 +94,7 @@ class UomController extends Controller
                 'uom_code' => [
                     'required',
                     'string',
+                    'min:3',
                     'max:50',
                     Rule::unique('uoms', 'uom_code')
                         ->ignore($id)
@@ -102,7 +103,8 @@ class UomController extends Controller
                 'uom_name' => [
                     'required',
                     'string',
-                    'max:255',
+                    'min:3',
+                    'max:100',
                     Rule::unique('uoms', 'uom_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')
@@ -115,6 +117,8 @@ class UomController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules,$messages);
@@ -156,7 +160,6 @@ class UomController extends Controller
         }
         $uom = Uom::findOrFail($id);
 
-        // Model-based validation
         $references = [
             [StockEntryItem::class, 'uom_id', 'Stock Entry Items'],
             [PurchaseInvoiceItem::class, 'uom_id', 'Purchase Invoice Items'],

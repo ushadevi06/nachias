@@ -48,7 +48,7 @@
 
                         <div class="col-md-4">
                             <label class="detail-title">Store:</label>
-                            <div class="text-muted">{{ $supplier->stores ?? '-' }}</div>
+                            <div class="text-muted">{{ $supplier->storeType->store_type_name ?? '-' }}</div>
                         </div>
 
                         <div class="col-md-4">

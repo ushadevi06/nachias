@@ -107,32 +107,33 @@ class EmployeeController extends Controller
             }
         }
         $employee = $id ? User::findOrFail($id) : null;
-        $departments = Department::active()->get();
-        $roles = Role::where('status', 'Active')->get();
-        $bloodGroups = BloodGroup::get();
-        $serviceProviders = ServiceProvider::active()->get();
-        $operationStages = OperationStage::active()->get();
-        $states = State::active()->get();
+        $departments = Department::active()->orderBy('id', 'desc')->get();
+        $roles = Role::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $bloodGroups = BloodGroup::orderBy('id', 'desc')->get();
+        $serviceProviders = ServiceProvider::active()->orderBy('id', 'desc')->get();
+        $operationStages = OperationStage::active()->orderBy('id', 'desc')->get();
+        $states = State::active()->orderBy('id', 'desc')->get();
         $cities = [];
 
         $stateId = old('state_id') ?? ($employee->state_id ?? null);
 
         if ($stateId) {
-            $cities = City::active()->where('state_id', $stateId)->get();
+            $cities = City::active()->where('state_id', $stateId)->orderBy('id', 'desc')->get();
         }
 
         if (request()->isMethod('post')) {
             $rules = [
-                'name' => 'required|string|max:255',
+                'name' => 'required|string|min:3|max:100',
                 'email' => [
                     'required',
                     'email',
-                    'max:255',
+                    'max:128',
                     Rule::unique('users', 'email')->ignore($id ?? null)->whereNull('deleted_at'),
                 ],
                 'phone' => [
                     'required',
                     'string',
+                    'min:10',
                     'max:16',
                     Rule::unique('users', 'phone')->ignore($id ?? null)->whereNull('deleted_at'),
                 ],
@@ -149,22 +150,24 @@ class EmployeeController extends Controller
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'status' => 'required|in:Active,Inactive',
+                'father_name' => 'nullable|string|min:3|max:100',
+                'father_phone' => 'nullable|string|min:10|max:15',
                 'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
-                'esi' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
-                'pf' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
-                'aadhaar' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
-                'pan' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
-                'address_line1' => 'required|string|max:255',
-                'contact_person_name' => 'nullable|string|max:255',
-                'contact_person_phone' => 'nullable|string|max:15',
-                'contact_person_email' => 'nullable|email|max:255',
+                'esi' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
+                'pf' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
+                'aadhaar' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
+                'pan' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
+                'address_line1' => 'required|string|min:3|max:150',
+                'contact_person_name' => 'nullable|string|min:3|max:100',
+                'contact_person_phone' => 'nullable|string|min:10|max:15',
+                'contact_person_email' => 'nullable|email|max:128',
                 'basic_salary'   => 'nullable|numeric|min:0|max:9999999',
                 'hra'            => 'nullable|numeric|min:0|max:9999999',
                 'allowances'     => 'nullable|numeric|min:0|max:9999999',
                 'deductions'     => 'nullable|numeric|min:0|max:9999999',
                 'gross_salary'   => 'nullable|numeric|min:0|max:9999999',
                 'net_salary'     => 'nullable|numeric|min:0|max:9999999',
-                'bank_name' => 'nullable|string|max:255',
+                'bank_name' => 'nullable|string|max:100',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
@@ -173,8 +176,7 @@ class EmployeeController extends Controller
                 'ifsc_code' => [
                     'nullable',
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
-                    'unique:users,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                    'max:255'
+                    'unique:users,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
             ];
 
@@ -182,10 +184,12 @@ class EmployeeController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             if (!$id) {
-                $rules['password'] = 'required|string|min:6';
+                $rules['password'] = 'required|string|min:6|max:8';
             }
 
             $validated = $request->validate($rules, $messages);

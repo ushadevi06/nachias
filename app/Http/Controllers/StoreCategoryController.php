@@ -94,14 +94,17 @@ class StoreCategoryController extends Controller
             $request = request();
 
             $rules = [
-                'code' => 'required|string|max:50|unique:store_categories,code,' . ($id ? $id : 'NULL') . ',id',
-                'category_name' => 'required|string|max:255',
-                'description' => 'nullable|string|max:255',
+                'code' => 'required|string|min:3|max:50|unique:store_categories,code,' . ($id ? $id : 'NULL') . ',id',
+                'category_name' => 'required|string|min:3|max:100',
+                'description' => 'nullable|string|max:255|regex:/^[^<>]*$/',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex'    => 'This field is an invalid format.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
             ];
             $validated = $request->validate($rules, $messages);
             $data = [

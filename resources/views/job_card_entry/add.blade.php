@@ -153,8 +153,7 @@
                                     <select id="season" name="season_id" class="form-select select2" data-placeholder="Select Season Code">
                                         <option value="">Select Season Code</option>
                                         @foreach($seasons as $season)
-                                            <option value="{{ $season->id }}" {{ (old('season_id', $jobCard ? $jobCard->season_id : '') == $season->id) ? 'selected' : '' }}>
-                                                {{ $season->name }}
+                                            <option value="{{ $season->id }}" {{ (old('season_id', $jobCard ? $jobCard->season_id : '') == $season->id) ? 'selected' : '' }}>{{ $season->name }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -180,9 +179,7 @@
                                     <select id="receipt_store_id" name="receipt_store_id" class="form-select select2" data-placeholder="Select Receipt Store">
                                         <option value="">Select Receipt Store</option>
                                         @foreach($storeTypes as $st)
-                                            <option value="{{ $st->id }}" {{ (old('receipt_store_id', $jobCard ? $jobCard->receipt_store_id : '') == $st->id) ? 'selected' : '' }}>
-                                                {{ $st->store_type_name }}
-                                            </option>
+                                            <option value="{{ $st->id }}" {{ (old('receipt_store_id', $jobCard ? $jobCard->receipt_store_id : '') == $st->id) ? 'selected' : '' }}>{{ $st->store_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="receipt_store_id">Receipt Store *</label>
@@ -244,9 +241,7 @@
                                     <select id="brand_category_id" name="brand_category_id" class="form-select select2" data-placeholder="Select Brand Category">
                                         <option value="">Select Brand Category</option>
                                         @foreach($brandCategories as $cat)
-                                            <option value="{{ $cat->id }}" {{ (old('brand_category_id', $jobCard ? $jobCard->brand_category_id : '') == $cat->id) ? 'selected' : '' }}>
-                                                {{ $cat->name }}
-                                            </option>
+                                            <option value="{{ $cat->id }}" {{ (old('brand_category_id', $jobCard ? $jobCard->brand_category_id : '') == $cat->id) ? 'selected' : '' }}>{{ $cat->name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="brand_category_id">Brand Category *</label>
@@ -313,9 +308,7 @@
                                     <select id="cuff_type" name="cuff_type_id" class="form-select select2" data-placeholder="Select Cuff Type">
                                         <option value="">Select Cuff Type</option>
                                         @foreach($cuffTypes as $type)
-                                            <option value="{{ $type->id }}" {{ (old('cuff_type_id', $jobCard ? $jobCard->cuff_type_id : '') == $type->id) ? 'selected' : '' }}>
-                                                {{ $type->cuff_type_name }}
-                                            </option>
+                                            <option value="{{ $type->id }}" {{ (old('cuff_type_id', $jobCard ? $jobCard->cuff_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->cuff_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="cuff_type">Cuff Type</label>

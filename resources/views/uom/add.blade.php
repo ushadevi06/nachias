@@ -11,7 +11,7 @@
                     </div>
 
                     <form action="{{ url('uoms/add' . ($uom ? '/' . $uom->id : '')) }}" method="POST"
-                        class="common-form">
+                        class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">

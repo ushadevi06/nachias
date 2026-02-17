@@ -14,11 +14,8 @@ class TaskAdjustmentItem extends Model
         'task_adjustment_id',
         'raw_material_id',
         'service_id',
-        'material_category',
         'adjustment_type',
         'qty',
-        'uom_id',
-        'store_id',
         'remarks',
         'previous_stock',
         'new_stock'

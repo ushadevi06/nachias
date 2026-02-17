@@ -50,9 +50,15 @@ class Supplier extends Model
         'branch',
         'account_number',
         'ifsc_code',
+        'store_id',
         'created_by',
         'updated_by',
     ];
+
+    public function storeType()
+    {
+        return $this->belongsTo(StoreType::class, 'store_id');
+    }
     public function state()
     {
         return $this->belongsTo(\App\Models\State::class);

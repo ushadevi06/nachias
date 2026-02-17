@@ -129,7 +129,7 @@ class PurchaseInvoiceController extends Controller
                 'items.*.raw_material_id' => 'required|exists:raw_materials,id',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'required|numeric|min:0',
-                'hsn_code' => [
+                'items.*.hsn_code' => [
                     'nullable',
                     'digits_between:4,8'
                 ],
@@ -155,6 +155,7 @@ class PurchaseInvoiceController extends Controller
                 '*.date' => 'Please enter a valid date.',
                 'items.required' => 'Please add at least one item.',
                 'items.*.quantity' => 'Quantity is required.',
+                'items.*.hsn_code.digits_between' => 'HSN Code must be between 4 and 8 digits.',
                 'other_state.required' => 'Please select if it is an other state transaction.',
                 'igst_percent.numeric' => 'IGST % must be a number.',
                 'cgst_percent.numeric' => 'CGST % must be a number.',
@@ -171,9 +172,7 @@ class PurchaseInvoiceController extends Controller
             ];
 
             $validated = $request->validate($rules, $messages);
-
             $purchaseOrder = PurchaseOrder::with('items')->findOrFail($request->purchase_order_id);
-
             $errors = [];
             $hasSelectedItems = false;
 
@@ -181,16 +180,12 @@ class PurchaseInvoiceController extends Controller
                 if (!isset($item['selected'])) {
                     continue;
                 }
-
                 $hasSelectedItems = true;
-
                 if (empty($item['quantity']) || $item['quantity'] <= 0) {
                     $errors["items.$index.quantity"] = 'This field is required.';
                     continue;
                 }
-
                 $poItem = $purchaseOrder->items->firstWhere('id', $item['purchase_order_item_id']);
-
                 if ($poItem && $item['quantity'] > $poItem->quantity) {
                     $errors["items.$index.quantity"] = 'Received quantity cannot exceed ordered quantity.';
                 }

@@ -97,7 +97,8 @@ class ZoneController extends Controller
                 'zone_name' => [
                     'required',
                     'string',
-                    'max:255',
+                    'min:1',
+                    'max:100',
                     Rule::unique('zones', 'zone_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')
@@ -108,6 +109,8 @@ class ZoneController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             $validated = $request->validate($rules, $messages);

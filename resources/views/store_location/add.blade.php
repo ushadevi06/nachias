@@ -11,7 +11,7 @@
                     </div>
 
                     <form action="{{ url('store_location/add' . ($storeLocation ? '/' . $storeLocation->id : '')) }}"
-                        method="POST" class="common-form">
+                        method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
