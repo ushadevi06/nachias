@@ -34,9 +34,6 @@ use App\Http\Controllers\JobCardEntryController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\TaskCreationController;
-use App\Http\Controllers\TaskAssignmentController;
-use App\Http\Controllers\TaskStatusUpdateController;
 use App\Http\Controllers\TaskManagementController;
 use App\Http\Controllers\DocumentRepositoryController;
 use App\Http\Controllers\LogController;
@@ -484,22 +481,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('payments/delete/{id}', [PaymentController::class, 'destroy']);
     Route::get('get_references', [PaymentController::class, 'getReferences']);
     Route::get('get_reference_details', [PaymentController::class, 'getReferenceDetails']);
-
-    /* Task Creation */
-    Route::get('task_creation', [TaskCreationController::class, 'index']);
-    Route::get('add_task_creation', [TaskCreationController::class, 'add']);
-    Route::get('view_task_creation', [TaskCreationController::class, 'view']);
-
-    /* Task Assignment */
-    Route::get('task_assignment', [TaskAssignmentController::class, 'index']);
-    Route::get('add_task_assignment', [TaskAssignmentController::class, 'add']);
-    Route::get('view_task_assignment', [TaskAssignmentController::class, 'view']);
-
-
-    /* Task Status Update */
-    Route::get('task_status_updates', [TaskStatusUpdateController::class, 'index']);
-    Route::get('add_task_status_update', [TaskStatusUpdateController::class, 'add']);
-    Route::get('view_task_status_update', [TaskStatusUpdateController::class, 'view']);
 
     /* Document Repository Update */
     Route::get('document_repository', [DocumentRepositoryController::class, 'index']);

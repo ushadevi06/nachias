@@ -609,7 +609,10 @@
                                                                     'service_id' => $it->service_id,
                                                                     'adjustment_type' => $it->adjustment_type,
                                                                     'qty' => $it->qty,
-                                                                    'remarks' => $it->remarks
+                                                                    'remarks' => $it->remarks,
+                                                                    'art_no' => $it->art_no,
+                                                                    'grn_no' => $it->grn_no,
+                                                                    'id' => $it->id
                                                                 ];
                                                             }
                                                         }
@@ -631,6 +634,8 @@
                                                                 </select>
                                                             </td>
                                                             <td>
+                                                                <input type="hidden" name="items[{{ $index }}][art_no]" value="{{ $item['art_no'] ?? '' }}">
+                                                                <input type="hidden" name="items[{{ $index }}][grn_no]" value="{{ $item['grn_no'] ?? '' }}">
                                                                 <select class="select2 form-select material-select" name="items[{{ $index }}][raw_material_id]" data-placeholder="Select Material">
                                                                     <option value="">Select Material</option>
                                                                     @if(isset($item['raw_material_id']) && $item['raw_material_id'])
@@ -655,9 +660,16 @@
                                                             <td>
                                                                 <input type="text" class="form-control" name="items[{{ $index }}][remarks]" placeholder="Remarks" value="{{ $item['remarks'] ?? '' }}">
                                                             </td>
-                                                            <td class="text-center">
-                                                                <button type="button" class="btn btn-icon btn-outline-danger btn-sm remove-row"><i class="ri ri-delete-bin-line"></i></button>
-                                                            </td>
+                                                             <td class="text-center">
+                                                                <div class="d-flex justify-content-center align-items-center gap-1">
+                                                                    @if(isset($item['id']))
+                                                                        <a href="{{ url('stock_entries') }}?art_no={{ $item['art_no'] ?? '' }}&grn_no={{ $item['grn_no'] ?? '' }}&material={{ $item['raw_material_id'] ?? '' }}" class="btn btn-sm btn-outline-info" title="Stock Adjustment">
+                                                                            Stock Adjustment
+                                                                        </a>
+                                                                    @endif
+                                                                    <button type="button" class="btn btn-icon btn-outline-danger btn-sm remove-row"><i class="ri ri-delete-bin-line"></i></button>
+                                                                </div>
+                                                             </td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
@@ -764,6 +776,7 @@
         });
         let assignmentIndex = {{ count($assignmentsArr) }};
         let rowIndex = {{ count($adjItems ?? [0]) }};
+        let availableMaterials = [];
 
         function addAssignmentRow(data = {}) {
             let rowHtml = `
@@ -838,12 +851,7 @@
                 maxDate: stageDueDate ? moment(stageDueDate).format('DD-MM-YYYY') : null,
                 onChange: function() {
                     calculateRowHours($row);
-                    // checkOverdueStatus($row);
                 }
-            });
-            
-            $row.find('.status-select-row').on('change', function() {
-                // checkOverdueStatus($row);
             });
 
             calculateRowHours($row);          
@@ -1052,6 +1060,18 @@
                             });
                             $(this).trigger('change');
                         });
+
+                        $('.item-row').each(function() {
+                            var $row = $(this);
+                            var selectedId = $row.find('.material-select').val();
+                            if (selectedId) {
+                                var mat = availableMaterials.find(function(m) { return m.id == selectedId; });
+                                if (mat) {
+                                    $row.find('input[name*="[art_no]"]').val(mat.art_no || '');
+                                    $row.find('input[name*="[grn_no]"]').val(mat.grn_no || '');
+                                }
+                            }
+                        });
                     }
                 }
             });
@@ -1082,6 +1102,8 @@
                         </select>
                     </td>
                     <td>
+                        <input type="hidden" name="items[${rowIndex}][art_no]" value="">
+                        <input type="hidden" name="items[${rowIndex}][grn_no]" value="">
                         <select class="select2 form-select material-select" name="items[${rowIndex}][raw_material_id]">
                             <option value="">Select Material</option>
                         </select>
@@ -1123,6 +1145,20 @@
                 $(this).closest('tr').remove();
             } else {
                 alert('At least one item is required.');
+            }
+        });
+
+        // Auto-fill art_no and grn_no hidden fields when a material is selected
+        $(document).on('change', '.material-select', function() {
+            var selectedId = $(this).val();
+            var $row = $(this).closest('tr');
+            var mat = availableMaterials.find(function(m) { return m.id == selectedId; });
+            if (mat) {
+                $row.find('input[name*="[art_no]"]').val(mat.art_no || '');
+                $row.find('input[name*="[grn_no]"]').val(mat.grn_no || '');
+            } else {
+                $row.find('input[name*="[art_no]"]').val('');
+                $row.find('input[name*="[grn_no]"]').val('');
             }
         });
 

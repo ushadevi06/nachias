@@ -650,21 +650,51 @@ class TaskManagementController extends Controller
             $materials = RawMaterial::whereIn('id', $allRelatedRmIds)->where('status', 'Active')->get();
         }
 
-        $formatted = $materials->map(function($m) use ($jobCard) {
-            $grnNo = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
+        $grnIdsForJobCard = [];
+        if ($jobCard && $jobCard->purchase_order_id) {
+            $grnIdsForJobCard = \App\Models\GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
+                $q->select('id')->from('purchase_invoices')->where('purchase_order_id', $jobCard->purchase_order_id);
+            })->pluck('id')->toArray();
+        }
+
+        $formatted = $materials->map(function($m) use ($jobCard, $grnIdsForJobCard) {
+            $grnItem = null;
+            
+            $grnItem = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
                 ->whereIn('id', function($q) use ($jobCard) {
                     $q->select('stock_entry_item_id')
                     ->from('job_card_issue_items')
                     ->where('job_card_entry_id', $jobCard->id);
-                })->with('grnEntryItem.grnEntry')->get()
-                  ->pluck('grnEntryItem.grnEntry.grn_number')
-                  ->unique()
-                  ->filter()
-                  ->first() ?? '';
-                  
+                })->with('grnEntryItem.grnEntry')->first();
+
+            if (!$grnItem && !empty($grnIdsForJobCard)) {
+                $grnItem = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
+                    ->whereHas('grnEntryItem', function($q) use ($grnIdsForJobCard) {
+                        $q->whereIn('grn_entry_id', $grnIdsForJobCard);
+                    })->with('grnEntryItem.grnEntry')->first();
+            }
+
+            if (!$grnItem) {
+                $grnItem = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
+                    ->with('grnEntryItem.grnEntry')
+                    ->latest()
+                    ->first();
+            }
+
+            $grnNo = $grnItem?->grnEntryItem?->grnEntry?->grn_number ?? '';
+            $artNo = $grnItem?->art_no ?? ($grnItem?->grnEntryItem?->art_no ?? '');
+
+            if (empty($artNo) && $jobCard) {
+                $fabric = $jobCard->fabricDetails->first(function($f) use ($m) {
+                    return trim($f->art_no) == trim($m->code) || trim($f->art_no) == trim($m->name);
+                });
+                if ($fabric) $artNo = $fabric->art_no;
+            }
+
             return [
-                'id' => $m->id,
-                'text' => $m->name . ($m->code ? " ({$m->code})" : ""),
+                'id'     => $m->id,
+                'text'   => $m->name . ($m->code ? " ({$m->code})" : ""),
+                'art_no' => $artNo,
                 'grn_no' => $grnNo
             ];
         });
@@ -694,14 +724,6 @@ class TaskManagementController extends Controller
 
         DB::beginTransaction();
         try {
-            /*
-            if ($id) {
-                $existing = TaskAdjustment::find($id);
-                if ($existing && $existing->status == 'Posted') {
-                    throw new \Exception("Posted adjustments cannot be edited. Please create a new adjustment for corrections.");
-                }
-            }
-            */
             $task = Task::findOrFail($request->task_id);
             $nextAdjNo = $request->adjustment_no;
             if (!$id && !$nextAdjNo) {
@@ -740,9 +762,54 @@ class TaskManagementController extends Controller
                 
                 $diff = (float)$itemData['qty'];
                 $newStock = in_array($itemData['adjustment_type'], $decreaseTypes) ? ($currentStock - $diff) : ($currentStock + $diff);
+
+                $artNo = $itemData['art_no'] ?? null;
+                $grnNo = $itemData['grn_no'] ?? null;
+
+                if ((empty($artNo) || empty($grnNo))) {
+                    $stockItemQuery = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id']);
+                    
+                    if ($request->job_card_id) {
+                        $stockItemQuery->whereIn('id', function($q) use ($request) {
+                            $q->select('stock_entry_item_id')
+                            ->from('job_card_issue_items')
+                            ->where('job_card_entry_id', $request->job_card_id);
+                        });
+                    }
+
+                    $stockItem = $stockItemQuery->with('grnEntryItem.grnEntry')->first();
+
+                    if (!$stockItem && $request->job_card_id) {
+                        $jobCard = \App\Models\JobCardEntry::find($request->job_card_id);
+                        if ($jobCard && $jobCard->purchase_order_id) {
+                            $grnIds = \App\Models\GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
+                                $q->select('id')->from('purchase_invoices')->where('purchase_order_id', $jobCard->purchase_order_id);
+                            })->pluck('id')->toArray();
+
+                            if (!empty($grnIds)) {
+                                $stockItem = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])
+                                    ->whereHas('grnEntryItem', function($q) use ($grnIds) {
+                                        $q->whereIn('grn_entry_id', $grnIds);
+                                    })->with('grnEntryItem.grnEntry')->first();
+                            }
+                        }
+                    }
+
+                    if (!$stockItem) {
+                        $stockItem = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])->with('grnEntryItem.grnEntry')->latest()->first();
+                    }
+
+                    if ($stockItem) {
+                        $artNo = $artNo ?: ($stockItem->art_no ?? $stockItem->grnEntryItem?->art_no);
+                        $grnNo = $grnNo ?: $stockItem->grnEntryItem?->grnEntry?->grn_number;
+                    }
+                }
+
                 $item = $adjustment->items()->create([
                     'service_id' => !empty($itemData['service_id']) ? $itemData['service_id'] : null,
                     'raw_material_id' => $itemData['raw_material_id'],
+                    'grn_no' => $grnNo,
+                    'art_no' => $artNo,
                     'adjustment_type' => $itemData['adjustment_type'],
                     'qty' => $diff,
                     'remarks' => $itemData['remarks'] ?? '',

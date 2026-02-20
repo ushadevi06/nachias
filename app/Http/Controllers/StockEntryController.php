@@ -121,8 +121,8 @@ class StockEntryController extends Controller
                     $action = '<div class="button-box">';
                     $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-art-no="' . $artNo . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
                     $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
-                    if (auth()->id() == 1 || auth()->user()->can('edit stock entries')) {
-                        $action .= '<a href="' . url('stock_entries/add/' . $entry->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                    if (auth()->id() == 1 || auth()->user()->can('view_details stock entries')) {
+                        $action .= '<a href="' . url('stock_entries/view/' . $entry->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                     }
                     $action .= '</div>';
 

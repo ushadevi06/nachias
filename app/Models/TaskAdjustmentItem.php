@@ -13,6 +13,8 @@ class TaskAdjustmentItem extends Model
     protected $fillable = [
         'task_adjustment_id',
         'raw_material_id',
+        'grn_no',
+        'art_no',
         'service_id',
         'adjustment_type',
         'qty',
