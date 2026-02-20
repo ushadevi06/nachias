@@ -4,6 +4,18 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-11">
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+            @if(session('danger'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ session('danger') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
             <form action="{{ url('stock_entries/add' . ($stockEntry ? '/' . $stockEntry->id : '')) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="card mb-6">
@@ -106,7 +118,7 @@
                             </div>
                             <div class="col-lg-4 mb-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', $stockEntry ? $stockEntry->stockEntryItems->sum('qty_in') : '') }}" />
+                                    <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', $stockEntry ? $stockEntry->stockEntryItems->sum('qty_in') : '') }}" step="0.01" />
                                     <label for="qty_in">Quantity In <span class="text-danger">*</span></label>
                                     @error('qty_in')
                                         <div class="text-danger small">{{ $message }}</div>
@@ -238,7 +250,7 @@
                     if (!$('#qty_in').val() || !stockEntry) {
                         $('#qty_in').val(item.qty_accepted);
                     }
-                    $('#qty_in').attr('max', item.qty_accepted);
+                    // $('#qty_in').attr('max', item.qty_accepted);
                     $('#price').val(item.rate);
                     $('#store_location').val(item.store_location_id).trigger('change');
                 }

@@ -57,7 +57,7 @@ class BrandCategoryController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        return view('brand_categories.view', compact('canAdd'));
+        return view('brand_categories.view');
     }
 
     public function add($id = null)

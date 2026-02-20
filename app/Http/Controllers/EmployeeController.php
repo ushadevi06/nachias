@@ -16,7 +16,6 @@ use App\Models\ServiceProvider;
 use App\Models\JobCardEntry;
 use App\Models\JobCardOperation;
 use App\Models\Task;
-use App\Models\TaskReceive;
 use App\Models\TaskAdjustment;
 use App\Models\OperationStage;
 
@@ -361,10 +360,6 @@ class EmployeeController extends Controller
 
         if (Task::where('issued_to', $id)->exists()) {
             return redirect('employees')->with('danger', 'Cannot delete This employee has tasks issued to them.');
-        }
-
-        if (TaskReceive::where('received_from', $id)->exists()) {
-            return redirect('employees')->with('danger', 'Cannot delete This employee has recorded task receipts.');
         }
 
         if (TaskAdjustment::where('approved_by', $id)->exists()) {

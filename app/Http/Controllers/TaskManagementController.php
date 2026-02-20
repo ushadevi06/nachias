@@ -10,13 +10,9 @@ use App\Models\ProcessSchedule;
 use App\Models\Task;
 use App\Models\TaskStatus;
 use App\Models\OperationStage;
-use App\Models\TaskReceive;
 use App\Models\Shift;
 use App\Models\TaskAdjustment;
 use App\Models\ProductionStageConsumable;
-use App\Models\StockConsumableIssue;
-use App\Models\StockConsumableIssueItem;
-use App\Models\StockConsumableStockDetail;
 use App\Models\StockEntryItem;
 use App\Models\RawMaterial;
 use App\Models\TaskAssignEmployee;
@@ -83,15 +79,7 @@ class TaskManagementController extends Controller
                 foreach ($t->assignments as $assign) {
                     $totalReceived += (float)$assign->completed_qty + (float)$assign->wastage_qty;
                 }
-                foreach ($t->receives as $receive) {
-                    if ($receive->received_services && is_array($receive->received_services)) {
-                        foreach ($receive->received_services as $serviceId => $quantities) {
-                            $totalReceived += (float)($quantities['good_qty'] ?? 0) + (float)($quantities['wastage_qty'] ?? 0);
-                        }
-                    } else {
-                        $totalReceived += (float)($receive->good_qty ?? 0);
-                    }
-                }
+
 
                 if (isset($boards[$statusName])) {
                     $boards[$statusName]['item'][] = [
@@ -145,7 +133,6 @@ class TaskManagementController extends Controller
                 'stage.operationStage',
                 'stage.services.productionService',
                 'assignee', 
-                'receives', 
                 'assignments.assignee', 
                 'assignments.service'
             ])->findOrFail($id);
@@ -341,23 +328,17 @@ class TaskManagementController extends Controller
 
         $shifts = \App\Models\Shift::active()->get();
 
-        $nextTRNo = 'REC-' . date('Y') . '-' . str_pad(TaskReceive::count() + 1, 3, '0', STR_PAD_LEFT);
         $nextAdjNo = 'ADJ-' . date('Y') . '-' . str_pad(TaskAdjustment::count() + 1, 3, '0', STR_PAD_LEFT);
         
         $relatedTasks = Task::where('job_card_entry_id', ($jobCard->id ?? 0))->get();
     
-        $taskReceive = null;
         $taskAdjustment = null;
-        $taskReceives = collect([]);
         $taskAdjustments = collect([]);
         if ($task) {
-            $taskReceives = TaskReceive::where('task_id', $task->id)->latest()->get();
-            $taskAdjustments = TaskAdjustment::with(['items.rawMaterial', 'items.uom'])->where('task_id', $task->id)->latest()->get();
-            
-            $taskReceive = $taskReceives->first();
-            if ($taskReceive) {
-                $nextTRNo = $taskReceive->task_receive_no;
-            }
+            $taskAdjustments = TaskAdjustment::with(['items.rawMaterial', 'items.uom', 'items.service'])
+                ->where('task_id', $task->id)
+                ->latest()
+                ->get();
 
             $taskAdjustment = $taskAdjustments->first();
             if ($taskAdjustment) {
@@ -404,7 +385,7 @@ class TaskManagementController extends Controller
               ->first() ?? '';
         }
 
-        return view('task_management/add', compact('task', 'production', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses', 'nextTRNo', 'nextAdjNo', 'relatedTasks', 'taskReceive', 'taskAdjustment', 'shifts', 'taskReceives', 'taskAdjustments', 'services', 'jobCardGrnNo'));
+        return view('task_management/add', compact('task', 'production', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses',  'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts',  'taskAdjustments', 'services', 'jobCardGrnNo'));
     }
 
     public function view($id)
@@ -412,7 +393,7 @@ class TaskManagementController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details task-management')) {
             return unauthorizedRedirect();
         }
-        $task = Task::with(['receives', 'adjustments.items.rawMaterial', 'adjustments.items.uom'])->findOrFail($id);
+        $task = Task::with(['adjustments.items.rawMaterial', 'adjustments.items.uom'])->findOrFail($id);
         return view('task_management/view_details', compact('task'));
     }
 
@@ -581,151 +562,6 @@ class TaskManagementController extends Controller
         return redirect('task_management')->with('success', 'Task deleted successfully');
     }
 
-    // public function receive_add($id = null)
-    // {
-    //     $taskReceive = null;
-    //     if ($id) {
-    //         $taskReceive = TaskReceive::findOrFail($id);
-    //     }
-
-    //     if (request()->isMethod('post')) {
-    //         $request = request();
-    //         if ($request->received_date) {
-    //             $request->merge(['received_date' => Carbon::createFromFormat('d-m-Y', $request->received_date)->format('Y-m-d')]);
-    //         }
-
-    //         $request->validate([
-    //             'task_id' => 'required|exists:tasks,id',
-    //             'received_date' => 'required|date',
-    //             'received_store' => 'required',
-    //             'shift_id' => 'nullable|exists:shifts,id',
-    //             'received_services' => 'required|array',
-    //             'actual_hours' => 'nullable|numeric|min:0',
-    //             'standard_minutes' => 'nullable|numeric|min:0',
-    //         ],[
-    //             'required' => 'This field is required.'
-    //         ]);
-
-    //         $task = Task::findOrFail($request->task_id);
-
-    //         DB::beginTransaction();
-    //         try {
-    //             $data = $request->all();
-    //             $task = Task::findOrFail($request->task_id);
-    //             $data['received_from'] = $task->issued_to; 
-                
-    //             $totalGood = 0;
-    //             $totalRework = 0;
-    //             $totalWastage = 0;
-                
-    //             foreach ($request->received_services as $svc) {
-    //                 $totalGood += (float)($svc['good_qty'] ?? 0);
-    //                 $totalRework += (float)($svc['rework_qty'] ?? 0);
-    //                 $totalWastage += (float)($svc['wastage_qty'] ?? 0);
-    //             }
-
-    //             $data['good_qty'] = $totalGood;
-    //             $data['rework_qty'] = $totalRework;
-    //             $data['wastage_qty'] = $totalWastage;
-
-    //             // Efficiency Calculation
-    //             if ($request->filled('actual_hours') && $request->filled('standard_minutes') && $request->actual_hours > 0) {
-    //                 $stdMinutes = (float)$request->standard_minutes;
-    //                 $actHours = (float)$request->actual_hours;
-    //                 $efficiency = ($stdMinutes * $totalGood) / ($actHours * 60);
-    //                 $data['efficiency_percent'] = round($efficiency * 100, 2); 
-    //             }
-
-    //             if (!$id) {
-    //                 $trCount = TaskReceive::count();
-    //                 $data['task_receive_no'] = $request->task_receive_no ?: ('REC-' . date('Y') . '-' . str_pad($trCount + 1, 3, '0', STR_PAD_LEFT));
-    //                 $data['created_by'] = auth()->id();
-    //                 $data['created_by'] = auth()->id();
-    //                 TaskReceive::create($data);
-    //                 $this->logActivity($task->id, 'Receipt Added', 'New receipt added for ' . $data['good_qty'] . ' qty');
-    //             } else {
-    //                 $data['updated_by'] = auth()->id();
-    //                 $data['updated_by'] = auth()->id();
-    //                 $taskReceive->update($data);
-    //             }
-
-    //             $task->refresh(); 
-    //             $issueQty = (float)($task->issue_qty ?? 0);
-    //             $serviceCount = is_array($task->services) ? count($task->services) : 1;
-    //             $targetQty = $issueQty * $serviceCount;
-
-    //             $totalReceived = (float)$task->receives()->sum('good_qty');
-    //             foreach($task->adjustments as $adj) {
-    //                 if ($adj->adjustment_type == 'Loss' || $adj->adjustment_type == 'Excess') {
-    //                     $totalReceived += (float)$adj->qty;
-    //                 } elseif ($adj->adjustment_type == 'Rework') {
-    //                     $totalReceived -= (float)$adj->qty;
-    //                 }
-    //             }
-                
-    //             $newStatus = $task->status;
-    //             if ($targetQty > 0 && $totalReceived >= $targetQty) {
-    //                 $newStatus = 'Completed';
-    //             } elseif ($totalReceived > 0 && $task->status == 'Planned') {
-    //                 $newStatus = 'In Progress';
-    //             } 
-
-    //             if ($task->status == 'Completed' && $totalReceived < $targetQty) {
-    //                 $newStatus = 'In Progress';
-    //             }
-                
-    //             if ($newStatus !== $task->status) {
-    //                 $task->status = $newStatus;
-    //                 $task->save();
-    //                 \App\Models\TaskStatus::firstOrCreate(['name' => $newStatus], ['color' => 'secondary']);
-
-    //                 if ($task->stage_id) {
-    //                     $schedule = \App\Models\ProcessSchedule::find($task->stage_id);
-    //                     if ($schedule) {
-    //                         $schedule->update(['status' => $newStatus]);
-                            
-    //                         if ($newStatus == 'Completed') {
-    //                             $nextSchedule = \App\Models\ProcessSchedule::where('production_id', $schedule->production_id)
-    //                                 ->where('id', '>', $schedule->id)
-    //                                 ->orderBy('id', 'asc')
-    //                                 ->first();
-                                    
-    //                             if ($nextSchedule && $nextSchedule->status == 'Planned') {
-    //                                 $nextSchedule->update(['status' => 'Pending']); 
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //             }
-
-    //             /* 
-    //             if ($newStatus == 'Completed') {
-    //                 $task->load('stage'); 
-    //                 if ($task->stage && $task->stage->consumables_issued_at === null) {
-    //                     $totalGoodQty = $task->receives()->sum('good_qty');
-                        
-    //                     if ($totalGoodQty > 0) {
-    //                         $this->issueConsumables($task, $totalGoodQty);
-    //                         $task->stage->update(['consumables_issued_at' => now()]);
-    //                     }
-    //                 }
-    //             }
-    //             */
-
-    //             DB::commit();
-    //             return redirect('task_management')->with('success', 'Task received successfully');
-    //         } catch (\Exception $e) {
-    //             DB::rollBack();
-    //             return back()->with('error', $e->getMessage());
-    //         }
-    //     }
-
-    //     $tasks = Task::all(); 
-    //     $stores = \App\Models\StoreType::where('status', 'Active')->get();
-    //     $nextTRNo = 'TR-' . str_pad(TaskReceive::count() + 1, 3, '0', STR_PAD_LEFT);
-        
-    //     return view('task_management/receive_add', compact('taskReceive', 'tasks', 'nextTRNo', 'stores'));
-    // }
 
     public function getTaskDetails($id)
     {
@@ -924,7 +760,7 @@ class TaskManagementController extends Controller
             $serviceCount = is_array($task->services) ? count($task->services) : 1;
             $targetQty = $issueQty * $serviceCount;
 
-            $totalReceived = (float)$task->receives()->sum('good_qty');
+            $totalReceived = 0;
             
             $allAdjustmentItems = \App\Models\TaskAdjustmentItem::whereHas('adjustment', function($q) use ($task) {
                 $q->where('task_id', $task->id);

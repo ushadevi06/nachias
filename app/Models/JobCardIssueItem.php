@@ -14,6 +14,7 @@ class JobCardIssueItem extends Model
         'job_card_entry_id',
         'job_card_article_matrix_id',
         'stock_entry_item_id',
+        'raw_material_id',
         'qty_issue',
         'qty_adjusted',
         'qty_wastage',
@@ -25,7 +26,6 @@ class JobCardIssueItem extends Model
         'unit_price',
         'total_cost',
         'cost_per_pc',
-        'stock_entry_item_id',
         'created_by',
         'updated_by',
     ];
@@ -38,5 +38,15 @@ class JobCardIssueItem extends Model
     public function fabricDetail()
     {
         return $this->belongsTo(JobCardFabricDetail::class, 'job_card_article_matrix_id');
+    }
+
+    public function rawMaterial()
+    {
+        return $this->belongsTo(RawMaterial::class, 'raw_material_id');
+    }
+
+    public function stockEntryItem()
+    {
+        return $this->belongsTo(StockEntryItem::class, 'stock_entry_item_id');
     }
 }

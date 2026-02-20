@@ -46,7 +46,7 @@ class StockEntryController extends Controller
             }
 
             if ($request->art_no) {
-                $query->whereHas('stockEntryItems.grnEntryItem', function($q) use ($request) {
+                $query->whereHas('stockEntryItems', function($q) use ($request) {
                     $q->where('art_no', $request->art_no);
                 });
             }
@@ -101,7 +101,7 @@ class StockEntryController extends Controller
                     $firstItem = $entry->stockEntryItems->first();
                     if ($request->art_no) {
                         $matchedItem = $entry->stockEntryItems->first(function($item) use ($request) {
-                            return $item->grnEntryItem && $item->grnEntryItem->art_no === $request->art_no;
+                            return $item->art_no === $request->art_no;
                         });
                         if ($matchedItem) {
                             $firstItem = $matchedItem;
@@ -112,7 +112,7 @@ class StockEntryController extends Controller
                     ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>'
                     : '-';
                     
-                    $artNo = $firstItem && $firstItem->grnEntryItem ? $firstItem->grnEntryItem->art_no : '-';
+                    $artNo = $firstItem ? ($firstItem->art_no ?: '-') : '-';
                     
                     $materialDisplay = $firstItem && $firstItem->rawMaterial 
                         ? $firstItem->rawMaterial->name . ' <span class="mini-title">(' . $firstItem->rawMaterial->code . ')</span>'
@@ -251,10 +251,12 @@ class StockEntryController extends Controller
                     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
                 }
 
+                $grnEntryItem = GrnEntryItem::find($request->grn_entry_item_id);
                 StockEntryItem::create([
                     'stock_entry_id' => $stockEntry->id,
                     'stock_type' => 'raw_material',
                     'grn_entry_item_id' => $request->grn_entry_item_id ?? null,
+                    'art_no' => $grnEntryItem->art_no ?? null,
                     'raw_material_id' => $request->raw_material_id ?? null,
                     'store_category_id' => $request->store_category_id ?? null,
                     'store_location_id' => $request->store_location_id,

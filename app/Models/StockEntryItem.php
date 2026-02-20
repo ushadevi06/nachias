@@ -14,6 +14,7 @@ class StockEntryItem extends Model
         'stock_entry_id',
         'stock_type',
         'grn_entry_item_id',
+        'art_no',
         'raw_material_id',
         'finished_item_code', 
         'store_category_id',

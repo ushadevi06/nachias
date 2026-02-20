@@ -53,12 +53,7 @@ class Task extends Model
     {
         return $this->belongsTo(User::class, 'issued_to');
     }
-
-    public function receives()
-    {
-        return $this->hasMany(TaskReceive::class, 'task_id');
-    }
-
+    
     public function adjustments()
     {
         return $this->hasMany(TaskAdjustment::class, 'task_id');
@@ -67,6 +62,11 @@ class Task extends Model
     public function assignments()
     {
         return $this->hasMany(TaskAssignEmployee::class, 'task_id');
+    }
+
+    public function receives()
+    {
+        return $this->hasMany(TaskReceive::class, 'task_id');
     }
     public function operationStage()
     {

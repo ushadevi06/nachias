@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shift;
-use App\Models\TaskReceive;
 use Illuminate\Http\Request;
 
 class ShiftController extends Controller
@@ -120,10 +119,6 @@ class ShiftController extends Controller
         }
 
         $shift = Shift::findOrFail($id);
-        if (TaskReceive::where('shift_id', $id)->exists()) {
-            session()->flash('danger', "This shift is currently referenced in Task Receives and cannot be deleted");
-            return redirect('shifts');
-        }
 
         $oldData = $shift->toArray();
         $shift->delete();

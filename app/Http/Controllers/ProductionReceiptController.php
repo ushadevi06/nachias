@@ -10,7 +10,6 @@ use App\Models\StoreType;
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
 use App\Models\Task;
-use App\Models\TaskReceive;
 use App\Models\StoreLocation;
 use App\Models\Item;
 use Illuminate\Http\Request;
@@ -261,6 +260,7 @@ class ProductionReceiptController extends Controller
                     'stock_entry_id' => $stockEntry->id,
                     'stock_type' => 'finished_goods',
                     'finished_item_code' => $itemCode,
+                    'art_no' => $item->art_no,
                     'size' => $item->size,
                     'store_location_id' => $storeLocationId,
                     'uom_id' => $item->uom_id,

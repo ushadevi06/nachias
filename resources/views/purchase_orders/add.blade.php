@@ -643,7 +643,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="igst_percent" class="fw-medium">IGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? $web_settings->igst) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -654,7 +654,7 @@
                                                 <label for="cgst_percent" class="fw-medium">CGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
                                                     <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100"
-                                                        value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? $web_settings->cgst) }}">
+                                                        value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -664,7 +664,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="sgst_percent" class="fw-medium">SGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100"  value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? $web_settings->sgst) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100"  value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>

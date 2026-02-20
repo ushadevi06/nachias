@@ -240,6 +240,7 @@ class JobCardEntryController extends Controller
                                 'balance' => $issue->balance,
                                 'average' => $issue->average,
                                 'produced_qty' => $issue->produced_qty,
+                                'raw_material_id' => $issue->raw_material_id,
                             ];
                         }
                     }
@@ -711,6 +712,7 @@ class JobCardEntryController extends Controller
                             'total_cost' => $totalCost,
                             'cost_per_pc' => $costPerPc,
                             'stock_entry_item_id' => $firstStockItemId ?? null,
+                            'raw_material_id' => ($firstStockItemId ? \App\Models\StockEntryItem::find($firstStockItemId)->raw_material_id : null),
                             'updated_by' => auth()->id(),
                         ];
 

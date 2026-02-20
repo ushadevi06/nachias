@@ -176,14 +176,14 @@
                                             <table class="table table-sm table-hover mb-0 align-middle" id="assignment-repeater-table">
                                                 <thead class="bg-light">
                                                     <tr>
-                                                        <th class="ps-3" style="width: 15%;">Services *</th>
-                                                        <th class="ps-3" style="width: 15%;">Issued To *</th>
-                                                        <th class="text-center" style="width: 14%;">Issue Date *</th>
-                                                        <th class="text-center" style="width: 14%;">Due Date</th>
-                                                        <th class="text-center" style="width: 11%;">Hrs</th>
-                                                        <th class="text-center" style="width: 11%;">Qty</th>
-                                                        <th class="text-center" style="width: 10%;">Status</th>
-                                                        <th class="text-center" style="width: 10%;">Remarks</th>
+                                                        <th class="ps-3" style="min-width: 180px;">Services *</th>
+                                                        <th class="ps-3" style="min-width: 180px;">Issued To *</th>
+                                                        <th class="text-center" style="min-width: 140px;">Issue Date *</th>
+                                                        <th class="text-center" style="min-width: 140px;">Due Date</th>
+                                                        <th class="text-center" style="min-width: 100px;">Hrs</th>
+                                                        <th class="text-center" style="min-width: 100px;">Qty</th>
+                                                        <th class="text-center" style="min-width: 140px;">Status</th>
+                                                        <th class="text-center" style="min-width: 200px;">Remarks</th>
                                                         <th class="text-center" style="width: 50px;"></th>
                                                     </tr>
                                                 </thead>
