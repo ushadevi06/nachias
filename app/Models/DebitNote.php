@@ -61,4 +61,9 @@ class DebitNote extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+
+    public function unifiedPayments()
+    {
+        return $this->hasMany(Payment::class, 'reference_id')->where('reference_type', 'Debit Note');
+    }
 }

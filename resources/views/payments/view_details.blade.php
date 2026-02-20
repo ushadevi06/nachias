@@ -1,56 +1,158 @@
 @extends('layouts.common')
-@section('title', 'View Payment - ' . env('WEBSITE_NAME'))
+@section('title', 'Payment Detail - ' . $payment->payment_no . ' - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <div class="table-header-box">
-                <h4>View Payment</h4>
-                <a href="{{ url('payments') }}" class="btn btn-primary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="mb-1">Payment Details</h4>
+                    <p class="text-muted mb-0">Record of transaction #{{ $payment->payment_no }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url('payments') }}" class="btn btn-outline-secondary">
+                        <i class="ri ri-arrow-left-line me-1"></i> Back
+                    </a>
+                </div>
             </div>
-            <div class="card detail-card">
-                <div class="card-body">
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <label class="detail-title">Payment Type: </label>
-                            <div class="text-muted">Supplier Payment</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Reference Document:</label>
-                            <div class="text-muted">PO(PO-2025-001)</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Party:</label>
-                            <div class="text-muted">Supplier</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Party Name:</label>
-                            <div class="text-muted">Krishna Fabrics(SUP001)</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Payment Mode:</label>
-                            <div class="text-muted">Online</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Amount Paid:</label>
-                            <div class="text-muted">₹20,000</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Balance Outstanding:</label>
-                            <div class="text-muted">₹6,900</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Payment Date :</label>
-                            <div class="text-muted">25-09-2025</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Status:</label>
-                            <div class="text-muted"><span class="badge bg-success">Cleared</span></div>
+
+            <div class="row g-4">
+                <!-- Main Info Card -->
+                <div class="col-xl-8">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h6 class="text-uppercase text-primary small font-bold tracking-wider mb-4">Core Information</h6>
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <label class="text-muted small d-block mb-1">Payment Type</label>
+                                        <h5 class="mb-0 text-dark">{{ $payment->payment_type }}</h5>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <label class="text-muted small d-block mb-1">Payment Date</label>
+                                        <h5 class="mb-0 text-dark">{{ date('d-m-Y', strtotime($payment->payment_date)) }}</h5>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small d-block mb-1">Reference Document</label>
+                                    <p class="font-medium text-dark h6 mb-0">{{ $payment->reference_type }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small d-block mb-1">Reference No</label>
+                                    <p class="font-medium text-dark h6 mb-0 text-primary">{{ $payment->reference_no ?: 'N/A' }}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Payment Method & Tracking -->
+                    @if($payment->payment_mode != 'Cash')
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h6 class="text-uppercase text-primary small font-bold tracking-wider mb-4">Billing & Tracking Details</h6>
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <label class="text-muted small d-block mb-1">Payment Mode</label>
+                                    <p class="font-medium text-dark mb-0">{{ $payment->payment_mode }}</p>
+                                </div>
+                                @if($payment->bank_name)
+                                <div class="col-md-8">
+                                    <label class="text-muted small d-block mb-1">Bank Name</label>
+                                    <p class="font-medium text-dark mb-0">{{ $payment->bank_name }}</p>
+                                </div>
+                                @endif
+                                
+                                @if($payment->transaction_no)
+                                <div class="col-md-6">
+                                    <label class="text-muted small d-block mb-1">Transaction / UTR No</label>
+                                    <code class="text-primary font-bold fs-6">{{ $payment->transaction_no }}</code>
+                                </div>
+                                @endif
+
+                                @if($payment->cheque_no)
+                                <div class="col-md-3">
+                                    <label class="text-muted small d-block mb-1">Cheque No</label>
+                                    <p class="font-medium text-dark mb-0">{{ $payment->cheque_no }}</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="text-muted small d-block mb-1">Cheque Date</label>
+                                    <p class="font-medium text-dark mb-0">{{ $payment->cheque_date ? date('d-m-Y', strtotime($payment->cheque_date)) : 'N/A' }}</p>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- Remarks & Attachments Section -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="row g-4">
+                                <div class="col-md-{{ $payment->attachment ? '8' : '12' }}">
+                                    <h6 class="text-uppercase text-primary small font-bold tracking-wider mb-3">Notes & Remarks</h6>
+                                    <div class="p-3 border rounded border-dashed text-muted italic">
+                                        {{ $payment->remarks ?: 'No additional notes provided for this transaction.' }}
+                                    </div>
+                                </div>
+                                @if($payment->attachment)
+                                <div class="col-md-4">
+                                    <h6 class="text-uppercase text-primary small font-bold tracking-wider mb-3">Attachment</h6>
+                                    <div class="p-3 border rounded text-center">
+                                        <a href="{{ asset($payment->attachment) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="ri ri-file-download-line me-1"></i> View Attachment
+                                        </a>
+                                    </div>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Snapshot Widget -->
+                <div class="col-xl-4">
+                    <div class="card border-0 bg-primary text-white shadow-lg sticky-top" style="top: 2rem; z-index: 10;">
+                        <div class="card-body p-4 text-center">
+                            <div class="mb-4">
+                                <div class="bg-opacity-10 d-inline-flex p-3 rounded-circle mb-3">
+                                    <i class="ri ri-wallet-3-line ri-2x text-white"></i>
+                                </div>
+                                <h6 class="text-white text-uppercase small tracking-widest">Total Amount</h6>
+                                <h2 class="text-white font-bold mb-0">₹{{ number_format($payment->amount, 2) }}</h2>
+                            </div>
+                            <hr class="border-white opacity-10">
+                            <div class="text-start">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-white-50 small">Voucher ID</span>
+                                    <span class="font-medium">{{ $payment->payment_no }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-white-50 small">Status</span>
+                                    <span class="badge bg-success bg-opacity-25 text-white rounded-pill">Confirmed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @if($payment->created_at)
+                    <div class="mt-4 p-4 text-center">
+                        <p class="small text-muted mb-0">Recorded on {{ $payment->created_at->format('M d, Y') }} at {{ $payment->created_at->format('h:i A') }}</p>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .font-bold { font-weight: 700; }
+    .font-medium { font-weight: 500; }
+    .border-dashed { border-style: dashed !important; }
+    .bg-light { background-color: #f8f9fa !important; }
+    .tracking-wider { letter-spacing: 0.05em; }
+    .tracking-widest { letter-spacing: 0.1em; }
+</style>
 @endsection

@@ -269,7 +269,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('size_ratio/delete/{id}', [SizeRatioController::class, 'destroy']);
     Route::post('size_ratio/status/{id}', [SizeRatioController::class, 'updateStatus']);
 
-
     /* Customer */
     Route::get('customers', [CustomerController::class, 'index']);
     Route::match(['GET','POST'], 'customers/add/{id?}', [CustomerController::class, 'add']);
@@ -480,8 +479,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Payments */
     Route::get('payments', [PaymentController::class, 'index']);
-    Route::get('add_payment', [PaymentController::class, 'add']);
-    Route::get('view_payment', [PaymentController::class, 'view']);
+    Route::match(['GET', 'POST'], 'payments/add/{id?}', [PaymentController::class, 'add']);
+    Route::get('payments/view/{id}', [PaymentController::class, 'view']);
+    Route::get('payments/delete/{id}', [PaymentController::class, 'destroy']);
+    Route::get('get_references', [PaymentController::class, 'getReferences']);
+    Route::get('get_reference_details', [PaymentController::class, 'getReferenceDetails']);
 
     /* Task Creation */
     Route::get('task_creation', [TaskCreationController::class, 'index']);
@@ -501,8 +503,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Document Repository Update */
     Route::get('document_repository', [DocumentRepositoryController::class, 'index']);
-    Route::get('add_document_repository', [DocumentRepositoryController::class, 'add']);
-    Route::get('view_document_repository', [DocumentRepositoryController::class, 'view']);
+    Route::match(['GET','POST'],'document_repository/add/{id?}',[DocumentRepositoryController::class,'add']);
+    Route::get('document_repository/view/{id}', [DocumentRepositoryController::class, 'view']);
+    Route::get('document_repository/delete/{id}', [DocumentRepositoryController::class, 'destroy']);
 
     /* Logs & Audit Log */
     Route::get('logs', [LogController::class, 'index']);
@@ -510,6 +513,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Backup & Restore */
     Route::get('backup_restore', [BackupController::class, 'index']);
+    Route::post('backup_restore/generate', [BackupController::class, 'generate']);
+    Route::post('backup_restore/restore', [BackupController::class, 'restore']);
+    Route::get('backup_restore/download/{id}', [BackupController::class, 'download']);
+    Route::get('backup_restore/delete/{id}', [BackupController::class, 'delete']);
 
     /*  Attendance  */
     Route::get('attendances', [AttendanceController::class, 'index']);

@@ -71,8 +71,8 @@ class PurchaseInvoice extends Model
         return $this->hasMany(PurchaseInvoiceCharge::class);
     }
 
-    public function payments()
+    public function unifiedPayments()
     {
-        return $this->hasMany(PurchaseInvoicePayment::class);
+        return $this->hasMany(Payment::class, 'reference_id')->where('reference_type', 'Purchase Invoice');
     }
 }

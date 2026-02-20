@@ -258,3 +258,49 @@ ALTER TABLE `users` CHANGE `ifsc_code` `ifsc_code` VARCHAR(20) CHARACTER SET utf
 ALTER TABLE `users` CHANGE `account_number` `account_number` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
 ALTER TABLE `users` CHANGE `bank_name` `bank_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
 ALTER TABLE `zones` CHANGE `zone_name` `zone_name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+
+DROP TABLE IF EXISTS `nachias`.`payments`;
+CREATE TABLE  `nachias`.`payments` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `payment_no` varchar(50) NOT NULL,
+  `payment_type` varchar(50) NOT NULL,
+  `reference_type` varchar(50) DEFAULT NULL,
+  `reference_id` bigint(20) unsigned DEFAULT NULL,
+  `reference_no` varchar(100) DEFAULT NULL,
+  `payment_mode` varchar(50) NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `payment_date` date NOT NULL,
+  `transaction_no` varchar(100) DEFAULT NULL,
+  `bank_name` varchar(100) DEFAULT NULL,
+  `cheque_no` varchar(100) DEFAULT NULL,
+  `cheque_date` date DEFAULT NULL,
+  `attachment` varchar(255) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
+  `created_by` bigint(20) unsigned DEFAULT NULL,
+  `updated_by` bigint(20) unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `payments_payment_no_unique` (`payment_no`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS `nachias`.`document_repositories`;
+CREATE TABLE  `nachias`.`document_repositories` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `document_name` varchar(100) NOT NULL,
+  `document_type` enum('Certification','HR','Compliance','Policy') NOT NULL,
+  `department_id` bigint(20) unsigned NOT NULL,
+  `validity_date` date DEFAULT NULL,
+  `remarks` varchar(255) DEFAULT NULL,
+  `file` varchar(255) NOT NULL,
+  `status` enum('Active','Inactive') NOT NULL DEFAULT 'Active',
+  `created_by` bigint(20) unsigned DEFAULT NULL,
+  `updated_by` bigint(20) unsigned DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `document_repositories_department_id_foreign` (`department_id`),
+  CONSTRAINT `document_repositories_department_id_foreign` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -99,17 +99,13 @@ class AjaxController extends Controller
         if (!$schedule) {
             return response()->json(['success' => false, 'results' => [], 'message' => 'Schedule not found']);
         }
-        $services = \App\Models\ProductionService::where('operation_stage_id', $schedule->operation_stage_id)
-        ->where('status', 'Active')
-        ->get()
-        ->map(function($s) use ($schedule) {
+        $services = \App\Models\ProductionService::where('operation_stage_id', $schedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($schedule) {
             return [
                 'id' => $s->id,
                 'text' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
                 'qty' => $schedule->planned_qty ?? 0
             ];
         })->values()->all();
-
         return response()->json(['success' => true, 'results' => $services]);
     }
     public function getTaskLogs($taskId)

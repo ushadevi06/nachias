@@ -390,7 +390,21 @@ class TaskManagementController extends Controller
         }
 
 
-        return view('task_management/add', compact('task', 'production', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses', 'nextTRNo', 'nextAdjNo', 'relatedTasks', 'taskReceive', 'taskAdjustment', 'shifts', 'taskReceives', 'taskAdjustments', 'services'));
+        $jobCardGrnNo = '';
+        if ($jobCard) {
+            $jobCardGrnNo = \App\Models\StockEntryItem::whereIn('id', function($q) use ($jobCard) {
+                $q->select('stock_entry_item_id')
+                ->from('job_card_issue_items')
+                ->where('job_card_entry_id', $jobCard->id)
+                ->whereNotNull('stock_entry_item_id');
+            })->with('grnEntryItem.grnEntry')->get()
+              ->pluck('grnEntryItem.grnEntry.grn_number')
+              ->unique()
+              ->filter()
+              ->first() ?? '';
+        }
+
+        return view('task_management/add', compact('task', 'production', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses', 'nextTRNo', 'nextAdjNo', 'relatedTasks', 'taskReceive', 'taskAdjustment', 'shifts', 'taskReceives', 'taskAdjustments', 'services', 'jobCardGrnNo'));
     }
 
     public function view($id)
@@ -782,12 +796,10 @@ class TaskManagementController extends Controller
                 $query->select('id')->from('grn_entry_items')->whereIn('art_no', $artNumbers);
             })->pluck('raw_material_id')->toArray();
 
-            $rmIdsFromIssues = \App\Models\StockEntryItem::whereIn('id', function($q) use ($jobCard) {
-                $q->select('stock_entry_item_id')
-                ->from('job_card_issue_items')
-                ->where('job_card_entry_id', $jobCard->id)
-                ->whereNotNull('stock_entry_item_id');
-            })->pluck('raw_material_id')->toArray();
+            $rmIdsFromIssues = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                ->whereNotNull('stock_entry_item_id')
+                ->pluck('raw_material_id')
+                ->toArray();
 
             if ($jobCard->item && !empty($jobCard->item->related_materials)) {
                 $rmIdsFromItemMaster = (array) $jobCard->item->related_materials;
@@ -802,10 +814,22 @@ class TaskManagementController extends Controller
             $materials = RawMaterial::whereIn('id', $allRelatedRmIds)->where('status', 'Active')->get();
         }
 
-        $formatted = $materials->map(function($m) {
+        $formatted = $materials->map(function($m) use ($jobCard) {
+            $grnNo = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
+                ->whereIn('id', function($q) use ($jobCard) {
+                    $q->select('stock_entry_item_id')
+                    ->from('job_card_issue_items')
+                    ->where('job_card_entry_id', $jobCard->id);
+                })->with('grnEntryItem.grnEntry')->get()
+                  ->pluck('grnEntryItem.grnEntry.grn_number')
+                  ->unique()
+                  ->filter()
+                  ->first() ?? '';
+                  
             return [
                 'id' => $m->id,
-                'text' => $m->name . ($m->code ? " ({$m->code})" : "")
+                'text' => $m->name . ($m->code ? " ({$m->code})" : ""),
+                'grn_no' => $grnNo
             ];
         });
 
