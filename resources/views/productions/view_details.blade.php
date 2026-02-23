@@ -126,13 +126,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($schedule->services as $service)
-                                <tr>
-                                    <td>{{ $service->productionService->service_name ?? '-' }}</td>
-                                    <td><span class="badge bg-label-info">{{ $service->applies_to }}</span></td>
-                                    <td class="text-end fw-bold">{{ $service->calculated_qty }}</td>
-                                </tr>
-                                @endforeach
                             </tbody>
                         </table>
                     </div>

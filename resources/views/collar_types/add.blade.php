@@ -9,8 +9,7 @@
                     <div class="card-header-box">
                         <h4>{{ $collarType ? 'Edit' : 'Add' }} Collar Type</h4>
                     </div>
-                    <form action="{{ url('collar_types/add' . ($collarType ? '/' . $collarType->id : '')) }}"
-                        method="POST" class="common-form" autocomplete="off">
+                    <form action="{{ url('collar_types/add' . ($collarType ? '/' . $collarType->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">

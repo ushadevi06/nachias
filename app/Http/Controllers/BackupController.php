@@ -84,7 +84,7 @@ class BackupController extends Controller
             $dbPass = env('DB_PASSWORD');
             $dbHost = env('DB_HOST');
 
-            $dumpPath = env('MYSQLDUMP_PATH', 'C:\xampp\mysql\bin\mysqldump.exe');
+            $dumpPath = env('MYSQLDUMP_PATH');
             $command = "\"{$dumpPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
             
             exec($command, $output, $returnVar);

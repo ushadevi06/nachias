@@ -115,7 +115,7 @@
                 <h5 class="modal-title">Quick Stock Adjustment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formAdjustment">
+            <form id="formAdjustment" autocomplete="off">
                 @csrf
                 <input type="hidden" name="item_id" id="adj_item_id">
                 <div class="modal-body">

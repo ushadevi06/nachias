@@ -81,7 +81,7 @@ class StorelocationController extends Controller
         $oldData = $storeLocation ? $storeLocation->toArray() : null;
         if ($request->isMethod('post')) {
             $request->validate([
-                'store_location' => 'required|string|min:3|max:100|unique:store_locations,store_location,' . $id . ',id,deleted_at,NULL',
+                'store_location' => 'required|string|min:2|max:100|unique:store_locations,store_location,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive'
             ],[
                 '*.required' => 'This field is required.',

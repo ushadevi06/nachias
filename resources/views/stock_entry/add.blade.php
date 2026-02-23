@@ -16,7 +16,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-            <form action="{{ url('stock_entries/add' . ($stockEntry ? '/' . $stockEntry->id : '')) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ url('stock_entries/add' . ($stockEntry ? '/' . $stockEntry->id : '')) }}" method="POST" enctype="multipart/form-data" autocomplete="off">
                 @csrf
                 <div class="card mb-6">
                     <div class="card-header">

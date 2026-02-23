@@ -9,7 +9,7 @@
                     <div class="card-header-box">
                         <h4>{{ $serviceProvider ? 'Edit' : 'Add' }} Service Provider</h4>
                     </div>
-                    <form action="{{ url('service_providers/add' . ($serviceProvider ? '/' . $serviceProvider->id : '')) }}" method="POST" class="common-form">
+                    <form action="{{ url('service_providers/add' . ($serviceProvider ? '/' . $serviceProvider->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4">
                             <div class="col-lg-12">

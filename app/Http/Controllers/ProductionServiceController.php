@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductionService;
 use App\Models\OperationStage;
-use App\Models\ProcessScheduleService;
 use App\Models\TaskAdjustment;
 use Illuminate\Http\Request;
 
@@ -116,8 +115,8 @@ class ProductionServiceController extends Controller
             return redirect('production_services')->with('success', $msg);
         }
 
-        $operationStages = OperationStage::active()->get();
-        $uoms = \App\Models\Uom::active()->get();
+        $operationStages = OperationStage::active()->orderBy('id','desc')->get();
+        $uoms = \App\Models\Uom::active()->orderBy('id','desc')->get();
 
         return view('production_services.add', compact('service', 'operationStages', 'uoms'));
     }
@@ -130,9 +129,6 @@ class ProductionServiceController extends Controller
 
         $service = ProductionService::findOrFail($id);
 
-        if (ProcessScheduleService::where('service_id', $id)->exists()) {
-            return redirect('production_services')->with('danger', 'This service is currently referenced in Process Schedule Services and cannot be deleted.');
-        }
 
         if (TaskAdjustment::where('service_id', $id)->exists()) {
             return redirect('production_services')->with('danger', 'This service is currently referenced in Task Adjustments and cannot be deleted.');

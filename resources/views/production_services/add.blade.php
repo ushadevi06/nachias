@@ -9,7 +9,7 @@
                     <div class="card-header-box">
                         <h4>{{ $service ? 'Edit' : 'Add' }} Production Service</h4>
                     </div>
-                    <form action="{{ url('production_services/add' . ($service ? '/' . $service->id : '')) }}" method="POST" class="common-form">
+                    <form action="{{ url('production_services/add' . ($service ? '/' . $service->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4">
                             <div class="col-12">
@@ -35,7 +35,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="operation_stage_id" id="operation_stage_id" class="select2 form-select @error('operation_stage_id') is-invalid @enderror">
+                                    <select name="operation_stage_id" id="operation_stage_id" class="select2 form-select @error('operation_stage_id') is-invalid @enderror" data-placeholder="Select Production Stage">
                                         <option value="">Select Production Stage</option>
                                         @foreach($operationStages as $stage)
                                             <option value="{{ $stage->id }}" {{ old('operation_stage_id', $service->operation_stage_id ?? '') == $stage->id ? 'selected' : '' }}>{{ $stage->operation_stage_name }}</option>

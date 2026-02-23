@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Production;
 use App\Models\ProcessSchedule;
-use App\Models\ProcessScheduleService;
 use App\Models\JobCardEntry;
 use App\Models\ProductionService;
 use App\Models\OperationStage;
@@ -71,7 +70,7 @@ class ProductionController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        $production = $id ? Production::with(['processSchedules.services'])->findOrFail($id) : null;
+        $production = $id ? Production::with(['processSchedules'])->findOrFail($id) : null;
 
         $usedJobCardIds = Production::when($id, function ($query) use ($id) {
             return $query->where('id', '!=', $id);
@@ -246,18 +245,6 @@ class ProductionController extends Controller
                         'created_by' => Auth::id()
                     ]);
 
-                    if (isset($scheduleData['services'])) {
-                        foreach ($scheduleData['services'] as $service) {
-                            if (isset($service['selected']) && $service['selected'] == 1) {
-                                ProcessScheduleService::create([
-                                    'process_schedule_id' => $schedule->id,
-                                    'service_id' => $service['service_id'],
-                                    'applies_to' => $service['applies_to'],
-                                    'calculated_qty' => $service['qty']
-                                ]);
-                            }
-                        }
-                    }
 
                     if ($data['status'] == 'Confirmed') {
                         $fsQty = $data['full_sleeve_qty'] ?? 0;
@@ -405,7 +392,7 @@ class ProductionController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view production')) {
             return unauthorizedRedirect();
         }
-        $production = Production::with(['processSchedules.services.productionService', 'processSchedules.serviceProvider', 'jobCard.purchaseOrder', 'plant', 'processGroup', 'consumables.rawMaterial', 'consumables.uom'])->findOrFail($id);
+        $production = Production::with(['processSchedules.serviceProvider', 'jobCard.purchaseOrder', 'plant', 'processGroup', 'consumables.rawMaterial', 'consumables.uom'])->findOrFail($id);
         return view('productions/view_details', compact('production'));
     }
 }

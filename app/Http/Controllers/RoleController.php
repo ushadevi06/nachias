@@ -31,12 +31,14 @@ class RoleController extends Controller
 
                 $actionBtn = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit roles')) {
-                    $actionBtn .= '<a href="' . url('roles/add/' . $role->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
-                }
-
-                if (auth()->id() == 1 || auth()->user()->can('delete roles')) {
-                    $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('roles/delete/' . $role->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                if($role->id != 4){
+                    if (auth()->id() == 1 || auth()->user()->can('edit roles')) {
+                        $actionBtn .= '<a href="' . url('roles/add/' . $role->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                    }
+                    
+                    if (auth()->id() == 1 || auth()->user()->can('delete roles')) {
+                        $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('roles/delete/' . $role->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                    }
                 }
 
                 $actionBtn .= '</div>'; 
@@ -76,7 +78,7 @@ class RoleController extends Controller
             $request->validate([
                 'name' => [
                     'required',
-                    'min:3',
+                    'min:2',
                     'max:100',
                     Rule::unique('roles', 'name')->ignore($id)->whereNull('deleted_at'),
                 ],

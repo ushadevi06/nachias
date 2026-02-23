@@ -33,11 +33,9 @@
                                 @if($document->validity_date)
                                     @if(Carbon::parse($document->validity_date)->isPast() && !Carbon::parse($document->validity_date)->isToday())
                                         <span class="badge bg-danger">Expired</span>
-                                    @else
-                                        <span class="badge bg-success">Active</span>
                                     @endif
                                 @else
-                                    <span class="badge bg-secondary">N/A</span>
+                                    <span class="badge bg-success">Active</span>
                                 @endif
                             </div>
                         </div>

@@ -9,7 +9,7 @@
                     <h5 class="card-title mb-0">Add Party</h5>
                 </div>
                 <div class="card-body">
-                    <form action="" method="POST">
+                    <form action="" method="POST" autocomplete="off">
                         <h6 class="mb-5">Identification & Contact:</h6>
                         <div class="row mb-4">
                             <div class="col-lg-4">

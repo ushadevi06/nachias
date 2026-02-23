@@ -60,14 +60,6 @@ class TaskManagementController extends Controller
                 // ---------------------------
 
                 $targetQty = (float)($t->jobCard->grand_total_qty ?? 0);
-                if ($targetQty == 0 && $t->services && is_array($t->services) && $t->stage_id) {
-                    foreach ($t->services as $serviceId) {
-                        $scheduleService = \App\Models\ProcessScheduleService::where('process_schedule_id', $t->stage_id)->where('service_id', $serviceId)->first();
-                        if ($scheduleService) {
-                            $targetQty += (float)($scheduleService->calculated_qty ?? 0);
-                        }
-                    }
-                }
                 if ($targetQty == 0 && $stage) {
                     $targetQty = (float)($stage->planned_qty ?? 0);
                 }
@@ -131,7 +123,6 @@ class TaskManagementController extends Controller
                 'production', 
                 'jobCard', 
                 'stage.operationStage',
-                'stage.services.productionService',
                 'assignee', 
                 'assignments.assignee', 
                 'assignments.service'
@@ -144,13 +135,12 @@ class TaskManagementController extends Controller
             if ($jobCard) {
                 $stages = ProcessSchedule::with([
                     'operationStage', 
-                    'serviceProvider', 
-                    'services.productionService'
+                    'serviceProvider'
                 ])->where('job_card_entry_id', $jobCard->id)->get();
             }
 
             if ($task->stage_id && (!$stages->where('id', $task->stage_id)->count() || !$task->stage)) {
-                $currentStage = ProcessSchedule::with(['operationStage', 'serviceProvider', 'services.productionService'])->find($task->stage_id);
+                $currentStage = ProcessSchedule::with(['operationStage', 'serviceProvider'])->find($task->stage_id);
                 if ($currentStage) {
                     $task->setRelation('stage', $currentStage);
                     if (!$stages->where('id', $task->stage_id)->count()) {
@@ -301,8 +291,7 @@ class TaskManagementController extends Controller
                 if ($jobCard) {
                     $stages = ProcessSchedule::with([
                         'operationStage', 
-                        'serviceProvider', 
-                        'services.productionService'
+                        'serviceProvider'
                     ])->where('job_card_entry_id', $jobCard->id)->get();
                 }
             }
@@ -354,7 +343,7 @@ class TaskManagementController extends Controller
         if ($task && $task->stage && $task->stage_id == $finalStageId) {
             $selectedSchedule = $task->stage;
         } elseif ($finalStageId) {
-            $selectedSchedule = ProcessSchedule::with(['services.productionService', 'operationStage'])->find($finalStageId);
+            $selectedSchedule = ProcessSchedule::with(['operationStage'])->find($finalStageId);
         }
         
         if ($selectedSchedule) {

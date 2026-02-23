@@ -9,8 +9,7 @@
                     <div class="card-header-box">
                         <h4>{{ $rawMaterial ? 'Edit' : 'Add' }} Raw Material</h4>
                     </div>
-                    <form action="{{ url('raw_materials/add' . ($rawMaterial ? '/' . $rawMaterial->id : '')) }}"
-                        method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
+                    <form action="{{ url('raw_materials/add' . ($rawMaterial ? '/' . $rawMaterial->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                         @csrf
                         <div class="row g-4">
                             <!-- Store Category -->

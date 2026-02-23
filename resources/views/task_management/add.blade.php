@@ -74,7 +74,7 @@
         <div class="col-lg-10">
             <div class="tab-content sdk-tab-content p-0" id="v-pills-tabContent">
                 <div class="tab-pane fade show active" id="content-issue" role="tabpanel">
-                    <form action="{{ $task ? route('task_management.edit', ['id' => $task->id]) : route('task_management.add') }}" method="POST" class="common-form">
+                    <form action="{{ $task ? route('task_management.edit', ['id' => $task->id]) : route('task_management.add') }}" method="POST" class="common-form" autocomplete="off">
                         @if(session('success'))
                             <div class="alert alert-success alert-dismissible fade show">
                                 {{ session('success') }}
@@ -327,7 +327,7 @@
                     </form>
                 </div>
                 <div class="tab-pane fade" id="content-receive" role="tabpanel">
-                    <form action="{{ route('task_management.update_progress') }}" method="POST" class="common-form">
+                    <form action="{{ route('task_management.update_progress') }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <input type="hidden" name="task_id" value="{{ $task->id ?? '' }}">
                         <div class="card border-0 shadow-sm section-card">
@@ -529,7 +529,7 @@
                     </form>
                 </div>
                 <div class="tab-pane fade" id="content-adjustment" role="tabpanel">
-                    <form action="{{ $taskAdjustment ? route('task_adjustments.add', $taskAdjustment->id) : route('task_adjustments.add') }}" method="POST" class="common-form">
+                    <form action="{{ $taskAdjustment ? route('task_adjustments.add', $taskAdjustment->id) : route('task_adjustments.add') }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="card border-0 shadow-sm section-card">
                             <div class="card-header border-bottom py-3 bg-label-warning bg-opacity-10">

@@ -10,8 +10,7 @@
                         <h4>{{ $uom ? 'Edit' : 'Add' }} UOM</h4>
                     </div>
 
-                    <form action="{{ url('uoms/add' . ($uom ? '/' . $uom->id : '')) }}" method="POST"
-                        class="common-form" autocomplete="off">
+                    <form action="{{ url('uoms/add' . ($uom ? '/' . $uom->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">

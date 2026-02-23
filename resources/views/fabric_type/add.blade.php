@@ -10,8 +10,7 @@
                         <h4>{{ $fabricType ? 'Edit' : 'Add' }} Fabric Type</h4>
                     </div>
 
-                    <form action="{{ url('fabric_type/add' . ($fabricType ? '/' . $fabricType->id : '')) }}"
-                        method="POST" class="common-form" autocomplete="off">
+                    <form action="{{ url('fabric_type/add' . ($fabricType ? '/' . $fabricType->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">

@@ -9,8 +9,7 @@
                     <div class="card-header-box mb-4">
                         <h4 class="mb-0">{{ $sizeRatio ? 'Edit' : 'Add' }} Size/Ratio</h4>
                     </div>
-                    <form action="{{ url('size_ratio/add' . ($sizeRatio ? '/' . $sizeRatio->id : '')) }}" method="POST"
-                        class="common-form">
+                    <form action="{{ url('size_ratio/add' . ($sizeRatio ? '/' . $sizeRatio->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">

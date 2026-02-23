@@ -43,9 +43,7 @@ class DocumentRepositoryController extends Controller
                     if (Carbon::parse($row->validity_date)->isPast() && !Carbon::parse($row->validity_date)->isToday()) {
                         $status = '<span class="badge bg-danger">Expired</span>';
                     }
-                } else {
-                    $status = '<span class="badge bg-secondary">N/A</span>';
-                }
+                } 
 
                 $data[] = [
                     'DT_RowIndex' => $i++,

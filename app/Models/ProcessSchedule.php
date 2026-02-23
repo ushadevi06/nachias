@@ -26,11 +26,6 @@ class ProcessSchedule extends Model
         return $this->belongsTo(JobCardEntry::class, 'job_card_entry_id');
     }
 
-    public function services()
-    {
-        return $this->hasMany(ProcessScheduleService::class);
-    }
-
     public function serviceProvider()
     {
         return $this->belongsTo(ServiceProvider::class, 'scheduled_to');

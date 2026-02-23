@@ -21,7 +21,7 @@
 
             <div class="card mb-3">
                 <div class="card-body">
-                    <form id="filter-form">
+                    <form id="filter-form" autocomplete="off">
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <select id="filter_brand_category" class="form-select select2" data-placeholder="Select Brand Category">

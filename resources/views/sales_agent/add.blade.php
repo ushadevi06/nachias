@@ -10,8 +10,7 @@
                     <div class="card-header-box">
                         <h4>{{ $salesAgent ? 'Edit' : 'Add' }} Sales Agent</h4>
                     </div>
-                    <form action="{{ url('sales_agents/add' . ($salesAgent ? '/' . $salesAgent->id : '')) }}"
-                        method="POST" class="common-form">
+                    <form action="{{ url('sales_agents/add' . ($salesAgent ? '/' . $salesAgent->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4">
                             <div class="col-lg-12">

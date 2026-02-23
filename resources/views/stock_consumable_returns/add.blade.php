@@ -5,7 +5,7 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-11">
-            <form action="" method="POST">
+            <form action="" method="POST" autocomplete="off">
             <div class="card mb-6">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Add Stock Consumable & Sales Return</h5>

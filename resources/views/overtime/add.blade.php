@@ -4,7 +4,7 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <form action="" method="POST" class="common-form">
+            <form action="" method="POST" class="common-form" autocomplete="off">
                 <div class="card">
                     <div class="card-body">
                         <div class="card-header-box">

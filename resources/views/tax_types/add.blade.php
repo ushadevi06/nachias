@@ -9,7 +9,7 @@
                     <div class="card-header-box">
                         <h4>Add Tax Type</h4>
                     </div>
-                    <form action="" method="POST" class="common-form">
+                    <form action="" method="POST" class="common-form" autocomplete="off">
                         <div class="row justify-content-center g-4">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">

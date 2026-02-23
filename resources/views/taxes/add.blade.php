@@ -10,7 +10,7 @@
                         <h4>{{ $tax ? 'Edit' : 'Add' }} Taxes</h4>
                     </div>
                     <form action="{{ url('taxes/add' . ($tax ? '/' . $tax->id : '')) }}" method="POST"
-                        class="common-form">
+                        class="common-form" autocomplete="off">
                         @csrf
                         <div class="row justify-content-center g-4">
                             <div class="col-md-6 col-xl-12">

@@ -13,7 +13,7 @@
                         @include('flash_messages')
                     </div>
                     <form action="{{ url('customers/add' . ($customer ? '/' . $customer->id : '')) }}" method="POST"
-                        class="common-form">
+                        class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4">
                             <div class="col-lg-12">

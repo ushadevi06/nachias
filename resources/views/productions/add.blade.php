@@ -315,7 +315,7 @@
                 end_date: "{{ $schedule->end_date ? date('d-m-Y', strtotime($schedule->end_date)) : '' }}",
                 due_date: "{{ $schedule->due_date ? date('d-m-Y', strtotime($schedule->due_date)) : '' }}",
                 scheduled_to: "{{ $schedule->scheduled_to }}",
-                services: @json($schedule->services->map(function($s){ return ['service_id' => $s->service_id, 'selected' => 1]; }))
+                services: []
             };
             @endif
         @endforeach

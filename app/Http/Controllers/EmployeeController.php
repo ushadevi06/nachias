@@ -188,7 +188,7 @@ class EmployeeController extends Controller
             ];
 
             if (!$id) {
-                $rules['password'] = 'required|string|min:6|max:8';
+                $rules['password'] = 'required|string|min:6|max:15';
             }
 
             $validated = $request->validate($rules, $messages);

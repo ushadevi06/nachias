@@ -9,8 +9,7 @@
                     <div class="card-header-box">
                         <h4>{{ $pattiType ? 'Edit' : 'Add' }} Patti Type</h4>
                     </div>
-                    <form action="{{ url('patti_types/add' . ($pattiType ? '/' . $pattiType->id : '')) }}"
-                        method="POST" class="common-form" autocomplete="off">
+                    <form action="{{ url('patti_types/add' . ($pattiType ? '/' . $pattiType->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">

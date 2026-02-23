@@ -132,7 +132,7 @@ class JobCardEntryController extends Controller
                 'production_stages.*.service_provider_id' => 'required|exists:service_providers,id',
                 'production_stages.*.employee_id' => 'required|exists:users,id',
                 'production_stages.*.issue_date' => 'required|date_format:d-m-Y',
-                'production_stages.*.deadline_date' => 'required|date_format:d-m-Y|after_or_equal:production_stages.*.issue_date',
+                'production_stages.*.deadline_date' => 'required|date_format:d-m-Y',
                 'stages' => 'nullable|array|min:1',
                 'size_ratio_id' => 'required|exists:size_ratios,id',
             ];
@@ -179,6 +179,30 @@ class JobCardEntryController extends Controller
                 }
                 if (!empty($missingFabricArtNos)) {
                     $validator->errors()->add('fabric_details', 'Please enter Sleeve Wise Qty for Art No: ' . implode(', ', $missingFabricArtNos));
+                }
+
+                $productionStages = $request->input('production_stages', []);
+                if (is_array($productionStages)) {
+                    foreach ($productionStages as $index => $stageData) {
+                        $stageId = $stageData['stage_id'] ?? null;
+                        $issueDateStr = $stageData['issue_date'] ?? null;
+                        $deadlineDateStr = $stageData['deadline_date'] ?? null;
+
+                        if ($stageId && $issueDateStr && $deadlineDateStr) {
+                            try {
+                                $issueDate = Carbon::createFromFormat('d-m-Y', $issueDateStr);
+                                $deadlineDate = Carbon::createFromFormat('d-m-Y', $deadlineDateStr);
+
+                                if ($deadlineDate->lessThan($issueDate)) {
+                                    $stage = OperationStage::find($stageId);
+                                    $stageName = $stage ? $stage->name : ('Stage ' . ($index + 1));
+                                    $validator->errors()->add("production_stages.$index.deadline_date", "$stageName deadline date must be date after or equal to $stageName issue date");
+                                }
+                            } catch (\Exception $e) {
+                                // Skip if date format is invalid, parent validator handles it
+                            }
+                        }
+                    }
                 }
             });
 

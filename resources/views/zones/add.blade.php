@@ -10,8 +10,7 @@
                         <h4>{{ $zone ? 'Edit' : 'Add' }} Zone</h4>
                     </div>
 
-                    <form action="{{ url('zones/add' . ($zone ? '/' . $zone->id : '')) }}" method="POST"
-                        class="common-form" autocomplete="off">
+                    <form action="{{ url('zones/add' . ($zone ? '/' . $zone->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
