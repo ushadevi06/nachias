@@ -201,7 +201,7 @@ class ServiceProviderController extends Controller
             return redirect('service_providers')->with('success', $message);
         }
 
-        $operation_stages = OperationStage::where('status', 'Active')->orderBy('operation_stage_name')->get();
+        $operation_stages = OperationStage::where('status', 'Active')->orderBy('id','desc')->get();
         $states = State::where('status', 'Active')->get();
         $cities = [];
         $places = [];

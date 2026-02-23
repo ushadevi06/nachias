@@ -48,9 +48,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- =========================
 -- TASK & PRODUCTION FLOW
 -- =========================
-DELETE FROM task_receives;
-ALTER TABLE task_receives AUTO_INCREMENT = 1;
-
 DELETE FROM task_adjustments;
 ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
 
@@ -65,11 +62,6 @@ ALTER TABLE production_receipt_items AUTO_INCREMENT = 1;
 DELETE FROM production_receipts;
 ALTER TABLE production_receipts AUTO_INCREMENT = 1;
 
-DELETE FROM productions;
-ALTER TABLE productions AUTO_INCREMENT = 1;
-
-DELETE FROM process_schedule_services;
-ALTER TABLE process_schedule_services AUTO_INCREMENT = 1;
 
 DELETE FROM process_schedules;
 ALTER TABLE process_schedules AUTO_INCREMENT = 1;
@@ -100,100 +92,62 @@ ALTER TABLE job_card_images AUTO_INCREMENT = 1;
 
 DELETE FROM job_card_entries;
 ALTER TABLE job_card_entries AUTO_INCREMENT = 1;
-
 DELETE FROM job_card_issue_stock_details;
 ALTER TABLE job_card_issue_stock_details AUTO_INCREMENT = 1;
-
 -- =========================
 -- GRN / STOCK
 -- =========================
 DELETE FROM grn_entry_item_variants;
 ALTER TABLE grn_entry_item_variants AUTO_INCREMENT = 1;
-
 DELETE FROM grn_entry_items;
 ALTER TABLE grn_entry_items AUTO_INCREMENT = 1;
-
 DELETE FROM grn_entries;
 ALTER TABLE grn_entries AUTO_INCREMENT = 1;
-
 DELETE FROM stock_entry_items;
 ALTER TABLE stock_entry_items AUTO_INCREMENT = 1;
-
 DELETE FROM stock_entries;
 ALTER TABLE stock_entries AUTO_INCREMENT = 1;
-
 -- =========================
 -- PURCHASE
 -- =========================
 DELETE FROM purchase_invoice_payments;
 ALTER TABLE purchase_invoice_payments AUTO_INCREMENT = 1;
-
 DELETE FROM purchase_invoice_charges;
 ALTER TABLE purchase_invoice_charges AUTO_INCREMENT = 1;
-
 DELETE FROM purchase_invoice_items;
 ALTER TABLE purchase_invoice_items AUTO_INCREMENT = 1;
-
 DELETE FROM purchase_invoices;
 ALTER TABLE purchase_invoices AUTO_INCREMENT = 1;
-
 DELETE FROM purchase_order_items;
 ALTER TABLE purchase_order_items AUTO_INCREMENT = 1;
-
 DELETE FROM purchase_orders;
 ALTER TABLE purchase_orders AUTO_INCREMENT = 1;
-
 -- =========================
 -- DEBIT NOTES
 -- =========================
 DELETE FROM debit_note_items;
 ALTER TABLE debit_note_items AUTO_INCREMENT = 1;
-
 DELETE FROM debit_notes;
 ALTER TABLE debit_notes AUTO_INCREMENT = 1;
-
-
-
-DELETE FROM process_schedule_services;
-ALTER TABLE process_schedule_services AUTO_INCREMENT = 1;
-
 DELETE FROM process_schedules;
 ALTER TABLE process_schedules AUTO_INCREMENT = 1;
-
 DELETE FROM production_receipt_items;
 ALTER TABLE production_receipt_items AUTO_INCREMENT = 1;
-
 DELETE FROM production_receipts;
 ALTER TABLE production_receipts AUTO_INCREMENT = 1;
-
-
-
 DELETE FROM production_stage_consumables;
 ALTER TABLE production_stage_consumables AUTO_INCREMENT = 1;
-
-DELETE FROM productions;
-ALTER TABLE productions AUTO_INCREMENT = 1;
-
 DELETE FROM stock_consumable_issue_items;
 ALTER TABLE stock_consumable_issue_items AUTO_INCREMENT = 1;
-
 DELETE FROM stock_consumable_issues;
 ALTER TABLE stock_consumable_issues AUTO_INCREMENT = 1;
-
-DELETE FROM stock_consumable_stock_details;
-ALTER TABLE stock_consumable_stock_details AUTO_INCREMENT = 1;
-
 DELETE FROM stock_entry_adjustments;
 ALTER TABLE stock_entry_adjustments AUTO_INCREMENT = 1;
-
 DELETE FROM task_adjustment_items;
 ALTER TABLE task_adjustment_items AUTO_INCREMENT = 1;
-
 DELETE FROM task_adjustments;
 ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
-
-DELETE FROM task_receives;
-ALTER TABLE task_receives AUTO_INCREMENT = 1;
-
+DELETE FROM task_assign_employees;
+ALTER TABLE task_assign_employees AUTO_INCREMENT = 1;
 
 SET FOREIGN_KEY_CHECKS = 1;

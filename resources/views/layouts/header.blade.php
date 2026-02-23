@@ -19,15 +19,13 @@
     <link rel="stylesheet" href="{{ url('assets/datatables/css/responsive.bootstrap5.min.css') }}">
     
     <!-- Core JS -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="{{ url('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ url('assets/js/moment.min.js') }}"></script>
     <script src="{{ url('assets/js/helpers.js') }}"></script>
     <script src="{{ url('assets/js/bootstrap.js') }}"></script>
     <script src="{{ url('assets/js/config.js') }}"></script>
-    
 	<script>
 		var APP_URL = {!! json_encode(url('/')) !!};
 	</script>
 </head>
-
 <body>

@@ -75,7 +75,7 @@ class DocumentRepositoryController extends Controller
         }
         $document = $id ? DocumentRepository::findOrFail($id) : null;
         $departments = Department::active()->orderBy('id','desc')->get();
-        if($_POST){
+        if ($request->isMethod('post')) {
             $rules = [
                 'document_name' => 'required|min:3|max:100',
                 'document_type' => 'required|in:Certification,HR,Compliance,Policy',

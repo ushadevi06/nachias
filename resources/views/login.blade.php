@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="{{ url('assets/css/responsive.bootstrap5.css') }}">
     <link rel="stylesheet" href="{{ url('assets/css/select2.css') }}">
     <link rel="stylesheet" href="{{ url('assets/css/page-auth.css') }}">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="{{ url('assets/datatables/css/dataTables.bootstrap5.min.css') }}">
 </head>
 
 <body>
@@ -71,7 +71,7 @@
             </div>
         </div>
     </div>
-    <script src="{{ url('assets/js/jquery.js') }}"></script>
+    <script src="{{ url('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ url('assets/js/config.js') }}"></script>
     <script src="{{ url('assets/js/helpers.js') }}"></script>
     <script src="{{ url('assets/js/menu.js') }}"></script>

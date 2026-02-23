@@ -50,9 +50,9 @@ class AuthController extends Controller
         return redirect('/');
     }
     public function profile(Request $request){
-        if(!$_POST){
+        if (!$request->isMethod('post')) {
             return view('profile'); 
-        } else{
+        } else {
             $request->validate([
                 'name' => 'required|min:3|max:50|regex:/^[a-zA-Z\s,:]+$/',
                 'email' => 'required|email',

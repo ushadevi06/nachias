@@ -58,7 +58,7 @@ class BackupDatabase extends Command
             $dbPass = env('DB_PASSWORD');
             $dbHost = env('DB_HOST');
 
-            $dumpPath = 'C:\xampp\mysql\bin\mysqldump.exe';
+            $dumpPath = env('MYSQLDUMP_PATH', 'C:\xampp\mysql\bin\mysqldump.exe');
             
             $command = "\"{$dumpPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
             

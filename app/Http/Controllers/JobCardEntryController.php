@@ -43,6 +43,9 @@ use Carbon\Carbon;
 class JobCardEntryController extends Controller
 {
     public function index(Request $request) {
+        if (auth()->id() != 1 && !auth()->user()->can('view job-card')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $jobCards = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup'])->orderBy('id', 'desc')->get();
     
@@ -87,6 +90,15 @@ class JobCardEntryController extends Controller
     }
 
     public function add(Request $request, $id = null) {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit job-card')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create job-card')) {
+                return unauthorizedRedirect();
+            }
+        }
         if ($request->isMethod('post')) {
             $rules = [
                 'job_card_no' => 'required|string|min:5|max:50|unique:job_card_entries,job_card_no' . ($id ? ',' . $id : ''),
@@ -461,11 +473,17 @@ class JobCardEntryController extends Controller
     }
 
     public function view_details($id) {
+        if (auth()->id() != 1 && !auth()->user()->can('view job-card')) {
+            return unauthorizedRedirect();
+        }
         $jobCard = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup', 'cuttingSizeRatios', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'images', 'sleeveMeters', 'fit', 'pattiType', 'collarType', 'cuffType', 'pocketType', 'bottomCut'])->findOrFail($id);
         return view('job_card_entry/view_details', compact('jobCard'));
     }
 
     public function view_jc_item($id) {
+        if (auth()->id() != 1 && !auth()->user()->can('issue-item job-card')) {
+            return unauthorizedRedirect();
+        }
         $jobCard = JobCardEntry::with(['brand', 'item', 'issueStore', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems', 'sleeveMeters'])->findOrFail($id);
         $issueItemMap = $jobCard->issueItems->keyBy('job_card_article_matrix_id');
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
@@ -505,6 +523,9 @@ class JobCardEntryController extends Controller
     } 
 
     public function issue_items(Request $request, $id) {
+        if (auth()->id() != 1 && !auth()->user()->can('issue-item job-card')) {
+            return unauthorizedRedirect();
+        }
         $jobCard = JobCardEntry::with(['purchaseOrder.items'])->findOrFail($id);
         $oldData = $jobCard->load('issueItems')->toArray();
         
@@ -856,7 +877,7 @@ class JobCardEntryController extends Controller
         $issuedQtys = [];
         if ($jobCardId) {
             $issuedQtys = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCardId)
-                ->with('fabricDetail') // assuming job_card_article_id links to JobCardFabricDetail
+                ->with('fabricDetail') 
                 ->get()
                 ->groupBy(function($item) {
                     return $item->fabricDetail->art_no ?? '';
@@ -941,12 +962,17 @@ class JobCardEntryController extends Controller
     }
 
     public function deleteImage($id) {
+        if (auth()->id() != 1 && !auth()->user()->can('edit job-card')) {
+            return unauthorizedRedirect();
+        }
         $image = JobCardImage::findOrFail($id);
+        $oldData = $image->toArray();
         $filePath = public_path($image->image);
         if (file_exists($filePath)) {
             unlink($filePath);
         }
         $image->delete();
+        addLog('delete', 'Job Card Image', 'job_card_images', $id, $oldData, null);
         return response()->json(['success' => true, 'message' => 'Image deleted successfully']);
     }
     

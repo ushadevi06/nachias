@@ -12,6 +12,9 @@ class BackupController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view backup-restore')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $backups = Backup::with('creator')->orderBy('id', 'desc')->get();
             $data = [];
@@ -51,6 +54,9 @@ class BackupController extends Controller
 
     public function generate()
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view backup-restore')) {
+            return unauthorizedRedirect();
+        }
         try {
             if (Backup::where('status', 'Running')->exists()) {
                 return response()->json(['status' => 'error', 'message' => 'A backup process is already running.']);
@@ -78,7 +84,7 @@ class BackupController extends Controller
             $dbPass = env('DB_PASSWORD');
             $dbHost = env('DB_HOST');
 
-            $dumpPath = 'C:\xampp\mysql\bin\mysqldump.exe';
+            $dumpPath = env('MYSQLDUMP_PATH', 'C:\xampp\mysql\bin\mysqldump.exe');
             $command = "\"{$dumpPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
             
             exec($command, $output, $returnVar);
@@ -108,6 +114,9 @@ class BackupController extends Controller
 
     public function restore(Request $request)
     {
+        if (auth()->id() != 1) {
+            return unauthorizedRedirect();
+        }
         $request->validate([
             'id' => 'required|exists:backups,id',
             'password' => 'required',
@@ -136,7 +145,7 @@ class BackupController extends Controller
             
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
-            $mysqlPath = 'C:\xampp\mysql\bin\mysql.exe';
+            $mysqlPath = env('MYSQL_PATH', 'C:\xampp\mysql\bin\mysql.exe');
             $command = "\"{$mysqlPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} < \"{$path}\"";
             exec($command, $output, $returnVar);
 
@@ -154,6 +163,9 @@ class BackupController extends Controller
 
     public function download($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view backup-restore')) {
+            return unauthorizedRedirect();
+        }
         $backup = Backup::findOrFail($id);
         $path = public_path('uploads/backup/' . $backup->filename);
         
@@ -165,6 +177,9 @@ class BackupController extends Controller
 
     public function delete($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view backup-restore')) {
+            return unauthorizedRedirect();
+        }
         $backup = Backup::findOrFail($id);
         $path = public_path('uploads/backup/' . $backup->filename);
         if (file_exists($path)) {
