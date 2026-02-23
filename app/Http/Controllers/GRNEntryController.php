@@ -235,7 +235,11 @@ class GrnEntryController extends Controller
                     if ($request->hasFile("items.$idx.item_image")) {
                         $file = $request->file("items.$idx.item_image");
                         $filename = 'grn_item_' . time() . '_' . $idx . '.' . $file->getClientOriginalExtension();
-                        $file->move(public_path('uploads/grn_items'), $filename);
+                        $uploadPath = public_path('uploads/grn_items');
+                        if (!file_exists($uploadPath)) {
+                            mkdir($uploadPath, 0755, true);
+                        }
+                        $file->move($uploadPath, $filename);
                         $imagePath = $filename;
                     }
 

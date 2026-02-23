@@ -9,7 +9,6 @@ use App\Models\FabricType;
 use App\Models\TaskAdjustmentItem;
 use App\Models\StockEntryItem;
 use App\Models\StockEntryAdjustment;
-use App\Models\StockConsumableIssueItem;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\ProductionStageConsumable;
@@ -152,7 +151,11 @@ class RawMaterialController extends Controller
             if ($request->hasFile('reference_image')) {
                 $image = $request->file('reference_image');
                 $filename = time() . '_' . $image->getClientOriginalName();
-                $image->move(public_path('uploads/raw_materials'), $filename);
+                $uploadPath = public_path('uploads/raw_materials');
+                if (!file_exists($uploadPath)) {
+                    mkdir($uploadPath, 0755, true);
+                }
+                $image->move($uploadPath, $filename);
                 $data['reference_image'] = 'uploads/raw_materials/' . $filename;
             }
 
@@ -205,9 +208,6 @@ class RawMaterialController extends Controller
         }
         if (StockEntryAdjustment::where('raw_material_id', $id)->exists()) {
             return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Stock Entry Adjustments and cannot be deleted.');
-        }
-        if (StockConsumableIssueItem::where('raw_material_id', $id)->exists()) {
-            return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Stock Consumable Issue Items and cannot be deleted.');
         }
         if (PurchaseInvoiceItem::where('raw_material_id', $id)->exists()) {
             return redirect('raw_materials')->with('danger', 'This raw material is currently referenced in Purchase Invoice Items and cannot be deleted.');

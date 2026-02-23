@@ -232,7 +232,11 @@ class StockEntryController extends Controller
                 if ($request->hasFile('reference_document')) {
                     $file = $request->file('reference_document');
                     $filename = 'stock_ref_' . time() . '.' . $file->getClientOriginalExtension();
-                    $file->move(public_path('uploads/stock_entries'), $filename);
+                    $uploadPath = public_path('uploads/stock_entries');
+                    if (!file_exists($uploadPath)) {
+                        mkdir($uploadPath, 0755, true);
+                    }
+                    $file->move($uploadPath, $filename);
                     $headerData['reference_document'] = $filename;
                 }
 
