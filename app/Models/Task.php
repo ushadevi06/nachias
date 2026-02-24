@@ -12,8 +12,6 @@ class Task extends Model
 
     protected $fillable = [
         'task_no',
-        'production_id',
-        'production_no',
         'job_card_entry_id',
         'job_card_no',
         'stage_id',
@@ -34,10 +32,7 @@ class Task extends Model
         'services' => 'array'
     ];
 
-    public function production()
-    {
-        return $this->belongsTo(Production::class);
-    }
+
 
     public function jobCard()
     {
@@ -63,11 +58,7 @@ class Task extends Model
     {
         return $this->hasMany(TaskAssignEmployee::class, 'task_id');
     }
-
-    public function receives()
-    {
-        return $this->hasMany(TaskReceive::class, 'task_id');
-    }
+    
     public function operationStage()
     {
         return $this->belongsTo(OperationStage::class, 'stage_id');

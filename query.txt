@@ -1,14 +1,2 @@
-ALTER TABLE stock_entries
-ADD COLUMN price DECIMAL(15,2) NULL DEFAULT 0
-AFTER stock_entry_no;
-ALTER TABLE brands
-ADD COLUMN code VARCHAR(50) NULL
-AFTER brand_name;
-ALTER TABLE styles
-ADD COLUMN code VARCHAR(50) NULL
-AFTER style_name;
-ALTER TABLE store_types
-ADD COLUMN status ENUM('Active','Inactive')
-DEFAULT 'Active'
-AFTER store_type_name;
-ALTER TABLE raw_materials MODIFY fabric_type_id BIGINT UNSIGNED NULL;
+ALTER TABLE task_assign_employees
+ADD COLUMN employee_id VARCHAR(255) NULL AFTER issued_to;

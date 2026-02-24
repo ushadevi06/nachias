@@ -68,10 +68,14 @@ class AjaxController extends Controller
             $query->where('name', 'like', '%' . request()->q . '%');
         }
 
-        $employees = $query->get(['id', 'name']);
+        $employees = $query->get(['id', 'name', 'emp_id']);
         
         $formatted = $employees->map(function($e) {
-            return ['id' => $e->id, 'text' => $e->name];
+            return [
+                'id' => $e->id, 
+                'text' => $e->name . ($e->emp_id ? " ({$e->emp_id})" : ""),
+                'emp_id' => $e->emp_id
+            ];
         });
 
         return response()->json(['success' => true, 'employees' => $employees, 'results' => $formatted]);

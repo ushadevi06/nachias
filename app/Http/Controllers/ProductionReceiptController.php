@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Production;
+
 use App\Models\ProductionReceipt;
 use App\Models\ProductionReceiptItem;
 use App\Models\JobCardEntry;
@@ -73,7 +73,7 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        $receipt = $id ? ProductionReceipt::with(['production.plant', 'items'])->findOrFail($id) : null;
+        $receipt = $id ? ProductionReceipt::with(['items'])->findOrFail($id) : null;
 
         if ($id) {
             $currentReceipt = ProductionReceipt::find($id);
@@ -116,15 +116,12 @@ class ProductionReceiptController extends Controller
 
             $request->validate($rules, $messages);
 
-            $production = Production::where('job_card_entry_id', $request->job_card_id)->first();
-            if (!$production) {
-                return back()->with('error', 'Production not found for this Job Card')->withInput();
-            }
+
 
             DB::beginTransaction();
             try {
                 $data = [
-                    'production_id' => $production->id,
+
                     'job_card_id'   => $request->job_card_id,
                     'customer_name' => $request->customer_name,
                     'order_due_date'=> $request->order_due_date ? date('Y-m-d', strtotime($request->order_due_date)) : null,
@@ -415,15 +412,12 @@ class ProductionReceiptController extends Controller
                     'total_cost' => floatval($cost)
                 ];
             }
-
-            // 2. Issue Items (Buttons, Trims, etc.)
             $issueItems = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->get();
             foreach ($issueItems as $issueItem) {
                 $rate = floatval($issueItem->average ?? 0);
                 if ($rate <= 0) continue;
 
                 $avgPrice = 0; 
-                // Fetch price from stock or grn
                 if ($issueItem->stock_entry_item_id) {
                     $stockInfo = \DB::table('stock_entry_items')->where('id', $issueItem->stock_entry_item_id)->first();
                     $avgPrice = $stockInfo ? $stockInfo->price : 0;
@@ -566,7 +560,7 @@ class ProductionReceiptController extends Controller
                 $sleeveType = 'H/S';
             }
 
-            $consumables = \App\Models\ProductionStageConsumable::where('production_id', $receipt->production_id)
+            $consumables = \App\Models\ProductionStageConsumable::where('job_card_id', $receipt->job_card_id)
                 ->where(function($q) use ($sleeveType) {
                     $q->where('sleeve_type', $sleeveType)->orWhere('sleeve_type', 'All');
                 })
@@ -596,7 +590,7 @@ class ProductionReceiptController extends Controller
                 }
             }
 
-            $consumables = \App\Models\ProductionStageConsumable::where('production_id', $receipt->production_id)
+            $consumables = \App\Models\ProductionStageConsumable::where('job_card_id', $receipt->job_card_id)
                 ->where(function($q) use ($sleeveType) {
                     $q->where('sleeve_type', $sleeveType)->orWhere('sleeve_type', 'All');
                 })

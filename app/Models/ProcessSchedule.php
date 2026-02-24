@@ -11,15 +11,10 @@ class ProcessSchedule extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'production_id', 'job_card_entry_id', 'operation_stage_id', 'stage', 'planned_qty', 'uom', 'scheduled_to',
+        'job_card_entry_id', 'operation_stage_id', 'stage', 'planned_qty', 'uom', 'scheduled_to',
         'service_provider_type', 'start_date', 'end_date', 'due_date', 'status',
         'created_by', 'updated_by'
     ];
-
-    public function production()
-    {
-        return $this->belongsTo(Production::class);
-    }
 
     public function jobCard()
     {

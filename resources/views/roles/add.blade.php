@@ -14,7 +14,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" placeholder="Enter Role Name" value="{{ old('name', $role->name) }}">
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" placeholder="Enter Role Name" value="{{ old('name', $role->name) }}" {{ $role->id == 4 ? 'readonly' : '' }}>
                                     <label for="name">Role Name <span class="text-danger">*</span> </label>
                                     @error('name')
                                     <div class="text-danger mt-1">{{ $message }}</div>

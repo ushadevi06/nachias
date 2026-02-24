@@ -11,7 +11,7 @@ class StockConsumableReturnController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = ProductionStageConsumable::with(['production', 'jobCard', 'rawMaterial', 'uom'])
+            $query = ProductionStageConsumable::with(['jobCard', 'rawMaterial', 'uom'])
                 ->where('status', 'Active')
                 ->where('item_type', 'Consumable');
 
@@ -49,7 +49,7 @@ class StockConsumableReturnController extends Controller
         return view('stock_consumable_returns/add');
     }
     public function view($id){
-        $consumable = ProductionStageConsumable::with(['production', 'jobCard', 'rawMaterial', 'uom'])
+        $consumable = ProductionStageConsumable::with(['jobCard', 'rawMaterial', 'uom'])
             ->findOrFail($id);
         return view('stock_consumable_returns/view_details', compact('consumable'));
     }

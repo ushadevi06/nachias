@@ -10,7 +10,6 @@ class ProductionReceipt extends Model
     use HasFactory;
 
     protected $fillable = [
-        'production_id',
         'job_card_id',
         'customer_name',
         'order_due_date',
@@ -26,10 +25,7 @@ class ProductionReceipt extends Model
         'updated_by',
     ];
 
-    public function production()
-    {
-        return $this->belongsTo(Production::class);
-    }
+
 
     public function jobCard()
     {

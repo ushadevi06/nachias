@@ -12,7 +12,6 @@ class ProductionStageConsumable extends Model
 
     protected $fillable = [
         'job_card_id',
-        'production_id',
         'production_stage_id',
         'stage',
         'art_no',
@@ -50,11 +49,6 @@ class ProductionStageConsumable extends Model
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
-    }
-
-    public function production()
-    {
-        return $this->belongsTo(Production::class, 'production_id');
     }
 
     public function jobCard()

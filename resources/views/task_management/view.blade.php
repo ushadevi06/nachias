@@ -71,7 +71,7 @@
   window.kanbanUpdateStatusUrl = "{{ route('task_management.update_status') }}";
   window.kanbanAddUrl = "{{ url('task_management/add') }}";
   window.kanbanListViewUrl = "{{ url('task_management') }}";
-  window.kanbanViewUrl = "{{ url('task_management') }}";
+  window.kanbanViewUrl = "{{ route('task_management.fetch') }}";
 </script>
 <script src="{{ url('assets/js/app-kanban.js') }}?v={{ time() }}"></script>
 <script>

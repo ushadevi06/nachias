@@ -525,7 +525,7 @@ $isSuper = $user->id == 1;
 
                                 {{-- Production --}}
                                 @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card') || $user->can('view task-management') || $user->can('view production-receipts')))
-                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('productions*') || request()->is('production_receipts*') || request()->is('add_production*') || request()->is('view_production*') || request()->is('task_management*')) ? 'active' : '' }}">
+                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('production_receipts*') || request()->is('task_management*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-inbox-line"></i>
                                         <div>Production</div>
@@ -538,15 +538,6 @@ $isSuper = $user->id == 1;
                                             </a>
                                         </li>
                                         @endif
-
-                                        {{-- @if($isSuper || $user->can('view production'))
-                                        <li class="menu-item {{ (request()->is('productions*') || request()->is('add_production*')) ? 'active' : '' }}">
-                                            <a href="{{ url('productions') }}" class="menu-link">
-                                                <div>Production</div>
-                                            </a>
-                                        </li>
-                                        @endif --}}
-
                                         @if($isSuper || $user->can('view task-management'))
                                         <li class="menu-item {{ request()->is('task_management*') ? 'active' : '' }}">
                                             <a href="{{ url('task_management') }}" class="menu-link">
@@ -707,7 +698,6 @@ $isSuper = $user->id == 1;
                                     </ul>
                                 </li>
                                 @endif
-
                                 <!-- Reports -->
                                 @if($user && (
                                 $isSuper || $user->can('view customer-report') || $user->can('view sale-report') || $user->can('view stock-report') || $user->can('view daily-production-report') || $user->can('view order-report') || $user->can('view employee-report')))

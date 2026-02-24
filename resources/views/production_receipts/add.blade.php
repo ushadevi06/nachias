@@ -59,7 +59,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="plant" id="plant" class="form-control" placeholder="Plant" value="{{ old('plant', ($receipt && $receipt->production && $receipt->production->plant) ? $receipt->production->plant->name : '') }}" readonly>
+                                    <input type="text" name="plant" id="plant" class="form-control" placeholder="Plant" value="{{ old('plant', ($receipt && $receipt->jobCard && $receipt->jobCard->serviceProvider) ? $receipt->jobCard->serviceProvider->name : '') }}" readonly>
                                     <label for="plant">Plant</label>
                                 </div>
                             </div>

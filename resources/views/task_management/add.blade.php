@@ -173,49 +173,50 @@
 
                                     <div class="col-md-12">
                                         <div class="table-responsive border rounded bg-white mt-3">
-                                            <table class="table table-sm table-hover mb-0 align-middle" id="assignment-repeater-table">
-                                                <thead class="bg-light">
-                                                    <tr>
-                                                        <th class="ps-3" style="min-width: 180px;">Services *</th>
-                                                        <th class="ps-3" style="min-width: 180px;">Issued To *</th>
-                                                        <th class="text-center" style="min-width: 140px;">Issue Date *</th>
-                                                        <th class="text-center" style="min-width: 140px;">Due Date</th>
-                                                        <th class="text-center" style="min-width: 100px;">Hrs</th>
-                                                        <th class="text-center" style="min-width: 100px;">Qty</th>
-                                                        <th class="text-center" style="min-width: 140px;">Status</th>
-                                                        <th class="text-center" style="min-width: 200px;">Remarks</th>
-                                                        <th class="text-center" style="width: 50px;"></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @php 
-                                                        $assignmentsArr = [];
-                                                        if(old('assignments')) {
-                                                            $assignmentsArr = old('assignments');
-                                                        } elseif(isset($task) && $task->assignments->count() > 0) {
-                                                            $assignmentsArr = $task->assignments;
-                                                        } elseif(!isset($task)) {
-                                                            $assignmentsArr = [[]]; 
-                                                        }
-                                                    @endphp
+                                            <div id="assignment-cards-container">
+                                                @php 
+                                                    $assignmentsArr = [];
+                                                    if(old('assignments')) {
+                                                        $assignmentsArr = old('assignments');
+                                                    } elseif(isset($task) && $task->assignments->count() > 0) {
+                                                        $assignmentsArr = $task->assignments;
+                                                    } elseif(!isset($task)) {
+                                                        $assignmentsArr = [[]]; 
+                                                    }
+                                                @endphp
 
-                                                    @foreach($assignmentsArr as $index => $assign)
-                                                        @php 
-                                                            $assign = (object)$assign;
-                                                            $employee_id = $assign->issued_to ?? ($assign->employee_id ?? '');
-                                                            $employee_name = '';
-                                                            if (isset($assign->assignee)) {
-                                                                $employee_name = $assign->assignee->name;
-                                                            } elseif (isset($assign->employee_name)) {
-                                                                $employee_name = $assign->employee_name;
-                                                            }
-                                                            $service_id = $assign->service_id ?? '';
-                                                            $issue_date = isset($assign->issue_date) ? \Carbon\Carbon::parse($assign->issue_date)->format('d-m-Y') : '';
-                                                            $due_date = isset($assign->due_date) ? \Carbon\Carbon::parse($assign->due_date)->format('d-m-Y') : '';
-                                                            $status = $assign->status ?? 'Open';
-                                                        @endphp
-                                                        <tr class="assignment-row">
-                                                            <td>
+                                                @foreach($assignmentsArr as $index => $assign)
+                                                    @php 
+                                                        $assign = (object)$assign;
+                                                        $emp_id_val = $assign->issued_to ?? ($assign->emp_id ?? '');
+                                                        $employee_name = '';
+                                                        $employee_emp_id = $assign->emp_id ?? '';
+                                                        if (isset($assign->assignee)) {
+                                                            $employee_name = $assign->assignee->name;
+                                                            $employee_emp_id = $employee_emp_id ?: ($assign->assignee->emp_id ?? '');
+                                                        } elseif (isset($assign->employee_name)) {
+                                                            $employee_name = $assign->employee_name;
+                                                        }
+                                                        $employee_display = $employee_name ?: 'Selected Employee';
+                                                        if ($employee_emp_id) {
+                                                            $employee_display .= ' (' . $employee_emp_id . ')';
+                                                        }
+                                                        $service_id = $assign->service_id ?? '';
+                                                        $issue_date = isset($assign->issue_date) ? \Carbon\Carbon::parse($assign->issue_date)->format('d-m-Y') : '';
+                                                        $due_date = isset($assign->due_date) ? \Carbon\Carbon::parse($assign->due_date)->format('d-m-Y') : '';
+                                                        $status = $assign->status ?? 'Open';
+                                                    @endphp
+                                                    <div class="assignment-card assignment-row">
+                                                        <div class="card-badge">#{{ $index + 1 }}</div>
+                                                        <div class="assignment-card-header">
+                                                            <h6 class="assignment-card-title">Assignment Details</h6>
+                                                            <button type="button" class="assignment-remove-btn remove-assignment-row">
+                                                                <i class="ri ri-delete-bin-line"></i>
+                                                            </button>
+                                                        </div>
+                                                        <div class="assignment-card-body">
+                                                            <div class="form-group mb-3">
+                                                                <label>Service *</label>
                                                                 <select class="form-select select2 services-select" name="assignments[{{ $index }}][service_id]" data-placeholder="Select Service" data-selected="{{ $service_id }}">
                                                                     <option value="">Select Service</option>
                                                                     @if(isset($services) && count($services) > 0)
@@ -232,62 +233,72 @@
                                                                     @endif
                                                                 </select>
                                                                 @error("assignments.$index.service_id") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
+                                                            </div>
+
+                                                            <div class="form-group mb-3">
+                                                                <label>Issued To *</label>
                                                                 <select class="form-select select2 employee-select" name="assignments[{{ $index }}][issued_to]" data-placeholder="Select Employee">
                                                                     <option value="">Select Employee</option>
-                                                                    @if($employee_id)
-                                                                        <option value="{{ $employee_id }}" selected>{{ $employee_name ?: 'Selected Employee' }}</option>
+                                                                    @if($emp_id_val)
+                                                                        <option value="{{ $emp_id_val }}" selected>{{ $employee_display }}</option>
                                                                     @endif
                                                                 </select>
+                                                                <input type="hidden" name="assignments[{{ $index }}][emp_id]" class="employee-id-input" value="{{ $assign->emp_id ?? '' }}">
                                                                 @error("assignments.$index.issued_to") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="text" class="form-control flatpickr-assignment issue-date" name="assignments[{{ $index }}][issue_date]" value="{{ $issue_date }}" placeholder="Enter Issue Date" autocomplete="off">
-                                                                @error("assignments.$index.issue_date") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="text" class="form-control flatpickr-assignment due-date" name="assignments[{{ $index }}][due_date]" value="{{ $due_date }}" placeholder="Enter Due Date" autocomplete="off">
-                                                                @error("assignments.$index.due_date") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="number" step="0.01" class="form-control total-hrs" name="assignments[{{ $index }}][total_hrs]" value="{{ $assign->total_hrs ?? '' }}" placeholder="0.00">
-                                                            </td>
-                                                            <td>
-                                                                <input type="number" step="1" class="form-control" name="assignments[{{ $index }}][issue_qty]" value="{{ $assign->issue_qty ?? '' }}" placeholder="Qty">
-                                                                @error("assignments.$index.issue_qty") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
+                                                            </div>
+
+                                                            <div class="assignment-card-grid mb-3">
+                                                                <div class="form-group">
+                                                                    <label>Issue Date *</label>
+                                                                    <input type="text" class="form-control flatpickr-assignment issue-date" name="assignments[{{ $index }}][issue_date]" value="{{ $issue_date }}" placeholder="Issue Date" autocomplete="off">
+                                                                    @error("assignments.$index.issue_date") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
+                                                                </div>
+                                                                <div class="form-group">
+                                                                    <label>Due Date</label>
+                                                                    <input type="text" class="form-control flatpickr-assignment due-date" name="assignments[{{ $index }}][due_date]" value="{{ $due_date }}" placeholder="Due Date" autocomplete="off">
+                                                                    @error("assignments.$index.due_date") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="assignment-card-grid mb-3">
+                                                                <div class="form-group">
+                                                                    <label>Hrs</label>
+                                                                    <input type="number" step="0.01" class="form-control total-hrs" name="assignments[{{ $index }}][total_hrs]" value="{{ $assign->total_hrs ?? '' }}" placeholder="0.00">
+                                                                </div>
+                                                                <div class="form-group">
+                                                                    <label>Qty</label>
+                                                                    <input type="number" step="1" class="form-control" name="assignments[{{ $index }}][issue_qty]" value="{{ $assign->issue_qty ?? '' }}" placeholder="Qty">
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="form-group mb-3">
+                                                                <label>Status</label>
                                                                 <select class="form-select select2 status-select-row" name="assignments[{{ $index }}][status]">
                                                                     <option value="Open" {{ $status == 'Open' ? 'selected' : '' }}>Open</option>
                                                                     <option value="In Progress" {{ $status == 'In Progress' ? 'selected' : '' }}>In Progress</option>
                                                                     <option value="Completed" {{ $status == 'Completed' ? 'selected' : '' }}>Completed</option>
                                                                 </select>
-                                                            </td>
-                                                            <td>
+                                                            </div>
+
+                                                            <div class="form-group">
+                                                                <label>Remarks</label>
                                                                 <input type="text" class="form-control" name="assignments[{{ $index }}][remarks]" value="{{ $assign->remarks ?? '' }}" placeholder="Remarks">
-                                                            </td>
-                                                            <td class="text-center">
-                                                                <button type="button" class="btn btn-sm btn-danger remove-assignment-row"><i class="ri ri-delete-bin-line"></i></button>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr>
-                                                        <td colspan="8" class="ps-3 py-2">
-                                                            <button type="button" class="btn btn-sm btn-outline-primary" id="add-assignment-row">
-                                                                <i class="ri ri-add-line me-1"></i> Add More
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                </tfoot>
-                                            </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                                
+                                                <button type="button" class="add-assignment-card-btn" id="add-assignment-row">
+                                                    <i class="ri ri-add-line fs-2"></i>
+                                                    <span class="fw-bold">Add Another Assignment</span>
+                                                </button>
+                                            </div>
+
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <select class="select2 form-select" name="issue_store" id="issue_store">
+                                            <select class="select2 form-select" name="issue_store" id="issue_store" data-placeholder="Select Store">
                                                 <option value="">Select Store</option>
                                                 @if(isset($stores))
                                                     @foreach($stores as $store)
@@ -297,6 +308,7 @@
                                             </select>
                                             <label>Issue Store *</label>
                                         </div>
+                                        @error('issue_store') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
@@ -780,48 +792,79 @@
 
         function addAssignmentRow(data = {}) {
             let rowHtml = `
-            <tr>
-                <td>
-                    <select class="form-select select2 services-select" name="assignments[${assignmentIndex}][service_id]" data-placeholder="Select Service" required>
-                    </select>
-                </td>
-                <td>
-                    <select class="form-select select2 employee-select" name="assignments[${assignmentIndex}][issued_to]" data-placeholder="Select Employee" required>
-                        <option value="">Select Employee</option>
-                        ${data.employee_id ? `<option value="${data.employee_id}" selected>${data.employee_name || 'Selected Employee'}</option>` : ''}
-                    </select>
-                </td>
-                <td>
-                    <input type="text" class="form-control flatpickr-assignment issue-date" name="assignments[${assignmentIndex}][issue_date]" value="${data.issue_date || ''}" placeholder="Enter Issue Date" autocomplete="off" required>
-                </td>
-                <td>
-                    <input type="text" class="form-control flatpickr-assignment due-date" name="assignments[${assignmentIndex}][due_date]" value="${data.due_date || ''}" placeholder="Enter Due Date" autocomplete="off" required>
-                </td>
-                <td>
-                    <input type="number" step="0.01" class="form-control total-hrs" name="assignments[${assignmentIndex}][total_hrs]" value="${data.total_hrs || ''}" placeholder="0.00">
-                </td>
-                <td>
-                    <input type="number" step="1" class="form-control" name="assignments[${assignmentIndex}][issue_qty]" value="${data.issue_qty || ''}" placeholder="Qty" required>
-                </td>
-                <td>
-                    <select class="form-select select2 status-select-row" name="assignments[${assignmentIndex}][status]">
-                        <option value="Open" ${data.status === 'Open' || !data.status ? 'selected' : ''}>Open</option>
-                        <option value="In Progress" ${data.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="Completed" ${data.status === 'Completed' ? 'selected' : ''}>Completed</option>
-                    </select>
-                </td>
-                <td>
-                    <input type="text" class="form-control" name="assignments[${assignmentIndex}][remarks]" value="${data.remarks || ''}" placeholder="Remarks">
-                </td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-danger remove-assignment-row"><i class="ri ri-delete-bin-line"></i></button>
-                </td>
-            </tr>`;
+            <div class="assignment-card assignment-row">
+                <div class="card-badge">#${assignmentIndex + 1}</div>
+                <div class="assignment-card-header">
+                    <h6 class="assignment-card-title">Assignment Details</h6>
+                    <button type="button" class="assignment-remove-btn remove-assignment-row">
+                        <i class="ri ri-delete-bin-line"></i>
+                    </button>
+                </div>
+                <div class="assignment-card-body">
+                    <div class="form-group mb-3">
+                        <label>Service *</label>
+                        <select class="form-select select2 services-select" name="assignments[${assignmentIndex}][service_id]" data-placeholder="Select Service">
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label>Issued To *</label>
+                        <select class="form-select select2 employee-select" name="assignments[${assignmentIndex}][issued_to]" data-placeholder="Select Employee">
+                            <option value="">Select Employee</option>
+                            ${data.issued_to ? `<option value="${data.issued_to}" selected>${data.employee_name || 'Selected Employee'}</option>` : ''}
+                        </select>
+                        <input type="hidden" name="assignments[${assignmentIndex}][emp_id]" class="employee-id-input" value="${data.emp_id || ''}">
+                    </div>
+
+                    <div class="assignment-card-grid mb-3">
+                        <div class="form-group">
+                            <label>Issue Date *</label>
+                            <input type="text" class="form-control flatpickr-assignment issue-date" name="assignments[${assignmentIndex}][issue_date]" value="${data.issue_date || ''}" placeholder="Issue Date" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label>Due Date</label>
+                            <input type="text" class="form-control flatpickr-assignment due-date" name="assignments[${assignmentIndex}][due_date]" value="${data.due_date || ''}" placeholder="Due Date" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="assignment-card-grid mb-3">
+                        <div class="form-group">
+                            <label>Hrs</label>
+                            <input type="number" step="0.01" class="form-control total-hrs" name="assignments[${assignmentIndex}][total_hrs]" value="${data.total_hrs || ''}" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>Qty</label>
+                            <input type="number" step="1" class="form-control" name="assignments[${assignmentIndex}][issue_qty]" value="${data.issue_qty || ''}" placeholder="Qty">
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label>Status</label>
+                        <select class="form-select select2 status-select-row" name="assignments[${assignmentIndex}][status]">
+                            <option value="Open" ${data.status === 'Open' || !data.status ? 'selected' : ''}>Open</option>
+                            <option value="In Progress" ${data.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Completed" ${data.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Remarks</label>
+                        <input type="text" class="form-control" name="assignments[${assignmentIndex}][remarks]" value="${data.remarks || ''}" placeholder="Remarks">
+                    </div>
+                </div>
+            </div>`;
             
-            $('#assignment-repeater-table tbody').append(rowHtml);
-            let $row = $('#assignment-repeater-table tbody tr:last');
+            $('#add-assignment-row').before(rowHtml);
+            let $row = $('#assignment-cards-container .assignment-row:last');
             initRowControls($row, data);
             assignmentIndex++;
+            updateCardNumbers();
+        }
+
+        function updateCardNumbers() {
+            $('#assignment-cards-container .assignment-card').each(function(index) {
+                $(this).find('.card-badge').text('#' + (index + 1));
+            });
         }
 
         function initRowControls($row, data = {}) {
@@ -912,6 +955,11 @@
                 placeholder: 'Select Employee',
                 allowClear: true,
                 width: '100%'
+            }).on('select2:select', function(e) {
+                var data = e.params.data;
+                $row.find('.employee-id-input').val(data.emp_id || '');
+            }).on('select2:clear', function(e) {
+                $row.find('.employee-id-input').val('');
             });
         }
 
@@ -964,10 +1012,11 @@
         });
 
         $(document).on('click', '.remove-assignment-row', function() {
-            if ($('#assignment-repeater-table tbody tr').length > 1) {
-                $(this).closest('tr').remove();
+            if ($('#assignment-cards-container .assignment-card').length > 1) {
+                $(this).closest('.assignment-card').remove();
+                updateCardNumbers();
             } else {
-                alert('At least one assignment row is required.');
+                alert('At least one assignment is required.');
             }
         });
 
@@ -984,7 +1033,7 @@
             var $el = $(this);
             var stageId = $el.val();
             
-            $('#assignment-repeater-table tbody tr').each(function() {
+            $('#assignment-cards-container .assignment-row').each(function() {
                 calculateRowHours($(this));
             });
 
@@ -1240,6 +1289,102 @@
     
     .sticky-sidebar { position: sticky; top: 100px; }
     .avatar { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+
+    /* Assignment Card Styles */
+    #assignment-cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+    .assignment-card {
+        background: #fff;
+        border-radius: 1rem;
+        border: 1px solid rgba(105, 108, 255, 0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        padding: 1.25rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .assignment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(105, 108, 255, 0.15);
+        border-color: rgba(105, 108, 255, 0.3);
+    }
+    .assignment-card .card-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 0.25rem 1rem;
+        border-bottom-left-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(105, 108, 255, 0.1);
+        color: var(--erp-primary);
+    }
+    .assignment-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px dashed rgba(0,0,0,0.05);
+    }
+    .assignment-card-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #566a7f;
+        margin: 0;
+    }
+    .assignment-remove-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 62, 29, 0.1);
+        color: #ff3e1d;
+        border: none;
+        transition: 0.2s;
+    }
+    .assignment-remove-btn:hover {
+        background: #ff3e1d;
+        color: #fff;
+    }
+    .assignment-card-body .form-group {
+        margin-bottom: 0.75rem;
+    }
+    .assignment-card-body label {
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: #a1acb8;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+        display: block;
+    }
+    .assignment-card-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+    .add-assignment-card-btn {
+        height: 100%;
+        min-height: 200px;
+        border: 2px dashed rgba(105, 108, 255, 0.3);
+        border-radius: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: var(--erp-primary);
+        transition: all 0.2s;
+    }
+    .add-assignment-card-btn:hover {
+        background: rgba(105, 108, 255, 0.05);
+        border-color: var(--erp-primary);
+    }
 </style>
 <!-- History Modal -->
 <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">

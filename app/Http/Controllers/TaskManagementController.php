@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Production;
+
 use App\Models\JobCardEntry;
 use App\Models\User;
 use App\Models\ProcessSchedule;
@@ -25,80 +25,85 @@ class TaskManagementController extends Controller
 {
     public function index(Request $request)
     {
-        if (request()->ajax()) {
-            $tasks = Task::with(['jobCard', 'stage.operationStage', 'operationStage', 'assignments'])->get();
-            $allStatuses = TaskStatus::all();
-
-            $boards = [];
-            foreach ($allStatuses as $status) {
-                // Initialize boards using status name as key for fast lookup
-                $boards[$status->name] = ['id' => $status->name, 'title' => $status->name, 'item' => []];
-            }
-
-            foreach ($tasks as $t) {
-                $statusName = $t->status ?: 'Planned';
-                
-                // --- Date Fallback Logic ---
-                $stage = $t->stage;
-                if (!$stage && $t->job_card_entry_id) {
-                    // Try to find current schedule if orphaned
-                    $osId = $t->operation_stage_id ?? $t->stage_id; 
-                    $stage = \App\Models\ProcessSchedule::where('job_card_entry_id', $t->job_card_entry_id)
-                        ->where('operation_stage_id', $osId)
-                        ->first();
-                }
-
-                $jcStart = $stage && $stage->start_date ? Carbon::parse($stage->start_date)->format('d-m-Y') : ($t->jobCard && $t->jobCard->job_card_date ? Carbon::parse($t->jobCard->job_card_date)->format('d-m-Y') : 'N/A');
-                $jcEnd = $stage && $stage->due_date ? Carbon::parse($stage->due_date)->format('d-m-Y') : ($t->jobCard && $t->jobCard->delivery_date ? Carbon::parse($t->jobCard->delivery_date)->format('d-m-Y') : 'N/A');
-
-                $stageName = 'No Stage';
-                if ($stage) {
-                    $stageName = $stage->operationStage ? $stage->operationStage->operation_stage_name : ($stage->stage ?: 'No Stage');
-                } elseif ($t->operationStage) {
-                    $stageName = $t->operationStage->operation_stage_name ?: 'No Stage';
-                }
-                // ---------------------------
-
-                $targetQty = (float)($t->jobCard->grand_total_qty ?? 0);
-                if ($targetQty == 0 && $stage) {
-                    $targetQty = (float)($stage->planned_qty ?? 0);
-                }
-                if ($targetQty == 0) {
-                    $targetQty = (float)($t->issue_qty ?? 0);
-                }
-                
-                $totalReceived = 0;
-                foreach ($t->assignments as $assign) {
-                    $totalReceived += (float)$assign->completed_qty + (float)$assign->wastage_qty;
-                }
-
-
-                if (isset($boards[$statusName])) {
-                    $boards[$statusName]['item'][] = [
-                        'id' => $t->id,
-                        'eid' => $t->id,
-                        'task_no' => $t->task_no,
-                        'title' => ($t->job_card_no ?? 'No JC') . ' - ' . (int)$targetQty . ' PCS',
-                        'stage_name' => $stageName,
-                        'badge-text' => $statusName,
-                        'start-date' => $t->issue_date ? Carbon::parse($t->issue_date)->format('d-m-Y') : 'N/A',
-                        'due-date' => $t->due_date ? Carbon::parse($t->due_date)->format('d-m-Y') : 'N/A',
-                        'jc-start' => $jcStart,
-                        'jc-end' => $jcEnd,
-                        'working_level' => (float)max(0, $totalReceived) . ' / ' . (float)$targetQty . ' PCS',
-                        'total_received' => (float)max(0, $totalReceived),
-                        'target_qty' => (float)$targetQty
-                    ];
-                }
-            }
-            return response()->json(array_values($boards));
-        }
-
         if (auth()->id() != 1 && !auth()->user()->can('view task-management')) {
             return unauthorizedRedirect();
         }
         $allStatuses = TaskStatus::all();
         return view('task_management/view', compact('allStatuses')); 
+    }
+
+    public function fetch(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view task-management')) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $tasks = Task::with(['jobCard', 'stage.operationStage', 'operationStage', 'assignments'])->get();
+        $allStatuses = TaskStatus::all();
+
+        $boards = [];
+        foreach ($allStatuses as $status) {
+            // Initialize boards using status name as key for fast lookup
+            $boards[$status->name] = ['id' => $status->name, 'title' => $status->name, 'item' => []];
+        }
+
+        foreach ($tasks as $t) {
+            $statusName = $t->status ?: 'Planned';
+            
+            // --- Date Fallback Logic ---
+            $stage = $t->stage;
+            if (!$stage && $t->job_card_entry_id) {
+                // Try to find current schedule if orphaned
+                $osId = $t->operation_stage_id ?? $t->stage_id; 
+                $stage = \App\Models\ProcessSchedule::where('job_card_entry_id', $t->job_card_entry_id)
+                    ->where('operation_stage_id', $osId)
+                    ->first();
+            }
+
+            $jcStart = $stage && $stage->start_date ? Carbon::parse($stage->start_date)->format('d-m-Y') : ($t->jobCard && $t->jobCard->job_card_date ? Carbon::parse($t->jobCard->job_card_date)->format('d-m-Y') : 'N/A');
+            $jcEnd = $stage && $stage->due_date ? Carbon::parse($stage->due_date)->format('d-m-Y') : ($t->jobCard && $t->jobCard->delivery_date ? Carbon::parse($t->jobCard->delivery_date)->format('d-m-Y') : 'N/A');
+
+            $stageName = 'No Stage';
+            if ($stage) {
+                $stageName = $stage->operationStage ? $stage->operationStage->operation_stage_name : ($stage->stage ?: 'No Stage');
+            } elseif ($t->operationStage) {
+                $stageName = $t->operationStage->operation_stage_name ?: 'No Stage';
+            }
+            // ---------------------------
+
+            $targetQty = (float)($t->jobCard->grand_total_qty ?? 0);
+            if ($targetQty == 0 && $stage) {
+                $targetQty = (float)($stage->planned_qty ?? 0);
+            }
+            if ($targetQty == 0) {
+                $targetQty = (float)($t->issue_qty ?? 0);
+            }
+            
+            $totalReceived = 0;
+            foreach ($t->assignments as $assign) {
+                $totalReceived += (float)$assign->completed_qty + (float)$assign->wastage_qty;
+            }
+
+
+            if (isset($boards[$statusName])) {
+                $boards[$statusName]['item'][] = [
+                    'id' => $t->id,
+                    'eid' => $t->id,
+                    'task_no' => $t->task_no,
+                    'title' => ($t->job_card_no ?? 'No JC') . ' - ' . (int)$targetQty . ' PCS',
+                    'stage_name' => $stageName,
+                    'badge-text' => $statusName,
+                    'start-date' => $t->issue_date ? Carbon::parse($t->issue_date)->format('d-m-Y') : 'N/A',
+                    'due-date' => $t->due_date ? Carbon::parse($t->due_date)->format('d-m-Y') : 'N/A',
+                    'jc-start' => $jcStart,
+                    'jc-end' => $jcEnd,
+                    'working_level' => (float)max(0, $totalReceived) . ' / ' . (float)$targetQty . ' PCS',
+                    'total_received' => (float)max(0, $totalReceived),
+                    'target_qty' => (float)$targetQty
+                ];
+            }
+        }
+        return response()->json(array_values($boards));
     }
     
     public function add($id = null)
@@ -115,12 +120,10 @@ class TaskManagementController extends Controller
         
         $task = null;
         $jobCard = null;
-        $production = null;
         $stages = collect([]);
 
         if ($id) {
             $task = Task::with([
-                'production', 
                 'jobCard', 
                 'stage.operationStage',
                 'assignee', 
@@ -158,14 +161,13 @@ class TaskManagementController extends Controller
                 'assignments.*.service_id' => 'required',
                 'assignments.*.issued_to' => 'required',
                 'assignments.*.issue_date' => 'required',
-                'assignments.*.due_date' => 'required',
+                'assignments.*.due_date' => 'nullable',
                 'issue_store' => 'required',
                 'status' => 'required'
             ], [
                 'assignments.*.service_id.required' => 'This field is required.',
                 'assignments.*.issued_to.required' => 'This field is required.',
                 'assignments.*.issue_date.required' => 'This field is required.',
-                'assignments.*.due_date.required' => 'This field is required.',
                 'assignments.*.issue_qty.required' => 'This field is required.',
                 'assignments.*.issue_qty.min' => 'Issue Qty must be at least 1',
             ]);
@@ -246,6 +248,7 @@ class TaskManagementController extends Controller
                     $assignData = [
                         'task_id' => $task->id,
                         'issued_to' => $assign['issued_to'],
+                        'emp_id' => $assign['emp_id'] ?? null,
                         'issue_qty' => $assign['issue_qty'] ?? 0,
                         'total_hrs' => $assign['total_hrs'] ?? 0,
                         'status' => $assign['status'] ?? 'Open',
@@ -374,7 +377,7 @@ class TaskManagementController extends Controller
               ->first() ?? '';
         }
 
-        return view('task_management/add', compact('task', 'production', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses',  'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts',  'taskAdjustments', 'services', 'jobCardGrnNo'));
+        return view('task_management/add', compact('task', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses',  'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts',  'taskAdjustments', 'services', 'jobCardGrnNo'));
     }
 
     public function view($id)
@@ -382,7 +385,14 @@ class TaskManagementController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details task-management')) {
             return unauthorizedRedirect();
         }
-        $task = Task::with(['adjustments.items.rawMaterial', 'adjustments.items.uom'])->findOrFail($id);
+        $task = Task::with([
+            'stage.operationStage',
+            'operationStage',
+            'assignments.assignee',
+            'assignments.service',
+            'adjustments.items.rawMaterial',
+            'adjustments.items.uom'
+        ])->findOrFail($id);
         return view('task_management/view_details', compact('task'));
     }
 
@@ -585,14 +595,14 @@ class TaskManagementController extends Controller
 
     public function getStageConsumables(Request $request, $id)
     {
-        $schedule = \App\Models\ProcessSchedule::with(['operationStage', 'production.jobCard.fabricDetails', 'jobCard.fabricDetails', 'jobCard.item'])->find($id);
+        $schedule = \App\Models\ProcessSchedule::with(['operationStage', 'jobCard.fabricDetails', 'jobCard.item'])->find($id);
         
         $jobCard = null;
         $stageName = '';
 
         if ($schedule) {
             $stageName = $schedule->operationStage->operation_stage_name ?? ($schedule->stage ?? '');
-            $jobCard = $schedule->jobCard ?? ($schedule->production->jobCard ?? null);
+            $jobCard = $schedule->jobCard ?? null;
         }
 
         if (!$jobCard && $request->has('job_card_id')) {

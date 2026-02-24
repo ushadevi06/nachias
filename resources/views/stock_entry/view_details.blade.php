@@ -11,25 +11,39 @@
             <div class="card detail-card">
                 <div class="card-body">
                     <div class="row g-4">
+                        @php
+                            $firstItem = $stockEntry->stockEntryItems->first();
+                            $totalQtyIn = $stockEntry->stockEntryItems->sum('qty_in');
+                            $totalQtyOut = $stockEntry->stockEntryItems->sum('qty_out');
+                            $isRawMaterial = ($stockEntry->entry_type === 'Raw Material');
+                            $isFinishedGoods = ($stockEntry->entry_type === 'Finished Goods');
+                        @endphp
+
+                        @if($isRawMaterial)
                         <div class="col-md-4">
                             <label class="detail-title">Stock Entry No: </label>
                             <div class="text-muted">{{ $stockEntry->stock_entry_no }}</div>
                         </div>
+                        @endif
+
                         <div class="col-md-4">
                             <label class="detail-title">Stock Date:</label>
                             <div class="text-muted">{{ $stockEntry->stock_date->format('d-m-Y') }}</div>
                         </div>
 
-                        @php
-                            $firstItem = $stockEntry->stockEntryItems->first();
-                            $totalQtyIn = $stockEntry->stockEntryItems->sum('qty_in');
-                            $totalQtyOut = $stockEntry->stockEntryItems->sum('qty_out');
-                        @endphp
-
-                        @if($stockEntry->grnEntry)
+                        @if($isRawMaterial && $stockEntry->grnEntry)
                         <div class="col-md-4">
                             <label class="detail-title">GRN Number:</label>
                             <div class="text-muted">{{ $stockEntry->grnEntry->grn_number }}</div>
+                        </div>
+                        @elseif($isFinishedGoods)
+                        <div class="col-md-4">
+                            <label class="detail-title">PO Number:</label>
+                            <div class="text-muted">
+                                {{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard && $stockEntry->productionReceipt->jobCard->purchaseOrder) 
+                                    ? $stockEntry->productionReceipt->jobCard->purchaseOrder->po_number 
+                                    : '-' }}
+                            </div>
                         </div>
                         @endif
 
@@ -38,15 +52,16 @@
                             <div class="text-muted">{{ $stockEntry->entry_type ?? '-' }}</div>
                         </div>
 
-
-                        @if($firstItem)
+                        @if($isRawMaterial && $firstItem)
                         <div class="col-md-4">
                             <label class="detail-title">Category:</label>
                             <div class="text-muted">{{ $firstItem->storeCategory->category_name ?? '-' }} ({{ $firstItem->storeCategory->code ?? '-' }})</div>
                         </div>
+                        @endif
 
+                        @if($firstItem)
                         <div class="col-md-4">
-                            <label class="detail-title">Material / Item:</label>
+                            <label class="detail-title">{{ $isFinishedGoods ? 'Item' : 'Material / Item' }}:</label>
                             <div class="text-muted">
                                 @if($firstItem->stock_type == 'raw_material')
                                     {{ $firstItem->rawMaterial->name ?? '-' }} ({{ $firstItem->rawMaterial->code ?? '-' }})
@@ -55,20 +70,18 @@
                                 @endif
                             </div>
                         </div>
+                        @endif
 
+                        @if($isRawMaterial && $firstItem)
                         <div class="col-md-4">
                             <label class="detail-title">Art No:</label>
                             <div class="text-muted">
-                                @if($firstItem->stock_type == 'raw_material')
-                                    {{ $firstItem->grnEntryItem->art_no ?? '-' }}
-                                @else
-                                    {{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard && $stockEntry->productionReceipt->jobCard->item) 
-                                        ? $stockEntry->productionReceipt->jobCard->item->design_art_no 
-                                        : '-' }}
-                                @endif
+                                {{ $firstItem->grnEntryItem->art_no ?? '-' }}
                             </div>
                         </div>
+                        @endif
 
+                        @if($firstItem)
                         <div class="col-md-4">
                             <label class="detail-title">UOM:</label>
                             <div class="text-muted">{{ $firstItem->uom->uom_code ?? '-' }}</div>
@@ -81,7 +94,7 @@
                         @endif
 
                         <div class="col-md-4">
-                            <label class="detail-title">Total Quantity In:</label>
+                            <label class="detail-title">{{ $isFinishedGoods ? 'Quantity In' : 'Total Quantity In' }}:</label>
                             <div class="text-muted text-success fw-bold">+{{ $totalQtyIn + 0 }}</div>
                         </div>
 
@@ -90,6 +103,7 @@
                             <div class="text-muted">{{ $stockEntry->remarks ?? '-' }}</div>
                         </div>
 
+                        @if($isRawMaterial)
                         <div class="col-md-4">
                             <label class="detail-title">Reference Document:</label>
                             <div class="text-muted">
@@ -100,6 +114,7 @@
                                 @endif
                             </div>
                         </div>
+                        @endif
 
                     </div>
                 </div>

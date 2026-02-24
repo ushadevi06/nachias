@@ -273,7 +273,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('view_customer/{id}', [CustomerController::class, 'view']);
     Route::get('customers/delete/{id}', [CustomerController::class, 'destroy']);
 
-
     /* Customer/Suppliers */
     Route::get('/suppliers', [SupplierController::class, 'index']);
     Route::match(['GET', 'POST'], '/suppliers/add/{id?}', [SupplierController::class, 'add']);
@@ -294,7 +293,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('sales_agent/{id}', [SalesAgentController::class, 'show']);
     Route::get('sales_agent/delete/{id}', [SalesAgentController::class, 'destroy']);
     Route::post('sales_agent/status/{id}', [SalesAgentController::class, 'updateStatus']);
-
 
     /* Purchase Order */
     Route::get('/purchase_orders', [PurchaseOrderController::class, 'index'])->name('purchase_orders.index');
@@ -364,7 +362,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['get', 'post'], 'stock_entries/add/{id?}', [StockEntryController::class, 'add']);
     Route::post('stock_entries/quick-adjustment', [StockEntryController::class, 'quickAdjustment'])->name('stock_entries.quick_adjustment');
     Route::get('stock_entries/adjustment-logs/{id?}', [StockEntryController::class, 'adjustmentLogs'])->name('stock_entries.adjustment_logs');
-    Route::get('stock_entries/view/{id}', [StockEntryController::class, 'view']);
+    Route::get('stock_entries/view/{id}/{entry_type?}', [StockEntryController::class, 'view']);
 
     /* Store */
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class, 'index']);
@@ -413,13 +411,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('job_card_entries/view-details-pdf/{id}', [JobCardEntryController::class, 'viewDetailsPdf'])->name('job_card_entries.view_details_pdf');
     Route::get('job_card_entries/costing-analysis/{id}', [JobCardEntryController::class, 'costing_analysis'])->name('job_card_entries.costing_analysis');
 
-    /* Production */
-    Route::get('productions', [ProductionController::class, 'index']);
-    Route::match(['GET', 'POST'], 'productions/add/{id?}', [ProductionController::class, 'add']);
-    Route::get('productions/get-job-card-details/{id}', [ProductionController::class, 'getJobCardDetails']);
-    Route::get('productions/get-services/{stage}/{id}', [ProductionController::class, 'getServices']);
-    Route::get('view_production/{id}', [ProductionController::class, 'view']);
+    /* Task Management */
     Route::get('task_management', [TaskManagementController::class, 'index']); 
+    Route::get('task_management/fetch', [TaskManagementController::class, 'fetch'])->name('task_management.fetch');
     Route::match(['GET', 'POST'], 'task_management/add/{id}', [TaskManagementController::class, 'add'])->name('task_management.edit');
     Route::match(['GET', 'POST'], 'task_management/create', [TaskManagementController::class, 'add'])->name('task_management.add');
     Route::get('task_management/view/{id}', [TaskManagementController::class, 'view']);
@@ -428,11 +422,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::post('task_management/update-assignment-progress', [TaskManagementController::class, 'update_task_progress'])->name('task_management.update_progress');
     Route::get('task_management/get_logs/{id}', [AjaxController::class, 'getTaskLogs'])->name('task_management.get_logs');
 
-    /* Task Receive */
-    Route::get('task_receives', [TaskManagementController::class, 'receive_index'])->name('task_receives.index');
-    Route::match(['GET', 'POST'], 'task_receives/add/{id?}', [TaskManagementController::class, 'receive_add'])->name('task_receives.add');
-    Route::get('task_receives/delete/{id}', [TaskManagementController::class, 'receive_destroy']);
-    Route::get('task_receives/get-task-details/{id}', [TaskManagementController::class, 'getTaskDetails']);
     Route::get('task_management/get-stage-consumables/{id}', [TaskManagementController::class, 'getStageConsumables']);
 
     /* Task Adjustment */
