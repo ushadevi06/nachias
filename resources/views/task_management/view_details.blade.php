@@ -99,8 +99,8 @@
                                                         <td>{{ $i + 1 }}</td>
                                                          <td>
                                                             <div class="fw-bold">{{ $asgn->assignee->name ?? 'N/A' }}</div>
-                                                            @if($asgn->emp_id ?? $asgn->assignee->emp_id ?? null)
-                                                                <small class="text-muted">ID: {{ $asgn->emp_id ?? $asgn->assignee->emp_id }}</small>
+                                                            @if($asgn->assignee && $asgn->assignee->emp_id)
+                                                                <small class="text-muted">ID: {{ $asgn->assignee->emp_id }}</small>
                                                             @endif
                                                         </td>
                                                         <td>{{ $asgn->service->service_name ?? 'N/A' }}</td>

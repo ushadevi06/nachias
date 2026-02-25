@@ -15,7 +15,6 @@ class TaskAssignEmployee extends Model
     protected $fillable = [
         'task_id',
         'issued_to',
-        'emp_id',
         'service_id', 
         'issue_date',
         'due_date',

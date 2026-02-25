@@ -248,7 +248,6 @@ class TaskManagementController extends Controller
                     $assignData = [
                         'task_id' => $task->id,
                         'issued_to' => $assign['issued_to'],
-                        'emp_id' => $assign['emp_id'] ?? null,
                         'issue_qty' => $assign['issue_qty'] ?? 0,
                         'total_hrs' => $assign['total_hrs'] ?? 0,
                         'status' => $assign['status'] ?? 'Open',
@@ -506,7 +505,7 @@ class TaskManagementController extends Controller
                 if ((float)$qc_checked != (float)$originalQcChecked) $changes[] = "QC Checked: " . (float)$originalQcChecked . " -> " . (float)$qc_checked;
 
                 if (!empty($changes)) {
-                    $empName = $assignment->employee->name ?? 'Unknown Employee';
+                    $empName = $assignment->assignee->name ?? 'Unknown Employee';
                     $this->logActivity($task->id, 'Progress Update', "Updated progress for **$empName**: " . implode(', ', $changes));
                 }
             }

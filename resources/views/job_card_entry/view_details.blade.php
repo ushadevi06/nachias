@@ -3,7 +3,7 @@
 @section('content')
 <div class="container-xxl section-padding">
     @php
-        $allSizes = ['36', '38', '40', '42', '44','46'];
+        $allSizes = [];
         if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
             $allSizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
         }
@@ -143,7 +143,7 @@
                                 <td class="fw-bold p-3 text-center">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? '-') }}</td>
                                 <td class="fw-bold p-3">CUTTING DATE</td>
                                 <td class="p-3">{{ $jobCard->cutting_date ? date('d-m-Y', strtotime($jobCard->cutting_date)) : '' }}</td>
-                                <td class="fw-bold p-3 vertical-align:middle;">H.O/D.C/NO</td>
+                                <td class="text-center fw-bold p-3">H.O/D.C/NO</td>
                             </tr>
 
                             {{-- Row 3 --}}
@@ -201,7 +201,7 @@
                                         <tr class="text-center" style="font-size: 0.8rem;">
                                             @foreach($sizes as $size)
                                                 @php $ratio = $jobCard->cuttingSizeRatios->where('size', $size)->first(); @endphp
-                                                <td class="py-1" style="width: 14.28%; border: 1px solid #eeeeee;">
+                                                <td class="py-1" style="width: 14.28%; border: 1px solid #fff; border-right: 1px solid #eeeeee;">
                                                     {{ ($ratio && $ratio->qty_fs > 0) ? (int)$ratio->qty_fs : '-' }}
                                                 </td>
                                             @endforeach
@@ -222,7 +222,7 @@
                                         <tr class="text-center" style="font-size: 0.8rem;">
                                             @foreach($sizes as $size)
                                                 @php $ratio = $jobCard->cuttingSizeRatios->where('size', $size)->first(); @endphp
-                                                <td class="py-1" style="width: 14.28%; border: 1px solid #eeeeee;">
+                                                <td class="py-1" style="width: 14.28%; border: 1px solid #fff; border-right: 1px solid #eeeeee;">
                                                     {{ ($ratio && $ratio->qty_hs > 0) ? (int)$ratio->qty_hs : '-' }}
                                                 </td>
                                             @endforeach
@@ -256,57 +256,44 @@
                     @endif
 
                     <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
-                        <thead>
-                            <tr class="text-center">
-                                @foreach($jobCard->fabricDetails as $detail)
-                                    <th class="fw-bold">ART NO</th>
-                                    <th>{{ $detail->art_no }}</th>
-                                @endforeach
-                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
-                                    <th class="fw-bold">ART NO</th>
-                                    <th></th>
-                                @endfor
-                            </tr>
-                        </thead>
                         <tbody>
                             <tr class="text-center">
+                                <td class="fw-bold" style="width: 15%;">ART NO</td>
                                 @foreach($jobCard->fabricDetails as $detail)
-                                    <td class="fw-bold">WIDTH</td>
+                                    @php
+                                        $materialName = $artMaterialMap[$detail->art_no] ?? '';
+                                    @endphp
+                                    <td>
+                                        {{ $detail->art_no }}
+                                        @if($materialName)
+                                            <br><small class="text-muted" style="font-size: 0.7rem;">{{ $materialName }}</small>
+                                        @endif
+                                    </td>
+                                @endforeach
+                            </tr>
+                            <tr class="text-center">
+                                <td class="fw-bold">WIDTH</td>
+                                @foreach($jobCard->fabricDetails as $detail)
                                     <td>{{ $detail->width ?: '-' }}</td>
                                 @endforeach
-                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
-                                    <td class="fw-bold">WIDTH</td>
-                                    <td></td>
-                                @endfor
                             </tr>
                             <tr class="text-center">
+                                <td class="fw-bold">Issue Meter</td>
                                 @foreach($jobCard->fabricDetails as $detail)
-                                    <td class="fw-bold">M/B.M</td>
                                     <td>{{ $detail->mtr ?: '-' }}</td>
                                 @endforeach
-                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
-                                    <td class="fw-bold">M/B.M</td>
-                                    <td></td>
-                                @endfor
                             </tr>
                             <tr class="text-center">
+                                <td class="fw-bold">IN/OUT</td>
                                 @foreach($jobCard->fabricDetails as $detail)
-                                    <td class="fw-bold">IN/OUT</td>
                                     <td>{{ $detail->in_out ?: '-' }}</td>
                                 @endforeach
-                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
-                                    <td class="fw-bold">IN/OUT</td>
-                                    <td></td>
-                                @endfor
+                            </tr>
                             <tr class="text-center">
+                                <td class="fw-bold">N.PATTI</td>
                                 @foreach($jobCard->fabricDetails as $detail)
-                                    <td class="fw-bold">N.PATTI</td>
                                     <td>{{ $detail->n_patti ?: '-' }}</td>
                                 @endforeach
-                                @for($i = count($jobCard->fabricDetails); $i < 5; $i++)
-                                    <td class="fw-bold">N.PATTI</td>
-                                    <td></td>
-                                @endfor
                             </tr>
                         </tbody>
                     </table>
@@ -363,7 +350,15 @@
                                     }
                                 @endphp
                                 <tr class="text-center">
-                                    <td>{{ $detail->art_no }}</td>
+                                    <td>
+                                        @php
+                                            $materialName = $artMaterialMap[$detail->art_no] ?? '';
+                                        @endphp
+                                        {{ $detail->art_no }}
+                                        @if($materialName)
+                                            <br><small class="text-muted" style="font-size: 0.65rem;">{{ $materialName }}</small>
+                                        @endif
+                                    </td>
                                     @foreach($activeFs as $s)
                                         @php 
                                             $q = $detail->quantities->where('size', $s)->first(); 
@@ -371,9 +366,6 @@
                                         @endphp
                                         <td>
                                             {{ ($q && $q->qty_fs > 0) ? (int)$q->qty_fs : '-' }}
-                                            @if($cons && $cons->fs_cons > 0)
-                                                <br><small class="text-muted" style="font-size: 0.65rem;">{{ $cons->fs_cons }}m</small>
-                                            @endif
                                         </td>
                                     @endforeach
                                     @foreach($activeHs as $s)
@@ -383,23 +375,11 @@
                                         @endphp
                                         <td>
                                             {{ ($q && $q->qty_hs > 0) ? (int)$q->qty_hs : '-' }}
-                                            @if($cons && $cons->hs_cons > 0)
-                                                <br><small class="text-muted" style="font-size: 0.65rem;">{{ $cons->hs_cons }}m</small>
-                                            @endif
                                         </td>
                                     @endforeach
                                     <td class="fw-bold">{{ $row_total ?: '-' }}</td>
                                 </tr>
                             @endforeach
-                            {{-- Fill empty rows if needed to maintain layout --}}
-                            @for($i = count($jobCard->fabricDetails); $i < 6; $i++)
-                                <tr class="text-center">
-                                    <td>&nbsp;</td>
-                                    @foreach($activeFs as $s) <td></td> @endforeach
-                                    @foreach($activeHs as $s) <td></td> @endforeach
-                                    <td></td>
-                                </tr>
-                            @endfor
                         </tbody>
                         <tfoot>
                             <tr class="text-center fw-bold">
@@ -414,61 +394,126 @@
                             </tr>
                         </tfoot>
                     </table>
-
-                    <div class="row g-0 border border-top-0" style="border-color: #eeeeee !important;">
-                        <div class="col-10">
-                            <div class="bg-light text-center fw-bold py-1 border-bottom" style="font-size: 0.8rem; border-color: #eeeeee !important;">AUTHORISED SIGNATURES</div>
-                            <table class="table mb-0 job-card-table" style="border: none;">
-                                <thead>
-                                    <tr class="text-center fw-bold" style="font-size: 0.7rem; border-bottom: 1px solid #eeeeee;">
-                                        <td colspan="2" style="border-right: 1px solid #eeeeee;">AUTHORISED SIGNATURES</td>
-                                        <td colspan="2" style="border-right: 1px solid #eeeeee;">CUTTING RECEIVED BY</td>
-                                        <td colspan="2" style="border-right: 1px solid #eeeeee;">ASSAMBILE</td>
-                                        <td colspan="2">TRIMMING & CHECKING</td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr style="border-bottom: 1px solid #eeeeee;">
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">FABRIC INCHARGE</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">UNIT INCHARGE</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">PRODUCTION UNIT SEND BY</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem;">IRONING</td>
-                                    </tr>
-                                    <tr style="border-bottom: 1px solid #eeeeee;">
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">FABRIC ISSUED BY</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">READY SECTION</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">H.O RECEIVED BY</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem;">PACKING & DELIVERY</td>
-                                    </tr>
-                                    <tr style="border-bottom: 1px solid #eeeeee;">
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">CUTTING SUPERVISOR</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">READY STORE</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">KAJA & BUTTON</td>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem;">F.G STORE</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold py-1" style="width: 5%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">DATE</td>
-                                        <td class="py-1 text-center fw-bold" style="width: 20%; font-size: 0.65rem; border-right: 1px solid #eeeeee;">CUTTING SEND BY</td>
-                                        <td colspan="6"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="col-2 border-start" style="border-color: #eeeeee !important;">
-                            <div class="bg-light text-center fw-bold py-1 border-bottom" style="font-size: 0.8rem; border-color: #eeeeee !important;">REMARKS</div>
-                            <div class="p-2" style="font-size: 0.75rem; min-height: 200px; white-space: pre-wrap;">{{ $jobCard->remarks }}</div>
+                    {{-- Authorised Signatures Section --}}
+                    <div class="mt-4">
+                        <style>
+                            .signature-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                border: 1px solid #000;
+                            }
+                            .signature-table th, .signature-table td {
+                                border: 1px solid #000;
+                                padding: 4px;
+                                font-size: 0.75rem;
+                                text-transform: uppercase;
+                            }
+                            .signature-table .header-row {
+                                font-weight: bold;
+                                text-align: left;
+                            }
+                            .signature-table .label-cell {
+                                font-weight: bold;
+                            }
+                            .signature-table .grid-cell {
+                                height: 25px;
+                            }
+                            .remarks-cell {
+                                vertical-align: top;
+                                position: relative;
+                            }
+                            .remarks-grid {
+                                width: 100%;
+                                height: 100%;
+                                border-collapse: collapse;
+                            }
+                            .remarks-grid td {
+                                border: 0.5px solid #ccc;
+                                height: 25px;
+                            }
+                        </style>
+                        <table class="signature-table">
+                            <thead>
+                                <tr class="header-row">
+                                    <th colspan="13">AUTHORISED SIGNATURES</th>
+                                </tr>
+                                <tr class="text-center fw-bold">
+                                    <th style="width: 10%;">SECTION</th>
+                                    <th style="width: 10%;">INCHARGE SIGN</th>
+                                    <th style="width: 10%;">PLANING DATE</th>
+                                    <th style="width: 10%;">SECTION</th>
+                                    <th style="width: 10%;">INCHARGE SIGN</th>
+                                    <th style="width: 10%;">DATE</th>
+                                    <th style="width: 10%;">SECTION</th>
+                                    <th style="width: 10%;">INCHARGE SIGN</th>
+                                    <th style="width: 10%;">DATE</th>
+                                    <th style="width: 5%;">TOTAL MTRS</th>
+                                    <th style="width: 5%;" class="text-center">{{ (int)$grand_total }}</th>
+                                    <th colspan="2" style="width: 10%;">REMARKS:</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="label-cell">PURCHASE</td>
+                                    <td></td>
+                                    <td rowspan="2" class="text-center" style="vertical-align: middle;">{{ date('d-m-Y', strtotime($jobCard->job_card_date)) }}</td>
+                                    <td class="label-cell">READY</td>
+                                    <td></td>
+                                    <td rowspan="2" class="text-center" style="vertical-align: middle;">{{ date('d-m-Y', strtotime($jobCard->job_card_date . ' + 7 days')) }}</td>
+                                    <td class="label-cell">FINAL FINISH RECD</td>
+                                    <td rowspan="4"></td>
+                                    <td rowspan="7" class="text-center" style="vertical-align: middle;">{{ date('d-m-Y', strtotime($jobCard->delivery_date)) }}</td>
+                                    <td colspan="4" rowspan="7" class="remarks-cell">
+                                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); height: 100%;">
+                                            @for($i = 0; $i < 28; $i++)
+                                                <div style="border: 0.1px solid #ddd; height: 25px;"></div>
+                                            @endfor
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">FABRIC STORE</td>
+                                    <td></td>
+                                    <td class="label-cell">READY STORE</td>
+                                    <td></td>
+                                    <td class="label-cell">IRONING</td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">CUTTING</td>
+                                    <td rowspan="5"></td>
+                                    <td rowspan="5" class="text-center" style="vertical-align: middle;">{{ date('d-m-Y', strtotime($jobCard->job_card_date . ' + 3 days')) }}</td>
+                                    <td class="label-cell">ASSEMBLE</td>
+                                    <td rowspan="2"></td>
+                                    <td rowspan="2" class="text-center" style="vertical-align: middle;">{{ date('d-m-Y', strtotime($jobCard->job_card_date . ' + 10 days')) }}</td>
+                                    <td class="label-cell">PACKING</td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">FUSING & LOGO</td>
+                                    <td class="label-cell">ASSEMBLE STORE</td>
+                                    <td class="label-cell">DELIVERY</td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">CUTTING SEND BY</td>
+                                    <td class="label-cell">KAJA & BUTTON</td>
+                                    <td rowspan="3"></td>
+                                    <td rowspan="3" class="text-center" style="vertical-align: middle;">{{ date('d-m-Y', strtotime($jobCard->job_card_date . ' + 12 days')) }}</td>
+                                    <td class="label-cell">F.G STORE</td>
+                                    <td rowspan="3"></td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">CUTTING RECD BY</td>
+                                    <td class="label-cell">TRIM & CHECK</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="label-cell">UNIT INCHARGE</td>
+                                    <td class="label-cell">PRO SEND</td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="mt-2" style="font-size: 0.8rem; font-weight: bold;">
+                            MANDATORY : Please put your signature once you have completed your SYSTEM ENTRY
                         </div>
                     </div>
                 </div>

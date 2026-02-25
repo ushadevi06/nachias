@@ -188,15 +188,17 @@
                                                 @foreach($assignmentsArr as $index => $assign)
                                                     @php 
                                                         $assign = (object)$assign;
-                                                        $emp_id_val = $assign->issued_to ?? ($assign->emp_id ?? '');
+                                                        $emp_id_val = $assign->issued_to ?? '';
                                                         $employee_name = '';
-                                                        $employee_emp_id = $assign->emp_id ?? '';
+                                                        $employee_emp_id = '';
+                                                        
                                                         if (isset($assign->assignee)) {
                                                             $employee_name = $assign->assignee->name;
-                                                            $employee_emp_id = $employee_emp_id ?: ($assign->assignee->emp_id ?? '');
+                                                            $employee_emp_id = $assign->assignee->emp_id ?? '';
                                                         } elseif (isset($assign->employee_name)) {
                                                             $employee_name = $assign->employee_name;
                                                         }
+                                                        
                                                         $employee_display = $employee_name ?: 'Selected Employee';
                                                         if ($employee_emp_id) {
                                                             $employee_display .= ' (' . $employee_emp_id . ')';
@@ -243,7 +245,7 @@
                                                                         <option value="{{ $emp_id_val }}" selected>{{ $employee_display }}</option>
                                                                     @endif
                                                                 </select>
-                                                                <input type="hidden" name="assignments[{{ $index }}][emp_id]" class="employee-id-input" value="{{ $assign->emp_id ?? '' }}">
+                                                                <input type="hidden" name="assignments[{{ $index }}][emp_id]" class="employee-id-input" value="{{ $employee_emp_id }}">
                                                                 @error("assignments.$index.issued_to") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
                                                             </div>
 
@@ -589,7 +591,6 @@
                                         </div>
                                         @error('approved_by') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
-
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
                                             <textarea class="form-control @error('overall_reason') is-invalid @enderror" name="overall_reason" style="height: 60px;" placeholder="Overall reason for this adjustment">{{ old('overall_reason', $taskAdjustment->overall_reason ?? ($taskAdjustment->reason ?? '')) }}</textarea>
@@ -1610,7 +1611,7 @@
             $('#history-content').empty();
 
             $.ajax({
-                url: '/task_management/get_logs/' + taskId,
+                url: `{{ url('task_management/get_logs') }}/${taskId}`,
                 method: 'GET',
                 success: function(response) {
                     $('#history-loading').hide();

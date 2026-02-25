@@ -500,8 +500,34 @@ class JobCardEntryController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view job-card')) {
             return unauthorizedRedirect();
         }
-        $jobCard = JobCardEntry::with(['purchaseOrder', 'brand', 'season', 'processGroup', 'cuttingSizeRatios', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'images', 'sleeveMeters', 'fit', 'pattiType', 'collarType', 'cuffType', 'pocketType', 'bottomCut'])->findOrFail($id);
-        return view('job_card_entry/view_details', compact('jobCard'));
+        $jobCard = JobCardEntry::with(['purchaseOrder.items.rawMaterial', 'brand', 'season', 'processGroup', 'cuttingSizeRatios', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'images', 'sleeveMeters', 'fit', 'pattiType', 'collarType', 'cuffType', 'pocketType', 'bottomCut'])->findOrFail($id);
+        
+        // Fetch material names similar to getPoDetails logic
+        $artMaterialMap = [];
+        if ($jobCard->purchase_order_id) {
+            $invoiceIds = \App\Models\PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
+            $grnItems = \App\Models\GrnEntryItem::whereIn('grn_entry_id', function($query) use ($invoiceIds) {
+                $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
+            })->with(['purchaseInvoiceItem.rawMaterial', 'fabricType'])->get();
+
+            foreach ($grnItems as $item) {
+                $name = $item->purchaseInvoiceItem->rawMaterial->name ?? ($item->fabricType->operation_stage_name ?? ($item->fabricType->name ?? null));
+                if ($name && !isset($artMaterialMap[$item->art_no])) {
+                    $artMaterialMap[$item->art_no] = $name;
+                }
+            }
+
+            // Fallback to PO items
+            if ($jobCard->purchaseOrder && $jobCard->purchaseOrder->items) {
+                foreach ($jobCard->purchaseOrder->items as $poItem) {
+                    if (!isset($artMaterialMap[$poItem->art_no])) {
+                        $artMaterialMap[$poItem->art_no] = $poItem->rawMaterial->name ?? null;
+                    }
+                }
+            }
+        }
+
+        return view('job_card_entry/view_details', compact('jobCard', 'artMaterialMap'));
     }
 
     public function view_jc_item($id) {
