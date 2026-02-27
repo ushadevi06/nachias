@@ -49,7 +49,7 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" min="0" max="100" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
+                                    <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
                                     <label for="commission">Commission (%)</label>
                                 </div>
                                 @error('commission')
@@ -108,9 +108,7 @@
                                     <select id="store_type_id" name="store_type_id" class="select2 form-select @error('store_type_id') is-invalid @enderror" data-placeholder="Select Store Type">
                                         <option value="">Select Store Type</option>
                                         @foreach($storeTypes as $storeType)
-                                        <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>
-                                            {{ $storeType->store_type_name }}
-                                        </option>
+                                        <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>{{ $storeType->store_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="store_type_id">Store Type <span class="text-danger">*</span></label>
@@ -397,7 +395,7 @@
                                             <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
                                             <input type="hidden" name="items[{{ $index }}][existing_file]" value="{{ $item->attached_file }}">
                                             @if($item->attached_file)
-                                            <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ url('uploads/purchase_orders/' . $item->attached_file) }}">
+                                            <a href="{{ url('uploads/purchase_orders/' . $item->attached_file) }}" class="mt-1 d-block" target="_blank">
                                                 <i class="ri ri-image-line"></i> View
                                             </a>
                                             @endif
@@ -560,18 +558,17 @@
                                                     $url = url('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
                                                 @endphp
 
-                                                @if($isImage)
-                                                    <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ $url }}">
+                                                <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
+                                                    @if($isImage)
                                                         <i class="ri ri-image-line"></i> View
-                                                    </a>
-                                                @else
-                                                    <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
+                                                    @else
                                                         <i class="ri ri-file-text-line"></i> View
-                                                    </a>
-                                                @endif
+                                                    @endif
+                                                </a>
                                             </div>
                                             @endif
                                         </div>
+                                        <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                         @error('additional_attachments')
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                         @enderror
@@ -602,7 +599,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">Discount:</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent" step="0.01" min="0" max="100" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent" step="0.01" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -643,7 +640,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="igst_percent" class="fw-medium">IGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -653,7 +650,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="cgst_percent" class="fw-medium">CGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100"
+                                                    <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" 
                                                         value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
@@ -664,7 +661,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="sgst_percent" class="fw-medium">SGST :</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100"  value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01"   value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -705,21 +702,6 @@
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-
-<!-- Image Preview Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Image Preview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalImage" src="" class="img-fluid" alt="Preview">
-            </div>
         </div>
     </div>
 </div>
@@ -1007,46 +989,6 @@
             }
         }
 
-       $(document).on('click', '.view-image', function () {
-        let imagePath = $(this).data('image');
-
-        let imageSrc = imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('blob:')
-            ? imagePath
-            : APP_URL + imagePath;
-
-        $('#modalImage').attr('src', imageSrc);
-        $('#imageModal').modal('show');
-    });
-
-    /* $(document).on('change', '.file-input', function () {
-        let file = this.files[0];
-        let $container = $(this).closest('td, .file-container');
-        
-        $container.find('.js-preview').remove();
-
-        if (file) {
-            let fileUrl = URL.createObjectURL(file);
-            let fileType = file.type;
-
-            if (fileType.startsWith('image/')) {
-                $container.append(`
-                    <a href="javascript:void(0)" class="view-image mt-1 d-block js-preview" data-image="${fileUrl}">
-                        <i class="ri ri-image-line"></i> View Selected Image
-                    </a>
-                `);
-            } else if (fileType === 'application/pdf') {
-                $container.append(`
-                    <a href="${fileUrl}" class="view-file mt-1 d-block js-preview" target="_blank">
-                        <i class="ri ri-file-pdf-line"></i> View Selected PDF
-                    </a>
-                `);
-            } else {
-                $container.append(`
-                    <span class="text-muted small mt-1 d-block text-truncate js-preview">Selected: ${file.name}</span>
-                `);
-            }
-        }
-    }); */
     calculateTotals();
 });
 </script>

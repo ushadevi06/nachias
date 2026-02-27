@@ -20,8 +20,7 @@ class DepartmentController extends Controller
             foreach ($departments as $row) {
                 $status = '
                 <label class="switch switch-success switch-lg">
-                    <input type="checkbox" class="switch-input department-status-toggle"
-                        data-id="' . $row->id . '" ' . ($row->status == "Active" ? "checked" : "") . '>
+                    <input type="checkbox" class="switch-input department-status-toggle" data-id="' . $row->id . '" ' . ($row->status == "Active" ? "checked" : "") . '>
                     <span class="switch-toggle-slider">
                         <span class="switch-on"></span>
                         <span class="switch-off"></span>
@@ -79,7 +78,6 @@ class DepartmentController extends Controller
                 $data['updated_by'] = auth()->id();
                 Department::where('id', $id)->update($data);
                 addLog('update', 'Department', 'departments', $id, null, $data);
-
                 $msg = 'Department updated successfully';
             } else {
                 $data['created_by'] = auth()->id();

@@ -16,9 +16,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" placeholder="Enter Role Name" value="{{ old('name', $role->name) }}" {{ $role->id == 4 ? 'readonly' : '' }}>
                                     <label for="name">Role Name <span class="text-danger">*</span> </label>
-                                    @error('name')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                                    @error('name')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                                 </div>
                             </div>
                             <div class="col-lg-12">
@@ -36,7 +34,7 @@
                                                 <th>Others</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody> 
                                             @foreach ($permissions as $main => $submodules)
                                             <tr class="table-primary">
                                                 <td colspan="8">
@@ -101,11 +99,7 @@
                                                     @if($others->isNotEmpty())
                                                         @foreach($others as $other)
                                                             <div class="form-check mb-2">
-                                                                <input type="checkbox" class="permission form-check-input"
-                                                                    data-sub="{{ $main }}"
-                                                                    name="permissions[]"
-                                                                    value="{{ $other->name }}"
-                                                                    {{ in_array($other->name, $rolePermissions ?? []) ? 'checked' : '' }}>
+                                                                <input type="checkbox" class="permission form-check-input" data-sub="{{ $main }}" name="permissions[]" value="{{ $other->name }}" {{ in_array($other->name, $rolePermissions ?? []) ? 'checked' : '' }}>
                                                                 <p class="small">{{ ucwords(str_replace(['-', '_'], ' ', $other->action)) }}</p>
                                                             </div>
                                                         @endforeach

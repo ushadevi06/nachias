@@ -14,9 +14,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name"
-                                        placeholder="Enter Process Group Name" name="name"
-                                        value="{{ old('name', $processGroup->name ?? '') }}">
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" placeholder="Enter Process Group Name" name="name" value="{{ old('name', $processGroup->name ?? '') }}">
                                     <label for="name">Process Group Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('name')
@@ -25,15 +23,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $processGroup->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $processGroup->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $processGroup->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $processGroup->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

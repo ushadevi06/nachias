@@ -65,7 +65,7 @@ class OperationStageController extends Controller
                     'required',
                     'string',
                     'min:3',
-                    'max:100',
+                    'max:50',
                     Rule::unique('operation_stages', 'operation_stage_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')

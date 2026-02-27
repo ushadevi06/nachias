@@ -17,22 +17,15 @@
     <link rel="stylesheet" href="{{ url('assets/css/demo.css') }}">
     <link rel="stylesheet" href="{{ url('assets/fonts/iconify-icons.css') }}">
     <link rel="stylesheet" href="{{ url('assets/css/node-waves.css') }}">
-    <link rel="stylesheet" href="{{ url('assets/css/responsive.bootstrap5.css') }}">
-    <link rel="stylesheet" href="{{ url('assets/css/select2.css') }}">
     <link rel="stylesheet" href="{{ url('assets/css/page-auth.css') }}">
-    <link rel="stylesheet" href="{{ url('assets/datatables/css/dataTables.bootstrap5.min.css') }}">
 </head>
 
 <body>
     <div class="authentication-wrapper authentication-cover">
-        <!--   <a href="{{ url('') }}" class="auth-cover-brand d-flex align-items-center gap-3">
-            <span class="app-brand-text demo text-heading fw-semibold">Nachias</span>
-        </a> -->
         <div class="authentication-inner row m-0">
             <div class="d-none d-lg-flex col-lg-5 align-items-center justify-content-center p-0 login-background">
                 <img src="{{ url('assets/images/login.png') }}" class="img-fluid" alt="login background" />
             </div>
-            <!-- Login -->
             <div class="d-flex col-12 col-lg-7 align-items-center authentication-bg position-relative py-sm-5 px-4 py-4">
                 <div class="login-card">
                     <h4 class="login-logo">Nachias</h4>
@@ -51,7 +44,7 @@
                             <div class="form-password-toggle form-control-validation">
                                 <div class="input-group input-group-merge">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="password" name="password" id="form-alignment-password" class="form-control" placeholder="············" aria-describedby="form-alignment-password2" onkeypress="return event.charCode !== 32" value="{{ old('password', Cookie::get('password') ?? '') }}">
+                                        <input type="password" name="password" id="form-alignment-password" class="form-control" placeholder="Enter your password" aria-describedby="form-alignment-password2" onkeypress="return event.charCode !== 32" value="{{ old('password', Cookie::get('password') ?? '') }}">
                                         <label for="form-alignment-password">Password</label>
                                     </div>
                                     <span class="input-group-text cursor-pointer" id="form-alignment-password2"><i class="icon-base ri ri-eye-off-line"></i></span>
@@ -74,10 +67,7 @@
     <script src="{{ url('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ url('assets/js/config.js') }}"></script>
     <script src="{{ url('assets/js/helpers.js') }}"></script>
-    <script src="{{ url('assets/js/menu.js') }}"></script>
     <script src="{{ url('assets/js/main.js') }}"></script>
-    <script src="{{ url('assets/js/select2.js') }}"></script>
     <script src="{{ url('assets/js/bootstrap.js') }}"></script>
 </body>
-
 </html>

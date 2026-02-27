@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'Add Debit Note - ' . env('WEBSITE_NAME'))
+@section('title', ($debitNote ? 'Edit Debit Note' : 'Add Debit Note') . ' - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
@@ -9,7 +9,7 @@
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
-                            <h4>Add Debit Note</h4>
+                            <h4>{{ $debitNote ? 'Edit' : 'Add' }} Debit Note</h4>
                         </div>
                         <div class="row g-4">
                             <div class="col-md-4">
@@ -21,7 +21,7 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="date" id="debit_note_date" name="debit_note_date" class="form-control" value="{{ old('debit_note_date', isset($debitNote) ? $debitNote->debit_note_date->format('Y-m-d') : date('Y-m-d')) }}">
+                                    <input type="text" id="debit_note_date" name="debit_note_date" class="form-control date-picker" value="{{ old('debit_note_date', isset($debitNote) ? $debitNote->debit_note_date->format('d-m-Y') : date('d-m-Y')) }}">
                                     <label for="debit_note_date">Debit Note Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('debit_note_date') <div class="text-danger">{{ $message }}</div> @enderror
@@ -52,6 +52,7 @@
                                     <input type="text" id="reason" name="reason" class="form-control" placeholder="Enter Reason" value="{{ old('reason', $debitNote->reason ?? '') }}">
                                     <label for="reason">Reason for Debit Note</label>
                                 </div>
+                                @error('reason') <div class="text-danger">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
@@ -183,6 +184,7 @@
                                             <textarea class="form-control" id="remarks" name="remarks" placeholder="Remarks" style="height: 120px;">{{ old('remarks', $debitNote->remarks ?? '') }}</textarea>
                                             <label for="remarks">Remarks</label>
                                         </div>
+                                        @error('remarks') <div class="text-danger">{{ $message }}</div> @enderror
                                     </div>
                                     <div class="col-12">
                                         <div class="form-group mb-3">
@@ -194,6 +196,8 @@
                                                 </div>
                                             @endif
                                         </div>
+                                        <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                        @error('reference_document') <div class="text-danger">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                             </div>
@@ -211,7 +215,7 @@
                                     <div class="col-md-6 text-end">
                                         <div class="d-flex gap-4 justify-content-end">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'Y') ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="other_state_yes">Yes</label>
                                             </div>
                                             <div class="form-check">
@@ -235,7 +239,7 @@
                                         <div class="col-md-6"><label class="fw-bold">IGST:</label></div>
                                         <div class="col-md-6 text-end">
                                             <div class="d-flex gap-2 align-items-center justify-content-end">
-                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
+                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
                                                 <span>%</span>
                                                 <strong id="igst_amt">₹0.00</strong>
                                             </div>
@@ -248,7 +252,7 @@
                                         <div class="col-md-6"><label class="fw-bold">CGST:</label></div>
                                         <div class="col-md-6 text-end">
                                             <div class="d-flex gap-2 align-items-center justify-content-end">
-                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
+                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
                                                 <span>%</span>
                                                 <strong id="cgst_amt">₹0.00</strong>
                                             </div>
@@ -258,7 +262,7 @@
                                         <div class="col-md-6"><label class="fw-bold">SGST:</label></div>
                                         <div class="col-md-6 text-end">
                                             <div class="d-flex gap-2 align-items-center justify-content-end">
-                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
+                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
                                                 <span>%</span>
                                                 <strong id="sgst_amt">₹0.00</strong>
                                             </div>
@@ -442,11 +446,16 @@
             $('#grand_total_display').text('₹' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         }
 
-        @if(isset($debitNote))
-             $('input[name="other_state"][value="{{ $debitNote->other_state }}"]').prop('checked', true);
+        @if(isset($debitNote) || old('other_state'))
              toggleTaxDivs();
              calculateTotals();
         @endif
+        
+        // Ensure initial state is set
+        if (!$('input[name="other_state"]:checked').length) {
+            $('#other_state_no').prop('checked', true);
+        }
+        toggleTaxDivs();
     });
 </script>
 

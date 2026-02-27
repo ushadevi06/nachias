@@ -5,13 +5,15 @@
 </div>
 
 <script src="{{ url('assets/js/select2.js') }}"></script>
-<script src="{{ url('assets/datatables/js/jquery.dataTables.min.js') }}"></script>
-<script src="{{ url('assets/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
-<script src="{{ url('assets/datatables/js/dataTables.responsive.min.js') }}"></script>
+<script src="{{ asset('assets/datatables/js/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('assets/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ asset('assets/datatables/js/dataTables.responsive.min.js') }}"></script>
 <script src="{{ url('assets/js/bs-stepper.js') }}"></script>
 <script src="{{ url('assets/js/form-wizard-numbered.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ url('assets/js/flatpickr.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
 <script src="{{ url('assets/js/menu.js') }}"></script>
 <script src="{{ url('assets/js/main.js') }}"></script>
 <script src="{{ url('assets/js/common.js') }}"></script>
@@ -26,12 +28,10 @@
     const menuInner = document.querySelector('.menu-inner');
     const lastMenuItem = menuInner ? menuInner.lastElementChild : null;
 
-    // Ensure margin is not negative
     if (menuInner) {
         menuInner.style.marginLeft = '0';
     }
 
-    // When last item is clicked, scroll only if necessary
     if (lastMenuItem) {
         lastMenuItem.addEventListener('click', () => {
             lastMenuItem.scrollIntoView({
@@ -69,68 +69,10 @@
             placeholder: "Select a country",
             allowClear: false
         });
-        $('#generateReport').on('shown.bs.modal', function() {
-            flatpickr("#date_range", {
-                mode: "range",
-                dateFormat: "d-m-Y",
-                allowInput: true,
-                appendTo: document.getElementById('generateReport'),
-                onOpen: function(selectedDates, dateStr, instance) {
-                    instance.calendarContainer.style.zIndex = 1050;
-                }
-            });
-        });
-        $('.po_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            allowInput: true,
-            defaultDate: 'today',
-        });
-
-        $('#doj').flatpickr({
-            dateFormat: 'd-m-Y',
-            allowInput: true
-        });
-        $('#order_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            allowInput: true
-        });
-        $('#reference_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            allowInput: true
-        });
-        flatpickr("#date_range", {
-            mode: "range",
-            dateFormat: "d-m-Y",
-            allowInput: true
-        });
-
-        $('.so_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
-            allowInput: true
-        });
-        $('.delivery_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            minDate: 'today',
-            allowInput: true
-        });
-        $('.inv_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            minDate: 'today',
-            allowInput: true
-        });
-        $('.due_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            allowInput: true
-        });
-
-        // Global fix to disable browser autocomplete on all datepicker inputs
-        $(document).on('focus', '.flatpickr-input, .issue_date, .delivery_date, .cutting_date, .issue-date, .deadline-date, .po_date, .so_date', function() {
-            $(this).attr('autocomplete', 'off');
-        });
     });
-
+</script>
+<script src="{{ url('assets/js/datepicker-init.js') }}"></script>
+<script>
     function delete_data(deleteUrl) {
         Swal.fire({
             title: "Are you sure?",

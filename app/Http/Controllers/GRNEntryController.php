@@ -159,11 +159,8 @@ class GrnEntryController extends Controller
                                 $fail('This article number is duplicated within this entry.');
                             }
 
-                            $id = request()->route('id'); 
-                            $exists = \App\Models\GrnEntryItem::where('art_no', $value)
-                                ->whereNull('deleted_at')
-                                ->where('grn_entry_id', '!=', $id ?? 0)
-                                ->exists();
+                            $id = $request->route('id'); 
+                            $exists = GrnEntryItem::where('art_no', $value)->whereNull('deleted_at')->where('grn_entry_id', '!=', $id ?? 0)->exists();
 
                             if ($exists) {
                                 $fail('This article number already exists in another GRN entry.');
@@ -175,7 +172,7 @@ class GrnEntryController extends Controller
                     $rules["items.$index.quality_check_status"] = 'required|in:Pass,Fail,Hold';
                     $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     $rules["items.$index.fabric_type_id"] = 'nullable|exists:fabric_types,id';
-                    $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048';
+                    $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048';
                     
                     $pi_item = PurchaseInvoiceItem::find($item['purchase_invoice_item_id']);
                     if ($pi_item) {
@@ -196,6 +193,9 @@ class GrnEntryController extends Controller
                 'items.*.qty_accepted.required' => 'This field is required',
                 'items.*.quality_check_status.required' => 'This field is required',
                 'items.*.store_location_id.required' => 'This field is required',
+                'items.*.item_image.image' => 'File must be an image.',
+                'items.*.item_image.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp).',
+                'items.*.item_image.max' => 'Uploaded file cannot exceed 2MB.',
             ]);
 
             $request->validate($rules, $messages);

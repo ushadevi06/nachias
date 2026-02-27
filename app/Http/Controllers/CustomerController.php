@@ -40,7 +40,7 @@ class CustomerController extends Controller
 
                 $action = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('view_details customers')) {
-                    $action .= '<a href="' . url('view_customer/' . $cust->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                    $action .= '<a href="' . url('customers/view/' . $cust->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('edit customers')) {
@@ -102,13 +102,13 @@ class CustomerController extends Controller
 
             $rules = [
                 'category' => 'required|in:Retailer,Wholesaler',
-                'name' => 'required|string|min:3|max:100',
-                'code' => 'required|string|min:3|max:50|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|string|min:10|max:15',
+                'name' => 'required|string|min:3|max:50',
+                'code' => 'required|string|min:3|max:20|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|numeric|digits_between:10,15|unique:customers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
-                'transport_name' => 'nullable|string|min:3|max:100',
-                'booking_office' => 'nullable|string|min:3|max:100',
+                'transport_name' => 'nullable|string|min:3|max:50',
+                'booking_office' => 'nullable|string|min:3|max:50',
                 'zone_id' => 'required|exists:zones,id',
                 'store_id' => 'nullable|exists:store_types,id',
                 'status' => 'required|in:Active,Inactive',
@@ -119,9 +119,9 @@ class CustomerController extends Controller
                 'address_line_2' => 'nullable|string|min:3|max:150',
                 'address_line_3' => 'nullable|string|min:3|max:150',
                 'zip_code' => 'nullable|string|min:3|max:10',
-                'contact_person_name' => 'nullable|string|min:3|max:100',
+                'contact_person_name' => 'nullable|string|min:3|max:50',
                 'designation' => 'nullable|string|min:3|max:50',
-                'contact_mobile_no' => 'nullable|string|min:10|max:15',
+                'contact_mobile_no' => 'nullable|numeric|digits_between:10,15',
                 'contact_email' => 'nullable|email|max:128',
                 'tax_type_id' => 'nullable|exists:taxes,id',
                 'gst_no' => [
@@ -134,12 +134,12 @@ class CustomerController extends Controller
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                     'unique:customers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'payment_terms' => 'nullable|string|min:3|max:255',
+                'payment_terms' => 'nullable|string|min:3|max:255|regex:/^[^<>]*$/',
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'box_discount' => 'nullable|numeric|min:0|max:100',
-                'bank_name' => 'nullable|string|min:3|max:100',
-                'branch' => 'nullable|string|min:3|max:100',
+                'bank_name' => 'nullable|string|min:3|max:50',
+                'branch' => 'nullable|string|min:3|max:50',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
@@ -157,6 +157,9 @@ class CustomerController extends Controller
                 '*.regex' => 'This field is an invalid format',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                '*.digits_between' => 'This field must be between :min and :max digits.',
+                '*.numeric' => 'This field must be a number.',
+                '*.url' => 'This field is an invalid URL.',
             ];
 
             $validated = $request->validate($rules,$messages);

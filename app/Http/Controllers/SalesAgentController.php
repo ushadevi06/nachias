@@ -36,7 +36,7 @@ class SalesAgentController extends Controller
                 $action = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('view_details sales-agents')) {
                     $action .= '
-                    <a href="' . url('sales_agent/' . $agent->id) . '" class="btn btn-view">
+                    <a href="' . url('sales_agents/view/' . $agent->id) . '" class="btn btn-view">
                         <i class="icon-base ri ri-eye-line"></i>
                     </a>';
                 }
@@ -97,21 +97,21 @@ class SalesAgentController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'agent_type' => 'required|string|max:100',
-                'name' => 'required|string|min:3|max:100',
+                'agent_type' => 'required|string|max:50',
+                'name' => 'required|string|min:3|max:50',
                 'code' => 'required|string|min:3|max:50|unique:sales_agents,code,' . $id . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:sales_agents,email,' . $id . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|min:10|max:15|unique:sales_agents,mobile_no,' . $id . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|numeric|digits_between:10,15|unique:sales_agents,mobile_no,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
                 'address_line_1' => 'required|string|max:150',
                 'address_line_2' => 'nullable|string|max:150',
-                'zip_code' => 'nullable|min:3|max:10',
-                'contact_person_name' => 'nullable|string|max:100',
-                'designation' => 'nullable|string|max:100',
-                'contact_phone_number' => 'nullable|string|min:10|max:15',
+                'zip_code' => 'required|min:3|max:10',
+                'contact_person_name' => 'nullable|string|max:50',
+                'designation' => 'nullable|string|max:50',
+                'contact_phone_number' => 'nullable|numeric|digits_between:10,15',
                 'contact_email' => 'nullable|email|max:128',
                 'gst_no' => [
                     'nullable',
@@ -123,8 +123,8 @@ class SalesAgentController extends Controller
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                     'unique:sales_agents,pan_no,' . $id . ',id,deleted_at,NULL'
                 ],
-                'commission_value' => 'nullable|numeric',
-                'sales_target' => 'nullable|numeric',
+                'commission_value' => 'nullable|numeric|max:100',
+                'sales_target' => 'nullable|numeric|max:100',
             ];
 
             $messages = [
@@ -133,6 +133,8 @@ class SalesAgentController extends Controller
                 '*.regex' => 'This field is an invalid format',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                '*.numeric'  => 'This field must be a number.',
+                '*.digits_between' => 'This field must be between :min and :max digits.',
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -194,7 +196,7 @@ class SalesAgentController extends Controller
 
         return view('sales_agent.add', compact('salesAgent', 'states', 'cities', 'places'));
     }
-    public function show($id)
+    public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view_details sales-agents')) {
             return unauthorizedRedirect();

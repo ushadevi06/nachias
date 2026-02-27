@@ -87,8 +87,8 @@ class PlaceController extends Controller
             ]);
         }
 
-        $states = State::active()->get();
-        $cities = City::active()->get();
+        $states = State::active()->orderby('id','desc')->get();
+        $cities = City::active()->orderby('id','desc')->get();
 
         return view('places.view', compact('states', 'cities'));
     }
@@ -117,10 +117,10 @@ class PlaceController extends Controller
                 'place_name' => [
                     'required',
                     'min:3',
-                    'max:100',
+                    'max:50',
                     Rule::unique('places', 'place_name')->ignore($id)->whereNull('deleted_at')
                 ],
-                'place_type' => 'required|max:100',
+                'place_type' => 'required|max:50',
                 'latitude' => 'nullable|numeric|max_length[10]',
                 'longitude' => 'nullable|numeric|max_length[11]',
                 'status' => 'required|in:Active,Inactive'
@@ -144,16 +144,15 @@ class PlaceController extends Controller
                 addLog('create', 'Place', 'places', $newPlace->id, null, $newData);
                 $message = 'Place added successfully';
             }
-
             return redirect('places')->with('success', $message);
         }
 
-        $states = State::active()->get();
+        $states = State::active()->orderBy('id','desc')->get();
         $cities = [];
         $stateId = old('state_id') ?? ($place->state_id ?? null);
 
         if ($stateId) {
-            $cities = City::active()->where('state_id', $stateId)->get();
+            $cities = City::active()->where('state_id', $stateId)->orderBy('id','desc')->get();
         }
 
         return view('places.add', compact('place', 'states', 'cities'));

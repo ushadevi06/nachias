@@ -15,9 +15,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('fabric_type') is-invalid @enderror" id="fabric_type"
-                                        placeholder="Enter Fabric Type" name="fabric_type"
-                                        value="{{ old('fabric_type', $fabricType->fabric_type ?? '') }}">
+                                    <input type="text" class="form-control @error('fabric_type') is-invalid @enderror" id="fabric_type" placeholder="Enter Fabric Type" name="fabric_type" value="{{ old('fabric_type', $fabricType->fabric_type ?? '') }}">
                                     <label for="fabric_type">Fabric Type <span class="text-danger">*</span></label>
                                 </div>
                                 @error('fabric_type')
@@ -26,15 +24,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $fabricType->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $fabricType->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $fabricType->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $fabricType->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

@@ -78,7 +78,7 @@ class SeasonController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'name'   => 'required|string|min:3|max:100|unique:seasons,name,' . $id . ',id,deleted_at,NULL',
+                'name'   => 'required|string|min:3|max:50|unique:seasons,name,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [

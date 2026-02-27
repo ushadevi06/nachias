@@ -115,6 +115,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Employees */
     Route::get('employees', [EmployeeController::class, 'index']);
+    Route::get('employees/view/{id}', [EmployeeController::class, 'view']);
     Route::get('employees/add/{id?}', [EmployeeController::class, 'add']);
     Route::post('employees/add/{id?}', [EmployeeController::class, 'add']);
     Route::post('employees/status/{id}', [EmployeeController::class, 'updateStatus']);
@@ -172,7 +173,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     /* Purchase Commission Agents */
     Route::get('purchase_commission_agent', [PurchaseCommissionAgentController::class, 'index']);
     Route::match(['GET', 'POST'], '/purchase_commission_agent/add/{id?}', [PurchaseCommissionAgentController::class, 'add']);
-    Route::get('view_purchase_commission_agent/{id}', [PurchaseCommissionAgentController::class, 'view']);
+    Route::get('purchase_commission_agents/view/{id}', [PurchaseCommissionAgentController::class, 'view']);
     Route::post('purchase_commission_agent/status/{id}', [PurchaseCommissionAgentController::class, 'updateStatus']);
     Route::get('purchase_commission_agent/delete/{id}', [PurchaseCommissionAgentController::class, 'destroy']);
 
@@ -270,7 +271,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('customers', [CustomerController::class, 'index']);
     Route::match(['GET','POST'], 'customers/add/{id?}', [CustomerController::class, 'add']);
     Route::post('customers/status/{id}', [CustomerController::class, 'updateStatus']);
-    Route::get('view_customer/{id}', [CustomerController::class, 'view']);
+     Route::get('customers/view/{id}', [CustomerController::class, 'view']);
     Route::get('customers/delete/{id}', [CustomerController::class, 'destroy']);
 
     /* Customer/Suppliers */
@@ -278,19 +279,20 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::match(['GET', 'POST'], '/suppliers/add/{id?}', [SupplierController::class, 'add']);
     Route::get('/supplier/delete/{id}', [SupplierController::class, 'destroy']);
     Route::post('/supplier/status/{id}', [SupplierController::class, 'updateStatus']);
-    Route::get('/view_supplier/{id}', [SupplierController::class, 'view']);
+    Route::get('/suppliers/view_details/{id}', [SupplierController::class, 'view']);
 
     /* Service Providers */
     Route::get('service_providers', [ServiceProviderController::class, 'index']);
     Route::match(['get','post'],'service_providers/add', [ServiceProviderController::class, 'add']);
     Route::post('/service_provider/status/{id}', [ServiceProviderController::class, 'updateStatus']);
     Route::match(['get','post'],'service_providers/add/{id}', [ServiceProviderController::class, 'add']);
+    Route::get('service_providers/view/{id}', [ServiceProviderController::class, 'view']);
     Route::get('service_provider/delete/{id}', [ServiceProviderController::class, 'destroy']);
 
     /* Sales Agents */
     Route::get('sales_agents', [SalesAgentController::class, 'index']);
     Route::match(['GET', 'POST'], 'sales_agents/add/{id?}', [SalesAgentController::class, 'add']);
-    Route::get('sales_agent/{id}', [SalesAgentController::class, 'show']);
+    Route::get('sales_agents/view/{id}', [SalesAgentController::class, 'view']);
     Route::get('sales_agent/delete/{id}', [SalesAgentController::class, 'destroy']);
     Route::post('sales_agent/status/{id}', [SalesAgentController::class, 'updateStatus']);
 
@@ -315,12 +317,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('purchase_invoices/download-pdf/{id}', [PurchaseInvoiceController::class, 'downloadPdf']);
     Route::delete('purchase_invoices/delete-charge/{id}', [PurchaseInvoiceController::class, 'deleteCharge']);
     Route::get('purchase_invoices/payment-history/{id}', [PurchaseInvoiceController::class, 'getPaymentHistory']);
-
-
-    /* Debit Notes */
-    Route::get('debit_notes', [DebitNoteController::class, 'index']);
-    Route::get('add_debit_note', [DebitNoteController::class, 'add']);
-    Route::get('view_debit_note', [DebitNoteController::class, 'view']);
 
     /* Raw Material Category */
     Route::get('store_categories', [StoreCategoryController::class, 'index']);

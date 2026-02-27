@@ -96,13 +96,14 @@ class PurchaseOrderController extends Controller
                 // if (auth()->id() == 1 || auth()->user()->can('delete purchase-order')) {
                 //     $action .= '<button class="btn btn-delete" onclick="delete_data(\'' . url('purchase_orders/delete/' . $po->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></button>';
                 // }
+                
                 $action .= '</div>';
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'po_number' => $po->po_number,
                     'po_date' => $po->po_date->format('d-m-Y'),
-                    'supplier_name' => $po->supplier->name . ' <a href="' . url('view_supplier/' . $po->supplier->id) . '" target="_blank"><span class="mini-title">(' . $po->supplier->code . ')</span></a>',
+                    'supplier_name' => $po->supplier->name . ' <a href="' . url('suppliers/view_details/' . $po->supplier->id) . '" target="_blank"><span class="mini-title">(' . $po->supplier->code . ')</span></a>',
                     'reference_no' => $po->reference_no ?? '-',
                     'due_date' => $po->due_date->format('d-m-Y'),
                     'delivery_location' => $po->storeType->store_type_name ?? '-',
@@ -150,7 +151,7 @@ class PurchaseOrderController extends Controller
                 'reference_date' => 'required|date',
                 'due_date' => 'required|date|after_or_equal:po_date',
                 'store_type_id' => 'required|exists:store_types,id',
-                'payment_terms' => 'nullable|string|max:1000',
+                'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
                 'status' => 'required|in:Draft,Approved,Dispatched,Received',
                 'items' => 'required|array|min:1',
                 'items.*.store_category_id' => 'required|exists:store_categories,id',
@@ -160,13 +161,13 @@ class PurchaseOrderController extends Controller
                 'items.*.art_no' => 'nullable|string|min:3|max:50',
                 'items.*.rate' => 'required|numeric|min:0',
                 'items.*.remarks' => 'nullable|string|min:5|max:255',
-                'items.*.attached_file' => 'nullable|file|mimes:jpeg,jpg,png,webp|max:2048',
+                'items.*.attached_file' => 'nullable|mimes:jpeg,jpg,png,webp|max:2048',
                 'items.*.color_id' => 'nullable|exists:colors,id',
                 'items.*.style_id' => 'nullable|exists:styles,id',
                 'items.*.brand_id' => 'nullable|exists:brands,id',
                 'items.*.fabric_width_id' => 'nullable|exists:size_ratios,id',
                 'discount_percent' => 'nullable',
-                'additional_attachments' => 'nullable|file|max:5120',
+                'additional_attachments' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
                 'round_off_type' => 'nullable|in:Add,Less',
                 'round_off' => 'nullable|numeric|min:0',
             ];
@@ -178,13 +179,14 @@ class PurchaseOrderController extends Controller
                 '*.date' => 'Please enter a valid date.',
                 '*.after_or_equal' => 'Due date must be after or equal to PO date.',
                 '*.numeric' => 'This field must be a number.',
-                'min'      => 'This field must be at least :min characters.',
-                'max'      => 'This field should not be more than :max characters.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
                 'items.required' => 'At least one item is required.',
                 'items.*.*' => 'This field is required.',
                 'items.*.attached_file.image' => 'File must be an image.',
-                'items.*.attached_file.mimes' => 'Image must be: jpeg, jpg, png, or webp.',
-                'items.*.attached_file.max' => 'Image size must not exceed 2MB.',
+                'items.*.attached_file.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
+                'items.*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
+                'regex' => 'This field is an invalid format',
             ];
 
             $validated = $request->validate($rules, $messages);

@@ -78,7 +78,7 @@ class StoreController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'store_type_name' => 'required|string|min:3|max:100|unique:store_types,store_type_name,' . $id,
+                'store_type_name' => 'required|string|min:3|max:50|unique:store_types,store_type_name,' . $id,
                 'status'   => 'required|in:Active,Inactive'
             ];
             $messages = [

@@ -50,7 +50,6 @@ class RoleController extends Controller
                     'action' => $actionBtn
                 ];
             }
-
             return response()->json([
                 "data" => $data
             ]);
@@ -79,7 +78,7 @@ class RoleController extends Controller
                 'name' => [
                     'required',
                     'min:2',
-                    'max:100',
+                    'max:50',
                     Rule::unique('roles', 'name')->ignore($id)->whereNull('deleted_at'),
                 ],
             ], [

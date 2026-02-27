@@ -156,11 +156,11 @@
                     <div class="row mb-3" id="customDateRow" style="display:none;">
                         <div class="col">
                             <label for="startDate" class="form-label">Start Date</label>
-                            <input type="date" id="startDate" class="form-control">
+                            <input type="text" id="startDate" class="form-control start_date">
                         </div>
                         <div class="col">
                             <label for="endDate" class="form-label">End Date</label>
-                            <input type="date" id="endDate" class="form-control">
+                            <input type="text" id="endDate" class="form-control end_date">
                         </div>
                     </div>
                     <div class="text-end">

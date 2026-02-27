@@ -4,18 +4,6 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-11">
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            @if(session('danger'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ session('danger') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
             <form action="{{ url('stock_entries/add' . ($stockEntry ? '/' . $stockEntry->id : '')) }}" method="POST" enctype="multipart/form-data" autocomplete="off">
                 @csrf
                 <div class="card mb-6">
@@ -161,14 +149,17 @@
                                 </div>
                             </div>
                             <div class="col-lg-4 mb-4">
-                                <label for="formFile" class="form-label">Reference Document</label>
-                                <input type="file" class="form-control" id="formFile" name="reference_document">
-                                @if($stockEntry && $stockEntry->reference_document)
+                                <div class="form-floating form-floating-outline text-black">
+                                    <input type="file" class="form-control" id="formFile" name="reference_document" accept="*">
+                                    @if($stockEntry && $stockEntry->reference_document)
                                     <a href="{{ url('uploads/stock_entries/' . $stockEntry->reference_document) }}" target="_blank" class="small">View current document</a>
-                                @endif
-                                @error('reference_document')
-                                    <div class="text-danger small">{{ $message }}</div>
-                                @enderror
+                                    @endif
+                                    <label for="formFile" class="form-label">Reference Document</label>
+                                    <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                    @error('reference_document')
+                                        <div class="text-danger small">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
 
                             <input type="hidden" name="status" value="Draft">
@@ -187,11 +178,6 @@
 
 <script>
     $(document).ready(function() {
-        $('.stock_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            allowInput: true
-        });
         const savedItems = @json($savedItems);
         const stockEntry = @json($stockEntry);
         let grnItemsData = [];

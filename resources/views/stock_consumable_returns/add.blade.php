@@ -215,12 +215,6 @@
 </div>
 <script>
     $(document).ready(function() {
-        $('.issue_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
-            allowInput: true
-        });
         $('#issue_type').change(function() {
             var issue_type = $(this).val();
             if(issue_type == 'Consumable Issue') {

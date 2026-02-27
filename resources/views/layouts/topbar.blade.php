@@ -31,10 +31,10 @@ $isSuper = $user->id == 1;
                                     @php
                                         $user = auth()->user();
                                         $profileImagePath = $user->profile_image 
-                                            ? public_path('uploads/profile/' . $user->id . '/' . $user->profile_image)
+                                            ? public_path('uploads/employee/' . $user->id . '/' . $user->profile_image)
                                             : null;
                                         $profileImageUrl = ($user->profile_image && file_exists($profileImagePath))
-                                            ? url('uploads/profile/' . $user->id . '/' . $user->profile_image)
+                                            ? url('uploads/employee/' . $user->id . '/' . $user->profile_image)
                                             : url('assets/images/user.jpg');
                                     @endphp
                                     <img src="{{ $profileImageUrl }}" alt="alt" class="rounded-circle">
@@ -93,7 +93,6 @@ $isSuper = $user->id == 1;
                         <div class="menu-horizontal-wrapper">
                             <ul class="menu-inner" style="margin-left: 0px;">
                                 <!-- Dashboards -->
-
                                 <li class="menu-item {{ request()->is('dashboard') ? 'active' : '' }}">
                                     <a href="{{ url('dashboard') }}" class="menu-link">
                                         <i class="menu-icon icon-base ri ri-home-smile-line"></i>
@@ -129,7 +128,7 @@ $isSuper = $user->id == 1;
 
                                 <!-- Master -->
                                 @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view colors') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view styles') || $user->can('view stores') || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view shifts') || $user->can('view production-services') || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent') || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items') || $user->can('view process-groups') || $user->can('view seasons')))
-                                <li class="menu-item {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('colors*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('stores*') || request()->is('styles*') || request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('shifts*') || request()->is('production_services*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*') || request()->is('process_groups*') || request()->is('seasons*')) ? 'active' : '' }}">
+                                <li class="menu-item master-dropdown {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('colors*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('stores*') || request()->is('styles*') || request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('shifts*') || request()->is('production_services*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*') || request()->is('process_groups*') || request()->is('seasons*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-layout-2-line"></i>
                                         <div>Master</div>
@@ -778,4 +777,6 @@ $isSuper = $user->id == 1;
                         </div>
                         <a href="#" class="menu-horizontal-next"></a>
                     </div>
-                </aside> 
+                </aside>
+
+

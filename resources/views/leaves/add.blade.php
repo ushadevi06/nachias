@@ -76,18 +76,6 @@
 </div>
 <script>
     $(document).ready(function() {
-        $('.start_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
-            allowInput: true
-        });
-        $('.end_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
-            allowInput: true
-        });
     });
 </script>
 @endsection

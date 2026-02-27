@@ -72,7 +72,7 @@ class ChargeController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'charge_name' => ['required','string','min:3','max:255', Rule::unique('charges', 'charge_name')->ignore($id)->whereNull('deleted_at')],
+                'charge_name' => ['required','string','min:3','max:50', Rule::unique('charges', 'charge_name')->ignore($id)->whereNull('deleted_at')],
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages =  [

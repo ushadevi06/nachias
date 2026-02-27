@@ -20,7 +20,7 @@ class ServiceProviderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view service-providers')) {
             return unauthorizedRedirect();
         }
-        $operation_stages = OperationStage::get();
+        $operation_stages = OperationStage::active()->orderBy('id', 'desc')->get();
         if ($request->ajax()) {
             $query = ServiceProvider::with(['operationStage', 'state', 'city', 'place']);
             if (!empty($request->operation_stage_id)) {
@@ -43,6 +43,11 @@ class ServiceProviderController extends Controller
                     </label>
                     <div class="status_msg_' . $provider->id . '"></div>';
                 $action = '<div class="button-box">';
+                if (auth()->id() == 1 || auth()->user()->can('view service-providers')) {
+                    $action .= '<a href="' . url('service_providers/view/' . $provider->id) . '" class="btn btn-view">
+                        <i class="icon-base ri ri-eye-line"></i>
+                    </a>';
+                }
                 if (auth()->id() == 1 || auth()->user()->can('edit service-providers')) {
                     $action .= '<a href="' . url('service_providers/add/' . $provider->id) . '" class="btn btn-edit">
                         <i class="icon-base ri ri-edit-box-line"></i>
@@ -107,11 +112,11 @@ class ServiceProviderController extends Controller
 
             $rules = [
                 'operation_stage_id' => 'required|exists:operation_stages,id',
-                'name' => 'required|string|max:100',
-                'code' => 'required|string|max:50|unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => 'required|string|max:50',
+                'code' => 'required|string|max:25|unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:service_providers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|string|min:10|max:15|unique:service_providers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'zip_code' => 'nullable|string|max:10',
+                'mobile_no' => 'required|numeric|digits_between:10,15|unique:service_providers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'zip_code' => 'nullable|string|min:6|max:10',
                 'website_url' => 'nullable|url|max:255',
                 'service_rate' => 'required|in:Per Agent,Job Type',
                 'status' => 'required|in:Active,Inactive',
@@ -120,9 +125,9 @@ class ServiceProviderController extends Controller
                 'place_id' => 'required|exists:places,id',
                 'address_line_1' => 'required|string|max:150',
                 'address_line_2' => 'nullable|string|max:150',
-                'contact_person_name' => 'nullable|string|max:100',
-                'designation' => 'nullable|string|max:100',
-                'phone_number' => 'nullable|string|min:10|max:15',
+                'contact_person_name' => 'nullable|string|max:50',
+                'designation' => 'nullable|string|max:50',
+                'phone_number' => 'nullable|numeric|digits_between:10,15',
                 'contact_email' => 'nullable|email|max:128',
                 'pan_no' => [
                     'nullable',
@@ -134,7 +139,7 @@ class ServiceProviderController extends Controller
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
                     'unique:service_providers,gst_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'remarks' => 'nullable|string|min:5|max:255',
+                'remarks' => 'nullable|string|min:5|max:255|regex:/^[a-zA-Z0-9\s.,-]*$/',
                 'bank_name' => 'nullable|string|min:5|max:100',
                 'bank_acc_no' => 'nullable|string|min:5|max:50|unique:service_providers,bank_acc_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'ifsc_code' => [
@@ -142,7 +147,7 @@ class ServiceProviderController extends Controller
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
                     'unique:service_providers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'payment_terms' => 'nullable|string|min:5|max:255',
+                'payment_terms' => 'nullable|string|min:5|max:255|regex:/^[a-zA-Z0-9\s.,-]*$/',
             ];
 
             $messages = [
@@ -151,6 +156,8 @@ class ServiceProviderController extends Controller
                 '*.regex' => 'This field is an invalid format',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
+                '*.numeric' => 'This field should be a number.',
+                '*.digits_between' => 'This field should be between :min and :max digits.',
             ];
             $validated = $request->validate($rules, $messages);
             
@@ -201,21 +208,32 @@ class ServiceProviderController extends Controller
             return redirect('service_providers')->with('success', $message);
         }
 
-        $operation_stages = OperationStage::where('status', 'Active')->orderBy('id','desc')->get();
-        $states = State::where('status', 'Active')->get();
+        $operation_stages = OperationStage::active()->orderBy('id','desc')->get();
+        $states = State::active()->orderBy('id','desc')->get();
         $cities = [];
         $places = [];
 
         $stateId = old('state_id', $serviceProvider->state_id ?? null);
         $cityId = old('city_id', $serviceProvider->city_id ?? null);
         if ($stateId) {
-            $cities = City::where('state_id', $stateId)->active()->get();
+            $cities = City::where('state_id', $stateId)->active()->orderBy('id','desc')->get();
         }
         if ($cityId) {
-            $places = Place::where('city_id', $cityId)->active()->get();
+            $places = Place::where('city_id', $cityId)->active()->orderBy('id','desc')->get();
         }
 
         return view('service_providers.add', compact('serviceProvider', 'operation_stages', 'states', 'cities', 'places'));
+    }
+
+    public function view($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view service-providers')) {
+            return unauthorizedRedirect();
+        }
+
+        $serviceProvider = ServiceProvider::with(['operationStage', 'state', 'city', 'place'])->findOrFail($id);
+
+        return view('service_providers.view_details', compact('serviceProvider'));
     }
 
     public function destroy($id)

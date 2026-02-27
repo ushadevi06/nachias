@@ -98,7 +98,7 @@ class CityController extends Controller
             $validated = $request->validate([
                 'state_id'   => 'required|exists:states,id',
                 'city_code' => ['nullable','min:2','max:10',Rule::unique('cities', 'city_code')->ignore($id)->whereNull('deleted_at')],
-                'city_name' => ['required','min:3','max:100',Rule::unique('cities', 'city_name')->ignore($id)->whereNull('deleted_at')],
+                'city_name' => ['required','min:3','max:50',Rule::unique('cities', 'city_name')->ignore($id)->whereNull('deleted_at')],
                 'status'    => 'required|in:Active,Inactive',
             ], [
                 '*.required' => 'This field is required.',
@@ -123,7 +123,7 @@ class CityController extends Controller
         }
 
         $city   = $id ? City::findOrFail($id) : null;
-        $states = State::where('status', 'Active')->get();
+        $states = State::active()->orderby('id','desc')->get();
         return view('cities.add', compact('city', 'states', 'id'));
     }
     public function updateStatus(Request $request, $id)

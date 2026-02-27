@@ -74,32 +74,3 @@
         </div>
     </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
-<script>
-    $(document).ready(function() {
-        $('.start_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
-            allowInput: true
-        });
-        $('.end_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
-            allowInput: true
-        });
-        flatpickr("#month_year", {
-            plugins: [
-                new monthSelectPlugin({
-                    shorthand: true,
-                    dateFormat: "F Y",
-                    altFormat: "F Y",
-                    theme: "light"
-                })
-            ]
-        });
-    });
-</script>
-@endsection

@@ -188,6 +188,8 @@ class StockEntryController extends Controller
             ];
             $messages = [
                 '*.required' => 'This field is required.',
+                'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
+                'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
             ];
 
             if ($request->has('items') && is_array($request->items) && count($request->items) > 0) {
@@ -200,6 +202,7 @@ class StockEntryController extends Controller
                 $rules['qty_in'] = 'required|numeric|min:1';
                 $rules['store_location_id'] = 'required|exists:store_locations,id';
                 $rules['price'] = 'nullable|numeric|min:0';
+                $rules['reference_document'] = 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048';
             }
 
             $request->validate($rules, $messages);

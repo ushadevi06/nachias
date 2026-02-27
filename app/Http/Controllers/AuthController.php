@@ -28,7 +28,6 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $user = Auth::user();
-
             if ($remember) {
                 Cookie::queue('email', $request->email, 43200);
                 Cookie::queue('password', $request->password, 43200);
@@ -58,24 +57,22 @@ class AuthController extends Controller
                 'email' => 'required|email',
                 'phone' => 'required|digits:10|not_in:0|unique:users,phone,'.$request->id,
                 'password' => 'nullable|min:8|max:15|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
-                'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+                'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:1024'
             ],[
                 'name.required' => 'This field is required',
                 'name.min' => 'Name must be at least 3 characters.',
                 'name.max' => 'Name cannot be exceed 50 characters.',
                 'name.regex' => 'This field is an invalid format.',
                 'email.required' => 'This field is required',
-                'email.regex' => 'Enter a valid email address (e.g., example@domain.com).', 
                 'phone.required' => 'This field is required',
-                'phone.regex' => 'Phone Number is an invalid format.',
                 'phone.unique' => 'Phone Number already exists',
                 'password.required' => 'This field is required.',
                 'password.min' => 'Password must be at least 8 characters.',
                 'password.max' => 'Password cannot exceed 15 characters.',
                 'password.regex' => 'This field is invalid format.',
                 'profile_image.image' => 'File must be an image.',
-                'profile_image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
-                'profile_image.max' => 'Image size cannot exceed 2MB.'
+                'profile_image.mimes' => 'Image must be a file of type: jpeg, png, jpg, webp.',
+                'profile_image.max' => 'Image size cannot exceed 1MB.'
             ]);
             
             $user = Auth::user();
@@ -90,7 +87,7 @@ class AuthController extends Controller
             }
             
             if ($request->hasFile('profile_image')) {
-                $uploadPath = public_path('uploads/profile/' . $user->id);
+                $uploadPath = public_path('uploads/employee/' . $user->id);
                 if ($user->profile_image) {
                     $oldImagePath = $uploadPath . '/' . $user->profile_image;
                     if (file_exists($oldImagePath)) {

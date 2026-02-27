@@ -193,12 +193,6 @@
 </div>
 <script>
     $(document).ready(function() {
-        $('.bill_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            defaultDate: 'today',
-            minDate: 'today',
-            allowInput: true
-        });
         $('#recuring_billing').change(function() {
             var recuring_bill = $(this).val();
             if (recuring_bill == 'Yes') {

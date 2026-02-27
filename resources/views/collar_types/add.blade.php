@@ -14,9 +14,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('collar_type_name') is-invalid @enderror" id="collar_type_name"
-                                        placeholder="Enter Collar Type Name" name="collar_type_name"
-                                        value="{{ old('collar_type_name', $collarType->collar_type_name ?? '') }}">
+                                    <input type="text" class="form-control @error('collar_type_name') is-invalid @enderror" id="collar_type_name" placeholder="Enter Collar Type Name" name="collar_type_name" value="{{ old('collar_type_name', $collarType->collar_type_name ?? '') }}">
                                     <label for="collar_type_name">Collar Type Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('collar_type_name')
@@ -28,12 +26,8 @@
                                     <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
                                         data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $collarType->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $collarType->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $collarType->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $collarType->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

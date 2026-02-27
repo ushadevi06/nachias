@@ -81,15 +81,6 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('zip_code') is-invalid @enderror" id="zip_code" placeholder="Enter ZipCode" name="zip_code" value="{{ old('zip_code', $serviceProvider->zip_code ?? '') }}">
-                                    <label for="zip_code">Zip Code</label>
-                                </div>
-                                @error('zip_code')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('website_url') is-invalid @enderror" id="website_url" placeholder="Enter Website URL" name="website_url" value="{{ old('website_url', $serviceProvider->website_url ?? '') }}">
                                     <label for="website_url">Website URL</label>
                                 </div>
@@ -172,7 +163,7 @@
                                 @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline mb-6">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('address_line_1') is-invalid @enderror" id="address_line_1" placeholder="Enter Address Line 1" name="address_line_1" value="{{ old('address_line_1', $serviceProvider->address_line_1 ?? '') }}">
                                     <label for="address_line_1">Address Line 1 <span class="text-danger">*</span></label>
                                 </div>
@@ -186,6 +177,15 @@
                                     <label for="address_line_2">Address Line 2</label>
                                 </div>
                                 @error('address_line_2')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('zip_code') is-invalid @enderror" id="zip_code" placeholder="Enter ZipCode" name="zip_code" value="{{ old('zip_code', $serviceProvider->zip_code ?? '') }}">
+                                    <label for="zip_code">Zip Code</label>
+                                </div>
+                                @error('zip_code')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -206,8 +206,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" placeholder="Enter Designation" name="designation" value="{{ old('designation', $serviceProvider->designation ?? '') }}">
-                                    <label for="designation">Designation</label>
+                                    <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" placeholder="Enter Contact Person Designation" name="designation" value="{{ old('designation', $serviceProvider->designation ?? '') }}">
+                                    <label for="designation">Contact Person Designation</label>
                                 </div>
                                 @error('designation')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -215,8 +215,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('phone_number') is-invalid @enderror" id="phone_number" placeholder="Enter Phone Number" name="phone_number" value="{{ old('phone_number', $serviceProvider->phone_number ?? '') }}">
-                                    <label for="phone_number">Phone Number</label>
+                                    <input type="text" class="form-control @error('phone_number') is-invalid @enderror" id="phone_number" placeholder="Enter Contact Person Phone Number" name="phone_number" value="{{ old('phone_number', $serviceProvider->phone_number ?? '') }}">
+                                    <label for="phone_number">Contact Person Phone Number</label>
                                 </div>
                                 @error('phone_number')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -224,8 +224,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('contact_email') is-invalid @enderror" id="contact_email" placeholder="Enter Email" name="contact_email" value="{{ old('contact_email', $serviceProvider->contact_email ?? '') }}">
-                                    <label for="contact_email">Email</label>
+                                    <input type="text" class="form-control @error('contact_email') is-invalid @enderror" id="contact_email" placeholder="Enter Contact Person Email" name="contact_email" value="{{ old('contact_email', $serviceProvider->contact_email ?? '') }}">
+                                    <label for="contact_email">Contact Person Email</label>
                                 </div>
                                 @error('contact_email')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -257,7 +257,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control h-px-100 @error('remarks') is-invalid @enderror" id="remarks" placeholder="Enter Remarks" name="remarks">{{ old('remarks', $serviceProvider->remarks ?? '') }}</textarea>
+                                    <textarea class="form-control @error('remarks') is-invalid @enderror" id="remarks" placeholder="Enter Remarks" name="remarks">{{ old('remarks', $serviceProvider->remarks ?? '') }}</textarea>
                                     <label for="remarks">Remarks</label>
                                 </div>
                                 @error('remarks')
@@ -301,7 +301,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control h-px-100 @error('payment_terms') is-invalid @enderror" id="payment_terms" placeholder="Enter Payment Terms" name="payment_terms">{{ old('payment_terms', $serviceProvider->payment_terms ?? '') }}</textarea>
+                                    <textarea class="form-control @error('payment_terms') is-invalid @enderror" id="payment_terms" placeholder="Enter Payment Terms" name="payment_terms">{{ old('payment_terms', $serviceProvider->payment_terms ?? '') }}</textarea>
                                     <label for="payment_terms">Payment Terms</label>
                                 </div>
                                 @error('payment_terms')

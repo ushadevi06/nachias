@@ -109,9 +109,12 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="doj" name="date_of_joining" placeholder="Date of Joining" value="{{ old('date_of_joining', $employee?->date_of_joining ? \Carbon\Carbon::parse($employee->date_of_joining)->format('d-m-Y') : '') }}">
+                                    <input type="text" class="form-control @error('date_of_joining') is-invalid @enderror" id="doj" name="date_of_joining" placeholder="Date of Joining" value="{{ old('date_of_joining', $employee?->date_of_joining ? \Carbon\Carbon::parse($employee->date_of_joining)->format('d-m-Y') : '') }}">
                                     <label for="doj">Date of Joining</label>
                                 </div>
+                                @error('date_of_joining')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -123,27 +126,37 @@
                                     </select>
                                     <label for="blood_group_id">Blood Group</label>
                                 </div>
+                                @error('blood_group_id')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="father_name" name="father_name" placeholder="Enter Father's Name" value="{{ old('father_name', $employee->father_name ?? '') }}">
+                                    <input type="text" class="form-control @error('father_name') is-invalid @enderror" id="father_name" name="father_name" placeholder="Enter Father's Name" value="{{ old('father_name', $employee->father_name ?? '') }}">
                                     <label for="father_name">Father's Name</label>
                                 </div>
+                                @error('father_name')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="father_phone" name="father_phone" placeholder="Enter Father's Phone Number" value="{{ old('father_phone', $employee->father_phone ?? '') }}">
+                                    <input type="text" class="form-control @error('father_phone') is-invalid @enderror" id="father_phone" name="father_phone" placeholder="Enter Father's Phone Number" value="{{ old('father_phone', $employee->father_phone ?? '') }}">
                                     <label for="father_phone">Father's Phone Number</label>
                                 </div>
+                                @error('father_phone')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="file" class="form-control" id="image" name="image" accept="image/jpeg,image/png,image/webp">
                                     <label for="image">Picture</label>
                                 </div>
+                                <small class="text-muted d-block mt-1">Max file size: 1MB. Supported formats: JPG, PNG, JPEG, WEBP</small>
                                 @if($employee && $employee->profile_image)
                                 <div class="file-preview">
-                                    <a href="{{ url('uploads/employee/' . $employee->id . '/' . $employee->profile_image) }}" target="_blank"><i class="ri-file-line"></i> View Profile Image</a>
+                                    <a href="{{ url('uploads/employee/' . $employee->id . '/' . $employee->profile_image) }}" target="_blank"><i class="ri ri-image-line"></i> View</a>
                                 </div>
                                 @endif
                                 @error('image')
@@ -345,6 +358,7 @@
                                     <input type="file" class="form-control @error('esi') is-invalid @enderror" id="esi" name="esi" accept="image/jpeg,image/png,image/webp,application/pdf">
                                     <label for="esi">ESI Document</label>
                                 </div>
+                                <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF</small>
                                 @error('esi')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
@@ -359,6 +373,7 @@
                                     <input type="file" class="form-control @error('pf') is-invalid @enderror" id="pf" name="pf" accept="image/jpeg,image/png,image/webp,application/pdf">
                                     <label for="pf">PF Document</label>
                                 </div>
+                                <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF</small>
                                 @error('pf')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
@@ -373,6 +388,7 @@
                                     <input type="file" class="form-control @error('aadhaar') is-invalid @enderror" id="aadhaar" name="aadhaar" accept="image/jpeg,image/png,image/webp,application/pdf">
                                     <label for="aadhaar">Aadhaar Card</label>
                                 </div>
+                                <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF</small>
                                 @error('aadhaar')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
@@ -387,6 +403,7 @@
                                     <input type="file" class="form-control @error('pan') is-invalid @enderror" id="pan" name="pan" accept="image/jpeg,image/png,image/webp,application/pdf">
                                     <label for="pan">Pan Card</label>
                                 </div>
+                                <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF</small>
                                 @error('pan')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror

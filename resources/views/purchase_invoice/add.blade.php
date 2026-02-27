@@ -381,7 +381,7 @@
                                 <div class="card p-3 border-0 shadow-sm">
                                     <div class="card-body">
                                         <h5 class="mb-3 fw-semibold">Invoice Details</h5>
-                                        <div class="form-floating form-floating-outline mb-3">
+                                        <div class="form-floating form-floating-outline mb-2">
                                             @php
                                                 $currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
                                             @endphp
@@ -475,12 +475,13 @@
                                                 </div>
                                                 @endif
                                             </div>
+                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                             @error('auth_sign')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
                                         </div>
 
-                                        <div class="mb-3">
+                                        <div class="mb-3 mt-5">
                                             <div class="form-floating form-floating-outline text-black">
                                                 <input type="file" class="form-control @error('attachments') is-invalid @enderror" id="attachments" name="attachments">
                                                 <label for="attachments">Attachments</label>
@@ -505,6 +506,7 @@
                                                 </div>
                                                 @endif
                                             </div>
+                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                             @error('attachments')
                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
@@ -548,7 +550,7 @@
                                         <span>Discount:</span>
                                         <div class="d-flex gap-2 align-items-center">
                                             <div class="input-group input-group-sm" style="width:120px;">
-                                                <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" min="0" max="100" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
+                                                <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
                                                 <span class="input-group-text">%</span>
                                             </div>
                                             <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
@@ -783,10 +785,6 @@
         $('.select2').select2({
             width: '100%',
             dropdownParent: $('body')
-        });
-        $('.invoice_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            allowInput: true
         });
 
         function toggleTransactionId() {

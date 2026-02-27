@@ -16,18 +16,14 @@
                     <div class="col-lg-12">
                         @include('flash_messages')
                     </div>
-                    <form action="{{ url('profile') }}" method="POST" autocomplete="off" enctype="multipart/form-data">
+                    <form action="{{ url('profile') }}" method="POST" autocomplete="off" enctype="multipart/form-data" autocomplete="off">
                         @csrf
                         <div class="row mb-4">
                             <div class="col-lg-12">
                                 <div class="d-flex justify-content-center mb-3">
                                     @php
-                                        $profileImagePath = $user->profile_image 
-                                            ? public_path('uploads/profile/' . $user->id . '/' . $user->profile_image)
-                                            : null;
-                                        $profileImageUrl = ($user->profile_image && file_exists($profileImagePath))
-                                            ? url('uploads/profile/' . $user->id . '/' . $user->profile_image)
-                                            : url('assets/images/user.jpg');
+                                        $profileImagePath = $user->profile_image ? public_path('uploads/employee/' . $user->id . '/' . $user->profile_image) : null;
+                                        $profileImageUrl = ($user->profile_image && file_exists($profileImagePath)) ? url('uploads/employee/' . $user->id . '/' . $user->profile_image) : url('assets/images/user.jpg');
                                     @endphp
                                     <img id="profileImagePreview" src="{{ $profileImageUrl }}" alt="Profile Image" 
                                         class="rounded-circle" style="width: 150px; height: 150px; object-fit: cover; border: 3px solid #ccc;">
@@ -35,7 +31,7 @@
                                 <div class="text-center">
                                     <label for="profile_image" class="form-label">Profile Image</label>
                                     <input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/*" onchange="previewImage(event)">
-                                    <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, GIF</small>
+                                    <small class="text-muted d-block mt-1">Max file size: 1MB. Supported formats: JPEG, PNG, JPG, WEBP</small>
                                     @if($errors->has('profile_image'))
                                         <p class="text-danger mt-1 mb-0">{{ $errors->first('profile_image') }}</p>
                                     @endif
@@ -90,19 +86,4 @@
         </div>
     </div>
 </div>
-@endsection
-
-@section('scripts')
-<script>
-function previewImage(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('profileImagePreview').src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-}
-</script>
 @endsection

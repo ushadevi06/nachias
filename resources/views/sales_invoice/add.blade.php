@@ -123,9 +123,9 @@
                                             <label for="rate">Amount * </label>
                                         </div>
                                     </div>
-                                    <div class="col-lg-1">
+                                    {{-- <div class="col-lg-1">
                                         <button type="button" class="btn btn-primary add_item"><i class="icon-base ri ri-add-line"></i></button>
-                                    </div>
+                                    </div> --}}
                                 </div>
                             </div>
                         </div>
@@ -176,7 +176,7 @@
 
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="date" class="form-control" id="due_date" name="due_date" value="{{ date('Y-m-d') }}">
+                                            <input type="text" class="form-control due_date" id="due_date" name="due_date" value="{{ date('d-m-Y') }}">
                                             <label for="due_date">Due Date</label>
                                         </div>
                                     </div>

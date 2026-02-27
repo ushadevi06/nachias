@@ -28,26 +28,18 @@ class StorelocationController extends Controller
 
                 $status = '
                 <label class="switch switch-success switch-lg">
-                    <input type="checkbox"
-                        class="switch-input store-status-toggle"
-                        data-id="' . $loc->id . '" ' . $checked . '>
+                    <input type="checkbox" class="switch-input store-status-toggle" data-id="' . $loc->id . '" ' . $checked . '>
                     <span class="switch-toggle-slider"></span>
                 </label>
                 <div class="status_msg_' . $loc->id . '"></div>';
-
                 $action = '<div class="button-box">';
 
                 if (auth()->id() == 1 || auth()->user()->can('edit store-location')) {
-                    $action .= '<a href="' . url('store_location/add/' . $loc->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
+                    $action .= '<a href="' . url('store_location/add/' . $loc->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete store-location')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete"
-                                onclick="delete_data(\'' . url('store_location/delete/' . $loc->id) . '\')">
-                                <i class="icon-base ri ri-delete-bin-line"></i>
-                            </a>';
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('store_location/delete/' . $loc->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $action .= '</div>';
@@ -81,7 +73,7 @@ class StorelocationController extends Controller
         $oldData = $storeLocation ? $storeLocation->toArray() : null;
         if ($request->isMethod('post')) {
             $request->validate([
-                'store_location' => 'required|string|min:2|max:100|unique:store_locations,store_location,' . $id . ',id,deleted_at,NULL',
+                'store_location' => 'required|string|min:2|max:50|unique:store_locations,store_location,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive'
             ],[
                 '*.required' => 'This field is required.',

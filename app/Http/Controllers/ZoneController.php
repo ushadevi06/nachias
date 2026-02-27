@@ -98,7 +98,7 @@ class ZoneController extends Controller
                     'required',
                     'string',
                     'min:1',
-                    'max:100',
+                    'max:50',
                     Rule::unique('zones', 'zone_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')
@@ -139,11 +139,11 @@ class ZoneController extends Controller
             return redirect('zones')->with('success', $message);
         }
 
-        $states = State::active()->get();
+        $states = State::active()->orderBy('id','desc')->get();
         $cities = [];
         $stateId = old('state_id') ?? ($zone->state_id ?? null);
         if ($stateId) {
-            $cities = City::where('state_id', $stateId)->get();
+            $cities = City::where('state_id', $stateId)->orderBy('id','desc')->get();
         }
 
         return view('zones.add', compact('zone', 'states', 'cities'));

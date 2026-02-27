@@ -16,8 +16,10 @@ class SettingController extends Controller
         $states = State::where('status', 'Active')->get();
         $cities = [];
 
-        if ($setting && $setting->state_id) {
-            $cities = City::where('state_id', $setting->state_id)
+        $stateId = old('state_id', $setting->state_id ?? null);
+
+        if ($stateId) {
+            $cities = City::where('state_id', $stateId)
                 ->where('status', 'Active')
                 ->get();
         }

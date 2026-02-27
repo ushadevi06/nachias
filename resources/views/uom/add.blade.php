@@ -15,9 +15,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('uom_code') is-invalid @enderror" id="uom-code" name="uom_code"
-                                        placeholder="Enter UOM Code"
-                                        value="{{ old('uom_code', $uom->uom_code ?? '') }}">
+                                    <input type="text" class="form-control @error('uom_code') is-invalid @enderror" id="uom-code" name="uom_code" placeholder="Enter UOM Code" value="{{ old('uom_code', $uom->uom_code ?? '') }}">
                                     <label for="uom-code">UOM Code <span class="text-danger">*</span></label>
                                 </div>
                                 @error('uom_code')
@@ -26,9 +24,7 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('uom_name') is-invalid @enderror" id="uom-name" name="uom_name"
-                                        placeholder="Enter UOM Name"
-                                        value="{{ old('uom_name', $uom->uom_name ?? '') }}">
+                                    <input type="text" class="form-control @error('uom_name') is-invalid @enderror" id="uom-name" name="uom_name" placeholder="Enter UOM Name" value="{{ old('uom_name', $uom->uom_name ?? '') }}">
                                     <label for="uom-name">UOM Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('uom_name')
@@ -37,8 +33,7 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description"
-                                        placeholder="Enter Description">{{ old('description', $uom->description ?? '') }}</textarea>
+                                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" placeholder="Enter Description">{{ old('description', $uom->description ?? '') }}</textarea>
                                     <label for="description">Description</label>
                                 </div>
                                 @error('description')
@@ -47,15 +42,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $uom->status ?? '') == 'Active' ? 'selected' : '' }}>Active
-                                        </option>
-                                        <option value="Inactive"
-                                            {{ old('status', $uom->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $uom->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $uom->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>

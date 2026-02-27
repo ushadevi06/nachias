@@ -47,6 +47,10 @@ class EmployeeController extends Controller
 
                 $actionBtn = '<div class="button-box">';
 
+                if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('view employee'))) {
+                    $actionBtn .= '<a href="' . url('employees/view/' . $emp->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                }
+
                 if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('edit employee'))) {
                     $actionBtn .= '<a href="' . url('employees/add/' . $emp->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
@@ -122,7 +126,7 @@ class EmployeeController extends Controller
 
         if (request()->isMethod('post')) {
             $rules = [
-                'name' => 'required|string|min:3|max:100',
+                'name' => 'required|string|min:3|max:50',
                 'email' => [
                     'required',
                     'email',
@@ -131,14 +135,13 @@ class EmployeeController extends Controller
                 ],
                 'phone' => [
                     'required',
-                    'string',
-                    'min:10',
-                    'max:16',
+                    'numeric',
+                    'digits_between:10,15',
                     Rule::unique('users', 'phone')->ignore($id ?? null)->whereNull('deleted_at'),
                 ],
                 'emp_id' => [
                     'required',
-                    'max:255',
+                    'max:20',
                     Rule::unique('users', 'emp_id')->ignore($id ?? null)->whereNull('deleted_at'),
                 ],
                 'department_id' => 'required|exists:departments,id',
@@ -149,8 +152,8 @@ class EmployeeController extends Controller
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'status' => 'required|in:Active,Inactive',
-                'father_name' => 'nullable|string|min:3|max:100',
-                'father_phone' => 'nullable|string|min:10|max:15',
+                'father_name' => 'nullable|string|min:3|max:50',
+                'father_phone' => 'nullable|numeric|digits_between:10,15',
                 'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
                 'esi' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
                 'pf' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
@@ -158,7 +161,7 @@ class EmployeeController extends Controller
                 'pan' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
                 'address_line1' => 'required|string|min:3|max:150',
                 'contact_person_name' => 'nullable|string|min:3|max:100',
-                'contact_person_phone' => 'nullable|string|min:10|max:15',
+                'contact_person_phone' => 'nullable|numeric|digits_between:10,15',
                 'contact_person_email' => 'nullable|email|max:128',
                 'basic_salary'   => 'nullable|numeric|min:0|max:9999999',
                 'hra'            => 'nullable|numeric|min:0|max:9999999',
@@ -166,7 +169,7 @@ class EmployeeController extends Controller
                 'deductions'     => 'nullable|numeric|min:0|max:9999999',
                 'gross_salary'   => 'nullable|numeric|min:0|max:9999999',
                 'net_salary'     => 'nullable|numeric|min:0|max:9999999',
-                'bank_name' => 'nullable|string|max:100',
+                'bank_name'      => 'nullable|string|min:3|max:50',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
@@ -183,6 +186,11 @@ class EmployeeController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
+                '*.numeric' => 'This field must be a number.',
+                'esi.max' => 'ESI file should not be more than 2MB.',
+                'pf.max' => 'PF file should not be more than 2MB.',
+                'aadhaar.max' => 'Aadhaar file should not be more than 2MB.',
+                'pan.max' => 'Pan file should not be more than 2MB.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];
@@ -336,7 +344,17 @@ class EmployeeController extends Controller
     }
 
 
+    public function view($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view employee')) {
+            return unauthorizedRedirect();
+        }
 
+        $employee = User::with(['department', 'role', 'bloodGroup', 'state', 'city', 'serviceProvider', 'operationStage'])->findOrFail($id);
+
+        return view('employees.view_details', compact('employee'));
+    }
+    
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete employee')) {

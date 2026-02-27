@@ -83,7 +83,7 @@ class PurchaseInvoiceController extends Controller
                     'DT_RowIndex' => $count++,
                     'invoice_no' => $invoice->invoice_no,
                     'invoice_date' => $invoice->invoice_date->format('d-m-Y'),
-                    'supplier_name' => $invoice->supplier ? $invoice->supplier->name .' <a href="' . url('view_supplier/' . $invoice->supplier->id) . '" target="_blank"><span class="mini-title">(' . $invoice->supplier->code . ')</span></a>' : '-',
+                    'supplier_name' => $invoice->supplier ? $invoice->supplier->name .' <a href="' . url('suppliers/view_details/' . $invoice->supplier->id) . '" target="_blank"><span class="mini-title">(' . $invoice->supplier->code . ')</span></a>' : '-',
                     'destination' => $invoice->destination ?? '-',
                     'total_amount' => '₹' . number_format($invoice->grand_total, 2),
                     'status' => $statusDropdown,
@@ -146,6 +146,8 @@ class PurchaseInvoiceController extends Controller
                 'charge_amount' => 'nullable|numeric|min:0',
                 'charges.amount.*' => 'nullable|numeric|min:0',
                 'transaction_id' => 'nullable|max:100',
+                'auth_sign' => 'nullable|mimes:jpeg,jpg,png,webp,pdf,doc,docx|max:2048',
+                'attachments' => 'nullable|mimes:jpeg,jpg,png,webp,pdf,doc,docx|max:2048',
             ];
 
             $messages = [
@@ -169,6 +171,10 @@ class PurchaseInvoiceController extends Controller
                 'charges.amount.*.numeric' => 'Charge amount must be a number.',
                 'min'      => 'This field must be at least :min characters.',
                 'max'      => 'This field should not be more than :max characters.',
+                'auth_sign.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp, .pdf, .doc, .docx).',
+                'auth_sign.max' => 'Uploaded file cannot exceed 2MB.',
+                'attachments.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp, .pdf, .doc, .docx).',
+                'attachments.max' => 'Uploaded file cannot exceed 2MB.',
             ];
 
             $validated = $request->validate($rules, $messages);

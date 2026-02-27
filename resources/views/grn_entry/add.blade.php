@@ -146,7 +146,7 @@
                                                                 @error("items.$idx.variants") <div class="text-danger small">{{ $message }}</div> @enderror
                                                             </td>
                                                             <td>
-                                                                <input type="file" name="items[{{$idx}}][item_image]" class="form-control" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                                 <input type="file" name="items[{{$idx}}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/webp" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
                                                                 @if(isset($itemObj->image) && $itemObj->image)
                                                                     <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
                                                                     <a href="{{ url('uploads/grn_items/' . $itemObj->image) }}" target="_blank">
@@ -299,11 +299,6 @@
 <script>
     $(document).ready(function() {
         let activeRowIndex = null;
-        const fabrics_options = `@foreach($fabricTypes as $ft)<option value="{{$ft->id}}">{{$ft->fabric_type}}</option>@endforeach`;
-        const locations_options = `@foreach($storeLocations as $loc)<option value="{{$loc->id}}">{{$loc->store_location}}</option>@endforeach`;
-
-        $('.grn_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
-        $('.sup_inv_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
         function initSelect2() {
             $('.select2').each(function() {
@@ -339,7 +334,7 @@
                                     <div class="variants-data-container"></div>
                                 </td>
                                 <td>
-                                    <input type="file" name="items[${idx}][item_image]" class="form-control">
+                                    <input type="file" name="items[${idx}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/webp">
                                 </td>
                                 <td>
                                     <input type="hidden" name="items[${idx}][purchase_invoice_item_id]" value="${item.id}">

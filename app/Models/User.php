@@ -35,34 +35,25 @@ class User extends Authenticatable
         'profile_image',
         'password',
         'status',
-
-        // Address
         'country',
         'state_id',
         'city_id',
         'address_line1',
         'address_line2',
         'zipcode',
-
-        // Emergency Contact
         'contact_person_name',
         'contact_person_phone',
-
-        // Salary
+        'contact_person_email',
         'basic_salary',
         'hra',
         'allowances',
         'deductions',
         'gross_salary',
         'net_salary',
-
-        // Documents
         'esi_document',
         'pf_document',
         'aadhaar_document',
         'pan_document',
-
-        // Bank
         'account_number',
         'bank_name',
         'ifsc_code',

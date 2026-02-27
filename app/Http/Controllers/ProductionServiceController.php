@@ -82,8 +82,8 @@ class ProductionServiceController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'service_name' => 'required|string|max:255|unique:production_services,service_name,' . $id . ',id,deleted_at,NULL',
-                'service_code' => 'required|string|max:50|unique:production_services,service_code,' . $id . ',id,deleted_at,NULL',
+                'service_name' => 'required|string|max:50|unique:production_services,service_name,' . $id . ',id,deleted_at,NULL',
+                'service_code' => 'required|string|max:75|unique:production_services,service_code,' . $id . ',id,deleted_at,NULL',
                 'operation_stage_id' => 'required|exists:operation_stages,id',
                 'status'       => 'required|in:Active,Inactive',
                 'applies_to'   => 'required|in:ALL,Full Sleeve,Half Sleeve,Both',
@@ -126,10 +126,7 @@ class ProductionServiceController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete production-services')) {
             return unauthorizedRedirect();
         }
-
         $service = ProductionService::findOrFail($id);
-
-
         if (TaskAdjustment::where('service_id', $id)->exists()) {
             return redirect('production_services')->with('danger', 'This service is currently referenced in Task Adjustments and cannot be deleted.');
         }

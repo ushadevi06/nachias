@@ -110,9 +110,7 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="place_id" name="place_id"
-                                        class="select2 form-select @error('place_id') is-invalid @enderror"
-                                        data-placeholder="Select Place">
+                                    <select id="place_id" name="place_id" class="select2 form-select @error('place_id') is-invalid @enderror" data-placeholder="Select Place">
                                         <option value="">Select Place</option>
                                         @foreach($servicePoints as $sp)
                                         <option value="{{ $sp->id }}" {{ (string)old('place_id', optional($agent)->place_id ?? '') === (string)$sp->id ? 'selected' : '' }}>{{ $sp->place_name }}</option>

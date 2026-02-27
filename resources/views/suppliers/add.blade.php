@@ -61,7 +61,7 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="url" class="form-control @error('website_url') is-invalid @enderror" id="website_url" placeholder="Enter Website URL" name="website_url" value="{{ old('website_url', $supplier->website_url ?? '') }}">
+                                    <input type="text" class="form-control @error('website_url') is-invalid @enderror" id="website_url" placeholder="Enter Website URL" name="website_url" value="{{ old('website_url', $supplier->website_url ?? '') }}">
                                     <label for="website_url">Website URL </label>
                                 </div>
                                 @error('website_url')
@@ -231,8 +231,8 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" placeholder="Enter Designation" name="designation" value="{{ old('designation', $supplier->designation ?? '') }}">
-                                    <label for="designation">Designation</label>
+                                    <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" placeholder="Enter Contact Person Designation" name="designation" value="{{ old('designation', $supplier->designation ?? '') }}">
+                                    <label for="designation">Contact Person Designation</label>
                                 </div>
                                 @error('designation')
                                 <div class="text-danger mt-1">{{ $message }}</div>

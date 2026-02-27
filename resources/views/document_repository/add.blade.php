@@ -93,11 +93,6 @@
 </div>
 <script>
     $(document).ready(function() {
-        $('.validity_date').flatpickr({
-            dateFormat: 'd-m-Y',
-            minDate: 'today',
-            allowInput: true
-        });
 
     });
 </script>

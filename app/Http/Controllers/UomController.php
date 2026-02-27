@@ -94,8 +94,8 @@ class UomController extends Controller
                 'uom_code' => [
                     'required',
                     'string',
-                    'min:3',
-                    'max:50',
+                    'min:1',
+                    'max:10',
                     Rule::unique('uoms', 'uom_code')
                         ->ignore($id)
                         ->whereNull('deleted_at')
@@ -104,7 +104,7 @@ class UomController extends Controller
                     'required',
                     'string',
                     'min:3',
-                    'max:100',
+                    'max:50',
                     Rule::unique('uoms', 'uom_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')

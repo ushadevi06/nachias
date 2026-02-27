@@ -14,9 +14,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('store_type_name') is-invalid @enderror" id="store_type_name" 
-                                        placeholder="Enter Store Name" name="store_type_name" 
-                                        value="{{ old('store_type_name', $storeType->store_type_name ?? '') }}">
+                                    <input type="text" class="form-control @error('store_type_name') is-invalid @enderror" id="store_type_name" placeholder="Enter Store Name" name="store_type_name" value="{{ old('store_type_name', $storeType->store_type_name ?? '') }}">
                                     <label for="store_type_name">Store Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('store_type_name')

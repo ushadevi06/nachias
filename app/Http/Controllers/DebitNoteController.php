@@ -101,15 +101,19 @@ class DebitNoteController extends Controller
                 'sub_total' => 'required|numeric|min:0',
                 'grand_total' => 'required|numeric|min:0',
                 'status' => 'required|in:Draft,Approved,Cancelled',
-                'reference_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+                'reference_document' => 'nullable|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+                'remarks' => 'nullable|string|min:5|max:255|regex:/^[^<>]*$/',
             ];
 
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
+                'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
+                'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                'remarks.regex' => 'This field is an invalid format',
             ];
 
             $validated = $request->validate($rules,$messages);

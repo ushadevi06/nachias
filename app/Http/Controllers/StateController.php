@@ -50,19 +50,13 @@ class StateController extends Controller
                 $actionBtn = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('edit states')) {
                     $actionBtn .= '
-                        <a href="' . url('states/add/' . $state->id) . '" class="btn btn-edit">
-                            <i class="icon-base ri ri-edit-box-line"></i>
-                        </a>';
+                        <a href="' . url('states/add/' . $state->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('delete states')) {
                     $actionBtn .= '
-                        <a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('states/delete/' . $state->id) . '\')">
-                            <i class="icon-base ri ri-delete-bin-line"></i>
-                        </a>';
+                        <a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('states/delete/' . $state->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
                 $actionBtn .= '</div>';
-
-
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'state_code' => $state->state_code,
@@ -76,7 +70,6 @@ class StateController extends Controller
                 "data" => $data
             ]);
         }
-
         return view('states.index');
     }
     
@@ -99,13 +92,14 @@ class StateController extends Controller
             $validated = $request->validate([
                 'state_code' => [
                     'required',
+                    'min:2',
                     'max:10',
                     'unique:states,state_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'state_name' => [
                     'required',
                     'min:5',
-                    'max:100',
+                    'max:50',
                     'unique:states,state_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'status' => 'required|in:Active,Inactive'

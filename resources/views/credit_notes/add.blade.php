@@ -20,7 +20,7 @@
                             </div>
                             <div class="col-lg-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="date" class="form-control note_date" id="note_date" name="note_date">
+                                    <input type="text" class="form-control note_date" id="note_date" name="note_date">
                                     <label for="note_date">Date *</label>
                                 </div>
                             </div>
@@ -209,11 +209,6 @@
 $(document).ready(function() {
     // Initialize Select2 and Date Picker
     $(".select2").select2();
-    $(".note_date").flatpickr({
-        dateFormat: "d-m-Y",
-        allowInput: true,
-        defaultDate: "today"
-    });
 
     // Add new item row
     $(".add_item").on("click", function () {

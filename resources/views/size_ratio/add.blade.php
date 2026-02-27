@@ -14,9 +14,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('size') is-invalid @enderror" id="size" name="size"
-                                        placeholder="Enter Size (comma separated)"
-                                        value="{{ old('size', $sizeRatio->size ?? '') }}">
+                                    <input type="text" class="form-control @error('size') is-invalid @enderror" id="size" name="size" placeholder="Enter Size (comma separated)" value="{{ old('size', $sizeRatio->size ?? '') }}">
                                     <label for="size">Size <span class="text-danger">*</span> (comma separated e.g., 38,40,42,44)</label>
                                 </div>
                                 @error('size')
@@ -26,9 +24,7 @@
 
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('ratio') is-invalid @enderror" id="ratio" name="ratio"
-                                        placeholder="Enter Ratio (comma separated)"
-                                        value="{{ old('ratio', $sizeRatio->ratio ?? '') }}">
+                                    <input type="text" class="form-control @error('ratio') is-invalid @enderror" id="ratio" name="ratio" placeholder="Enter Ratio (comma separated)" value="{{ old('ratio', $sizeRatio->ratio ?? '') }}">
                                     <label for="ratio">Ratio <span class="text-danger">*</span> (comma separated e.g., 1,2,3,1)</label>
                                 </div>
                                 @error('ratio')
@@ -41,15 +37,10 @@
 
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $sizeRatio->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $sizeRatio->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $sizeRatio->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $sizeRatio->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
@@ -57,7 +48,6 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-12 text-end">
                                 <button type="submit" class="btn btn-primary me-2">Submit</button>
                                 <a href="{{ url('size_ratio') }}" class="btn btn-secondary">Cancel</a>

@@ -878,8 +878,6 @@
             syncReferenceNo();
         }
 
-        const flatpickrConfig = { dateFormat: 'd-m-Y', allowInput: true };
-        $('.issue_date, .delivery_date, .cutting_date, .dynamic-stage-date, .issue-date, .deadline-date').flatpickr(flatpickrConfig);
 
         function performStockCheck(isRecheck = false) {
             const form = $('form.common-form');
@@ -2189,9 +2187,6 @@
                     placeholder: $(this).data('placeholder'),
                     width: '100%'
                 });
-            });
-            $('#production-stages-table tbody tr:last .issue-date, #production-stages-table tbody tr:last .deadline-date').flatpickr({
-                dateFormat: 'd-m-Y'
             });
 
             stageRowIndex++;

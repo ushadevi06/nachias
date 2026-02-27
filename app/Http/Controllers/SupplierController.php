@@ -25,7 +25,6 @@ class SupplierController extends Controller
         }
 
         if ($request->ajax()) {
-
             $query = Supplier::with(['state', 'city', 'place', 'storeType']);
             $suppliers = $query->orderBy('id', 'desc')->get();
 
@@ -33,9 +32,7 @@ class SupplierController extends Controller
             $count = 1;
 
             foreach ($suppliers as $supplier) {
-
                 $checked = $supplier->status === 'Active' ? 'checked' : '';
-
                 $status = '
                 <label class="switch switch-success switch-lg">
                     <input type="checkbox"
@@ -49,7 +46,7 @@ class SupplierController extends Controller
 
                 if (auth()->id() == 1 || auth()->user()->can('view_details suppliers')) {
                     $action .= '
-                    <a href="' . url('view_supplier/' . $supplier->id) . '" class="btn btn-view">
+                    <a href="' . url('suppliers/view_details/' . $supplier->id) . '" class="btn btn-view">
                         <i class="icon-base ri ri-eye-line"></i>
                     </a>';
                 }
@@ -118,14 +115,13 @@ class SupplierController extends Controller
             $request = request();
 
             $rules = [
-                'name' => 'required|string|min:3|max:100',
-                'code' => 'required|string|min:3|max:50|unique:suppliers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|string|min:10|max:15|unique:suppliers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => 'required|string|min:3|max:50',
+                'code' => 'required|string|min:3|max:25|unique:suppliers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|numeric|digits_between:10,15|unique:suppliers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:suppliers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
-                'transport_name' => 'nullable|string|min:3|max:100',
-                'booking_area' => 'nullable|string|min:3|max:100',
-                'stores' => 'nullable|string|min:3|max:100',
+                'transport_name' => 'nullable|string|min:3|max:50',
+                'booking_area' => 'nullable|string|min:3|max:50',
                 'store_id' => 'nullable|exists:store_types,id',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
@@ -135,11 +131,13 @@ class SupplierController extends Controller
                 'address_line_2' => 'nullable|string|min:5|max:150',
                 'address_line_3' => 'nullable|string|min:5|max:150',
                 'zip_code' => 'nullable|string|min:6|max:10',
-                'contact_person_name' => 'nullable|string|min:3|max:100',
-                'designation' => 'nullable|string|min:3|max:100',
-                'contact_mobile_no' => 'nullable|string|min:10|max:15',
+                'contact_person_name' => 'nullable|string|min:3|max:50',
+                'designation' => 'nullable|string|min:3|max:50',
+                'contact_mobile_no' => 'nullable|numeric|digits_between:10,15',
                 'contact_email' => 'nullable|email|max:128',
                 'commission' => 'nullable|numeric|min:0|max:100',
+                'purchase_commission_agent_id' => 'nullable|exists:purchase_commission_agents,id',
+                'commission_percentage' => 'nullable|numeric|min:0|max:100',
                 'tax_id' => 'nullable|exists:taxes,id',
                 'gst_no' => [
                     'nullable',
@@ -153,9 +151,9 @@ class SupplierController extends Controller
                 ],
                 'ecc_no' => 'nullable|string|max:15',
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
-                'payment_terms' => 'nullable|string|max:255',
-                'bank_name' => 'nullable|string|min:3|max:100',
-                'branch' => 'nullable|string|min:3|max:100',
+                'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
+                'bank_name' => 'nullable|string|min:3|max:50',
+                'branch' => 'nullable|string|min:3|max:50',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
@@ -173,6 +171,9 @@ class SupplierController extends Controller
                 '*.regex' => 'This field is an invalid format',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                '*.digits_between' => 'This field must be between :min and :max digits.',
+                '*.numeric' => 'This field must be a number.',
+                '*.url' => 'This field is an invalid URL.',
             ];
             $validated = $request->validate($rules,$messages);
 

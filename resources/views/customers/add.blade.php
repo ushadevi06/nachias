@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'Add Customer - ' . env('WEBSITE_NAME'))
+@section('title', ($customer ? 'Edit Customer' : 'Add Customer') . ' - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
@@ -24,15 +24,11 @@
                                 <div class="d-flex align-items-center gap-4">
                                     <div class="form-check">
                                         <input class="form-check-input @error('category') is-invalid @enderror" type="radio" name="category" id="category_retailer" value="Retailer" {{ old('category', $customer->category ?? '') == 'Retailer' ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="category_retailer">
-                                            Retailer
-                                        </label>
+                                        <label class="form-check-label" for="category_retailer">Retailer</label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input @error('category') is-invalid @enderror" type="radio" name="category" id="category_wholesaler" value="Wholesaler" {{ old('category', $customer->category ?? '') == 'Wholesaler' ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="category_wholesaler">
-                                            Wholesaler
-                                        </label>
+                                        <label class="form-check-label" for="category_wholesaler">Wholesaler</label>
                                     </div>
                                 </div>
                                 @error('category')
@@ -78,7 +74,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="url" class="form-control @error('website_url') is-invalid @enderror" id="website_url" placeholder="Enter Website URL" name="website_url" value="{{ old('website_url', $customer->website_url ?? '') }}">
+                                    <input type="text" class="form-control @error('website_url') is-invalid @enderror" id="website_url" placeholder="Enter Website URL" name="website_url" value="{{ old('website_url', $customer->website_url ?? '') }}">
                                     <label for="website_url">Website URL </label>
                                 </div>
                                 @error('website_url')
@@ -193,7 +189,7 @@
                                 @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline mb-6">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('address_line_1') is-invalid @enderror" id="address_line_1" placeholder="Enter Address Line 1" name="address_line_1" value="{{ old('address_line_1', $customer->address_line_1 ?? '') }}">
                                     <label for="address_line_1">Address Line 1 <span class="text-danger">*</span></label>
                                 </div>
@@ -245,8 +241,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" placeholder="Enter Designation" name="designation" value="{{ old('designation', $customer->designation ?? '') }}">
-                                    <label for="designation">Designation</label>
+                                    <input type="text" class="form-control @error('designation') is-invalid @enderror" id="designation" placeholder="Enter Contact Person Designation" name="designation" value="{{ old('designation', $customer->designation ?? '') }}">
+                                    <label for="designation">Contact Person Designation</label>
                                 </div>
                                 @error('designation')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -254,8 +250,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('contact_mobile_no') is-invalid @enderror" id="contact_mobile_no" placeholder="Enter Mobile Number" name="contact_mobile_no" value="{{ old('contact_mobile_no', $customer->contact_mobile_no ?? '') }}">
-                                    <label for="contact_mobile_no">Mobile Number</label>
+                                    <input type="text" class="form-control @error('contact_mobile_no') is-invalid @enderror" id="contact_mobile_no" placeholder="Enter Contact Person Mobile Number" name="contact_mobile_no" value="{{ old('contact_mobile_no', $customer->contact_mobile_no ?? '') }}">
+                                    <label for="contact_mobile_no">Contact Person Mobile Number</label>
                                 </div>
                                 @error('contact_mobile_no')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -263,8 +259,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="email" class="form-control @error('contact_email') is-invalid @enderror" id="contact_email" placeholder="Enter Email" name="contact_email" value="{{ old('contact_email', $customer->contact_email ?? '') }}">
-                                    <label for="contact_email">Email</label>
+                                    <input type="email" class="form-control @error('contact_email') is-invalid @enderror" id="contact_email" placeholder="Enter Contact Person Email" name="contact_email" value="{{ old('contact_email', $customer->contact_email ?? '') }}">
+                                    <label for="contact_email">Contact Person Email</label>
                                 </div>
                                 @error('contact_email')
                                 <div class="text-danger mt-1">{{ $message }}</div>

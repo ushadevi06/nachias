@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Debit Notes</h4>
-                <a class="btn btn-primary" href="{{ url('add_debit_note') }}">
+                <a class="btn btn-primary" href="{{ url('debit_notes/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
             </div>
@@ -126,11 +126,5 @@
             });
         });
     });
-
-    function delete_data(url) {
-        if (confirm('Are you sure you want to delete this debit note?')) {
-            window.location.href = url;
-        }
-    }
 </script>
 @endsection

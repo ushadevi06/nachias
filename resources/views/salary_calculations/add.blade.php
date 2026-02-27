@@ -87,20 +87,9 @@
         </div>
     </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+
 <script>
     $(document).ready(function() {
-        flatpickr("#month_year", {
-            plugins: [
-                new monthSelectPlugin({
-                    shorthand: true,
-                    dateFormat: "F Y",
-                    altFormat: "F Y",
-                    theme: "light"
-                })
-            ]
-        });
         $('#employee').change(function() {
             var employee = $(this).val();
             if (employee == "Ramesh Kumar(EMP001)") {
