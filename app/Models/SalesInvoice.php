@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class SalesInvoice extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'inv_no',
+        'inv_date',
+        'so_id',
+        'customer_id',
+        'delivery_address',
+        'remarks',
+        'invoice_status',
+        'payment_mode',
+        'extra_input',
+        'due_date',
+        'notes',
+        'signature_file',
+        'attachment_file',
+        'show_fields',
+        'sub_total',
+        'discount_percent',
+        'discount',
+        'total',
+        'other_state',
+        'tax_amount',
+        'igst_percent',
+        'igst',
+        'cgst_percent',
+        'cgst',
+        'sgst_percent',
+        'sgst',
+        'other_charges',
+        'round_off_type',
+        'round_off',
+        'grand_total',
+        'received_amount',
+        'due_amount',
+        'created_by',
+        'updated_by',
+    ];
+
+    protected $casts = [
+        'inv_date' => 'date',
+        'due_date' => 'date',
+        'other_state' => 'boolean',
+        'show_fields' => 'array',
+    ];
+
+    public function salesOrder()
+    {
+        return $this->belongsTo(SalesOrder::class, 'so_id');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(SalesInvoiceItem::class, 'sales_invoice_id');
+    }
+}

@@ -30,6 +30,7 @@ class Setting extends Model
         'closing_time',
         'po_prefix',
         'purchase_invoice_prefix',
+        'so_prefix',
     ];
 
     protected $casts = [

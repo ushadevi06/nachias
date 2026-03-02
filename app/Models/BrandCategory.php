@@ -25,6 +25,11 @@ class BrandCategory extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+    public function items()
+    {
+        return $this->hasMany(Item::class, 'brand_category_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'Active');

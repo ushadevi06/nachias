@@ -555,24 +555,24 @@ $isSuper = $user->id == 1;
                                 </li>
                                 @endif
                                 @if($isSuper || $user->can('view sales-order') || $user->can('view sales-invoice') || $user->can('view credit-notes'))
-                                <li class="menu-item {{ (request()->is('sales_order*') || request()->is('sales_invoice*') || request()->is('credit_notes*')) ? 'active' : '' }}">
+                                <li class="menu-item {{ (request()->is('sales_orders*') || request()->is('sales_invoices*') || request()->is('credit_notes*')) ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-order-play-line"></i>
                                         <div>Sales</div>
                                     </a>
                                     <ul class="menu-sub">
                                         @if($isSuper || $user->can('view sales-order'))
-                                        <li class="menu-item {{ request()->is('sales_order*') ? 'active' : '' }}">
-                                            <a href="{{ url('sales_order') }}" class="menu-link">
-                                                <div>Sales Order</div>
+                                        <li class="menu-item {{ request()->is('sales_orders*') ? 'active' : '' }}">
+                                            <a href="{{ url('sales_orders') }}" class="menu-link">
+                                                <div>Sales Orders</div>
                                             </a>
                                         </li>
                                         @endif
 
                                         @if($isSuper || $user->can('view sales-invoice'))
-                                        <li class="menu-item {{ request()->is('sales_invoice*') ? 'active' : '' }}">
-                                            <a href="{{ url('sales_invoice') }}" class="menu-link">
-                                                <div>Sales Invoice</div>
+                                        <li class="menu-item {{ request()->is('sales_invoices*') ? 'active' : '' }}">
+                                            <a href="{{ url('sales_invoices') }}" class="menu-link">
+                                                <div>Sales Invoices</div>
                                             </a>
                                         </li>
                                         @endif

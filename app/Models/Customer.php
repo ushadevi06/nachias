@@ -88,4 +88,7 @@ class Customer extends Model
             'mobile' => $this->mobile_no
         ];
     }
+    public function scopeActive($query){
+        return $query->where('status', 'Active');
+    }
 }

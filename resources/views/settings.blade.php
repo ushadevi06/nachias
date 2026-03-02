@@ -142,6 +142,16 @@
                                     @enderror
                                 </div>
                             </div>
+                            
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('so_prefix') is-invalid @enderror" id="so_prefix" placeholder="SO Prefix (e.g., SO/24-25/)" name="so_prefix" value="{{ old('so_prefix', $setting->so_prefix ?? '') }}">
+                                    <label for="so_prefix">SO Prefix</label>
+                                    @error('so_prefix')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
 
                             <div class="col-lg-12">
                                 <hr>

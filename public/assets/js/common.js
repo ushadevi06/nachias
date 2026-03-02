@@ -122,11 +122,17 @@ document.addEventListener('DOMContentLoaded', function () {
             var el = document.createElement('div');
             el.className = 'nd-item' + (isActive ? ' nd-current' : '');
             el.innerText = label;
-            el.addEventListener('click', function () {
+            el.addEventListener('click', function (e) {
                 if (href && href !== '#' && href !== 'javascript:void(0)') {
-                    window.location.href = href;
+                    if (e.ctrlKey || e.metaKey) {
+                        window.open(href, '_blank');
+                    } else {
+                        window.location.href = href;
+                        closeMega();
+                    }
+                } else {
+                    closeMega();
                 }
-                closeMega();
             });
             ndRight.appendChild(el);
         });
@@ -165,11 +171,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     setTimeout(function () { el.click(); }, 0);
                 }
             } else {
-                el.addEventListener('click', function () {
+                el.addEventListener('click', function (e) {
                     if (href && href !== '#' && href !== 'javascript:void(0)') {
-                        window.location.href = href;
+                        if (e.ctrlKey || e.metaKey) {
+                            window.open(href, '_blank');
+                        } else {
+                            window.location.href = href;
+                            closeMega();
+                        }
+                    } else {
+                        closeMega();
                     }
-                    closeMega();
                 });
             }
             ndLeft.appendChild(el);

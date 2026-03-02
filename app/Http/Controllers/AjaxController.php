@@ -9,7 +9,12 @@ use App\Models\City;
 use App\Models\Place;
 use App\Models\RawMaterial;
 use App\Models\User;
+use App\Models\Customer;
+use App\Models\Item;
 use App\Models\TaskLog;
+use App\Models\ProcessSchedule;
+use App\Models\ProductionService;
+use App\Models\ServiceProvider;
 
 class AjaxController extends Controller
 {
@@ -82,9 +87,7 @@ class AjaxController extends Controller
     }
     public function getServiceProvidersByStage($stageId)
     {
-        $providers = \App\Models\ServiceProvider::active()
-            ->where('operation_stage_id', $stageId)
-            ->get(['id', 'name']);
+        $providers = ServiceProvider::active()->where('operation_stage_id', $stageId)->get(['id', 'name']);
         
         $results = $providers->map(function($p) {
             return ['id' => $p->id, 'text' => $p->name];
@@ -94,16 +97,16 @@ class AjaxController extends Controller
     }
     public function getServicesByStage($stageId)
     {
-        $schedule = \App\Models\ProcessSchedule::with(['operationStage'])->find($stageId);
+        $schedule = ProcessSchedule::with(['operationStage'])->find($stageId);
         
         if (!$schedule) {
-            $schedule = \App\Models\ProcessSchedule::with(['operationStage'])->where('operation_stage_id', $stageId)->first();
+            $schedule = ProcessSchedule::with(['operationStage'])->where('operation_stage_id', $stageId)->first();
         }
         
         if (!$schedule) {
             return response()->json(['success' => false, 'results' => [], 'message' => 'Schedule not found']);
         }
-        $services = \App\Models\ProductionService::where('operation_stage_id', $schedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($schedule) {
+        $services = ProductionService::where('operation_stage_id', $schedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($schedule) {
             return [
                 'id' => $s->id,
                 'text' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
@@ -126,5 +129,79 @@ class AjaxController extends Controller
         });
         
         return response()->json(['success' => true, 'logs' => $logs]);
+    }
+
+    public function getItemDetails($id)
+    {
+        $item = Item::with(['uom'])->find($id);
+        if (!$item) {
+            return response()->json(['success' => false, 'message' => 'Item not found']);
+        }
+
+        $stockDetails = \App\Models\StockEntryItem::where('finished_item_code', 'like', $item->code . '%')->whereNull('deleted_at')->select('id', 'size', 'finished_item_code', 'price', DB::raw('(qty_in - qty_out) as balance'))->get();
+
+        $stockData = $stockDetails->map(function($s) {
+            $sleeve = null;
+            if (str_contains($s->finished_item_code, 'Half') || str_contains($s->finished_item_code, 'H/S')) {
+                $sleeve = 'Half';
+            } elseif (str_contains($s->finished_item_code, 'Full') || str_contains($s->finished_item_code, 'F/S')) {
+                $sleeve = 'Full';
+            } else {
+                $sleeve = 'Full';
+            }
+            
+            return [
+                'stock_entry_item_id' => $s->id,
+                'size' => $s->size,
+                'sleeve' => $sleeve,
+                'rate' => (float)$s->price,
+                'balance' => (float)$s->balance
+            ];
+        })->filter(function($s) {
+            return $s['balance'] > 0;
+        })->values();
+
+        $totalStock = $stockData->sum('balance');
+        $defaultRate = $item->wholesale_price ?? ($stockData->first()['rate'] ?? 0);
+
+        return response()->json([
+            'success'   => true,
+            'rate'      => (float)$defaultRate,
+            'uom_id'    => $item->uom_id,
+            'color_id'  => is_array($item->color_id) ? ($item->color_id[0] ?? null) : $item->color_id,
+            'size_id'   => $item->size_ratio_id, 
+            'art_no'    => $item->design_art_no,
+            'mrp'       => (float)$item->mrp,
+            'available_stock' => (float)$totalStock,
+            'stock_breakdown' => $stockData
+        ]);
+    }
+
+    public function getItemsByBrandCategory($brandCategoryId)
+    {
+        $items = Item::active()
+            ->where('brand_category_id', $brandCategoryId)
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('stock_entry_items')
+                    ->whereColumn('stock_entry_items.finished_item_code', 'like', DB::raw("CONCAT(items.code, '%')"))
+                    ->whereNull('deleted_at')
+                    ->groupBy('finished_item_code')
+                    ->havingRaw('SUM(qty_in) - SUM(qty_out) > 0');
+            })
+            ->get(['id', 'name', 'code']);
+        return response()->json(['success' => true, 'items' => $items]);
+    }
+
+    public function getCustomerDetails($id)
+    {
+        $customer = Customer::with(['tax'])->find($id);
+        if (!$customer) {
+            return response()->json(['success' => false, 'message' => 'Customer not found']);
+        }
+        return response()->json([
+            'success' => true,
+            'customer' => $customer
+        ]);
     }
 }

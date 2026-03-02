@@ -77,7 +77,7 @@
                                 <tr>
                                     <td>{{ $consumable->art_no }}</td>
                                     <td><span class="badge bg-label-secondary small">{{ $consumable->item_type }}</span></td>
-                                    <td class="small">{{ $consumable->rawMaterial->name ?? '-' }}</td>
+                                    <td class="small">{{ $consumable->rawMaterial->name ?? '-' }} ({{ $consumable->rawMaterial->code ?? '-' }})</td>
                                     <td>{{ $consumable->uom->name ?? '-' }}</td>
                                     <td><span class="badge bg-label-info">{{ $consumable->sleeve_type }}</span></td>
                                     <td class="text-end">{{ number_format($consumable->fs_qty, 2) }}</td>

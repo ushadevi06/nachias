@@ -145,8 +145,9 @@ class ItemController extends Controller
                 'service_providers'   => 'nullable|array',
                 'service_providers.*' => 'nullable|exists:service_providers,id',
                 'wholesale_price'     => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
-                'retail_price'        => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
+                 'retail_price'        => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
                 'export_price'        => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
+                'mrp'                 => 'nullable|numeric|min:0|regex:/^\d{1,8}(\.\d{1,2})?$/',
                 'status'              => 'required|in:Active,Inactive',
             ];
 
@@ -189,6 +190,7 @@ class ItemController extends Controller
                     'wholesale_price'   => $request->wholesale_price,
                     'retail_price'      => $request->retail_price,
                     'export_price'      => $request->export_price,
+                    'mrp'               => $request->mrp,
                     'status'            => $request->status,
                 ];
 

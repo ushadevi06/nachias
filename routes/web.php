@@ -27,8 +27,8 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\GrnEntryController;
 use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockConsumableReturnController;
-use App\Http\Controllers\SaleOrderController;
-use App\Http\Controllers\SaleInvoiceController;
+use App\Http\Controllers\SalesOrderController;
+use App\Http\Controllers\SalesInvoiceController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\JobCardEntryController;
 use App\Http\Controllers\ProductionController;
@@ -112,6 +112,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('get-employees-by-plant/{plantId?}/{stageId?}', [AjaxController::class, 'getEmployeesByPlant']);
     Route::get('get-service-providers-by-stage/{stageId}', [AjaxController::class, 'getServiceProvidersByStage']);
     Route::get('get-services-by-stage/{stageId}', [AjaxController::class, 'getServicesByStage']);
+    Route::get('get-item-details/{id}', [AjaxController::class, 'getItemDetails']);
+    Route::get('get-items-by-brand-category/{brandCategoryId}', [AjaxController::class, 'getItemsByBrandCategory']);
+    Route::get('get-customer-details/{id}', [AjaxController::class, 'getCustomerDetails']);
 
     /* Employees */
     Route::get('employees', [EmployeeController::class, 'index']);
@@ -366,14 +369,19 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('stock_consumables_returns/view/{id}', [StockConsumableReturnController::class, 'view']);
 
     /* Sales Order */
-    Route::get('sales_order', [SaleOrderController::class, 'index']);
-    Route::get('add_sale_order', [SaleOrderController::class, 'add']);
-    Route::get('view_sale_order', [SaleOrderController::class, 'view']);
+    Route::get('sales_orders', [SalesOrderController::class, 'index']);
+    Route::match(['GET', 'POST'], 'sales_orders/add/{id?}', [SalesOrderController::class, 'add']);
+    Route::get('sales_orders/view/{id}', [SalesOrderController::class, 'view']);
+    Route::get('sales_orders/delete/{id}', [SalesOrderController::class, 'destroy']);
+    Route::post('sales_orders/status/{id}', [SalesOrderController::class, 'updateStatus']);
 
     /* Sales Invoice */
-    Route::get('sales_invoice', [SaleInvoiceController::class, 'index']);
-    Route::get('add_sale_invoice', [SaleInvoiceController::class, 'add']);
-    Route::get('view_sale_invoice', [SaleInvoiceController::class, 'view']);
+    Route::get('sales_invoices', [SalesInvoiceController::class, 'index']);
+    Route::match(['GET', 'POST'], 'sales_invoices/add/{id?}', [SalesInvoiceController::class, 'add']);
+    Route::get('sales_invoices/view/{id}', [SalesInvoiceController::class, 'view']);
+    Route::get('sales_invoices/download-pdf/{id}', [SalesInvoiceController::class, 'downloadPdf']);
+    Route::post('sales_invoices/status/{id}', [SalesInvoiceController::class, 'updateStatus']);
+    Route::get('sales_invoices/get-sale-order-details/{id}', [SalesInvoiceController::class, 'getSaleOrderDetails']);
 
     /* Credit Notes */
     Route::get('credit_notes', [CreditNoteController::class, 'index']);

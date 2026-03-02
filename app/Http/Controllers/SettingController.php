@@ -61,6 +61,7 @@ class SettingController extends Controller
             'closing_time' => 'nullable|string|max:255',
             'po_prefix' => 'nullable|string|max:10',
             'purchase_invoice_prefix' => 'nullable|string|max:10',
+            'so_prefix' => 'nullable|string|max:10',
         ];
 
         $messages = [
@@ -92,6 +93,7 @@ class SettingController extends Controller
             'closing_time' => $request->closing_time,
             'po_prefix' => $request->po_prefix,
             'purchase_invoice_prefix' => $request->purchase_invoice_prefix,
+            'so_prefix' => $request->so_prefix,
         ];
 
         if ($request->hasFile('logo')) {

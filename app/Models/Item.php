@@ -30,6 +30,7 @@ class Item extends Model
         'wholesale_price',
         'retail_price',
         'export_price',
+        'mrp',
         'status',
         'created_by',
     ];
@@ -41,19 +42,9 @@ class Item extends Model
         'service_providers' => 'array',
     ];
 
-    // public function getColorsAttribute()
-    // {
-    //     if (!$this->color_id) {
-    //         return [];
-    //     }
-    //     return explode(',', $this->color_id);
-    // }
-
     public function setColorIdAttribute($value)
     {
-        $this->attributes['color_id'] = is_array($value)
-            ? implode(',', $value)
-            : $value;
+        $this->attributes['color_id'] = is_array($value) ? implode(',', $value) : $value;
     }
 
     public function getColorIdAttribute($value)
@@ -116,5 +107,9 @@ class Item extends Model
         }
 
         return $barcode;
+    }
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'Active');
     }
 }

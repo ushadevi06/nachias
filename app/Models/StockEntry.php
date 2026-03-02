@@ -48,6 +48,7 @@ class StockEntry extends Model
         'Production Issue',
         'Stock Adjustment',
         'Stock Conversion',
+        'Sales Invoice',
     ];
 
     // Relationships

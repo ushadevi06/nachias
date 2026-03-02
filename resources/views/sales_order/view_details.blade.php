@@ -6,146 +6,243 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>View Sale Order</h4>
-                <a href="{{ url('sales_order') }}" class="btn btn-primary">
-                    <i class="ri ri-arrow-left-line back-arrow"></i>Back
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="{{ url('sales_orders') }}" class="btn btn-primary">
+                        <i class="ri ri-arrow-left-line back-arrow"></i> Back
+                    </a>
+                </div>
             </div>
 
             <div class="card detail-card">
                 <div class="card-body">
                     <div class="row g-4">
 
-                        <!-- ========== ORDER DETAILS ========== -->
+                        {{-- ===== ORDER DETAILS ===== --}}
                         <div class="col-lg-12">
                             <h6>Order Details:</h6>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">SO Number: </label>
-                            <div class="text-muted">S0-1001</div>
+                            <label class="detail-title">SO Number:</label>
+                            <div class="text-muted">{{ $salesOrder->so_no }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">SO Date:</label>
-                            <div class="text-muted">19-Sep-2025</div>
+                            <div class="text-muted">{{ $salesOrder->so_date->format('d-M-Y') }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Order Type:</label>
+                            <div class="text-muted">{{ $salesOrder->order_type }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Request Date:</label>
+                            <div class="text-muted">{{ $salesOrder->request_date ? $salesOrder->request_date->format('d-M-Y') : '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Season:</label>
+                            <div class="text-muted">{{ $salesOrder->season->name ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Customer Name:</label>
-                            <div class="text-muted">Hero Mens Wear (CUS001)</div>
+                            <div class="text-muted">{{ $salesOrder->customer ? $salesOrder->customer->name . ' (' . $salesOrder->customer->code . ')' : '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Customer PO Ref No:</label>
-                            <div class="text-muted">PO-458</div>
+                            <div class="text-muted">{{ $salesOrder->customer_po_ref ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Store:</label>
+                            <div class="text-muted">{{ $salesOrder->store->store_type_name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Sales Agent:</label>
+                            <div class="text-muted">{{ $salesOrder->salesAgent->name ?? '-' }}</div>
+                        </div>
+
+                        <div class="col-lg-12"><hr></div>
+
+                        {{-- ===== BILLING & SHIPPING ===== --}}
+                        <div class="col-lg-12">
+                            <h6>Billing &amp; Shipping Details:</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Billing Address:</label>
+                            <div class="text-muted">{{ $salesOrder->billing_address ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Shipping Address:</label>
+                            <div class="text-muted">{{ $salesOrder->shipping_address ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Payment Terms:</label>
+                            <div class="text-muted">{{ $salesOrder->payment_terms ?? '-' }}</div>
+                        </div>
+
+                        <div class="col-lg-12"><hr></div>
+
+                        {{-- ===== LOGISTICS ===== --}}
+                        <div class="col-lg-12">
+                            <h6>Logistics &amp; Destination:</h6>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Expected Delivery Date:</label>
-                            <div class="text-muted">15-Sep-2025</div>
+                            <div class="text-muted">{{ $salesOrder->delivery_date ? $salesOrder->delivery_date->format('d-M-Y') : '-' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Zone:</label>
-                            <div class="text-muted">North Zone</div>
+                            <label class="detail-title">Shipping Method:</label>
+                            <div class="text-muted">{{ $salesOrder->shipping_method ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Address Line 1:</label>
-                            <div class="text-muted">12, Main Street</div>
+                            <label class="detail-title">Transport Mode:</label>
+                            <div class="text-muted">{{ $salesOrder->transport_mode ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Address Line 2:</label>
-                            <div class="text-muted">Delhi</div>
+                            <label class="detail-title">Dispatch From:</label>
+                            <div class="text-muted">{{ $salesOrder->dispatch_from ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Zipcode:</label>
-                            <div class="text-muted">625011</div>
+                            <label class="detail-title">Transporter Name:</label>
+                            <div class="text-muted">{{ $salesOrder->transporter_name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Freight Type:</label>
+                            <div class="text-muted">{{ $salesOrder->freight_type ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Freight Amount:</label>
+                            <div class="text-muted">₹{{ number_format($salesOrder->freight_amount, 2) }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">E-Way Bill No:</label>
+                            <div class="text-muted">{{ $salesOrder->eway_bill_no ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">LR No:</label>
+                            <div class="text-muted">{{ $salesOrder->lr_no ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Dispatch Through:</label>
+                            <div class="text-muted">{{ $salesOrder->dispatch_through ?? '-' }}</div>
                         </div>
 
-                        <div class="col-lg-12">
-                            <hr>
-                        </div>
+                        <div class="col-lg-12"><hr></div>
 
-                        <!-- ========== ITEM DETAILS ========== -->
+                        {{-- ===== ITEM DETAILS ===== --}}
                         <div class="col-lg-12">
                             <h6>Item Details:</h6>
                         </div>
                         <div class="col-lg-12">
                             <div class="table-responsive">
                                 <table class="table table-bordered align-middle">
-                                    <thead>
+                                    <thead class="table-primary">
                                         <tr>
                                             <th>S.No</th>
-                                            <th>Brand</th>
-                                            <th>Item (Code)</th>
-                                            <th>Quantity Order</th>
-                                            <th>Rate Per Unit</th>
+                                            <th>Brand Category</th>
+                                            <th>Item</th>
+                                            <th>Color</th>
+                                            <th>Art No</th>
                                             <th>UOM</th>
                                             <th>Size</th>
-                                            <th>Sleeve Type</th>
+                                            <th>Qty</th>
+                                            <th>Rate</th>
+                                            <th>MRP</th>
                                             <th>Amount</th>
+                                            <th>Sleeve Type</th>
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        @forelse($salesOrder->items as $idx => $item)
                                         <tr>
-                                            <td>1</td>
-                                            <td>UrbanStitch</td>
-                                            <td>Men’s Casual Denim Shirt <span class="mini-title">(ITEM001)</span></td>
-                                            <td>3</td>
-                                            <td>₹30</td>
-                                            <td>PCS</td>
-                                            <td>38, 40, 42</td>
-                                            <td>Checked Full Sleeve</td>
-                                            <td>₹90</td>
+                                            <td>{{ $idx + 1 }}</td>
+                                            <td>{{ $item->brandCategory->name ?? '-' }} ({{ $item->brandCategory->code ?? '-' }})</td>
+                                            <td>{{ $item->item->item_name ?? $item->item->name ?? '-' }} ({{ $item->item->code ?? '-' }})</td>
+                                            <td>{{ $item->color->color_name ?? '-' }}</td>
+                                            <td>{{ $item->art_no ?? '-' }}</td>
+                                            <td>{{ $item->uom->uom_code ?? '-' }}</td>
+                                            <td>{{ $item->size_id ?? '-' }}</td>
+                                            <td>{{ number_format($item->qty, 2) }}</td>
+                                            <td>₹{{ number_format($item->rate, 2) }}</td>
+                                            <td>₹{{ number_format($item->mrp ?? 0, 2) }}</td>
+                                            <td>₹{{ number_format($item->amount, 2) }}</td>
+                                            <td>{{ $item->sleeve ? implode(', ', $item->sleeve) : '-' }}</td>
                                         </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>EliteThreads</td>
-                                            <td>Men’s Formal Cotton Shirt <span class="mini-title">(ITEM002)</span></td>
-                                            <td>1</td>
-                                            <td>₹50</td>
-                                            <td>PCS</td>
-                                            <td>40, 42</td>
-                                            <td>Others Half Sleeve</td>
-                                            <td>₹50</td>
-                                        </tr>
+                                        @empty
+                                        <tr><td colspan="12" class="text-center text-muted">No items found</td></tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <div class="col-lg-12">
-                            <hr>
-                        </div>
+                        <div class="col-lg-12"><hr></div>
 
-                        <!-- ========== TAX & CHARGES SECTION ========== -->
+                        {{-- ===== ADDITIONAL INFO + TAX SUMMARY ===== --}}
                         <div class="row g-4 mt-2">
-                            <!-- Additional Information Card -->
                             <div class="col-lg-6">
                                 <div class="card h-100 border shadow-none">
                                     <div class="card-body">
                                         <div class="card-header-box mb-4">
                                             <h6 class="mb-0">Additional Information</h6>
                                         </div>
-                                        <div class="row g-4">
+                                        <div class="row g-3">
                                             <div class="col-md-12">
                                                 <label class="detail-title d-block">Status:</label>
-                                                <div class="text-muted"><span class="badge bg-label-warning">Pending</span></div>
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label class="detail-title d-block">Payment Terms:</label>
-                                                <div class="text-muted h-px-100 border rounded p-2">30 Days</div>
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label class="detail-title d-block">Remarks:</label>
-                                                <div class="text-muted border rounded p-2">Urgent delivery requested</div>
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label class="detail-title d-block">Additional Attachments:</label>
-                                                <div class="mt-2">
-                                                    <img src="{{ url('assets/img/illustrations/page-pricing-basic.png') }}" alt="Attachment Preview" class="img-fluid rounded border shadow-sm" style="max-height: 200px; cursor: pointer;">
+                                                <div>
+                                                    @php
+                                                    $statusColors = [
+                                                        'Draft' => 'secondary', 'Approved' => 'success',
+                                                        'Pending' => 'warning', 'In Production' => 'info',
+                                                        'Dispatched' => 'primary', 'Cancelled' => 'danger',
+                                                    ];
+                                                    @endphp
+                                                    <span class="badge bg-label-{{ $statusColors[$salesOrder->status] ?? 'secondary' }}">{{ $salesOrder->status }}</span>
                                                 </div>
                                             </div>
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Approved By:</label>
+                                                <div class="text-muted">{{ $salesOrder->approvedBy->name ?? '-' }}</div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Approved Date:</label>
+                                                <div class="text-muted">{{ $salesOrder->approved_date ? $salesOrder->approved_date->format('d-M-Y H:i A') : '-' }}</div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Terms & Conditions:</label>
+                                                <div class="text-muted border rounded p-2">{!! nl2br(e($salesOrder->terms_conditions ?? '-')) !!}</div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Internal Notes:</label>
+                                                <div class="text-muted border rounded p-2">{!! nl2br(e($salesOrder->internal_remarks ?? '-')) !!}</div>
+                                            </div>
+                                            @if($salesOrder->attachment)
+                                            <div class="col-md-12">
+                                                <label class="detail-title d-block">Attachments:</label>
+                                                <div class="mt-2 d-flex flex-wrap gap-3">
+                                                    @foreach(explode(',', $salesOrder->attachment) as $file)
+                                                        @php
+                                                        $ext = pathinfo($file, PATHINFO_EXTENSION);
+                                                        $isImg = in_array(strtolower($ext), ['jpg','jpeg','png','webp','gif']);
+                                                        $url = url('uploads/so/' . $salesOrder->id . '/' . $file);
+                                                        @endphp
+                                                        <div class="attachment-box">
+                                                            @if($isImg)
+                                                            <a href="{{ $url }}" target="_blank">
+                                                                <img src="{{ $url }}" alt="Attachment" class="img-fluid rounded border shadow-sm" style="height:80px; width:80px; object-fit:cover;">
+                                                            </a>
+                                                            @else
+                                                            <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-secondary h-100 d-flex align-items-center">
+                                                                <i class="ri ri-file-text-line me-1"></i> {{ mb_strimwidth($file, 0, 15, '...') }}
+                                                            </a>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Tax Summary Card -->
                             <div class="col-lg-6">
                                 <div class="card h-100 border shadow-none">
                                     <div class="card-body">
@@ -153,74 +250,73 @@
                                             <h6 class="mb-0">Tax Summary</h6>
                                         </div>
                                         <div class="d-flex flex-column gap-3">
-                                            <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex justify-content-between">
                                                 <span class="fw-semibold">Total Qty:</span>
-                                                <span class="fw-bold">4.00</span>
+                                                <span class="fw-bold">{{ number_format($salesOrder->total_qty, 2) }}</span>
                                             </div>
-                                            <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex justify-content-between">
                                                 <span class="fw-semibold">Sub Total:</span>
-                                                <span class="fw-bold">₹140.00</span>
+                                                <span class="fw-bold">₹{{ number_format($salesOrder->sub_total_qty, 2) }}</span>
                                             </div>
                                             <div class="row align-items-center g-2">
-                                                <div class="col-6">
-                                                    <span class="fw-semibold">Discount:</span>
-                                                </div>
+                                                <div class="col-6"><span class="fw-semibold">Discount:</span></div>
                                                 <div class="col-6 text-end">
-                                                    <span class="badge bg-label-danger">2%</span>
-                                                    <div class="fw-bold mt-1">₹2.80</div>
+                                                    <span class="badge bg-label-danger">{{ $salesOrder->discount_percent }}%</span>
+                                                    <div class="fw-bold mt-1">₹{{ number_format($salesOrder->discount_amount, 2) }}</div>
                                                 </div>
                                             </div>
                                             <hr class="my-1">
-                                            <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex justify-content-between">
                                                 <span class="fw-semibold">Net Amount (Before Tax):</span>
-                                                <span class="fw-bold">₹137.20</span>
+                                                <span class="fw-bold">₹{{ number_format($salesOrder->taxable_amount, 2) }}</span>
                                             </div>
-
-                                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <div class="d-flex justify-content-between">
                                                 <span class="fw-semibold">Other State:</span>
-                                                <span class="badge bg-label-secondary">No</span>
+                                                <span class="badge bg-label-{{ $salesOrder->other_state ? 'warning' : 'secondary' }}">{{ $salesOrder->other_state ? 'Yes' : 'No' }}</span>
                                             </div>
-
-                                            <!-- CGST Row -->
+                                            @if($salesOrder->other_state)
                                             <div class="row align-items-center g-2">
-                                                <div class="col-6">
-                                                    <span class="fw-semibold">CGST :</span>
-                                                </div>
+                                                <div class="col-6"><span class="fw-semibold">IGST:</span></div>
                                                 <div class="col-6 text-end">
-                                                    <span class="small text-muted me-2">(9%)</span>
-                                                    <span class="fw-bold">₹12.35</span>
+                                                    <span class="small text-muted">({{ $salesOrder->igst_percent }}%)</span>
+                                                    <span class="fw-bold ms-1">₹{{ number_format($salesOrder->tax_amount, 2) }}</span>
                                                 </div>
                                             </div>
-
-                                            <!-- SGST Row -->
+                                            @else
                                             <div class="row align-items-center g-2">
-                                                <div class="col-6">
-                                                    <span class="fw-semibold">SGST :</span>
-                                                </div>
+                                                <div class="col-6"><span class="fw-semibold">CGST:</span></div>
                                                 <div class="col-6 text-end">
-                                                    <span class="small text-muted me-2">(9%)</span>
-                                                    <span class="fw-bold">₹12.35</span>
+                                                    <span class="small text-muted">({{ $salesOrder->cgst_percent }}%)</span>
+                                                    <span class="fw-bold ms-1">₹{{ number_format($salesOrder->taxable_amount * $salesOrder->cgst_percent / 100, 2) }}</span>
                                                 </div>
                                             </div>
-
-                                            <div class="d-flex justify-content-between align-items-center">
+                                            <div class="row align-items-center g-2">
+                                                <div class="col-6"><span class="fw-semibold">SGST:</span></div>
+                                                <div class="col-6 text-end">
+                                                    <span class="small text-muted">({{ $salesOrder->sgst_percent }}%)</span>
+                                                    <span class="fw-bold ms-1">₹{{ number_format($salesOrder->taxable_amount * $salesOrder->sgst_percent / 100, 2) }}</span>
+                                                </div>
+                                            </div>
+                                            @endif
+                                            <div class="d-flex justify-content-between">
                                                 <span class="fw-semibold">Tax Amount:</span>
-                                                <span class="fw-bold">₹24.70</span>
+                                                <span class="fw-bold">₹{{ number_format($salesOrder->tax_amount, 2) }}</span>
                                             </div>
-
+                                            <div class="d-flex justify-content-between">
+                                                <span class="fw-semibold">Round Off ({{ $salesOrder->round_off_type }}):</span>
+                                                <span class="fw-bold">₹{{ number_format($salesOrder->round_off, 2) }}</span>
+                                            </div>
                                             <hr class="my-1">
-
                                             <div class="d-flex justify-content-between align-items-center text-primary">
                                                 <h5 class="m-0 fw-bold">Total Amount:</h5>
-                                                <h5 class="m-0 fw-bold">₹162.00</h5>
+                                                <h5 class="m-0 fw-bold">₹{{ number_format($salesOrder->total_amount, 2) }}</h5>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                    </div> <!-- row end -->
+                    </div>
                 </div>
             </div>
         </div>
