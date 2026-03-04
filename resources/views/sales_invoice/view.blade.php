@@ -22,10 +22,10 @@
                             </div>
                             <div class="col-md-4 col-lg-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="customer_id" id="customer_id" class="form-select select2" data-placeholder="Select Customer/Buyer">
-                                        <option value="">Select Customer/Buyer</option>
+                                    <select name="customer_id" id="customer_id" class="form-select select2" data-placeholder="Select Customer">
+                                        <option value="">Select Customer</option>
                                         @foreach($customers as $customer)
-                                            <option value="{{ $customer->id }}">{{ $customer->name }} ({{ $customer->customer_code }})</option>
+                                            <option value="{{ $customer->id }}">{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
                                 </div>

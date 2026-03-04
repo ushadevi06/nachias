@@ -6,6 +6,16 @@
         <div class="col-lg-12">
             <form action="{{ isset($invoice) ? url('sales_invoices/add/'.$invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -121,6 +131,7 @@
                                                     'rate' => $item->rate,
                                                     'mrp' => $item->mrp,
                                                     'amount' => $item->amount,
+                                                    'stock_entry_item_id' => $item->stock_entry_item_id,
                                                 ];
                                             })->toArray();
                                         }
@@ -133,6 +144,7 @@
                                                 <span class="brand-text">{{ $row->brand_name ?? '' }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
+                                                <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
                                             </td>
                                             <td>
                                                 <span class="item-text">{{ $row->item_name ?? '' }} ({{ $row->sleeve_type ?? '' }})</span>
@@ -526,6 +538,7 @@
                                         <span class="brand-text">${item.brand_name}</span>
                                         <input type="hidden" name="items[${index}][brand_id]" class="brand-id" value="${item.brand_id}">
                                         <input type="hidden" name="items[${index}][brand_name]" class="brand-name" value="${item.brand_name}">
+                                        <input type="hidden" name="items[${index}][stock_entry_item_id]" class="stock-entry-item-id" value="${item.stock_entry_item_id || ''}">
                                     </td>
                                     <td>
                                         <span class="item-text">${item.item_name} (${item.sleeve})</span>

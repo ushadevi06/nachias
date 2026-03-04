@@ -7,8 +7,8 @@
             <div class="table-header-box">
                 <h4>View Sales Invoice</h4>
                 <div class="d-flex gap-2">
-                    <a href="{{ url('sales_invoices/download-pdf/'.$invoice->id) }}" class="btn btn-primary">
-                    <i class="ri ri-arrow-down-line back-arrow"></i>Download
+                    <a href="{{ url('sales_invoices/download-pdf/'.$invoice->id) }}" class="btn btn-primary" target="_blank">
+                    <i class="ri ri-arrow-down-line back-arrow"></i>Download PDF
                     </a>
                     <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
                         <i class="ri ri-arrow-left-line back-arrow"></i>Back
@@ -19,7 +19,6 @@
             <div class="card detail-card">
                 <div class="card-body">
                     <div class="row g-4">
-                        <!-- Order Details -->
                         <div class="col-lg-12">
                             <h6>Order Details:</h6>
                         </div>
@@ -58,7 +57,6 @@
                             <hr>
                         </div>
 
-                        <!-- Item Details -->
                         <div class="col-lg-12">
                             <h6>Item Details:</h6>
                         </div>
@@ -106,8 +104,6 @@
                         <div class="col-lg-12">
                             <hr>
                         </div>
-                        
-                        <!-- Show in Customer Invoice PDF Section -->
                         <div class="col-lg-12 mt-4">
                             <div class="card">
                                 <div class="card-body">

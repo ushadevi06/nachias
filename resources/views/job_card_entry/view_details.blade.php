@@ -25,7 +25,7 @@
     @endphp
     <div class="row">
         <div class="col-lg-12 text-end">
-            <a href="{{ route('job_card_entries.view_details_pdf', $jobCard->id) }}" class="btn btn-primary" target="_blank"><i class="ri ri-file-pdf-line me-1"></i> PDF</a>
+            {{-- <a href="{{ route('job_card_entries.view_details_pdf', $jobCard->id) }}" class="btn btn-primary" target="_blank"><i class="ri ri-file-pdf-line me-1"></i> PDF</a> --}}
             <a href="{{ url('job_card_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line me-1"></i> Back to List</a>
         </div>
         <div class="col-lg-12 mt-4">

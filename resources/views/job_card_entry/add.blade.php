@@ -415,13 +415,9 @@
                                                         $taskStatus = $taskData['status'] ?? null;
                                                         $taskNo = $taskData['task_no'] ?? null;
 
-                                                        $buttonText = $hasTask 
-                                                            ? 'Assigned Task (Task: ' . $taskNo . ')' 
-                                                            : 'Assign Task';
+                                                        $buttonText = $hasTask ? 'Assigned Task (Task: ' . $taskNo . ')' : 'Assign Task';
 
-                                                        $buttonTitle = $hasTask 
-                                                            ? "Task already assigned (Status: $taskStatus)" 
-                                                            : 'Assign Task';
+                                                        $buttonTitle = $hasTask ? "Task already assigned (Status: $taskStatus)" : 'Assign Task';
                                                     @endphp
                                                     <button type="button" class="btn btn-sm btn-outline-primary assign-task-btn ms-1" title="{{ $buttonTitle }}" {{ $hasTask ? 'disabled' : '' }}><i class="ri ri-task-line"></i> {{ $buttonText }}</button>
                                                     @endif
@@ -1868,7 +1864,7 @@
 
             addedStages.push(stageId);
             const index = addedStages.length - 1;
-            const empOptions = `@foreach($employees as $emp)<option value="{{ $emp->id }}">{{ $emp->name }}</option>@endforeach`;
+            const empOptions = `@foreach($employees as $emp)<option value="{{ $emp->id }}">{{ $emp->name }}( {{ $emp->emp_id }} )</option>@endforeach`;
 
             const rowHtml = `
                 <tr data-stage="${stageId}">
@@ -2245,7 +2241,8 @@
                         if (response.success) {
                             response.employees.forEach(e => {
                                 let selected = ($employeeSelect.data('selected') == e.id) ? 'selected' : '';
-                                $employeeSelect.append(`<option value="${e.id}" ${selected}>${e.name}</option>`);
+                                let label = e.emp_id ? `${e.name} (${e.emp_id})` : e.name;
+                                $employeeSelect.append(`<option value="${e.id}" ${selected}>${label}</option>`);
                             });
                             $employeeSelect.trigger('change');
                         }

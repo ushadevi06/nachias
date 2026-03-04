@@ -1,146 +1,130 @@
+
 @extends('layouts.common')
-@section('title', 'View Credit Note - ' . env('WEBSITE_NAME'))
+@section('title', 'Credit Note Details - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <div class="table-header-box">
-                <h4>View Credit Note</h4>
-                <a href="{{ url('credit_notes') }}" class="btn btn-primary">
-                    <i class="ri ri-arrow-left-line back-arrow"></i> Back
-                </a>
-            </div>
-
-            <div class="card detail-card">
+            <div class="card mb-4">
                 <div class="card-body">
-                    <!-- Credit Note Info -->
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <label class="detail-title">Credit Note No:</label>
-                            <div class="text-muted">CN-1001</div>
+                    <div class="card-header-box d-flex justify-content-between align-items-center border-bottom pb-2 mb-4">
+                        <h4 class="mb-0">Credit Note Details</h4>
+                        <a href="{{ url('credit_notes') }}" class="btn btn-secondary btn-sm">Back</a>
+                    </div>
+                    
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-3">
+                            <label class="text-muted d-block small uppercase mb-1">Note Number</label>
+                            <h6 class="mb-0">{{ $creditNote->note_no }}</h6>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Date:</label>
-                            <div class="text-muted">19-09-2025</div>
+                        <div class="col-md-3">
+                            <label class="text-muted d-block small uppercase mb-1">Date</label>
+                            <h6 class="mb-0">{{ $creditNote->note_date->format('d-M-Y') }}</h6>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Linked Invoice No:</label>
-                            <div class="text-muted">SINV-1001</div>
+                        <div class="col-md-3">
+                            <label class="text-muted d-block small uppercase mb-1">Sales Invoice</label>
+                            <h6 class="mb-0">{{ $creditNote->salesInvoice ? $creditNote->salesInvoice->inv_no : '-' }}</h6>
                         </div>
+                        <div class="col-md-3">
+                            <label class="text-muted d-block small uppercase mb-1">Customer</label>
+                            <h6 class="mb-0">{{ $creditNote->customer ? $creditNote->customer->name : '-' }}</h6>
+                        </div>
+                    </div>
 
-                        <div class="col-md-4">
-                            <label class="detail-title">Customer / Buyer:</label>
-                            <div class="text-muted">Hero Mens Wear (CUS001)</div>
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-3">
+                            <label class="text-muted d-block small uppercase mb-1">Status</label>
+                            <span class="badge bg-{{ $creditNote->status == 'Approved' ? 'success' : ($creditNote->status == 'Cancelled' ? 'danger' : 'warning') }}">
+                                {{ $creditNote->status }}
+                            </span>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Reason:</label>
-                            <div><span class="badge text-bg-secondary">Rate Correction</span></div>
+                        <div class="col-md-9">
+                            <label class="text-muted d-block small uppercase mb-1">Reason</label>
+                            <p class="mb-0">{{ $creditNote->reason ?: '-' }}</p>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Other State:</label>
-                            <div class="text-muted">No</div>
-                        </div>
+                    </div>
 
-                        <div class="col-lg-12"><hr></div>
+                    <div class="table-responsive mb-5">
+                        <table class="table table-bordered align-middle" style="min-width: 1000px;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Brand Category</th>
+                                    <th>Item Name</th>
+                                    <th>Size</th>
+                                    <th>UOM</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Rate</th>
+                                    <th class="text-end">MRP</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($creditNote->items as $index => $item)
+                                    <tr>
+                                        <td>{{ $index + 1 }}</td>
+                                        @php
+                                            $sleeveShort = '';
+                                            if ($item->sleeve_type) {
+                                                $sleeveShort = ' - ' . (strtolower($item->sleeve_type) == 'full' ? 'F/S' : 'H/S');
+                                            }
+                                        @endphp
+                                        <td>{{ $item->brandCategory ? $item->brandCategory->name : '-' }}</td>
+                                        <td>{{ ($item->item ? $item->item->name : '-') . ($item->item ? ' (' . $item->item->code . ')' : '') . $sleeveShort }}</td>
+                                        <td>{{ $item->size ?: '-' }}</td>
+                                        <td>{{ $item->uom ? $item->uom->uom_code : '-' }}</td>
+                                        <td class="text-end">{{ number_format($item->quantity, 2) }}</td>
+                                        <td class="text-end">₹{{ number_format($item->rate, 2) }}</td>
+                                        <td class="text-end">₹{{ number_format($item->mrp, 2) }}</td>
+                                        <td class="text-end">₹{{ number_format($item->amount, 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
 
-                        <!-- Item Details -->
-                        <div class="col-lg-12">
-                            <h6>Item Details</h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>S.No</th>
-                                            <th>Item (Code)</th>
-                                            <th>Description</th>
-                                            <th>Qty</th>
-                                            <th>UOM</th>
-                                            <th>Rate</th>
-                                            <th>Value</th>
-                                            <th>Tax</th>
-                                            <th>Line Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>1</td>
-                                            <td>Men’s Casual Denim Shirt (ITEM001)</td>
-                                            <td>Returned due to defect</td>
-                                            <td>10</td>
-                                            <td>PCS</td>
-                                            <td>₹500.00</td>
-                                            <td>₹5,000.00</td>
-                                            <td>₹900.00</td>
-                                            <td>₹5,900.00</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>Men’s Formal Cotton Shirt (ITEM002)</td>
-                                            <td>Rate adjustment</td>
-                                            <td>5</td>
-                                            <td>PCS</td>
-                                            <td>₹600.00</td>
-                                            <td>₹3,000.00</td>
-                                            <td>₹540.00</td>
-                                            <td>₹3,540.00</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                    <div class="row justify-content-end">
+                        <div class="col-md-5">
+                            <div class="card border">
+                                <div class="card-body">
+                                    <h5 class="mb-4">Tax Summary</h5>
+                                    <table class="table table-borderless mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <th class="ps-0">Sub total:</th>
+                                                <td class="text-end pe-0">₹{{ number_format($creditNote->sub_total, 2) }}</td>
+                                            </tr>
+                                            @if(!$creditNote->other_state)
+                                                <tr>
+                                                    <th class="ps-0">CGST ({{ $creditNote->cgst_percent }}%)</th>
+                                                    <td class="text-end pe-0">₹{{ number_format($creditNote->cgst, 2) }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0">SGST ({{ $creditNote->sgst_percent }}%)</th>
+                                                    <td class="text-end pe-0">₹{{ number_format($creditNote->sgst, 2) }}</td>
+                                                </tr>
+                                            @else
+                                                <tr>
+                                                    <th class="ps-0">IGST ({{ $creditNote->igst_percent }}%)</th>
+                                                    <td class="text-end pe-0">₹{{ number_format($creditNote->igst, 2) }}</td>
+                                                </tr>
+                                            @endif
+                                            <tr>
+                                                <th class="ps-0">Tax Amount:</th>
+                                                <td class="text-end pe-0">₹{{ number_format($creditNote->tax_amount, 2) }}</td>
+                                            </tr>
+                                            <tr class="border-top fw-bold">
+                                                <th class="ps-0 h5 mb-0">Grand Total:</th>
+                                                <td class="text-end pe-0 h5 mb-0 text-success">₹{{ number_format($creditNote->grand_total, 2) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-
-                        <div class="col-lg-12"><hr></div>
-
-                        <!-- Totals & Taxes Section -->
-                        <div class="col-lg-12">
-                            <h6>Tax & Charges</h6>
-                            <table class="table table-borderless mb-0">
-                                <tbody>
-                                    <tr>
-                                        <th style="width:50%;">Sub Total:</th>
-                                        <td class="text-end text-muted">₹8,000.00</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Discount (5%):</th>
-                                        <td class="text-end text-muted">₹400.00</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Total After Discount:</th>
-                                        <td class="text-end text-muted">₹7,600.00</td>
-                                    </tr>
-                                    <tr>
-                                        <th>CGST (9%):</th>
-                                        <td class="text-end text-muted">₹684.00</td>
-                                    </tr>
-                                    <tr>
-                                        <th>SGST (9%):</th>
-                                        <td class="text-end text-muted">₹684.00</td>
-                                    </tr>
-                                    <!-- If Other State = Yes, replace above with IGST -->
-                                    <!--
-                                    <tr>
-                                        <th>IGST (18%):</th>
-                                        <td class="text-end text-muted">₹1,368.00</td>
-                                    </tr>
-                                    -->
-                                    <tr class="fw-bold border-top">
-                                        <th>Grand Total:</th>
-                                        <td class="text-end text-success">₹8,968.00</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Received Amount:</th>
-                                        <td class="text-end text-muted">₹7,000.00</td>
-                                    </tr>
-                                    <tr>
-                                        <th class="text-danger">Due Amount:</th>
-                                        <td class="text-end text-danger fw-bold">₹1,968.00</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div> 
-                </div> 
-            </div> 
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

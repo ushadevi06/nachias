@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+use Illuminate\Support\Facades\Log;
+
+
 class SalesInvoiceController extends Controller
 {
     public function index(Request $request)
@@ -178,7 +181,14 @@ class SalesInvoiceController extends Controller
                 }
 
                 if ($id) {
-                    $invoice = SalesInvoice::findOrFail($id);
+                    $invoice = SalesInvoice::with('items')->findOrFail($id);
+
+                    // Revert old stock deductions before removing old items
+                    $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
+                    if (in_array($invoice->invoice_status, $activeStatuses)) {
+                        $this->revertStockDeduction($invoice);
+                    }
+
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
                     $invoice->update($invoiceData);
                     $invoice->items()->forceDelete();
@@ -201,7 +211,15 @@ class SalesInvoiceController extends Controller
                         'art_no' => $item['art_no'] ?? null,
                         'size' => $item['size'] ?? null,
                         'sleeve_type' => $item['sleeve_type'] ?? null,
+                        'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
                     ]);
+                }
+
+                // Apply stock deduction if invoice status is active
+                $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
+                if (in_array($invoice->invoice_status, $activeStatuses)) {
+                    $invoice->load('items'); // Reload fresh items
+                    $this->applyStockDeduction($invoice);
                 }
 
                 DB::commit();
@@ -338,10 +356,17 @@ class SalesInvoiceController extends Controller
 
     private function applyStockDeduction(SalesInvoice $invoice): void
     {
+        \Log::info('applyStockDeduction called for invoice #' . $invoice->id, [
+            'items' => $invoice->items->map(fn($i) => [
+                'item_id' => $i->item_id,
+                'quantity' => $i->quantity,
+                'stock_entry_item_id' => $i->stock_entry_item_id,
+            ])->toArray()
+        ]);
+
         foreach ($invoice->items as $item) {
             if (empty($item->stock_entry_item_id)) continue;
-            StockEntryItem::where('id', $item->stock_entry_item_id)
-                ->increment('qty_out', $item->quantity);
+            StockEntryItem::where('id', $item->stock_entry_item_id)->increment('qty_out', $item->quantity);
         }
     }
 
@@ -349,9 +374,7 @@ class SalesInvoiceController extends Controller
     {
         foreach ($invoice->items as $item) {
             if (empty($item->stock_entry_item_id)) continue;
-            StockEntryItem::where('id', $item->stock_entry_item_id)
-                ->where('qty_out', '>=', $item->quantity) // prevent negative
-                ->decrement('qty_out', $item->quantity);
+            StockEntryItem::where('id', $item->stock_entry_item_id)->where('qty_out', '>=', $item->quantity)->decrement('qty_out', $item->quantity);
         }
     }
 

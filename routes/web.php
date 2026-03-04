@@ -91,6 +91,8 @@ Route::get('/', function () {
 Route::get('/update_page', function () {
     return view('update_page');
 });
+
+
 Route::match(['get','post'],'login', [AuthController::class, 'authentication'])->name('login');
 Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'])->group(function () {
     Route::match(['get', 'post'], '/dashboard', [HomeController::class, 'index']);
@@ -385,8 +387,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Credit Notes */
     Route::get('credit_notes', [CreditNoteController::class, 'index']);
-    Route::get('add_credit_note', [CreditNoteController::class, 'add']);
-    Route::get('view_credit_note', [CreditNoteController::class, 'view']);
+    Route::match(['GET', 'POST'], 'credit_notes/add/{id?}', [CreditNoteController::class, 'add']);
+    Route::get('credit_notes/view/{id}', [CreditNoteController::class, 'view']);
+    Route::get('credit_notes/delete/{id}', [CreditNoteController::class, 'destroy']);
+    Route::get('credit_notes/get-invoice-details/{id}', [CreditNoteController::class, 'getInvoiceDetails']);
+    Route::post('credit_notes/status/{id}', [CreditNoteController::class, 'updateStatus']);
 
     /* Debit Notes */
     Route::get('debit_notes', [DebitNoteController::class, 'index']);
@@ -463,9 +468,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
 
     /* Billing */
     Route::get('billing', [BillingController::class, 'index']);
-    Route::get('add_billing', [BillingController::class, 'add']);
-    Route::get('view_billing', [BillingController::class, 'view']);
-    Route::get('billing_invoice', [BillingController::class, 'billing_invoice']);
+    Route::match(['GET', 'POST'], 'billing/add/{id?}', [BillingController::class, 'add']);
+    Route::get('billing/view/{id}', [BillingController::class, 'view']);
+    Route::get('billing/delete/{id}', [BillingController::class, 'destroy']);
+    Route::post('billing/update-status/{id}', [BillingController::class, 'updateStatus']);
 
     /* Payments */
     Route::get('payments', [PaymentController::class, 'index']);
@@ -531,12 +537,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('settings', [SettingController::class, 'index']);
     Route::post('settings/update', [SettingController::class, 'update']);
 
-    Route::get('/run-artisan-commands', function () {
+    Route::get('/clear-cache', function () {
         Artisan::call('optimize:clear');
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
-        Artisan::call('config:cache');
-        return "Artisan commands executed successfully";
+        Artisan::call('route:clear');
+        Artisan::call('view:clear');
+        return "All caches cleared successfully! Please visit /nachias now.";
     });
 
 });

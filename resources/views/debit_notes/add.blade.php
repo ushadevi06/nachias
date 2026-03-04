@@ -91,51 +91,27 @@
                                         @foreach(old('items') as $index => $item)
                                             <tr class="item-row">
                                                 <td>
-                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1"
-                                                        class="form-check-input item-checkbox"
-                                                        {{ isset($item['selected']) ? 'checked' : '' }}>
-
-                                                    <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]"
-                                                        value="{{ $item['purchase_invoice_item_id'] ?? '' }}">
-
-                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]"
-                                                        value="{{ $item['raw_material_id'] ?? '' }}">
+                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
+                                                    <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item['purchase_invoice_item_id'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
                                                 </td>
-
                                                 <td>
                                                     {{ \App\Models\RawMaterial::find($item['raw_material_id'])?->name ?? '-' }}
                                                 </td>
-
                                                 <td>
-                                                    <input type="hidden" name="items[{{ $index }}][uom_id]"
-                                                        value="{{ $item['uom_id'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
                                                     {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
                                                 </td>
-
                                                 <td>
-                                                    <input type="number"
-                                                        name="items[{{ $index }}][quantity]"
-                                                        class="form-control item-qty"
-                                                        value="{{ $item['quantity'] ?? 0 }}"
-                                                        step="0.01">
+                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item['quantity'] ?? 0 }}" step="0.01">
                                                 </td>
 
                                                 <td>
-                                                    <input type="number"
-                                                        name="items[{{ $index }}][rate]"
-                                                        class="form-control item-rate"
-                                                        value="{{ $item['rate'] ?? 0 }}"
-                                                        step="0.01"
-                                                        readonly>
+                                                    <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item['rate'] ?? 0 }}" step="0.01" readonly>
                                                 </td>
 
                                                 <td>
-                                                    <input type="number"
-                                                        name="items[{{ $index }}][amount]"
-                                                        class="form-control item-amount"
-                                                        value="{{ $item['amount'] ?? 0 }}"
-                                                        step="0.01"
-                                                        readonly>
+                                                    <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ $item['amount'] ?? 0 }}" step="0.01" readonly>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -163,6 +139,10 @@
                                                 </td>
                                             </tr>
                                         @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="7" class="text-center">No items added yet.</td>
+                                        </tr>
                                     @endif
                                 </tbody>
                             </table>
@@ -171,120 +151,113 @@
                 </div>
 
                 <div class="row g-4">
-                    <!-- Left Side: Additional Information -->
                     <div class="col-md-6">
                         <div class="card h-100">
                             <div class="card-body">
-                                <div class="card-header-box">
-                                    <h4>Additional Information</h4>
+                                <div class="card-header-box mb-3">
+                                    <h5 class="mb-0">Additional Information</h5>
                                 </div>
-                                <div class="row g-4">
-                                    <div class="col-12">
-                                        <div class="form-floating form-floating-outline">
-                                            <textarea class="form-control" id="remarks" name="remarks" placeholder="Remarks" style="height: 120px;">{{ old('remarks', $debitNote->remarks ?? '') }}</textarea>
-                                            <label for="remarks">Remarks</label>
-                                        </div>
-                                        @error('remarks') <div class="text-danger">{{ $message }}</div> @enderror
-                                    </div>
+                                <div class="row g-3">
                                     <div class="col-12">
                                         <div class="form-group mb-3">
-                                            <label for="reference_document" class="form-label">Reference Document (Attachment)</label>
+                                            <textarea class="form-control" id="remarks" name="remarks" placeholder="Remarks">{{ old('remarks', $debitNote->remarks ?? '') }}</textarea>
+                                        </div>
+                                        @error('remarks') <div class="text-danger small">{{ $message }}</div> @enderror
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label for="reference_document" class="form-label fw-bold small text-muted">Reference Document (Attachment)</label>
                                             <input type="file" id="reference_document" name="reference_document" class="form-control">
+                                            <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                             @if(isset($debitNote) && $debitNote->reference_document)
-                                                <div class="mt-1">
-                                                    <a href="{{ url('uploads/debit_notes/' . $debitNote->reference_document) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="ri ri-eye-line me-1"></i> View</a>
+                                                <div class="mb-2">
+                                                    <a href="{{ asset('uploads/debit_notes/' . $debitNote->reference_document) }}" target="_blank" class="mt-1 d-block">
+                                                        <i class="ri ri-image-line"></i> View
+                                                    </a>
                                                 </div>
                                             @endif
+                                            @error('reference_document') <div class="text-danger small">{{ $message }}</div> @enderror
                                         </div>
-                                        <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                        @error('reference_document') <div class="text-danger">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Right Side: Tax Summary -->
                     <div class="col-md-6">
                         <div class="card h-100">
                             <div class="card-body">
-                                <div class="card-header-box">
-                                    <h4>Tax Summary</h4>
-                                </div>
-
-                                <div class="row g-3 align-items-center mb-3">
-                                    <div class="col-md-6"><label class="fw-bold">Other State?</label></div>
-                                    <div class="col-md-6 text-end">
-                                        <div class="d-flex gap-4 justify-content-end">
-                                            <div class="form-check">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="mb-0">Tax Summary</h5>
+                                    <div class="d-flex gap-3 align-items-center">
+                                        <label class="fw-bold small mb-0">Other State?</label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check m-0">
                                                 <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="other_state_yes">Yes</label>
+                                                <label class="form-check-label small" for="other_state_yes">Yes</label>
                                             </div>
-                                            <div class="form-check">
+                                            <div class="form-check m-0">
                                                 <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="other_state_no">No</label>
+                                                <label class="form-check-label small" for="other_state_no">No</label>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="row g-3 align-items-center mb-3">
-                                    <div class="col-md-6"><label class="fw-bold">Sub total:</label></div>
-                                    <div class="col-md-6 text-end">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <label class="fw-bold text-muted">Sub total:</label>
+                                    <div class="text-end">
                                         <input type="hidden" id="sub_total" name="sub_total" value="{{ old('sub_total', $debitNote->sub_total ?? '0.00') }}">
                                         <span id="sub_total_display" class="fw-bold">₹{{ number_format(old('sub_total', $debitNote->sub_total ?? 0), 2) }}</span>
                                     </div>
                                 </div>
 
                                 <div id="igst_div" style="display: none;">
-                                    <div class="row g-3 align-items-center mb-3">
-                                        <div class="col-md-6"><label class="fw-bold">IGST:</label></div>
-                                        <div class="col-md-6 text-end">
-                                            <div class="d-flex gap-2 align-items-center justify-content-end">
-                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
-                                                <span>%</span>
-                                                <strong id="igst_amt">₹0.00</strong>
-                                            </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <label class="fw-bold text-muted">IGST:</label>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;">
+                                            <span class="small">%</span>
+                                            <strong id="igst_amt" class="ms-2">₹0.00</strong>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div id="cgst_sgst_div" style="display: none;">
-                                    <div class="row g-3 align-items-center mb-3">
-                                        <div class="col-md-6"><label class="fw-bold">CGST:</label></div>
-                                        <div class="col-md-6 text-end">
-                                            <div class="d-flex gap-2 align-items-center justify-content-end">
-                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
-                                                <span>%</span>
-                                                <strong id="cgst_amt">₹0.00</strong>
-                                            </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <label class="fw-bold text-muted">CGST:</label>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;">
+                                            <span class="small">%</span>
+                                            <strong id="cgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
                                     </div>
-                                    <div class="row g-3 align-items-center mb-3">
-                                        <div class="col-md-6"><label class="fw-bold">SGST:</label></div>
-                                        <div class="col-md-6 text-end">
-                                            <div class="d-flex gap-2 align-items-center justify-content-end">
-                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width:80px;">
-                                                <span>%</span>
-                                                <strong id="sgst_amt">₹0.00</strong>
-                                            </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <label class="fw-bold text-muted">SGST:</label>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;">
+                                            <span class="small">%</span>
+                                            <strong id="sgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="row g-3 align-items-center mb-3">
-                                    <div class="col-md-6"><label class="fw-bold">Tax Amount:</label></div>
-                                    <div class="col-md-6 text-end">
+                                <div class="d-flex justify-content-between mb-3 mt-4">
+                                    <label class="fw-bold text-muted">Tax Amount:</label>
+                                    <div class="text-end">
                                         <input type="hidden" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $debitNote->tax_amount ?? '0.00') }}">
                                         <span id="tax_amount_display" class="fw-bold">₹{{ number_format(old('tax_amount', $debitNote->tax_amount ?? 0), 2) }}</span>
                                     </div>
                                 </div>
 
-                                <hr>
+                                <hr class="my-3">
 
-                                <div class="row g-3 align-items-center">
-                                    <div class="col-md-6"><label class="fw-bold">Grand Total:</label></div>
-                                    <div class="col-md-6 text-end">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <label class="fw-bold" style="font-size: 1.1rem;">Grand Total:</label>
+                                    <div class="text-end">
                                         <input type="hidden" id="grand_total" name="grand_total" value="{{ old('grand_total', $debitNote->grand_total ?? '0.00') }}">
-                                        <span id="grand_total_display" class="fw-bold fs-5 text-success">₹{{ number_format(old('grand_total', $debitNote->grand_total ?? 0), 2) }}</span>
+                                        <span id="grand_total_display" class="fw-bold" style="font-size: 1.5rem; color: #28a745;">₹{{ number_format(old('grand_total', $debitNote->grand_total ?? 0), 2) }}</span>
                                     </div>
                                 </div>
                             </div>

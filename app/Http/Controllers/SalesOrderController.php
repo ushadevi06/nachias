@@ -27,8 +27,7 @@ class SalesOrderController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = SalesOrder::with(['customer', 'salesAgent'])
-                ->orderBy('id', 'desc');
+            $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id', 'desc');
 
             if (!empty($request->customer_id)) {
                 $query->where('customer_id', $request->customer_id);
@@ -347,13 +346,13 @@ class SalesOrderController extends Controller
             }
         }
 
-        $seasons          = Season::active()->orderBy('id', 'desc')->get();
-        $customers        = Customer::active()->orderBy('id', 'desc')->get();
-        $stores           = StoreType::active()->orderBy('id', 'desc')->get();
-        $sales_agent      = SalesAgent::active()->orderBy('id', 'desc')->get();
-        $brandCategories  = BrandCategory::active()
+        $seasons          = Season::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $customers        = Customer::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $stores           = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $sales_agent      = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $brandCategories  = BrandCategory::where('status', 'Active')
             ->whereHas('items', function($q) {
-                $q->active()->whereExists(function ($query) {
+                $q->where('status', 'Active')->whereExists(function ($query) {
                     $query->select(DB::raw(1))
                         ->from('stock_entry_items')
                         ->whereColumn('stock_entry_items.finished_item_code', 'like', DB::raw("CONCAT(items.code, '%')"))
@@ -363,7 +362,7 @@ class SalesOrderController extends Controller
                 });
             })
             ->orderBy('id', 'desc')->get();
-        $itemsQuery = Item::active()
+        $itemsQuery = Item::where('status', 'Active')
             ->whereExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('stock_entry_items')
@@ -377,9 +376,9 @@ class SalesOrderController extends Controller
             $itemsQuery->orWhereIn('id', $existingItemIds);
         }
         $items = $itemsQuery->orderBy('id','desc')->get();
-        $colors       = Color::active()->orderBy('id','desc')->get();
-        $uoms         = Uom::active()->orderBy('id','desc')->get();
-        $sizes        = SizeRatio::active()->orderBy('id', 'desc')->get();
+        $colors       = Color::where('status', 'Active')->orderBy('id','desc')->get();
+        $uoms         = Uom::where('status', 'Active')->orderBy('id','desc')->get();
+        $sizes        = SizeRatio::where('status', 'Active')->orderBy('id', 'desc')->get();
         $dynamicSizes = DB::table('stock_entry_items')
             ->join('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
             ->where('stock_entries.entry_type', 'Finished Goods')
