@@ -15,8 +15,7 @@
                             <!-- Store Category -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="store_category_id" id="store_category_id" class="select2 form-select @error('store_category_id') is-invalid @enderror"
-                                        data-placeholder="Select Store Category">
+                                    <select name="store_category_id" id="store_category_id" class="select2 form-select @error('store_category_id') is-invalid @enderror" data-placeholder="Select Store Category">
                                         <option value="">Select Store Category</option>
                                         @foreach($storeCategories as $category)
                                         <option value="{{ $category->id }}" {{ old('store_category_id', $rawMaterial->store_category_id ?? '') == $category->id ? 'selected' : '' }}>{{ $category->category_name }}</option>
@@ -61,7 +60,6 @@
                                 @enderror
                             </div>
 
-
                             <!-- Size / Width -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -89,18 +87,26 @@
                                 @enderror
                             </div>
 
-                            <!-- Fabric Type -->
+                            <!-- Material Type -->
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="fabric_type_id" id="fabric_type_id" class="select2 form-select @error('fabric_type_id') is-invalid @enderror" data-placeholder="Select Fabric Type">
-                                        <option value="">Select Fabric Type</option>
-                                        @foreach($fabricTypes as $fabricType)
-                                        <option value="{{ $fabricType->id }}" {{ old('fabric_type_id', $rawMaterial->fabric_type_id ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
-                                        @endforeach
+                                    <select name="material_type" id="material_type" class="select2 form-select @error('material_type') is-invalid @enderror" data-placeholder="Select Material Type">
+                                        <option value="">Select Material Type</option>
+                                        <option value="Plastic" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Plastic' ? 'selected' : '' }}>Plastic</option>
+                                        <option value="Fabric" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Fabric' ? 'selected' : '' }}>Fabric</option>
+                                        <option value="Thread" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Thread' ? 'selected' : '' }}>Thread</option>
+                                        <option value="Zip" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Zip' ? 'selected' : '' }}>Zip</option>
+                                        <option value="Button" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Button' ? 'selected' : '' }}>Button</option>
+                                        <option value="Elastic" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Elastic' ? 'selected' : '' }}>Elastic</option>
+                                        <option value="Velcro" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Velcro' ? 'selected' : '' }}>Velcro</option>
+                                        <option value="Label" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Label' ? 'selected' : '' }}>Label</option>
+                                        <option value="Tag" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Tag' ? 'selected' : '' }}>Tag</option>
+                                        <option value="Padding" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Padding' ? 'selected' : '' }}>Padding</option>
+                                        <option value="Lining" {{ old('material_type', $rawMaterial->material_type ?? '') == 'Lining' ? 'selected' : '' }}>Lining</option>
                                     </select>
-                                    <label for="fabric_type_id">Fabric Type</label>
+                                    <label for="material_type">Material Type</label>
                                 </div>
-                                @error('fabric_type_id')
+                                @error('material_type')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>

@@ -59,7 +59,7 @@
                                     <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer/Buyer">
                                         <option value="">Select Customer/Buyer</option>
                                         @foreach($customers as $customer)
-                                            <option value="{{ $customer->id }}" {{ (old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
+                                            <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" {{ (old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
                                     <label for="customer_id">Customer / Buyer *</label>
@@ -380,11 +380,11 @@
                                         <label class="text-secondary fw-medium mb-2 d-block">Other State?</label>
                                         <div class="d-flex gap-4">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', isset($invoice) && $invoice->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', isset($invoice) && $invoice->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
                                                 <label class="form-check-label" for="other_state_yes">Yes</label>
                                             </div>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', isset($invoice) && $invoice->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', isset($invoice) && $invoice->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
                                                 <label class="form-check-label" for="other_state_no">No</label>
                                             </div>
                                         </div>
@@ -597,6 +597,29 @@
                         }
                     }
                 });
+            }
+        });
+
+        $('#customer_id').on('change', function() {
+            let customerId = $(this).val();
+            if (customerId) {
+                let customerStateId = $(this).find(':selected').data('state-id');
+                let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+
+                if (customerStateId && companyStateId) {
+                    if (customerStateId == companyStateId) {
+                        $('#other_state_no').prop('checked', true).trigger('change');
+                        $('#cgst_percent').val("{{ $web_settings->cgst ?? 9 }}");
+                        $('#sgst_percent').val("{{ $web_settings->sgst ?? 9 }}");
+                        $('#igst_percent').val(0);
+                    } else {
+                        $('#other_state_yes').prop('checked', true).trigger('change');
+                        $('#igst_percent').val("{{ $web_settings->igst ?? 18 }}");
+                        $('#cgst_percent').val(0);
+                        $('#sgst_percent').val(0);
+                    }
+                }
+                calculateTotals();
             }
         });
 

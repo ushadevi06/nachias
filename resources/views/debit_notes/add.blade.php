@@ -194,11 +194,11 @@
                                         <label class="fw-bold small mb-0">Other State?</label>
                                         <div class="d-flex gap-3">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }} onclick="return false;">
                                                 <label class="form-check-label small" for="other_state_yes">Yes</label>
                                             </div>
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }}>
+                                                <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="N" {{ (old('other_state', $debitNote->other_state ?? 'N') == 'N') ? 'checked' : '' }} onclick="return false;">
                                                 <label class="form-check-label small" for="other_state_no">No</label>
                                             </div>
                                         </div>
@@ -335,6 +335,18 @@
         });
 
         $('input[name="other_state"]').on('change', function() {
+            if ($(this).val() === 'Y') {
+                if (parseFloat($('#igst_percent').val()) == 0) {
+                    $('#igst_percent').val("{{ $web_settings->igst }}");
+                }
+            } else {
+                if (parseFloat($('#cgst_percent').val()) == 0) {
+                    $('#cgst_percent').val("{{ $web_settings->cgst }}");
+                }
+                if (parseFloat($('#sgst_percent').val()) == 0) {
+                    $('#sgst_percent').val("{{ $web_settings->sgst }}");
+                }
+            }
             toggleTaxDivs();
             calculateTotals();
         });
@@ -396,7 +408,6 @@
             $('#tax_amount').val(taxAmount.toFixed(2));
             $('#tax_amount_display').text('₹' + taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
 
-            // Automated Round Off Logic
             let totalBeforeRoundOff = subTotal + taxAmount;
             let grandTotal = Math.round(totalBeforeRoundOff);
             let roundOff = grandTotal - totalBeforeRoundOff;
@@ -420,11 +431,10 @@
         }
 
         @if(isset($debitNote) || old('other_state'))
-             toggleTaxDivs();
-             calculateTotals();
+            toggleTaxDivs();
+            calculateTotals();
         @endif
         
-        // Ensure initial state is set
         if (!$('input[name="other_state"]:checked').length) {
             $('#other_state_no').prop('checked', true);
         }

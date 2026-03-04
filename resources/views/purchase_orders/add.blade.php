@@ -62,7 +62,10 @@
                                     <select id="supplier_id" name="supplier_id" class="select2 form-select @error('supplier_id') is-invalid @enderror" data-placeholder="Select Supplier">
                                         <option value="">Select Supplier</option>
                                         @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}" {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }} ({{ $supplier->code }})
+                                            <option value="{{ $supplier->id }}" 
+                                                data-state-id="{{ $supplier->state_id }}" 
+                                                {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>
+                                                {{ $supplier->name }} ({{ $supplier->code }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -626,11 +629,11 @@
                                             <label class="fw-medium">Other State:</label>
                                             <div>
                                                 <div class="form-check form-check-inline">
-                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }}>
+                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
                                                     <label class="form-check-label" for="other_state_yes">Yes</label>
                                                 </div>
                                                 <div class="form-check form-check-inline">
-                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }}>
+                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
                                                     <label class="form-check-label" for="other_state_no">No</label>
                                                 </div>
                                             </div>
@@ -988,6 +991,25 @@
                 $('.cgst-field, .sgst-field').removeClass('d-none');
             }
         }
+
+        $(document).on('change', '#supplier_id', function() {
+            let supplierStateId = $(this).find(':selected').data('state-id');
+            let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+            if (supplierStateId && companyStateId) {
+                if (supplierStateId == companyStateId) {
+                    $('#other_state_no').prop('checked', true).trigger('change');
+                    $('#cgst_percent').val("{{ $web_settings->cgst ?? 0 }}");
+                    $('#sgst_percent').val("{{ $web_settings->sgst ?? 0 }}");
+                    $('#igst_percent').val(0);
+                } else {
+                    $('#other_state_yes').prop('checked', true).trigger('change');
+                    $('#igst_percent').val("{{ $web_settings->igst ?? 0 }}");
+                    $('#cgst_percent').val(0);
+                    $('#sgst_percent').val(0);
+                }
+                calculateTotals();
+            }
+        });
 
     calculateTotals();
 });

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\RawMaterial;
 use App\Models\StoreCategory;
 use App\Models\Uom;
-use App\Models\FabricType;
 use App\Models\TaskAdjustmentItem;
 use App\Models\StockEntryItem;
 use App\Models\StockEntryAdjustment;
@@ -24,15 +23,12 @@ class RawMaterialController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = RawMaterial::with('storeCategory', 'uom', 'fabricType');
+            $query = RawMaterial::with('storeCategory', 'uom');
 
             if ($request->category_id) {
                 $query->where('store_category_id', $request->category_id);
             }
 
-            if ($request->fabric_type_id) {
-                $query->where('fabric_type_id', $request->fabric_type_id);
-            }
 
             $materials = $query->latest()->get();
             $data = [];
@@ -76,7 +72,6 @@ class RawMaterialController extends Controller
                         ($material->storeCategory->category_name ?? '-') . '</span>',
                     'name'        => $material->name,
                     'uom'         => $material->uom->uom_code ?? '-',
-                    'fabric_type' => $material->fabricType->fabric_type ?? '-',
                     'size_width'  => $material->size_width ?? '-',
                     'min_stock'   => $material->min_stock,
                     'created_by'  => createdByName($material->created_by),
@@ -118,7 +113,7 @@ class RawMaterialController extends Controller
                 'supplier_design_name' => 'nullable|string|min:3|max:150',
                 'size_width' => 'nullable|numeric|min:0|max:100',
                 'uom_id' => 'required|exists:uoms,id',
-                'fabric_type_id' => 'nullable|exists:fabric_types,id',
+                'material_type' => 'nullable|string|max:100',
                 'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1024',
                 'specification' => 'nullable|string|min:5|max:255',
                 'min_stock' => 'nullable|numeric|min:0',
@@ -142,7 +137,7 @@ class RawMaterialController extends Controller
                 'supplier_design_name' => $request->supplier_design_name,
                 'size_width' => $request->size_width,
                 'uom_id' => $request->uom_id,
-                'fabric_type_id' => $request->fabric_type_id,
+                'material_type' => $request->material_type,
                 'specification' => $request->specification,
                 'min_stock' => $request->min_stock ?? 0,
                 'status' => $request->status,
@@ -186,8 +181,7 @@ class RawMaterialController extends Controller
 
         $storeCategories = StoreCategory::where('status', 'Active')->get();
         $uoms = Uom::where('status', 'Active')->get();
-        $fabricTypes = FabricType::where('status', 'Active')->get();
-        return view('raw_materials.add', compact('rawMaterial', 'storeCategories', 'uoms', 'fabricTypes'));
+        return view('raw_materials.add', compact('rawMaterial', 'storeCategories', 'uoms'));
     }
 
     public function destroy($id)

@@ -484,7 +484,6 @@ class PurchaseInvoiceController extends Controller
                 $item->id
             )->sum('quantity');
 
-            // Use ROUND to avoid floating point precision issues (e.g. 9.999999 vs 10)
             $balanceQty = round($item->quantity - $alreadyInvoicedQty, 3);
 
             if ($balanceQty <= 0) {
@@ -514,6 +513,7 @@ class PurchaseInvoiceController extends Controller
             'success' => true,
             'po_number' => $purchaseOrder->po_number,
             'supplier_id' => $purchaseOrder->supplier_id,
+            'supplier_state_id' => $purchaseOrder->supplier->state_id ?? null,
             'supplier_name' => $purchaseOrder->supplier->name . ' (' . $purchaseOrder->supplier->code . ')',
             'items' => $items,
         ]);

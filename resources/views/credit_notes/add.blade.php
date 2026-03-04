@@ -44,7 +44,7 @@
                                     <select class="select2 form-select" name="customer_id" id="customer_id" data-placeholder="Select Customer/Buyer">
                                         <option value="">Select Customer/Buyer</option>
                                         @foreach(\App\Models\Customer::all() as $customer)
-                                            <option value="{{ $customer->id }}" {{ (old('customer_id', $creditNote->customer_id ?? '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }}</option>
+                                            <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" {{ (old('customer_id', $creditNote->customer_id ?? '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="customer_id">Customer / Buyer *</label>
@@ -239,11 +239,11 @@
                                         <label class="fw-bold small mb-0">Other State?</label>
                                         <div class="d-flex gap-3">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_yes" value="yes" {{ (old('is_other_state', ($creditNote->other_state ?? false) == true) ? 'checked' : '') }}>
+                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_yes" value="yes" {{ (old('is_other_state', ($creditNote->other_state ?? false) == true) ? 'checked' : '') }} onclick="return false;">
                                                 <label class="form-check-label small" for="state_yes">Yes</label>
                                             </div>
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_no" value="no" {{ (old('is_other_state', ($creditNote->other_state ?? false) == false) ? 'checked' : '') }}>
+                                                <input class="form-check-input" type="radio" name="is_other_state" id="state_no" value="no" {{ (old('is_other_state', ($creditNote->other_state ?? false) == false) ? 'checked' : '') }} onclick="return false;">
                                                 <label class="form-check-label small" for="state_no">No</label>
                                             </div>
                                         </div>
@@ -395,6 +395,29 @@ $(document).ready(function() {
                 }
             }
         });
+    });
+
+    $('#customer_id').on('change', function() {
+        let customerId = $(this).val();
+        if (customerId) {
+            let customerStateId = $(this).find(':selected').data('state-id');
+            let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+
+            if (customerStateId && companyStateId) {
+                if (customerStateId == companyStateId) {
+                    $('#state_no').prop('checked', true).trigger('change');
+                    $('#cgst_percent').val("{{ $web_settings->cgst ?? 9 }}");
+                    $('#sgst_percent').val("{{ $web_settings->sgst ?? 9 }}");
+                    $('#igst_percent').val(0);
+                } else {
+                    $('#state_yes').prop('checked', true).trigger('change');
+                    $('#igst_percent').val("{{ $web_settings->igst ?? 18 }}");
+                    $('#cgst_percent').val(0);
+                    $('#sgst_percent').val(0);
+                }
+            }
+            calculateTotal();
+        }
     });
 
     $(document).on('input', '.qty, .rate', function() {

@@ -52,6 +52,7 @@
                                     <input type="text" class="form-control request_date" id="request_date" name="request_date" placeholder="Request Date" value="{{ old('request_date', $salesOrder ? optional($salesOrder->request_date)->format('d-m-Y') : date('d-m-Y')) }}">
                                     <label for="request_date">Request Date</label>
                                 </div>
+                                @error('request_date')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
@@ -63,13 +64,14 @@
                                     </select>
                                     <label for="season_id">Season</label>
                                 </div>
+                                @error('season_id')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer">
                                         <option value="">Select Customer</option>
                                         @foreach($customers as $customer)
-                                        <option value="{{ $customer->id }}" {{ old('customer_id', $salesOrder->customer_id ?? '') == $customer->id ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
+                                        <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" {{ old('customer_id', $salesOrder->customer_id ?? '') == $customer->id ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
                                     <label for="customer_id">Customer <span class="text-danger">*</span></label>
@@ -102,13 +104,13 @@
                                 <div class="row gx-2">
                                     <div class="col-8">
                                         <div class="form-floating form-floating-outline">
-                                            <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Broker/Sales Agent">
-                                                <option value="">Select Broker/Sales Agent</option>
+                                            <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Agent/Executive">
+                                                <option value="">Select Sales Agent/Executive</option>
                                                 @foreach($sales_agent as $agent)
                                                 <option value="{{ $agent->id }}" {{ old('agent_id', $salesOrder->agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }}</option>
                                                 @endforeach
                                             </select>
-                                            <label for="agent_id">Broker/Sales Agent</label>
+                                            <label for="agent_id">Sales Agent/Executive</label>
                                         </div>
                                     </div>
                                     <div class="col-4">
@@ -359,7 +361,7 @@
                                             <div class="col-md-2">
                                                 <div class="form-floating form-floating-outline">
                                                     <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
-                                                    <label>MRP</label>
+                                                    <label>MRP *</label>
                                                 </div>
                                                 @error("items.$index.mrp")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                             </div>
@@ -470,7 +472,7 @@
                                             <div class="col-md-2">
                                                 <div class="form-floating form-floating-outline">
                                                     <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
-                                                    <label>MRP</label>
+                                                    <label>MRP *</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
@@ -574,7 +576,7 @@
                                         <div class="col-md-2">
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">
-                                                <label>MRP</label>
+                                                <label>MRP *</label>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
@@ -697,11 +699,11 @@
                                             <label class="fw-medium">Other State:</label>
                                             <div>
                                                 <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }}>
+                                                    <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
                                                     <label class="form-check-label" for="other_state_yes">Yes</label>
                                                 </div>
                                                 <div class="form-check form-check-inline">
-                                                    <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }}>
+                                                    <input class="form-check-input" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', $salesOrder && $salesOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
                                                     <label class="form-check-label" for="other_state_no">No</label>
                                                 </div>
                                             </div>
@@ -710,7 +712,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">IGST:</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                     <input type="number" class="form-control form-control-sm text-end" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $salesOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end" id="igst_percent" name="igst_percent" step="0.01" min="0" max="100" value="{{ old('igst_percent', $salesOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -719,7 +721,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">CGST:</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                     <input type="number" class="form-control form-control-sm text-end" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100" value="{{ old('cgst_percent', $salesOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end" id="cgst_percent" name="cgst_percent" step="0.01" min="0" max="100" value="{{ old('cgst_percent', $salesOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -728,7 +730,7 @@
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">SGST:</label>
                                                 <div class="input-group input-group-sm" style="width:120px;">
-                                                     <input type="number" class="form-control form-control-sm text-end" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100" value="{{ old('sgst_percent', $salesOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
+                                                    <input type="number" class="form-control form-control-sm text-end" id="sgst_percent" name="sgst_percent" step="0.01" min="0" max="100" value="{{ old('sgst_percent', $salesOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
                                                     <span class="input-group-text px-1">%</span>
                                                 </div>
                                             </div>
@@ -748,7 +750,7 @@
                                                     <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $salesOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="round_off_less">Less</label>
                                                 </div>
-                                                <input type="number" class="form-control form-control-sm text-end" style="width:100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $salesOrder->round_off ?? '0.00') }}" autocomplete="off">
+                                                <input type="number" class="form-control form-control-sm text-end" style="width:100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $salesOrder->round_off ?? '0.00') }}" autocomplete="off" readonly>
                                             </div>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
@@ -958,8 +960,8 @@ $(document).ready(function () {
                     </div>
                     <div class="col-md-2">
                         <div class="form-floating form-floating-outline">
-                            <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
-                            <label>MRP</label>
+                            <input type="number" name="items[\${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
+                            <label>MRP *</label>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -1002,11 +1004,23 @@ $(document).ready(function () {
                         if (c.payment_terms) $('#payment_terms').val(c.payment_terms);
                         if (c.transport_name) $('#transporter_name').val(c.transport_name);
                         
-                        if (c.tax && c.tax.tax_name && c.tax.tax_name.toUpperCase().includes('IGST')) {
-                            $('input[name="other_state"][value="yes"]').prop('checked', true).trigger('change');
-                        } else if (c.tax) {
-                            $('input[name="other_state"][value="no"]').prop('checked', true).trigger('change');
+                        let customerStateId = c.state_id;
+                        let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+
+                        if (customerStateId && companyStateId) {
+                            if (customerStateId == companyStateId) {
+                                $('#other_state_no').prop('checked', true).trigger('change');
+                                $('#cgst_percent').val("{{ $web_settings->cgst ?? 0 }}");
+                                $('#sgst_percent').val("{{ $web_settings->sgst ?? 0 }}");
+                                $('#igst_percent').val(0);
+                            } else {
+                                $('#other_state_yes').prop('checked', true).trigger('change');
+                                $('#igst_percent').val("{{ $web_settings->igst ?? 0 }}");
+                                $('#cgst_percent').val(0);
+                                $('#sgst_percent').val(0);
+                            }
                         }
+                        calculateTotals();
                     }
                 }
             });

@@ -28,14 +28,6 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-3">
-                                <select id="filter_fabric_type" class="form-select select2" data-placeholder="Select Fabric Type">
-                                    <option value="">Select Fabric Type</option>
-                                    @foreach(\App\Models\FabricType::where('status','Active')->get() as $fab)
-                                    <option value="{{ $fab->id }}">{{ $fab->fabric_type }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
 
                             <div class="col-md-3">
                                 <button type="button" class="btn btn-primary" id="filter-btn">Filter</button>
@@ -53,7 +45,6 @@
                                     <th>Store Category</th>
                                     <th>Name</th>
                                     <th>UOM</th>
-                                    <th>Fabric Type</th>
                                     <th>Width</th>
                                     <th>Min Stock</th>
                                     <th>Created By</th>
@@ -88,7 +79,6 @@
                 url: "{{ url('raw_materials') }}",
                 data: function(d) {
                     d.category_id = $('#filter_category').val();
-                    d.fabric_type_id = $('#filter_fabric_type').val();
                 }
             },
             columns: [{
@@ -104,9 +94,6 @@
                 },
                 {
                     data: 'uom'
-                },
-                {
-                    data: 'fabric_type'
                 },
                 {
                     data: 'size_width'
@@ -134,7 +121,6 @@
         });
         $('#reset-btn').click(function() {
             $('#filter_category').val('').trigger('change');
-            $('#filter_fabric_type').val('').trigger('change');
             $('#filter_status').val('').trigger('change');
             table.ajax.reload();
         });

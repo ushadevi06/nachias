@@ -19,7 +19,7 @@ class RawMaterial extends Model
         'supplier_design_name',
         'size_width',
         'uom_id',
-        'fabric_type_id',
+        'material_type',
         'reference_image',
         'specification',
         'min_stock',
@@ -40,10 +40,6 @@ class RawMaterial extends Model
         return $this->belongsTo(Uom::class, 'uom_id');
     }
 
-    public function fabricType()
-    {
-        return $this->belongsTo(FabricType::class, 'fabric_type_id');
-    }
 
     public function createdByUser()
     {

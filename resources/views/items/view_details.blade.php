@@ -164,10 +164,10 @@
                             <label class="detail-title">Export Price:</label>
                             <div>{{ $item->export_price ? '₹' . number_format($item->export_price, 2) : '-' }}</div>
                         </div>
-                        <div class="col-md-3">
+                        {{-- <div class="col-md-3">
                             <label class="detail-title">MRP:</label>
                             <div>{{ $item->mrp ? '₹' . number_format($item->mrp, 2) : '-' }}</div>
-                        </div>
+                        </div> --}}
                         <div class="col-lg-12">
                             <hr>
                         </div>

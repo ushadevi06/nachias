@@ -366,7 +366,7 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" step="0.01" class="form-control @error('mrp') is-invalid @enderror" id="mrp" placeholder="Enter MRP" name="mrp" value="{{ old('mrp', $item->mrp ?? '') }}">
                                     <label for="mrp">MRP</label>
@@ -374,7 +374,7 @@
                                 @error('mrp')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
-                            </div>
+                            </div> --}}
                             <div class="col-lg-12 text-end">
                                 <button type="submit" class="btn btn-primary">Submit</button>
                                 <a href="{{ url('items') }}" class="btn btn-secondary">Cancel</a>

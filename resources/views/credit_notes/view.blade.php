@@ -46,6 +46,13 @@
     $(function() {
         var table = $('#creditNoteTable').DataTable({
             responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            pageLength: 10,
             ajax: "{{ url('credit_notes') }}",
             columns: [
                 { data: 'DT_RowIndex' },

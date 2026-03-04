@@ -151,7 +151,7 @@ class SalesOrderController extends Controller
                 'items.*.size_id'   => 'required',
                 'items.*.qty'      => 'required|numeric|min:0.01',
                 'items.*.rate'     => 'required|numeric|min:0',
-                'items.*.mrp'      => 'nullable|numeric|min:0',
+                'items.*.mrp'      => 'required|numeric|min:0',
                 'commission_percent'=> 'nullable|numeric|min:0|max:100',
                 'commission_amount'=> 'nullable|numeric|min:0',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
@@ -186,6 +186,7 @@ class SalesOrderController extends Controller
                 'items.*.qty.required'     => 'This field is required.',
                 'items.*.rate.required'    => 'This field is required.',
                 'items.*.art_no.required'  => 'This field is required.',
+                'items.*.mrp.required'  => 'This field is required.',
                 'attachment.*.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
                 'attachment.*.max' => 'Uploaded file cannot exceed 2MB.',
             ];

@@ -572,12 +572,12 @@
                                         <label class="fw-semibold mb-2 d-block">Other State?</label>
                                         <div class="d-flex gap-4">
                                             <div class="form-check">
-                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="Y" {{ $otherState === 'Y' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }}>
+                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="Y" {{ $otherState === 'Y' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
                                                 <label class="form-check-label">Yes</label>
                                             </div>
 
                                             <div class="form-check">
-                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="N" {{ $otherState === 'N' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }}>
+                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="N" {{ $otherState === 'N' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
                                                 <label class="form-check-label">No</label>
                                             </div>
                                         </div>
@@ -825,11 +825,23 @@
                             $('#supplier_id').val(response.supplier_id);
                             $('#supplier_name').val(response.supplier_name);
                             $('#supplier_name_hidden').val(response.supplier_name);
+                            
+                            let companyStateId = "{{ $web_settings->state_id }}";
+                            if (response.supplier_state_id) {
+                                if (response.supplier_state_id == companyStateId) {
+                                    $('input[name="other_state"][value="N"]').prop('checked', true).trigger('change');
+                                    if (parseFloat($('#cgst_percent').val()) == 0) $('#cgst_percent').val("{{ $web_settings->cgst }}");
+                                    if (parseFloat($('#sgst_percent').val()) == 0) $('#sgst_percent').val("{{ $web_settings->sgst }}");
+                                } else {
+                                    $('input[name="other_state"][value="Y"]').prop('checked', true).trigger('change');
+                                    if (parseFloat($('#igst_percent').val()) == 0) $('#igst_percent').val("{{ $web_settings->igst }}");
+                                }
+                            }
 
                             let itemsHtml = "";
                             response.items.forEach(function(item, index) {
                                 const balancedQty = item.qty_ordered - item.qty_invoiced;
-
+                                console.log(item);
                                 itemsHtml += `
                                     <tr class="item-row">
                                         <td>
@@ -1061,9 +1073,20 @@
             if ($(this).val() === 'Y') {
                 $('#igst_div').show();
                 $('#cgst_sgst_div').hide();
+                // Fetch default IGST if currently 0
+                if (parseFloat($('#igst_percent').val()) == 0) {
+                    $('#igst_percent').val("{{ $web_settings->igst }}");
+                }
             } else {
                 $('#igst_div').hide();
                 $('#cgst_sgst_div').show();
+                // Fetch default CGST/SGST if currently 0
+                if (parseFloat($('#cgst_percent').val()) == 0) {
+                    $('#cgst_percent').val("{{ $web_settings->cgst }}");
+                }
+                if (parseFloat($('#sgst_percent').val()) == 0) {
+                    $('#sgst_percent').val("{{ $web_settings->sgst }}");
+                }
             }
 
             calculateTaxOnly(); 
