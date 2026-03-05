@@ -284,8 +284,6 @@ class PurchaseInvoiceController extends Controller
                     $invoiceData['updated_by'] = auth()->id();
                     $oldInvoice->update($invoiceData);
                     $invoice = $oldInvoice;
-
-                    PurchaseInvoiceItem::where('purchase_invoice_id', $id)->forceDelete();
                     PurchaseInvoiceCharge::where('purchase_invoice_id', $id)->forceDelete();
                     
                     $newData = $invoice->fresh()->toArray();
@@ -335,19 +333,34 @@ class PurchaseInvoiceController extends Controller
                 if ($request->has('items')) {
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == '1') {
-                            PurchaseInvoiceItem::create([
-                                'purchase_invoice_id' => $invoice->id,
-                                'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
-                                'raw_material_id' => $item['raw_material_id'],
-                                'hsn_code' => $item['hsn_code'],
-                                'quantity' => $item['quantity'],
-                                'uom_id' => $item['uom_id'],
-                                'rate' => $item['rate'],
-                                'amount' => $item['quantity'] * $item['rate'],
-                                'qty_ordered' => $item['qty_ordered'] ?? 0,
-                                'qty_received' => $item['quantity'],
-                                'qty_invoiced' => $item['quantity'],
-                            ]);
+                            if ($id) {
+                                $existingItem = PurchaseInvoiceItem::where('purchase_invoice_id', $id)
+                                    ->where('purchase_order_item_id', $item['purchase_order_item_id'] ?? null)
+                                    ->first();
+                                if ($existingItem) {
+                                    $existingItem->update([
+                                        'hsn_code'     => $item['hsn_code'] ?? $existingItem->hsn_code,
+                                        'quantity'     => $item['quantity'],
+                                        'amount'       => $item['quantity'] * $item['rate'],
+                                        'qty_received' => $item['quantity'],
+                                        'qty_invoiced' => $item['quantity'],
+                                    ]);
+                                }
+                            } else {
+                                PurchaseInvoiceItem::create([
+                                    'purchase_invoice_id'    => $invoice->id,
+                                    'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
+                                    'raw_material_id'        => $item['raw_material_id'],
+                                    'hsn_code'               => $item['hsn_code'],
+                                    'quantity'               => $item['quantity'],
+                                    'uom_id'                 => $item['uom_id'],
+                                    'rate'                   => $item['rate'],
+                                    'amount'                 => $item['quantity'] * $item['rate'],
+                                    'qty_ordered'            => $item['qty_ordered'] ?? 0,
+                                    'qty_received'           => $item['quantity'],
+                                    'qty_invoiced'           => $item['quantity'],
+                                ]);
+                            }
                         }
                     }
                 }

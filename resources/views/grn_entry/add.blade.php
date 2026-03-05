@@ -109,7 +109,7 @@
                                                         @php 
                                                             $itemObj = is_array($item) ? (object)$item : $item; 
                                                             if (is_array($item)) {
-                                                                 $dbItem = \App\Models\PurchaseInvoiceItem::with('uom')->find($item['purchase_invoice_item_id'] ?? 0);
+                                                                $dbItem = \App\Models\PurchaseInvoiceItem::with('uom')->find($item['purchase_invoice_item_id'] ?? 0);
                                                                 $designName = ($dbItem && $dbItem->rawMaterial) ? ($dbItem->rawMaterial->name . ' (' . $dbItem->rawMaterial->code . ')') : 'Item ' . ($idx + 1);
                                                                 $uomName = ($dbItem && $dbItem->uom) ? $dbItem->uom->uom_code : 'MTR';
                                                                 $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'] ?? 0)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
@@ -307,6 +307,16 @@
             });
         }
         initSelect2();
+		
+		let fabrics_options = '';
+        @foreach($fabricTypes as $ft)
+        fabrics_options += `<option value="{{ $ft->id }}">{{ addslashes($ft->fabric_type) }}</option>`;
+        @endforeach
+
+        let locations_options = '';
+        @foreach($storeLocations as $loc)
+        locations_options += `<option value="{{ $loc->id }}">{{ addslashes($loc->store_location) }}</option>`;
+        @endforeach
 
         $('#po_no').on('change', function() {
             let po_id = $(this).val();
@@ -570,7 +580,6 @@
             row.find('.amount-input').val((accepted * rate).toFixed(2));
         }
 
-        // Run calculations and button status for rows already present (from old() or edit mode)
         $('.item-row').each(function() {
             let row = $(this);
             updateRowCalculations(row);
@@ -608,10 +617,9 @@
                 row.find('.text-danger').hide();
             }
             updateRowCalculations(row);
-            validateForm(); // Re-validate form after changes
+            validateForm();
         });
 
-        // Initialize state for existing rows
         $('.row-select').each(function() {
             let row = $(this).closest('.item-row');
             let isChecked = $(this).is(':checked');
@@ -625,7 +633,6 @@
             row.find('.btn-variants').prop('disabled', !isChecked || received <= 0);
         });
 
-        // Auto-scroll to errors in items table if QC or Store Location are invalid
         let targetedErrors = $('.item-row').find('select[name*="quality_check_status"].is-invalid, select[name*="store_location_id"].is-invalid');
         if (targetedErrors.length > 0) {
             setTimeout(function() {
