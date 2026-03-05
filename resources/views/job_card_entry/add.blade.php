@@ -2163,10 +2163,10 @@
                     </select>
                 </td>
                 <td>
-                    <input type="text" name="production_stages[${stageRowIndex}][issue_date]" class="form-control issue-date" value="">
+                    <input type="text" name="production_stages[${stageRowIndex}][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
                 </td>
                 <td>
-                    <input type="text" name="production_stages[${stageRowIndex}][deadline_date]" class="form-control deadline-date" value="">
+                    <input type="text" name="production_stages[${stageRowIndex}][deadline_date]" class="form-control deadline-date" value="" placeholder="Enter Deadline Date">
                 </td>
                 <td>
                     <input type="text" name="production_stages[${stageRowIndex}][remarks]" class="form-control" placeholder="Enter Remarks">
@@ -2184,6 +2184,9 @@
                     width: '100%'
                 });
             });
+
+            const config = typeof flatpickrConfig !== 'undefined' ? flatpickrConfig : { dateFormat: 'd-m-Y', allowInput: true };
+            $('#production-stages-table tbody tr:last .issue-date, #production-stages-table tbody tr:last .deadline-date').flatpickr(config);
 
             stageRowIndex++;
         });

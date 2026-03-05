@@ -41,10 +41,7 @@
                                     <select name="purchase_order_id" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" {{ isset($invoice) ? 'disabled' : '' }}>
                                         <option value="">Select Purchase Order</option>
                                         @foreach($purchaseOrders as $po)
-                                        <option value="{{ $po->id }}"
-                                            {{ old('purchase_order_id', $invoice->purchase_order_id ?? '') == $po->id ? 'selected' : '' }}>
-                                            {{ $po->po_number }} - {{ $po->supplier->name }}
-                                        </option>
+                                        <option value="{{ $po->id }}" {{ old('purchase_order_id', $invoice->purchase_order_id ?? '') == $po->id ? 'selected' : '' }}>{{ $po->po_number }} - {{ $po->supplier->name }}</option>
                                         @endforeach
                                     </select>
                                     @if(isset($invoice))
@@ -237,7 +234,7 @@
                                         <td>
                                             <input type="number"
                                                 name="items[{{ $index }}][quantity]"
-                                                class="form-control form-control-sm received-qty-input @error('items.'.$index.'.quantity') is-invalid @enderror"
+                                                class="form-control form-control-sm item-quantity received-qty-input @error('items.'.$index.'.quantity') is-invalid @enderror"
                                                 value="{{ $invItem->quantity }}"
                                                 step="0.01"
                                                 data-max-qty="{{ $balancedQty }}">
@@ -335,7 +332,7 @@
                                                     'charge_id' => $id,
                                                     'charge_name' => $oldCharges['name'][$index] ?? '',
                                                     'charge_amount' => $oldCharges['amount'][$index] ?? 0,
-                                                    'id' => null // We don't necessarily track the invoice_charge_id in old input
+                                                    'id' => null 
                                                 ];
                                             }
                                         } else {
@@ -812,6 +809,17 @@
 
         // Initial call
         toggleTransactionId();
+
+        // Update Select All state on page load
+        function updateSelectAllState() {
+            let allChecked = $('.item-checkbox').length > 0 && $('.item-checkbox:not(:checked)').length === 0;
+            $('#select_all_items').prop('checked', allChecked);
+        }
+
+        $('.item-checkbox').each(function() {
+            toggleItemFields($(this));
+        });
+        updateSelectAllState();
         $('#purchase_order').on('change', function() {
             let poId = $(this).val();
             if (poId) {
@@ -1053,6 +1061,7 @@
 
         $(document).on('change', '.item-checkbox', function() {
             toggleItemFields($(this));
+            updateSelectAllState();
             calculateTotals();
         });
 

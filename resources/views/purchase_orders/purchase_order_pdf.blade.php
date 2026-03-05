@@ -93,7 +93,7 @@
                         @if($item->color) | Color: {{ $item->color->color_name }} @endif
                     </small>
                 </td>
-                <td>{{ $item->art_no ?? 'N/A' }}</td>
+                <td>{{ $item->supplier_design_name ?? 'N/A' }}</td>
                 <td class="text-right">{{ number_format($item->quantity, 2) }}</td>
                 <td>{{ $item->uom->uom_code }}</td>
                 <td class="text-right">{{ number_format($item->rate, 2) }}</td>

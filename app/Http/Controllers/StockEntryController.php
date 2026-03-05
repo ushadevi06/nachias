@@ -173,9 +173,8 @@ class StockEntryController extends Controller
                 if ($id && $stockEntry) {
                     $query->orWhere('id', $stockEntry->grn_entry_id);
                 }
-            })
-            ->orderBy('grn_number', 'desc')
-            ->get();
+            })->orderBy('grn_number', 'desc')->get(); 
+        
         $storeCategories = StoreCategory::where('status', 'Active')->orderBy('category_name')->get();
         $rawMaterials = RawMaterial::where('status', 'Active')->orderBy('name')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('store_location')->get();
@@ -211,8 +210,7 @@ class StockEntryController extends Controller
             $totalStocked = StockEntryItem::where('grn_entry_item_id', $request->grn_entry_item_id)
                 ->when($id, function($q) use ($id) {
                     $q->where('stock_entry_id', '!=', $id);
-                })
-                ->sum('qty_in');
+                })->sum('qty_in');
             $availableBalance = $grnItem->qty_accepted - $totalStocked;
 
             if ($request->qty_in > $availableBalance) {

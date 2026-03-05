@@ -216,7 +216,6 @@ class GrnEntryController extends Controller
                     $grn = GrnEntry::findOrFail($id);
                     $headerData['updated_by'] = auth()->id();
                     $grn->update($headerData);
-                    $grn->grnEntryItems()->delete();
                     $newData = $grn->fresh()->toArray();
                     addLog('update', 'GRN Entry', 'grn_entries', $id, $oldData, $newData);
                 } else {
@@ -228,6 +227,7 @@ class GrnEntryController extends Controller
                     $newData = $grn->toArray();
                     addLog('create', 'GRN Entry', 'grn_entries', $grn->id, null, $newData);
                 }
+                $processedItemIds = [];
                 foreach ($request->items as $idx => $itemData) {
                     if (($itemData['row_selected'] ?? 0) == 0) continue;
 
@@ -243,23 +243,53 @@ class GrnEntryController extends Controller
                         $imagePath = $filename;
                     }
 
-                    $item = GrnEntryItem::create([
-                        'grn_entry_id' => $grn->id,
-                        'purchase_invoice_item_id' => $itemData['purchase_invoice_item_id'] ?? null,
-                        'art_no' => $itemData['art_no'] ?? null,
-                        'fabric_type_id' => $itemData['fabric_type_id'] ?? null,
-                        'qty_ordered' => $itemData['qty_ordered'] ?? 0,
-                        'qty_received' => $itemData['qty_received'] ?? 0,
-                        'qty_accepted' => $itemData['qty_accepted'] ?? 0,
-                        'qty_rejected' => $itemData['qty_rejected'] ?? 0,
-                        'qty_balanced' => $itemData['qty_balanced'] ?? 0,
-                        'rate' => $itemData['rate'] ?? 0,
-                        'amount' => $itemData['amount'] ?? 0,
-                        'quality_check_status' => $itemData['quality_check_status'] ?? null,
-                        'store_location_id' => $itemData['store_location_id'] ?? null,
-                        'image' => $imagePath,
-                    ]);
+                    $piItemId = $itemData['purchase_invoice_item_id'] ?? null;
+                    
+                    $item = null;
+                    if ($id) {
+                        $item = GrnEntryItem::where('grn_entry_id', $grn->id)->where('purchase_invoice_item_id', $piItemId)->first();
+                    }
 
+                    if ($item) {
+                        $updateData = [
+                            'art_no' => $itemData['art_no'] ?? null,
+                            'fabric_type_id' => $itemData['fabric_type_id'] ?? null,
+                            'qty_ordered' => $itemData['qty_ordered'] ?? 0,
+                            'qty_received' => $itemData['qty_received'] ?? 0,
+                            'qty_accepted' => $itemData['qty_accepted'] ?? 0,
+                            'qty_rejected' => $itemData['qty_rejected'] ?? 0,
+                            'qty_balanced' => $itemData['qty_balanced'] ?? 0,
+                            'rate' => $itemData['rate'] ?? 0,
+                            'amount' => $itemData['amount'] ?? 0,
+                            'quality_check_status' => $itemData['quality_check_status'] ?? null,
+                            'store_location_id' => $itemData['store_location_id'] ?? null,
+                        ];
+                        if ($imagePath !== null) {
+                            $updateData['image'] = $imagePath;
+                        }
+                        $item->update($updateData);
+                    } else {
+                        $item = GrnEntryItem::create([
+                            'grn_entry_id' => $grn->id,
+                            'purchase_invoice_item_id' => $piItemId,
+                            'art_no' => $itemData['art_no'] ?? null,
+                            'fabric_type_id' => $itemData['fabric_type_id'] ?? null,
+                            'qty_ordered' => $itemData['qty_ordered'] ?? 0,
+                            'qty_received' => $itemData['qty_received'] ?? 0,
+                            'qty_accepted' => $itemData['qty_accepted'] ?? 0,
+                            'qty_rejected' => $itemData['qty_rejected'] ?? 0,
+                            'qty_balanced' => $itemData['qty_balanced'] ?? 0,
+                            'rate' => $itemData['rate'] ?? 0,
+                            'amount' => $itemData['amount'] ?? 0,
+                            'quality_check_status' => $itemData['quality_check_status'] ?? null,
+                            'store_location_id' => $itemData['store_location_id'] ?? null,
+                            'image' => $imagePath,
+                        ]);
+                    }
+
+                    $processedItemIds[] = $item->id;
+
+                    $item->variants()->delete();
                     if (isset($itemData['variants']) && is_array($itemData['variants'])) {
                         foreach ($itemData['variants'] as $v) {
                             if (($v['qty'] ?? 0) > 0) {
@@ -271,6 +301,10 @@ class GrnEntryController extends Controller
                             }
                         }
                     }
+                }
+
+                if ($id) {
+                    GrnEntryItem::where('grn_entry_id', $grn->id)->whereNotIn('id', $processedItemIds)->delete();
                 }
 
                 DB::commit();
@@ -298,7 +332,8 @@ class GrnEntryController extends Controller
                     }
                 }
 
-                return redirect('grn_entries')->with('success', 'GRN Entry saved successfully');
+                $message = $id ? 'GRN Entry updated successfully' : 'GRN Entry saved successfully';
+                return redirect('grn_entries')->with('success', $message);
             } catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => $e->getMessage()]);

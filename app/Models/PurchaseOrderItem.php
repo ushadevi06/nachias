@@ -19,7 +19,7 @@ class PurchaseOrderItem extends Model
         'style_id',
         'brand_id',
         'quantity',
-        'art_no',
+        'supplier_design_name',
         'rate',
         'amount',
         'remarks',

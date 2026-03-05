@@ -55,7 +55,6 @@ $(document).ready(function () {
         allowInput: true
     });
 
-    // Month & Year Picker
     $('#month_year').flatpickr({
         plugins: [
             new monthSelectPlugin({

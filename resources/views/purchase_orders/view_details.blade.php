@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>View Purchase Order</h4>
-                <a href="{{ url('purchase_orders') }}" class="btn btn-primary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
+                <a href="{{ url('purchase_orders') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
             </div>
             <div class="card detail-card">
                 <div class="card-body">
@@ -26,9 +26,9 @@
                             <label class="detail-title">Purchase Commission Agent:</label>
                             <div class="text-muted">
                                 @if($purchaseOrder->purchaseCommissionAgent)
-                                {{ $purchaseOrder->purchaseCommissionAgent->name }}({{ $purchaseOrder->purchaseCommissionAgent->code }})
+                                    {{ $purchaseOrder->purchaseCommissionAgent->name }}({{ $purchaseOrder->purchaseCommissionAgent->code }})
                                 @else
-                                -
+                                    -
                                 @endif
                             </div>
                         </div>
@@ -49,7 +49,7 @@
                             <div class="text-muted">{{ $purchaseOrder->due_date->format('d-M-Y') }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Delivery Location:</label>
+                            <label class="detail-title">Fabric Store:</label>
                             <div class="text-muted">{{ $purchaseOrder->storeType->store_type_name ?? '-' }}</div>
                         </div>
 
@@ -69,20 +69,16 @@
                                         $attachment = $purchaseOrder->additional_attachments;
                                         $extension = pathinfo($attachment, PATHINFO_EXTENSION);
                                         $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                        $url = url('uploads/po/' . $purchaseOrder->id . '/' . $attachment);
+                                        $url = url('uploads/purchase_orders/' . $attachment);
                                     @endphp
 
                                     @if($isImage)
-                                        <a href="javascript:void(0)" class="view-image" data-image="{{ $url }}">
-                                            <i class="ri ri-image-line"></i> View
-                                        </a>
+                                        <a href="javascript:void(0)" class="view-image" data-image="{{ $url }}"><i class="ri ri-image-line"></i> View</a>
                                     @else
-                                        <a href="{{ $url }}" target="_blank">
-                                            <i class="ri ri-file-text-line"></i> View
-                                        </a>
+                                        <a href="{{ $url }}" target="_blank"><i class="ri ri-file-text-line"></i> View</a>
                                     @endif
                                 @else
-                                -
+                                    -
                                 @endif
                             </div>
                         </div>
@@ -144,7 +140,7 @@
                                             </td>
                                             <td>{{ $item->uom->uom_code ?? '-' }}</td>
                                             <td>{{ number_format($item->quantity, 2) }}</td>
-                                            <td>{{ $item->art_no ?? '-' }}</td>
+                                            <td>{{ $item->supplier_design_name ?? '-' }}</td>
                                             <td>{{ $item->color->color_name ?? '-' }}</td>
                                             <td>₹{{ number_format($item->rate, 2) }}</td>
                                             <td>₹{{ number_format($item->amount, 2) }}</td>

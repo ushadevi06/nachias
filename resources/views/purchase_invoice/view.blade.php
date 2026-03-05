@@ -10,12 +10,9 @@
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
             </div>
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
             <div class="card">
                 <div class="card-body">
                     <div class="filter-box">
@@ -178,8 +175,6 @@
             table.ajax.reload();
         });
 
-
-        // Status change
         $(document).on('change', '.invoice-status-change', function() {
             var invoiceId = $(this).data('id');
             var status = $(this).val();
@@ -202,7 +197,6 @@
             });
         });
 
-        // Load invoice items in modal
         $(document).on('click', '.btn-invoice-items', function() {
             var invoiceId = $(this).data('id');
 

@@ -12,12 +12,9 @@
                 </a>
             </div>
 
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
 
             <div class="card">
                 <div class="card-body">
@@ -56,7 +53,6 @@
                                     <th>Due Date</th>
                                     <th>Store Type</th>
                                     <th>Total Order Qty</th>
-
                                     <th>Status</th>
                                     <th>Total Amount</th>
                                     <th>Actions</th>
@@ -132,7 +128,6 @@
             ]
         });
 
-        // Initialize Flatpickr
         $('#po_date_range').flatpickr({
             mode: 'range',
             dateFormat: 'd-m-Y',
@@ -162,7 +157,7 @@
                 },
                 success: function(response) {
                     let msg = '<span class="text-success">Status Changed</span>';
-                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(1000).fadeOut();
                     table.ajax.reload(null, false);
                 },
                 error: function() {

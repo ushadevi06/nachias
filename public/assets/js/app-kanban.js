@@ -177,58 +177,44 @@
             }
         },
         click: function (el) {
-            // Redirect to task view when clicking on the card
         }
     });
 
-    // Delegated click handler for kanban items - redirects to task detail view
-    $(document).on('click', '.kanban-item', function (e) {
-        // Don't redirect when clicking on dropdown, status badge, or other interactive elements
-        if ($(e.target).closest('.kanban-tasks-item-dropdown, .dropdown-menu, .badge, .status-dropdown-item, .add-custom-task-status').length) {
-            return;
-        }
-        const eid = $(this).attr('data-eid');
-        if (eid && window.kanbanListViewUrl) {
-            window.location.href = window.kanbanListViewUrl + '/view/' + eid;
-        }
+    window.kanban = kanban;
 
+    const kanbanItems = Array.from(document.querySelectorAll('.kanban-item'));
+    if (kanbanItems.length) {
+        kanbanItems.forEach(function (el) {
+            const eid = el.getAttribute('data-eid');
+            let itemData = null;
+            if (kanbanData && Array.isArray(kanbanData)) {
+                kanbanData.forEach(board => {
+                    if (board.item && Array.isArray(board.item)) {
+                        const found = board.item.find(item => String(item.id) === String(eid));
+                        if (found) itemData = found;
+                    }
+                });
+            }
+            if (!itemData) return;
 
+            const taskId = itemData.task_no || 'TASK-000';
+            const title = itemData.title || el.textContent || '';
+            const badgeText = itemData['badge-text'] || '';
+            const jcStart = itemData['jc-start'] || 'N/A';
+            const jcEnd = itemData['jc-end'] || 'N/A';
 
-        window.kanban = kanban;
+            el.innerHTML = '';
 
-        const kanbanItems = Array.from(document.querySelectorAll('.kanban-item'));
-        if (kanbanItems.length) {
-            kanbanItems.forEach(function (el) {
-                const eid = el.getAttribute('data-eid');
-                let itemData = null;
-                if (kanbanData && Array.isArray(kanbanData)) {
-                    kanbanData.forEach(board => {
-                        if (board.item && Array.isArray(board.item)) {
-                            const found = board.item.find(item => String(item.id) === String(eid));
-                            if (found) itemData = found;
-                        }
-                    });
-                }
-                if (!itemData) return;
-
-                const taskId = itemData.task_no || 'TASK-000';
-                const title = itemData.title || el.textContent || '';
-                const badgeText = itemData['badge-text'] || '';
-                const jcStart = itemData['jc-start'] || 'N/A';
-                const jcEnd = itemData['jc-end'] || 'N/A';
-
-                el.innerHTML = '';
-
-                const headerHtml = `
+            const headerHtml = `
                 <div class="kanban-item-header">
                     <span class="kanban-item-id">${taskId}</span>
                     ${renderDropdown(eid, itemData.id)}
                 </div>
             `;
 
-                const badgeHtml = renderStatusDropdown(badgeText);
-                const titleHtml = `<span class="kanban-text">${title}</span>`;
-                const datesHtml = `
+            const badgeHtml = renderStatusDropdown(badgeText);
+            const titleHtml = `<span class="kanban-text">${title}</span>`;
+            const datesHtml = `
                 <div class="kanban-item-dates">
                     <div class="date-box start-date">
                         <small style="color: #696cff; font-weight: 600;"><i class="ri-calendar-line"></i> START</small>
@@ -241,125 +227,125 @@
                 </div>
             `;
 
-                const workingLevel = itemData.working_level || '0 / 0 PCS';
-                const totalReceived = itemData.total_received || 0;
-                const targetQty = itemData.target_qty || 0;
+            const workingLevel = itemData.working_level || '0 / 0 PCS';
+            const totalReceived = itemData.total_received || 0;
+            const targetQty = itemData.target_qty || 0;
 
-                el.setAttribute('data-working-level', workingLevel);
-                el.setAttribute('data-target-qty', targetQty);
-                el.setAttribute('data-received-qty', totalReceived);
+            el.setAttribute('data-working-level', workingLevel);
+            el.setAttribute('data-target-qty', targetQty);
+            el.setAttribute('data-received-qty', totalReceived);
 
-                const progressColor = (badgeText === 'Completed') ? 'bg-success' : 'bg-secondary';
+            const progressColor = (badgeText === 'Completed') ? 'bg-success' : 'bg-secondary';
 
-                // Commented out working level and progress display
-                /*
-                const progressHtml = `
-                    <div class="kanban-progress-wrapper">
-                        <div class="progress-label">
-                            <span>Working Level</span>
-                            <span>${workingLevel} (${progress}%)</span>
-                        </div>
-                        <div class="progress">
-                            <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div >
-                    `;
-                */
-                const progressHtml = ''; // Working level and progress hidden
+            // Commented out working level and progress display
+            /*
+            const progressHtml = `
+                <div class="kanban-progress-wrapper">
+                    <div class="progress-label">
+                        <span>Working Level</span>
+                        <span>${workingLevel} (${progress}%)</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div >
+                `;
+            */
+            const progressHtml = ''; // Working level and progress hidden
 
-                const stageName = itemData.stage_name || 'No S+ badgeHtmltage';
-                const stageHtml = `<div class="text-xs mb-2 text-dark bg-label-warning p-1 rounded fw-bold text-center">${stageName}</div>`;
+            const stageName = itemData.stage_name || 'No S+ badgeHtmltage';
+            const stageHtml = `<div class="text-xs mb-2 text-dark bg-label-warning p-1 rounded fw-bold text-center">${stageName}</div>`;
 
-                el.insertAdjacentHTML('beforeend', headerHtml + titleHtml + stageHtml + datesHtml + progressHtml);
-            });
+            el.insertAdjacentHTML('beforeend', headerHtml + titleHtml + stageHtml + datesHtml + progressHtml);
+        });
+    }
+
+    $(document).on('click', '.kanban-title-board', function () {
+        this.contentEditable = 'true';
+        this.focus();
+    });
+
+    $(document).on('click', '.kanban-tasks-item-dropdown', function (e) {
+        e.stopPropagation();
+    });
+
+    $(document).on('click', '.kanban-tasks-item-dropdown .dropdown-item', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const url = $(this).attr('href');
+        if (url && url !== 'javascript:void(0)') {
+            window.location.href = url;
         }
+    });
 
-        $(document).on('click', '.kanban-title-board', function () {
-            this.contentEditable = 'true';
-            this.focus();
-        });
+    $(document).on('click', '.change-task-status', function (e) {
+        e.preventDefault();
+        const newStatus = $(this).data('status');
+        const taskItem = $(this).closest('.kanban-item')[0];
+        const taskId = taskItem.getAttribute('data-eid');
 
-        $(document).on('click', '.kanban-tasks-item-dropdown', function (e) {
-            e.stopPropagation();
-        });
+        if (window.kanban && taskId && newStatus) {
+            window.kanban.moveElement(newStatus, taskId);
+        }
+    });
 
-        $(document).on('click', '.kanban-tasks-item-dropdown .dropdown-item', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const url = $(this).attr('href');
-            if (url && url !== 'javascript:void(0)') {
-                window.location.href = url;
-            }
-        });
+    $(document).on('click', '.add-custom-task-status', function (e) {
+        e.preventDefault();
+        const taskItem = $(this).closest('.kanban-item')[0];
+        const taskId = taskItem.getAttribute('data-eid');
+        const newStatus = prompt('Enter custom status name:');
 
-        $(document).on('click', '.change-task-status', function (e) {
-            e.preventDefault();
-            const newStatus = $(this).data('status');
-            const taskItem = $(this).closest('.kanban-item')[0];
-            const taskId = taskItem.getAttribute('data-eid');
+        if (newStatus && window.kanban && taskId) {
+            const existingBoard = window.kanban.findBoard(newStatus);
+            if (!existingBoard) {
+                // Save to database first
+                $.ajax({
+                    url: window.location.origin + '/task_management/add_custom_status',
+                    method: 'POST',
+                    data: {
+                        _token: window.csrfToken,
+                        status_name: newStatus
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // Add to Kanban board
+                            window.kanban.addBoards([{
+                                id: newStatus,
+                                title: newStatus,
+                                item: []
+                            }]);
 
-            if (window.kanban && taskId && newStatus) {
+                            const $container = $('.kanban-container');
+                            const $addListCol = $('.kanban-add-new-board-column');
+                            if ($container.length && $addListCol.length) {
+                                $container.append($addListCol);
+                            }
+                            window.kanban.moveElement(newStatus, taskId);
+                        } else {
+                            alert('Failed to add custom status: ' + (response.message || 'Unknown error'));
+                        }
+                    },
+                    error: function (xhr) {
+                        if (xhr.status === 422) {
+                            const errors = xhr.responseJSON?.errors;
+                            if (errors && errors.status_name) {
+                                alert('Error: ' + errors.status_name[0]);
+                            } else {
+                                alert('Status already exists or is invalid');
+                            }
+                        } else {
+                            alert('Failed to add custom status. Please try again.');
+                        }
+                    }
+                });
+            } else {
                 window.kanban.moveElement(newStatus, taskId);
             }
-        });
-
-        $(document).on('click', '.add-custom-task-status', function (e) {
-            e.preventDefault();
-            const taskItem = $(this).closest('.kanban-item')[0];
-            const taskId = taskItem.getAttribute('data-eid');
-            const newStatus = prompt('Enter custom status name:');
-
-            if (newStatus && window.kanban && taskId) {
-                const existingBoard = window.kanban.findBoard(newStatus);
-                if (!existingBoard) {
-                    // Save to database first
-                    $.ajax({
-                        url: window.location.origin + '/task_management/add_custom_status',
-                        method: 'POST',
-                        data: {
-                            _token: window.csrfToken,
-                            status_name: newStatus
-                        },
-                        success: function (response) {
-                            if (response.success) {
-                                // Add to Kanban board
-                                window.kanban.addBoards([{
-                                    id: newStatus,
-                                    title: newStatus,
-                                    item: []
-                                }]);
-
-                                const $container = $('.kanban-container');
-                                const $addListCol = $('.kanban-add-new-board-column');
-                                if ($container.length && $addListCol.length) {
-                                    $container.append($addListCol);
-                                }
-                                window.kanban.moveElement(newStatus, taskId);
-                            } else {
-                                alert('Failed to add custom status: ' + (response.message || 'Unknown error'));
-                            }
-                        },
-                        error: function (xhr) {
-                            if (xhr.status === 422) {
-                                const errors = xhr.responseJSON?.errors;
-                                if (errors && errors.status_name) {
-                                    alert('Error: ' + errors.status_name[0]);
-                                } else {
-                                    alert('Status already exists or is invalid');
-                                }
-                            } else {
-                                alert('Failed to add custom status. Please try again.');
-                            }
-                        }
-                    });
-                } else {
-                    window.kanban.moveElement(newStatus, taskId);
-                }
-            }
-        });
-
-        const kanbanContainer = document.querySelector('.kanban-container');
-        if (kanbanContainer && typeof PerfectScrollbar !== 'undefined') {
-            new PerfectScrollbar(kanbanContainer);
         }
-    })();
+    });
+
+    const kanbanContainer = document.querySelector('.kanban-container');
+    if (kanbanContainer && typeof PerfectScrollbar !== 'undefined') {
+        new PerfectScrollbar(kanbanContainer);
+    }
+})();

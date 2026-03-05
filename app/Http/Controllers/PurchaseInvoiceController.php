@@ -507,7 +507,7 @@ class PurchaseInvoiceController extends Controller
                 'id' => $item->id,
                 'raw_material_id' => $item->raw_material_id,
                 'raw_material_name' => $item->rawMaterial->name,
-                'art_no' => $item->art_no,
+                'art_no' => $item->supplier_design_name,
                 'hsn_code' => $item->rawMaterial->hsn_code ?? '',
                 'quantity' => $balanceQty,
                 'qty_ordered' => $item->quantity,

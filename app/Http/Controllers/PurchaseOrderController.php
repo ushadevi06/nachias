@@ -135,6 +135,9 @@ class PurchaseOrderController extends Controller
         $purchaseOrder = null;
         if ($id) {
             $purchaseOrder = PurchaseOrder::with(['items.storeCategory', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+            if ($purchaseOrder->status !== 'Draft') {
+                return redirect('purchase_orders')->with('error','Only Draft Purchase Orders can be edited.');
+            }
         }
         $purchaseOrder = $purchaseOrder ?? null;
 
@@ -158,7 +161,7 @@ class PurchaseOrderController extends Controller
                 'items.*.raw_material_id' => 'required|exists:raw_materials,id',
                 'items.*.uom_id' => 'required|exists:uoms,id',
                 'items.*.quantity' => 'required|numeric|min:0.01',
-                'items.*.art_no' => 'nullable|string|min:3|max:50',
+                'items.*.supplier_design_name' => 'nullable|string|min:3|max:50',
                 'items.*.rate' => 'required|numeric|min:0',
                 'items.*.remarks' => 'nullable|string|min:5|max:255',
                 'items.*.attached_file' => 'nullable|mimes:jpeg,jpg,png,webp|max:2048',
@@ -252,8 +255,8 @@ class PurchaseOrderController extends Controller
                 }
 
                 if ($request->hasFile('additional_attachments')) {
-                    if (!empty($purchaseOrder->additional_attachments)) {
-                        $oldFilePath = public_path('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments);
+                    if ($id && !empty($purchaseOrder->additional_attachments)) {
+                        $oldFilePath = public_path('uploads/purchase_orders/'.$purchaseOrder->additional_attachments);
                         if (file_exists($oldFilePath)) {
                             @unlink($oldFilePath);
                         }
@@ -261,7 +264,7 @@ class PurchaseOrderController extends Controller
 
                     $file = $request->file('additional_attachments');
                     $fileName = 'additional_' . time() . '.' . $file->getClientOriginalExtension();
-                    $uploadPath = public_path('uploads/po/' . $purchaseOrder->id);
+                    $uploadPath = public_path('uploads/purchase_orders');
                     if (!file_exists($uploadPath)) {
                         mkdir($uploadPath, 0755, true);
                     }
@@ -276,7 +279,7 @@ class PurchaseOrderController extends Controller
                         'raw_material_id' => $item['raw_material_id'],
                         'uom_id' => $item['uom_id'],
                         'quantity' => $item['quantity'],
-                        'art_no' => $item['art_no'],
+                        'supplier_design_name' => $item['supplier_design_name'] ?? null,
                         'rate' => $item['rate'],
                         'amount' => $item['quantity'] * $item['rate'],
                         'remarks' => $item['remarks'],
@@ -288,6 +291,13 @@ class PurchaseOrderController extends Controller
                     ];
 
                     if ($request->hasFile("items.{$index}.attached_file")) {
+                        if ($id && !empty($item->attached_file)) {
+                            $oldFilePath = public_path('uploads/purchase_orders/'.$item->attached_file);
+                            if (file_exists($oldFilePath)) {
+                                @unlink($oldFilePath);
+                            }
+                        }
+
                         $file = $request->file("items.{$index}.attached_file");
                         $fileName = time() . '_' . $index . '_' . $file->getClientOriginalName();
 
@@ -367,13 +377,9 @@ class PurchaseOrderController extends Controller
         }
 
         if ($purchaseOrder->additional_attachments) {
-            $filePath = public_path('uploads/po/' . $purchaseOrder->id . '/' . $purchaseOrder->additional_attachments);
+            $filePath = public_path('uploads/purchase_orders/' . $purchaseOrder->additional_attachments);
             if (file_exists($filePath)) {
                 unlink($filePath);
-            }
-            $folderPath = public_path('uploads/po/' . $purchaseOrder->id);
-            if (is_dir($folderPath)) {
-                rmdir($folderPath);
             }
         }
 
