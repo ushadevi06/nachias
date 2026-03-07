@@ -52,6 +52,9 @@ use App\Http\Controllers\SizeRatioController;
 use App\Http\Controllers\StoreLocationController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ZoneController;
+use App\Http\Controllers\SalesMarketingReportController;
+use App\Http\Controllers\WarehouseReportController;
+use App\Http\Controllers\ProductionReportController;
 use App\Http\Controllers\OperationStageController;
 use App\Http\Controllers\TaxTypeController;
 use App\Http\Controllers\TaxController;
@@ -72,6 +75,7 @@ use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\ProductionReceiptController;
 use App\Http\Controllers\ProcessGroupController;
 use App\Http\Controllers\SeasonController;
+use App\Http\Controllers\TicketManagementController;
 
 
 /*
@@ -183,10 +187,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('purchase_commission_agent/delete/{id}', [PurchaseCommissionAgentController::class, 'destroy']);
 
     /* Store location */
-    Route::get('/store_location', [StorelocationController::class, 'index']);
-    Route::match(['GET', 'POST'], '/store_location/add/{id?}', [StorelocationController::class, 'add']);
-    Route::get('/store_location/delete/{id}', [StorelocationController::class, 'destroy']);
-    Route::post('/store_location/status/{id}', [StorelocationController::class, 'updateStatus']);
+    Route::get('/store_location', [StoreLocationController::class, 'index']);
+    Route::match(['GET', 'POST'], '/store_location/add/{id?}', [StoreLocationController::class, 'add']);
+    Route::get('/store_location/delete/{id}', [StoreLocationController::class, 'destroy']);
+    Route::post('/store_location/status/{id}', [StoreLocationController::class, 'updateStatus']);
 
     /* Departments */
     Route::get('/departments', [DepartmentController::class, 'index']);
@@ -436,6 +440,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     /* Task Adjustment */
     Route::post('task_adjustments/add/{id?}', [TaskManagementController::class, 'adjustment_add'])->name('task_adjustments.add');
 
+    /* Ticket Management */
+    Route::get('ticket_management', [TicketManagementController::class, 'index'])->name('ticket_management.index');
+    Route::match(['GET', 'POST'], 'ticket_management/add/{id?}', [TicketManagementController::class, 'add'])->name('ticket_management.add');
+    Route::post('ticket_management/store', [TicketManagementController::class, 'store'])->name('ticket_management.store');
+    Route::post('ticket_management/status/{id}', [TicketManagementController::class, 'updateStatus']);
+    Route::get('ticket_management/delete/{id}', [TicketManagementController::class, 'destroy']);
+
     /* Production Receipts */
     Route::get('production_receipts', [ProductionReceiptController::class, 'index']);
     Route::match(['GET', 'POST'], 'production_receipts/add/{id?}', [ProductionReceiptController::class, 'add']);
@@ -525,10 +536,17 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active','employee.active'
     Route::get('payroll_reports', [PayrollReportController::class, 'index']);
     Route::get('add_payroll_report', [PayrollReportController::class, 'add']);
 
+    /* Sales & Marketing Report */
+    Route::get('sales_marketing_reports', [SalesMarketingReportController::class, 'index']);
+
+    /* Warehouse Report */
+    Route::get('warehouse_reports', [WarehouseReportController::class, 'index']);
+
+    /* Production Report */
+    Route::get('production_reports', [ProductionReportController::class, 'index']);
+
     /* Customer Report */
-    Route::get('customer_reports', [ReportController::class, 'customer_reports']);
     Route::get('sale_reports', [ReportController::class, 'sale_reports']);
-    Route::get('stock_reports', [ReportController::class, 'stock_reports']);
     Route::get('daily_production_reports', [ReportController::class, 'daily_production_reports']);
     Route::get('order_reports', [ReportController::class, 'order_reports']);
     Route::get('employee_reports', [ReportController::class, 'employee_reports']);

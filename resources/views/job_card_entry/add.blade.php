@@ -618,6 +618,7 @@
                                                             @endforeach
                                                         </div>
                                                         <input type="file" class="form-control form-control-sm" name="fabric_images[{{ $index }}][]" multiple accept="image/*">
+                                                        <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                                     </div>
                                                 </th>
                                             @endforeach

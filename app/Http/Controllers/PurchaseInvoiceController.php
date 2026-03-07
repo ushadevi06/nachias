@@ -21,8 +21,7 @@ class PurchaseInvoiceController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = PurchaseInvoice::with(['supplier'])
-                ->orderBy('id', 'desc');
+            $query = PurchaseInvoice::with(['supplier'])->orderBy('id', 'desc');
 
             if (!empty($request->supplier_id)) {
                 $query->where('supplier_id', $request->supplier_id);

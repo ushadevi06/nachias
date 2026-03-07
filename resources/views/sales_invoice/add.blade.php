@@ -279,6 +279,7 @@
                                                     <a href="{{ asset($invoice->signature_file) }}" target="_blank" class="small text-primary"><i class="ri ri-file-line"></i> View</a>
                                                 </div>
                                             @endif
+                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                         </div>
                                     </div>
 
@@ -291,6 +292,7 @@
                                                     <a href="{{ asset($invoice->attachment_file) }}" target="_blank" class="small text-primary"><i class="ri ri-file-line"></i> View</a>
                                                 </div>
                                             @endif
+                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                         </div>
                                     </div>
                                     <!-- Show Fields in Customer Invoice PDF -->

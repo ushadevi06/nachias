@@ -698,8 +698,6 @@ $isSuper = $user->id == 1;
                                 </li>
                                 @endif
                                 <!-- Reports -->
-                                @if($user && (
-                                $isSuper || $user->can('view customer-report') || $user->can('view sale-report') || $user->can('view stock-report') || $user->can('view daily-production-report') || $user->can('view order-report') || $user->can('view employee-report')))
                                 <li class="menu-item {{  request()->is('customer_reports*') || request()->is('sale_reports*') || request()->is('stock_reports*') ||  request()->is('daily_production_reports*') || request()->is('order_reports*') || request()->is('employee_reports*') ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-file-chart-line"></i>
@@ -707,57 +705,32 @@ $isSuper = $user->id == 1;
                                     </a>
 
                                     <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view customer-report'))
-                                        <li class="menu-item {{ request()->is('customer_reports*') ? 'active' : '' }}">
-                                            <a href="{{ url('customer_reports') }}" class="menu-link">
-                                                <div>Customer Report</div>
+                                        <li class="menu-item {{ request()->is('sales_marketing_reports*') ? 'active' : '' }}">
+                                            <a href="{{ url('sales_marketing_reports') }}" class="menu-link">
+                                                <div>Sales & Marketing Reports</div>
                                             </a>
                                         </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view sale-report'))
-                                        <li class="menu-item {{ request()->is('sale_reports*') ? 'active' : '' }}">
-                                            <a href="{{ url('sale_reports') }}" class="menu-link">
-                                                <div>Sale Report</div>
+                                        <li class="menu-item {{ request()->is('warehouse_reports*') ? 'active' : '' }}">
+                                            <a href="{{ url('warehouse_reports') }}" class="menu-link">
+                                                <div>Warehouse Reports</div>
                                             </a>
                                         </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view stock-report'))
-                                        <li class="menu-item {{ request()->is('stock_reports*') ? 'active' : '' }}">
-                                            <a href="{{ url('stock_reports') }}" class="menu-link">
-                                                <div>Stock Report</div>
+                                        <li class="menu-item {{ request()->is('production_reports*') ? 'active' : '' }}">
+                                            <a href="{{ url('production_reports') }}" class="menu-link">
+                                                <div>Production Reports</div>
                                             </a>
                                         </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view daily-production-report'))
-                                        <li class="menu-item {{ request()->is('daily_production_reports*') ? 'active' : '' }}">
-                                            <a href="{{ url('daily_production_reports') }}" class="menu-link">
-                                                <div>Daily Production Report</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view order-report'))
-                                        <li class="menu-item {{ request()->is('order_reports*') ? 'active' : '' }}">
-                                            <a href="{{ url('order_reports') }}" class="menu-link">
-                                                <div>Order Report</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view employee-report'))
-                                        <li class="menu-item {{ request()->is('employee_reports*') ? 'active' : '' }}">
-                                            <a href="{{ url('employee_reports') }}" class="menu-link">
-                                                <div>Employee Report</div>
-                                            </a>
-                                        </li>
-                                        @endif
                                     </ul>
                                 </li>
+                                @if($user && ($isSuper || $user->can('view ticket-management')))
+                                <!-- Ticket Management -->
+                                <li class="menu-item {{ request()->is('ticket_management*') ? 'active' : '' }}">
+                                    <a href="{{ url('ticket_management') }}" class="menu-link">
+                                        <i class="menu-icon icon-base ri ri-customer-service-2-line"></i>
+                                        <div>Ticket Management</div>
+                                    </a>
+                                </li>
                                 @endif
-
                                 <!-- Settings -->
                                 @if($user && ($isSuper || $user->can('view settings')))
                                 <li class="menu-item {{ request()->is('settings') ? 'active' : '' }}">

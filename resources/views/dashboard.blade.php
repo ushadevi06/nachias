@@ -1,489 +1,781 @@
 @extends('layouts.common')
-@section('title', 'Dashboard - ' . env('WEBSITE_NAME'))
+@section('title', 'ERP Dashboard - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
-    <!-- Card Border Shadow -->
-    <div class="row g-4">
-        <div class="col-sm-6 col-lg-3">
-            <div class="card dashboard-card">
-                <div class="card-body">
-                    <h6 class="dashboard-title">Total Orders</h6>
-                    <div class="inner-wrapper">
-                        <div class="icon-box">
-                            <i class="ri ri-file-list-fill"></i>
-                        </div>
-                        <div class="content-box">
-                            <h4>45</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    
+    <!-- Page Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h4 class="fw-bold mb-0 text-primary">ERP Dashboard</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item active">Dashboard Overview</li>
+                </ol>
+            </nav>
         </div>
-        <div class="col-sm-6 col-lg-3">
-            <div class="card dashboard-card two">
-                <div class="card-body">
-                    <h6 class="dashboard-title">Total Stock Value</h6>
-                    <div class="inner-wrapper">
-                        <div class="icon-box">
-                            <i class="ri ri-funds-line"></i>
-                        </div>
-                        <div class="content-box">
-                            <h4>679</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-            <div class="card dashboard-card three">
-                <div class="card-body">
-                    <h6 class="dashboard-title">Profit Margin</h6>
-                    <div class="inner-wrapper">
-                        <div class="icon-box">
-                            <i class="ri ri-wallet-3-line"></i>
-                        </div>
-                        <div class="content-box">
-                            <h4>24.8%</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-            <div class="card dashboard-card four">
-                <div class="card-body">
-                    <h6 class="dashboard-title">Total Sales</h6>
-                    <div class="inner-wrapper">
-                        <div class="icon-box">
-                            <i class="ri ri-shopping-cart-2-line"></i>
-                        </div>
-                        <div class="content-box">
-                            <h4>530</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Progress Indicator -->
-        <div class="col-lg-12">
-            <div class="row justify-content-start g-4">
-                <div class="col-lg-6">
-                    <div class="card text-center common-card">
-                        <div class="card-body">
-                            <h5 class="card-title">Orders in Progress</h5>
-                            <div class="common-chart">
-                                <canvas id="progressChart"></canvas>
-                            </div>
-                            <p class="mt-3 mb-0">204/300 Orders</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="card common-card">
-                        <div class="card-body">
-                            <h5 class="card-title">Monthly Sales</h5>
-                            <div class="common-chart">
-                                <canvas id="salesChart" width="600" height="300"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row g-3 align-items-center">
-                        <div class="col-lg-8 col-xl-9">
-                            <h5 class="dashboard-card-title">Sales vs Expenses</h5>
-                        </div>
-                        <div class="col-lg-4 col-xl-3">
-                            <select id="filterRange" class="form-select">
-                                <option value="first">First 6 Months</option>
-                                <option value="last">Last 6 Months</option>
-                            </select>
-                        </div>
-                        <div class="col-lg-12">
-                            <hr>
-                            <div class="common-chart">
-                                <canvas id="salesExpensesChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 ">
-            <div class="card">
-                <div class="card-body">
-                    <!-- Data Source -->
-                    <div class="mb-3">
-                        <label for="dataSource" class="form-label">Data Source</label>
-                        <select id="dataSource" class="form-select">
-                            <option value="" disabled selected>-- Select Module --</option>
-                            <option value="sales">Sales</option>
-                            <option value="production">Production</option>
-                            <option value="store">Store</option>
-                            <option value="accounts">Accounts</option>
-                        </select>
-                    </div>
+    </div>
 
-                    <!-- Display Type -->
-                    <div class="mb-3">
-                        <label for="displayType" class="form-label">Display Type</label>
-                        <select id="displayType" class="form-select">
-                            <option value="" disabled selected>-- Select Display Type --</option>
-                            <option value="table">Table</option>
-                            <option value="chart">Chart</option>
-                            <option value="kpi">KPI</option>
-                            <option value="number">Number Widget</option>
-                        </select>
-                    </div>
-
-                    <!-- Date Range -->
-                    <div class="mb-3">
-                        <label for="dateRange" class="form-label">Date Range</label>
-                        <select id="dateRange" class="form-select">
-                            <option value="" disabled selected>-- Select Range --</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </div>
-
-                    <!-- Custom Date Picker (hidden unless Custom is selected) -->
-                    <div class="row mb-3" id="customDateRow" style="display:none;">
-                        <div class="col">
-                            <label for="startDate" class="form-label">Start Date</label>
-                            <input type="text" id="startDate" class="form-control start_date">
-                        </div>
-                        <div class="col">
-                            <label for="endDate" class="form-label">End Date</label>
-                            <input type="text" id="endDate" class="form-control end_date">
+    <!-- SECTION 1: SALES & ORDER DASHBOARD -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-3">
+            <div class="section-indicator bg-primary me-2"></div>
+            <h5 class="fw-bold mb-0">Sales & Order Dashboard</h5>
+        </div>
+        <div class="row g-3">
+            <!-- Sales KPI Cards -->
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-primary border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Sales (Today)</p>
+                                <h4 class="mb-0 fw-bold">₹1,24,500</h4>
+                                <span class="text-success small"><i class="ri ri-arrow-up-s-line"></i> 8.5%</span>
+                            </div>
+                            <div class="kpi-icon bg-light-primary">
+                                <i class="ri ri-money-rupee-circle-line text-primary"></i>
+                            </div>
                         </div>
                     </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary">Save Metric</button>
+                </div>
+            </div>
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-info border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Sales (Month)</p>
+                                <h4 class="mb-0 fw-bold">₹42,80,000</h4>
+                                <span class="text-success small"><i class="ri ri-arrow-up-s-line"></i> 12.2%</span>
+                            </div>
+                            <div class="kpi-icon bg-light-info">
+                                <i class="ri ri-calendar-check-line text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-success border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Sales (Year)</p>
+                                <h4 class="mb-0 fw-bold">₹5.24 Cr</h4>
+                                <span class="text-success small"><i class="ri ri-arrow-up-s-line"></i> 15%</span>
+                            </div>
+                            <div class="kpi-icon bg-light-success">
+                                <i class="ri ri-line-chart-line text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Order KPI Cards -->
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-warning border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Orders (Today)</p>
+                                <h4 class="mb-0 fw-bold">42</h4>
+                                <span class="text-muted small">New Bookings</span>
+                            </div>
+                            <div class="kpi-icon bg-light-warning">
+                                <i class="ri ri-shopping-bag-3-line text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-secondary border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Orders (Month)</p>
+                                <h4 class="mb-0 fw-bold">1,120</h4>
+                                <span class="text-muted small">Confirmed</span>
+                            </div>
+                            <div class="kpi-icon bg-light-secondary">
+                                <i class="ri ri-archive-line text-secondary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Stock & Urgent -->
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-dark border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Total Stock</p>
+                                <h4 class="mb-0 fw-bold">14,500</h4>
+                                <span class="text-muted small">Items in Hand</span>
+                            </div>
+                            <div class="kpi-icon bg-light-dark">
+                                <i class="ri ri-stack-line text-dark"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-lg-3">
+                <div class="card kpi-widget border-0 shadow-sm border-start border-danger border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="text-muted small fw-bold mb-1">Urgent Orders</p>
+                                <h4 class="mb-0 fw-bold text-danger">85</h4>
+                                <span class="text-danger small fw-bold">Action Required</span>
+                            </div>
+                            <div class="kpi-icon bg-light-danger">
+                                <i class="ri ri-error-warning-line text-danger"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-6">
-            <div class="card common-card">
-                <div class="card-body">
-                    <h5 class="card-title text-start">Pending Orders</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tr>
-                                <th>S.No</th>
-                                <th>Item(Code)</th>
-                                <th>Customer</th>
-                                <th>Quantity</th>
-                                <th>Rate</th>
-                                <th>Amount</th>
-                            </tr>
-                            <tr>
-                                <td>1</td>
-                                <td>Men’s Casual Denim Shirt(ITEM001)</td>
-                                <td>Hero Mens Wear(CUS001)</td>
-                                <td>3</td>
-                                <td>₹50</td>
-                                <td>₹150</td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td>Men’s Formal Cotton Shirt(ITEM002)</td>
-                                <td>Unlimited Fashion Store(CUS002)</td>
-                                <td>1</td>
-                                <td>₹25</td>
-                                <td>₹25</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5" class="text-end"><strong>Subtotal</strong></td>
-                                <td colspan="2"><strong>₹175.00</strong></td>
-                            </tr>
-                        </table>
-                    </div>
+    </div>
+
+    <!-- SECTION 2: ACCOUNTS DASHBOARD -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-3">
+            <div class="section-indicator bg-success me-2"></div>
+            <h5 class="fw-bold mb-0">Accounts & Financial Dashboard</h5>
+        </div>
+        
+        <!-- Financial KPI Grid -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-2">
+                <div class="card financial-stat border-0 shadow-sm p-3">
+                    <p class="text-muted small mb-1">Total Sales Val.</p>
+                    <h5 class="mb-0 fw-bold">₹12.55 Cr</h5>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card financial-stat border-0 shadow-sm p-3">
+                    <p class="text-muted small mb-1">Sales Return</p>
+                    <h5 class="mb-0 fw-bold text-danger">₹4.20 L</h5>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card financial-stat border-0 shadow-sm p-3">
+                    <p class="text-muted small mb-1">Bill Disc. (2%)</p>
+                    <h5 class="mb-0 fw-bold">₹2.45 L</h5>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card financial-stat border-0 shadow-sm p-3">
+                    <p class="text-muted small mb-1">Total Debtors</p>
+                    <h5 class="mb-0 fw-bold text-primary">₹85.40 L</h5>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card financial-stat border-0 shadow-sm p-3">
+                    <p class="text-muted small mb-1">Total Purchase</p>
+                    <h5 class="mb-0 fw-bold">₹8.12 Cr</h5>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card financial-stat border-0 shadow-sm p-3">
+                    <p class="text-muted small mb-1">Total Creditors</p>
+                    <h5 class="mb-0 fw-bold text-danger">₹42.15 L</h5>
                 </div>
             </div>
         </div>
-        <div class="col-lg-12">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">Add New Widget</h5>
-                    <hr>
-                    <form class="common-form">
-                        <div class="row g-4">
-                            <div class="col-md-6 col-xl-3">
-                                <label for="widgetName" class="form-label">Widget Name</label>
-                                <input type="text" id="widgetName" class="form-control" placeholder="Enter Widget Name">
+
+        <div class="row g-4">
+            <!-- Debtors Outstanding & Aging -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="ri ri-team-line me-2"></i>Debtors Outstanding & Aging</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="small">Zone</th>
+                                        <th class="small">Total (₹)</th>
+                                        <th class="small">0-30 Days</th>
+                                        <th class="small">31-60 Days</th>
+                                        <th class="small">61-90 Days</th>
+                                        <th class="small">Above 90</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small">
+                                    <tr>
+                                        <td><strong>South Zone</strong></td>
+                                        <td>24,50,000</td>
+                                        <td class="text-success">15,00,000</td>
+                                        <td>6,00,000</td>
+                                        <td class="text-warning">2,50,000</td>
+                                        <td class="text-danger fw-bold">1,00,000</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>North Zone</strong></td>
+                                        <td>18,20,000</td>
+                                        <td class="text-success">10,20,000</td>
+                                        <td>5,00,000</td>
+                                        <td class="text-warning">2,00,000</td>
+                                        <td class="text-danger fw-bold">1,00,000</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Central Zone</strong></td>
+                                        <td>12,40,000</td>
+                                        <td class="text-success">8,40,000</td>
+                                        <td>2,00,000</td>
+                                        <td class="text-warning">1,50,000</td>
+                                        <td class="text-danger fw-bold">50,000</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top-0 py-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="small text-muted">Debtors Collection Performance</span>
+                            <div class="progress w-50" style="height: 10px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 75%">75%</div>
                             </div>
-                            <div class="col-md-6 col-xl-3">
-                                <label for="widgetType" class="form-label">Widget Type</label>
-                                <select id="widgetType" class="form-select select2" data-placeholder="Select Widget Type">
-                                    <option value="" disabled selected>-- Select Widget Type --</option>
-                                    <option value="chart">Chart</option>
-                                    <option value="graph">Graph</option>
-                                    <option value="table">Table</option>
-                                    <option value="kpi">KPI Card</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <label for="dataSource" class="form-label">Data Source</label>
-                                <select id="dataSource" class="form-select select2" data-placeholder="Select Data Source">
-                                    <option value="" disabled selected>-- Select Data Source --</option>
-                                    <option value="custom">Custom Report</option>
-                                    <option value="predefined">Predefined Report</option>
-                                    <option value="module">Module Data</option>
-                                </select>
-                            </div>
-                            <div class="col-lg-12">
-                                <hr>
-                            </div>
-                            <div class="col-lg-12">
-                                <h5>Filters</h5>
-                                <div class="row g-2">
-                                    <div class="col-md-6 col-xl-3">
-                                        <label class="form-label">Data Range</label>
-                                        <select class="form-select select2" data-placeholder="Select Data Range">
-                                            <option value="">Date Range</option>
-                                            <option value="daily">Daily</option>
-                                            <option value="weekly">Weekly</option>
-                                            <option value="monthly">Monthly</option>
-                                            <option value="custom">Custom</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 col-xl-3">
-                                        <label class="form-label">Category</label>
-                                        <input type="text" class="form-control" placeholder="Category">
-                                    </div>
-                                    <div class="col-md-6 col-xl-3">
-                                        <label class="form-label">Department</label>
-                                        <input type="text" class="form-control" placeholder="Department">
-                                    </div>
-                                    <div class="col-md-6 col-xl-3">
-                                        <label class="form-label">Customer</label>
-                                        <input type="text" class="form-control" placeholder="Customer">
-                                    </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Itemwise Stock Value -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="ri ri-pie-chart-line me-2"></i>Item-wise Stock Value</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
+                                <div><i class="ri ri-checkbox-blank-circle-fill text-primary me-2"></i>Fabric</div>
+                                <span class="fw-bold">₹42.50 L</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
+                                <div><i class="ri ri-checkbox-blank-circle-fill text-info me-2"></i>Accessories</div>
+                                <span class="fw-bold">₹8.20 L</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
+                                <div><i class="ri ri-checkbox-blank-circle-fill text-warning me-2"></i>WIP</div>
+                                <span class="fw-bold">₹15.30 L</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
+                                <div><i class="ri ri-checkbox-blank-circle-fill text-success me-2"></i>Finished Goods</div>
+                                <span class="fw-bold">₹28.40 L</span>
+                            </li>
+                        </ul>
+                        <hr>
+                        <div style="height: 200px;">
+                            <canvas id="stockDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Widget -->
+            <div class="col-lg-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 border-end">
+                                <h6 class="fw-bold mb-3">Sales vs Collection (Month-wise)</h6>
+                                <div style="height: 250px;">
+                                    <canvas id="salesCollectionChart"></canvas>
                                 </div>
                             </div>
-                            <div class="col-lg-12">
-                                <hr>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <label for="position" class="form-label">Position on Dashboard</label>
-                                <input type="number" id="position" class="form-control" placeholder="Enter sequence order (e.g., 1, 2, 3)">
-                                <small class="text-muted">Use numbers to define sequence order. (Drag & Drop can be implemented in dashboard view)</small>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <label for="visibility" class="form-label">Visibility</label>
-                                <select id="visibility" class="form-select select2" data-placeholder="Select Visibility">
-                                    <option value="" disabled selected>-- Select Visibility --</option>
-                                    <option value="user">User Based</option>
-                                    <option value="role">Role Based</option>
-                                </select>
-                            </div>
-                            <div class="col-lg-12">
-                                <div class="button-box">
-                                    <button type="submit" class="btn btn-primary">Save Widget</button>
-                                    <button type="reset" class="btn btn-secondary">Cancel</button>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3 ms-md-3">Purchase vs Payment (Month-wise)</h6>
+                                <div style="height: 250px;" class="ms-md-3">
+                                    <canvas id="purchasePaymentChart"></canvas>
                                 </div>
                             </div>
                         </div>
-                    </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: PRODUCTION DASHBOARD -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-3">
+            <div class="section-indicator bg-warning me-2"></div>
+            <h5 class="fw-bold mb-0">Production Dashboard</h5>
+        </div>
+        
+        <div class="row g-4">
+            <!-- 1. Production WIP -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="ri ri-loader-line me-2"></i>Production WIP (Unit Wise)</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="small">Process</th>
+                                        <th class="small text-center">Opening</th>
+                                        <th class="small text-center">Inward</th>
+                                        <th class="small text-center">Outward</th>
+                                        <th class="small text-center">WIP</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small">
+                                    <tr>
+                                        <td><strong>Stitching</strong></td>
+                                        <td class="text-center">500</td>
+                                        <td class="text-center text-success">250</td>
+                                        <td class="text-center text-primary">400</td>
+                                        <td class="text-center fw-bold">350</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Finishing</strong></td>
+                                        <td class="text-center">300</td>
+                                        <td class="text-center text-success">150</td>
+                                        <td class="text-center text-primary">100</td>
+                                        <td class="text-center fw-bold">350</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Production Cost (Unit Wise) -->
+            <div class="col-lg-5">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm p-3 border-start border-primary border-4">
+                            <p class="text-muted small fw-bold mb-1">Unit I Cost</p>
+                            <h5 class="mb-0 fw-bold">₹1.25 L</h5>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
+                            <p class="text-muted small fw-bold mb-1">Unit II Cost</p>
+                            <h5 class="mb-0 fw-bold">₹2.80 L</h5>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white py-3">
+                                <h6 class="mb-0 fw-bold"><i class="ri ri-money-rupee-circle-line me-2"></i>Production Cost Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small">Material Cost</span>
+                                    <span class="small fw-bold">₹1.50 L</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small">Labor Cost</span>
+                                    <span class="small fw-bold">₹0.85 L</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 65%"></div>
+                                    <div class="progress-bar bg-info" role="progressbar" style="width: 35%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Production Target Unit Wise -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="ri ri-focus-3-line me-2"></i>Production Target Status</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4 text-center">
+                            <h3 class="fw-bold mb-1 text-primary">85%</h3>
+                            <p class="text-muted small uppercase fw-bold mb-0">Total Efficiency</p>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small">Plan vs Achieved</span>
+                                <span class="small fw-bold">850 / 1000</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <div class="bg-light-warning p-2 rounded w-100 text-center">
+                                <p class="text-muted x-small mb-1">Pending</p>
+                                <h5 class="mb-0 fw-bold">150</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Production Delivery Days Overdue -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100 border-top border-danger border-3">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold text-danger"><i class="ri ri-time-line me-2"></i>Delivery Days Overdue</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item py-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small fw-bold">JC/2026/001</span>
+                                    <span class="badge bg-soft-danger text-danger">5 Days Overdue</span>
+                                </div>
+                                <p class="text-muted x-small mb-0">Target: 01-Mar | Qty: 500</p>
+                            </div>
+                            <div class="list-group-item py-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small fw-bold">JC/2026/008</span>
+                                    <span class="badge bg-soft-warning text-warning">2 Days Overdue</span>
+                                </div>
+                                <p class="text-muted x-small mb-0">Target: 05-Mar | Qty: 200</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Process Wise Status -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="ri ri-flow-chart me-2"></i>Process Wise Status</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0 align-middle">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="small">Process</th>
+                                        <th class="small text-center">Done</th>
+                                        <th class="small text-center">Hold</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small">
+                                    <tr>
+                                        <td>Fabric Spread</td>
+                                        <td class="text-center text-success fw-bold">450</td>
+                                        <td class="text-center text-danger">12</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cuff Stitching</td>
+                                        <td class="text-center text-success fw-bold">380</td>
+                                        <td class="text-center text-danger">05</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Button Fixing</td>
+                                        <td class="text-center text-success fw-bold">290</td>
+                                        <td class="text-center text-danger">18</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 4: MAINTENANCE -->
+    <div class="mb-4">
+        <div class="d-flex align-items-center mb-3">
+            <div class="section-indicator bg-danger me-2"></div>
+            <h5 class="fw-bold mb-0">Maintenance</h5>
+        </div>
+        <div class="row g-4">
+            <!-- Renewals & Compliance Table -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold text-navy"><i class="ri ri-shield-check-line me-2"></i>Renewals & Compliance</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="small font-weight-bold">Renewal Item</th>
+                                        <th class="small font-weight-bold">Due Date</th>
+                                        <th class="small font-weight-bold text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small">
+                                    <tr>
+                                        <td><strong>Vehicle & Other Insurance</strong></td>
+                                        <td>15-Mar-26</td>
+                                        <td class="text-center"><span class="badge bg-soft-danger text-danger border border-danger px-2 py-1">Due</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>AMC Renewal</strong></td>
+                                        <td>22-Mar-26</td>
+                                        <td class="text-center"><span class="badge bg-soft-warning text-warning border border-warning px-2 py-1">Due</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Other Licenses Renewal</strong></td>
+                                        <td>12-May-26</td>
+                                        <td class="text-center"><span class="badge bg-soft-info text-info border border-info px-2 py-1">Active</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Machinery & Other Service Due (Unit Wise) -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100 text-navy">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold text-navy"><i class="ri ri-settings-5-line me-2"></i>Machinery & Other Service Due (Unit Wise)</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small fw-bold">Unit I (Cutting)</span>
+                                <span class="small text-danger">02 Due</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: 65%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small fw-bold">Unit II (Stitching)</span>
+                                <span class="small text-success">Healthy</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small fw-bold">Unit III (Finishing)</span>
+                                <span class="small text-warning">01 Due</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 85%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance Requirements Log -->
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold text-navy"><i class="ri ri-tools-line me-2"></i>Maintenance Requirements</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush list-group-sm">
+                            <div class="list-group-item border-0 py-3 bg-light-danger-soft">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small fw-bold">Requirements Raised</span>
+                                    <span class="badge bg-danger rounded-pill">12</span>
+                                </div>
+                            </div>
+                            <div class="list-group-item border-0 py-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small fw-bold">Requirements Attended</span>
+                                    <span class="badge bg-success rounded-pill">09</span>
+                                </div>
+                            </div>
+                            <div class="list-group-item border-0 py-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small fw-bold text-danger">Requirements Pending</span>
+                                    <span class="badge bg-danger rounded-pill">03</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const ctx = document.getElementById('progressChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            datasets: [{
-                data: [68, 32], // 68% complete, 32% remaining
-                backgroundColor: ['#71a769', '#e9ecef'], // Blue for complete, gray for remaining
-                borderWidth: 0
-            }]
-        },
-        options: {
-            cutout: '70%', // Makes it a ring/doughnut
-            circumference: 360,
-            rotation: -90,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    enabled: false
-                }
-            },
-            animation: {
-                animateRotate: true
-            }
-        }
-    });
 
-    const progressText = document.createElement('div');
-    progressText.style.position = 'absolute';
-    progressText.style.top = '52%';
-    progressText.style.left = '50%';
-    progressText.style.transform = 'translate(-50%, -50%)';
-    progressText.innerHTML = '<h3>68%</h3><p>Complete</p>';
-    document.getElementById('progressChart').parentElement.style.position = 'relative';
-    document.getElementById('progressChart').parentElement.appendChild(progressText);
-
-    // Chart configuration for Monthly Sales
-    const salesCtx = document.getElementById('salesChart').getContext('2d');
-    new Chart(salesCtx, {
-        type: 'line',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-            datasets: [{
-                label: 'Sales (₹)',
-                data: [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150], // Approximate values from the image
-                borderColor: '#FFC69D',
-                backgroundColor: '#ffc69d2d', // Light blue fill
-                borderWidth: 1, // Reduced from 2 to 1
-                fill: true,
-                tension: 0.4,
-                pointRadius: 3, // Reduced from 5 to 3
-                pointHoverRadius: 5 // Reduced from 7 to 5
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '₹' + value + 'K';
-                        },
-                        font: {
-                            size: 10 // Reduced font size for y-axis
-                        }
-                    }
-                },
-                x: {
-                    ticks: {
-                        font: {
-                            size: 8 // Reduced font size for x-axis from 10 to 8
-                        }
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': $' + context.parsed.y + 'K';
-                        }
-                    },
-                    bodyFont: {
-                        size: 10 // Reduced font size for tooltip
-                    }
-                }
-            }
-        }
-    });
-    const salesExpensesCtx = document.getElementById('salesExpensesChart').getContext('2d');
-
-    // Full year data (in thousands)
-    const chartData = {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-        ],
-        sales: [12, 15, 18, 17, 20, 23, 21, 25, 27, 30, 32, 34], // in K
-        expenses: [10, 13, 14, 16, 18, 19, 20, 22, 23, 25, 27, 28] // in K
-    };
-
-    function getFilteredData(range) {
-        if (range === 'first') {
-            return {
-                labels: chartData.labels.slice(0, 6),
-                sales: chartData.sales.slice(0, 6),
-                expenses: chartData.expenses.slice(0, 6)
-            };
-        } else {
-            return {
-                labels: chartData.labels.slice(6, 12),
-                sales: chartData.sales.slice(6, 12),
-                expenses: chartData.expenses.slice(6, 12)
-            };
-        }
+<style>
+    
+    .section-indicator {
+        width: 12px;
+        height: 24px;
+        border-radius: 4px;
     }
 
-    // Initial load: First 6 months
-    let filtered = getFilteredData('first');
+    /* KPI Widget Styles */
+    .kpi-widget {
+        transition: transform 0.3s ease;
+    }
+    .kpi-widget:hover {
+        transform: translateY(-5px);
+    }
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 1.5rem;
+    }
 
-    let salesExpensesChart = new Chart(salesExpensesCtx, {
-        type: 'bar',
-        data: {
-            labels: filtered.labels,
-            datasets: [{
-                    label: 'Sales',
-                    data: filtered.sales,
-                    backgroundColor: '#16b1ff96',
-                    borderColor: '#16b1ff',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Expenses',
-                    data: filtered.expenses,
-                    backgroundColor: '#ff00008c',
-                    borderColor: '#ff0000',
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 10, // Show 10K, 20K, 30K
-                        callback: function(value) {
-                            return value + 'K';
-                        }
-                    }
-                }
+    /* Color Variances */
+    .bg-light-primary { background: #eef2ff; }
+    .bg-light-info { background: #ecfeff; }
+    .bg-light-success { background: #f0fdf4; }
+    .bg-light-warning { background: #fffbeb; }
+    .bg-light-danger { background: #fef2f2; }
+    .bg-light-secondary { background: #f8fafc; }
+    .bg-light-dark { background: #f1f5f9; }
+
+    /* Financial Stat Cards */
+    .financial-stat {
+        background: #fff;
+        border-top: 3px solid #e2e8f0 !important;
+    }
+
+    /* Table Styles */
+    .table thead th {
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        color: #64748b;
+        border-top: none;
+    }
+
+    /* Alert Styling */
+    .alert-soft-danger {
+        background-color: #fef2f2;
+        border: 1px solid #fee2e2;
+        color: #991b1b;
+    }
+    .alert-soft-warning {
+        background-color: #fffbeb;
+        border: 1px solid #fef3c7;
+        color: #92400e;
+    }
+
+    .x-small { font-size: 0.65rem; }
+    .badge.bg-label-success { background: #dcfce7; color: #166534; }
+    .badge.bg-label-primary { background: #dbeafe; color: #1e40af; }
+    .badge.bg-label-warning { background: #fef9c3; color: #854d0e; }
+
+    .bg-soft-danger { background-color: #fef2f2; }
+    .bg-soft-warning { background-color: #fffbeb; }
+    .bg-soft-info { background-color: #eff6ff; }
+    .bg-light-danger-soft { background-color: #fff5f5; }
+
+    .border-dashed { border-style: dashed !important; }
+</style>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Helper for Chart defaults
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#64748b';
+
+        // 1. Stock Distribution Chart (Doughnut)
+        new Chart(document.getElementById('stockDistributionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Fabric', 'Accessories', 'WIP', 'Finished Goods'],
+                datasets: [{
+                    data: [42.5, 8.2, 15.3, 28.4],
+                    backgroundColor: ['#1e3a8a', '#06b6d4', '#f59e0b', '#10b981'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
             },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y + 'K';
-                        }
-                    }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // 2. Sales vs Collection Chart (Line)
+        new Chart(document.getElementById('salesCollectionChart'), {
+            type: 'line',
+            data: {
+                labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+                datasets: [{
+                    label: 'Sales',
+                    data: [65, 59, 80, 81, 56, 55, 40, 70, 90, 110, 105, 120],
+                    borderColor: '#1e3a8a',
+                    backgroundColor: 'rgba(30, 58, 138, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3
+                }, {
+                    label: 'Collection',
+                    data: [45, 48, 60, 70, 46, 45, 30, 60, 85, 95, 100, 110],
+                    borderColor: '#10b981',
+                    backgroundColor: 'transparent',
+                    tension: 0.4,
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { boxWidth: 8, usePointStyle: true, padding: 20 } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                    x: { grid: { display: false } }
                 }
             }
-        }
-    });
+        });
 
-    // Handle filter change
-    document.getElementById('filterRange').addEventListener('change', function() {
-        let selected = this.value;
-        let filtered = getFilteredData(selected);
-
-        salesExpensesChart.data.labels = filtered.labels;
-        salesExpensesChart.data.datasets[0].data = filtered.sales;
-        salesExpensesChart.data.datasets[1].data = filtered.expenses;
-        salesExpensesChart.update();
-    });
-
-    document.getElementById('dateRange').addEventListener('change', function() {
-        if (this.value === 'custom') {
-            document.getElementById('customDateRow').style.display = 'flex';
-        } else {
-            document.getElementById('customDateRow').style.display = 'none';
-        }
+        // 3. Purchase vs Payment Chart (Bar)
+        new Chart(document.getElementById('purchasePaymentChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+                datasets: [{
+                    label: 'Purchase',
+                    data: [40, 45, 50, 60, 40, 35, 30, 50, 70, 80, 75, 85],
+                    backgroundColor: '#1e3a8a',
+                    borderRadius: 4
+                }, {
+                    label: 'Payment',
+                    data: [35, 40, 45, 55, 38, 30, 25, 45, 65, 75, 70, 80],
+                    backgroundColor: '#94a3b8',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { boxWidth: 8, usePointStyle: true, padding: 20 } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
     });
 </script>
 @endsection
