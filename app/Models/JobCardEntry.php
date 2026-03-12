@@ -29,13 +29,13 @@ class JobCardEntry extends Model
         'fs_qty', 'hs_qty', 'receipt_store', 'fit_id', 'patti_type_id', 'collar_type_id',
         'cuff_type_id', 'pocket_type_id', 'bottom_cut_id', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',
-        'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'average', 'remarks', 'status', 
+        'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'average', 'remarks', 'status',
         'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label', 'brand_category_id', 'item_id'
     ];
 
     public function cuttingMaster()
     {
-        return $this->belongsTo(User::class, 'cutting_master_id');
+        return $this->belongsTo(User::class , 'cutting_master_id');
     }
 
     public function purchaseOrder()
@@ -45,17 +45,17 @@ class JobCardEntry extends Model
 
     public function serviceProvider()
     {
-        return $this->belongsTo(ServiceProvider::class, 'service_provider_id');
+        return $this->belongsTo(ServiceProvider::class , 'service_provider_id');
     }
 
     public function issueStore()
     {
-        return $this->belongsTo(StoreType::class, 'issue_store_id');
+        return $this->belongsTo(StoreType::class , 'issue_store_id');
     }
 
     public function receiptStoreMapping()
     {
-        return $this->belongsTo(StoreType::class, 'receipt_store_id');
+        return $this->belongsTo(StoreType::class , 'receipt_store_id');
     }
 
     public function brand()
@@ -100,7 +100,7 @@ class JobCardEntry extends Model
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class , 'created_by');
     }
 
     public function issueItems()
@@ -115,36 +115,41 @@ class JobCardEntry extends Model
 
     public function sleeveMeters()
     {
-        return $this->hasMany(JobCardSleeveMeter::class, 'job_card_id');
+        return $this->hasMany(JobCardSleeveMeter::class , 'job_card_id');
     }
 
     public function fit()
     {
-        return $this->belongsTo(Fit::class, 'fit_id');
+        return $this->belongsTo(Fit::class , 'fit_id');
     }
 
     public function pattiType()
     {
-        return $this->belongsTo(PattiType::class, 'patti_type_id');
+        return $this->belongsTo(PattiType::class , 'patti_type_id');
     }
 
     public function collarType()
     {
-        return $this->belongsTo(CollarType::class, 'collar_type_id');
+        return $this->belongsTo(CollarType::class , 'collar_type_id');
     }
 
     public function cuffType()
     {
-        return $this->belongsTo(CuffType::class, 'cuff_type_id');
+        return $this->belongsTo(CuffType::class , 'cuff_type_id');
     }
 
     public function pocketType()
     {
-        return $this->belongsTo(PocketType::class, 'pocket_type_id');
+        return $this->belongsTo(PocketType::class , 'pocket_type_id');
     }
 
     public function bottomCut()
     {
-        return $this->belongsTo(BottomCut::class, 'bottom_cut_id');
+        return $this->belongsTo(BottomCut::class , 'bottom_cut_id');
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class , 'job_card_entry_id');
     }
 }

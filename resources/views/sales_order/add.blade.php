@@ -872,121 +872,123 @@ $(document).ready(function () {
     $('.delivery_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
     function createRow() {
-        let sleeveCbs = `
-            <div class="segmented-control mt-1">
-                <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_full_${itemIndex}" value="Full" checked>
-                <label for="sleeve_full_${itemIndex}">Full</label>
-                <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_half_${itemIndex}" value="Half">
-                <label for="sleeve_half_${itemIndex}">Half</label>
-            </div>`;
+    let sleeveCbs = `
+        <div class="segmented-control mt-1">
+            <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_full_${itemIndex}" value="Full" checked>
+            <label for="sleeve_full_${itemIndex}">Full</label>
+            <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_half_${itemIndex}" value="Half">
+            <label for="sleeve_half_${itemIndex}">Half</label>
+        </div>`;
 
-        let brandOpts = `<option value="">Select</option>`;
-        @foreach($brandCategories as $bc)
-        brandOpts += `<option value="{{ $bc->id }}">{{ addslashes($bc->name) }} - {{ addslashes($bc->code) }}</option>`;
-        @endforeach
+    let brandOpts = `<option value="">Select</option>`;
+    @foreach($brandCategories as $bc)
+    brandOpts += `<option value="{{ $bc->id }}">{{ addslashes($bc->name) }} - {{ addslashes($bc->code) }}</option>`;
+    @endforeach
 
-        let colorOpts = `<option value="">Select Color</option>`;
-        @foreach($colors as $col)
-        colorOpts += `<option value="{{ $col->id }}">{{ addslashes($col->color_name) }}</option>`;
-        @endforeach
+    let colorOpts = `<option value="">Select Color</option>`;
+    @foreach($colors as $col)
+    colorOpts += `<option value="{{ $col->id }}">{{ addslashes($col->color_name) }}</option>`;
+    @endforeach
 
-        let uomOpts = `<option value="">UOM</option>`;
-        @foreach($uoms as $u)
-        uomOpts += `<option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>`;
-        @endforeach
+    let uomOpts = `<option value="">UOM</option>`;
+    @foreach($uoms as $u)
+    uomOpts += `<option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>`;
+    @endforeach
 
-        let rowCountDisplay = $('.item-block').length + 1;
-        
-        let rowHtml = `
-            <div class="item-block" id="row-${itemIndex}">
-                <div class="item-block-header">
-                    <span class="item-number">Item #${rowCountDisplay}</span>
-                    <button type="button" class="remove_item_btn" onclick="removeRow(${itemIndex})"><i class="ri ri-delete-bin-line"></i></button>
+    let rowHtml = `
+        <div class="item-block" id="row-${itemIndex}">
+            <div class="item-block-header">
+                <span class="item-number">Item #</span>
+                <button type="button" class="remove_item_btn" onclick="removeRow(${itemIndex})"><i class="ri ri-delete-bin-line"></i></button>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">${brandOpts}</select>
+                        <label>Brand Category *</label>
+                    </div>
                 </div>
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <select name="items[${itemIndex}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">${brandOpts}</select>
-                            <label>Brand Category *</label>
-                        </div>
+                <div class="col-md-3">
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][item_id]" class="select2 form-select item-select" data-placeholder="Item"><option value="">Select Item</option></select>
+                        <label>Item *</label>
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-floating form-floating-outline">
-                            <select name="items[${itemIndex}][item_id]" class="select2 form-select item-select" data-placeholder="Item"><option value="">Select Item</option></select>
-                            <label>Item *</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <select name="items[${itemIndex}][color_id]" class="select2 form-select" data-placeholder="Color">${colorOpts}</select>
-                            <label>Color</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <input type="text" name="items[${itemIndex}][art_no]" class="form-control" placeholder="Art No">
-                            <label>Art No *</label>
-                        </div>
-                    </div>
-                    <div class="col-md-1">
-                        <div class="form-floating form-floating-outline">
-                            <select name="items[${itemIndex}][uom_id]" class="select2 form-select" data-placeholder="UOM">${uomOpts}</select>
-                            <label>UOM *</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
-                                <option value="">Select Size</option>
-                            </select>
-                            <label>Size *</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <input type="number" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
-                            <label>Quantity *</label>
-                            <div class="stock-info-wrapper mt-1">
-                                <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                                <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
-                            <label>Rate *</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <input type="number" name="items[\${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
-                            <label>MRP *</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-floating form-floating-outline">
-                            <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
-                            <label>Amount</label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="sleeve-container">
-                            <span class="sleeve-label">Sleeve Type</span>
-                            ${sleeveCbs}
-                        </div>
-                    </div>
-                    <input type="hidden" name="items[${itemIndex}][stock_entry_item_id]" class="stock-entry-item-id" value="">
                 </div>
-            </div>`;
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][color_id]" class="select2 form-select" data-placeholder="Color">${colorOpts}</select>
+                        <label>Color</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[${itemIndex}][art_no]" class="form-control" placeholder="Art No">
+                        <label>Art No *</label>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][uom_id]" class="select2 form-select" data-placeholder="UOM">${uomOpts}</select>
+                        <label>UOM *</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
+                            <option value="">Select Size</option>
+                        </select>
+                        <label>Size *</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
+                        <label>Quantity *</label>
+                        <div class="stock-info-wrapper mt-1">
+                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
+                        <label>Rate *</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
+                        <label>MRP *</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
+                        <label>Amount</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="sleeve-container">
+                        <span class="sleeve-label">Sleeve Type</span>
+                        ${sleeveCbs}
+                    </div>
+                </div>
+                <input type="hidden" name="items[${itemIndex}][stock_entry_item_id]" class="stock-entry-item-id" value="">
+            </div>
+        </div>`;
 
-        $('#item-rows').append(rowHtml);
-        $('#item-rows .item-block:last .select2').each(function() {
-            $(this).select2({ dropdownParent: $(this).closest('.item-block') });
-        });
-        itemIndex++;
-    }
+    $('#item-rows').append(rowHtml);
 
+    $('#item-rows .item-block:last .select2').each(function() {
+        $(this).select2({ dropdownParent: $(this).closest('.item-block') });
+    });
+
+    itemIndex++;
+
+    // Renumber all items after appending
+    reindexItems();
+}
     $('.add_item').on('click', createRow);
 
     $('#customer_id').on('change', function() {

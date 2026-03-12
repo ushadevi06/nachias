@@ -22,9 +22,7 @@
                         <div class="col-md-5 text-md-end mt-3 mt-md-0">
                             <div class="d-flex flex-wrap justify-content-md-end gap-2">
                                 @if(isset($task))
-                                <button type="button" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold" id="btn-view-history" data-task-id="{{ $task->id }}">
-                                    <i class="ri ri-time-line me-1"></i> History
-                                </button>
+                                <button type="button" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold" id="btn-view-history" data-task-id="{{ $task->id }}"><i class="ri ri-time-line me-1"></i> History</button>
                                 @endif
                                 <span class="badge bg-label-info rounded-pill px-3 py-2 fw-bold">
                                     <i class="ri ri-loader-4-line me-1"></i> {{ $task ? $task->status : '' }}
@@ -46,14 +44,14 @@
                     <div class="card-body px-0 py-2">
                         <div class="nav flex-column nav-pills custom-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                             <button class="nav-link active text-start py-3 px-4 d-flex align-items-center" id="tab-issue" data-bs-toggle="pill" data-bs-target="#content-issue" type="button" role="tab">
-                                <i class="ri ri-upload-2-line me-2 fs-5"></i>
+                                <i class="ri ri-task-line me-2 fs-5"></i>
                                 <div>
                                     <span class="d-block fw-bold">Task Issue</span>
                                     <small class="text-muted font-small">Issue materials/tasks</small>
                                 </div>
                             </button>
                             <button class="nav-link text-start py-3 px-4 d-flex align-items-center" id="tab-receive" data-bs-toggle="pill" data-bs-target="#content-receive" type="button" role="tab">
-                                <i class="ri ri-download-2-line me-2 fs-5"></i>
+                                <i class="ri ri-refresh-line me-2 fs-5"></i>
                                 <div>
                                     <span class="d-block fw-bold">Status Update</span>
                                     <small class="text-muted font-small">Employee Progress</small>
@@ -75,7 +73,7 @@
             <div class="tab-content sdk-tab-content p-0" id="v-pills-tabContent">
                 <div class="tab-pane fade show active" id="content-issue" role="tabpanel">
                     <form action="{{ $task ? route('task_management.edit', ['id' => $task->id]) : route('task_management.add') }}" method="POST" class="common-form" autocomplete="off">
-                        @if(session('success'))
+                        {{-- @if(session('success'))
                             <div class="alert alert-success alert-dismissible fade show">
                                 {{ session('success') }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -86,7 +84,7 @@
                                 {{ session('error') }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
-                            @endif
+                            @endif 
                             @if ($errors->any())
                             <div class="alert alert-danger alert-dismissible fade show">
                                 <ul class="mb-0">
@@ -96,7 +94,7 @@
                                 </ul>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
-                            @endif 
+                            @endif  --}}
                         @csrf
                         <input type="hidden" name="production_id" value="{{ $production->id ?? ($task->production_id ?? '') }}">
                         <input type="hidden" name="production_no" value="{{ $production->production_no ?? ($task->production_no ?? '') }}">

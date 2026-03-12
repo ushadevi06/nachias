@@ -23,40 +23,44 @@
     <!-- Global Filter Card -->
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
-            <form class="row g-3 align-items-end">
+            <form class="row g-3 align-items-end" method="GET" action="{{ url('sales-marketing-report') }}">
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
-                    <input type="text" class="form-control start_date" name="from_date" placeholder="DD-MM-YYYY">
+                    <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">To Date</label>
-                    <input type="text" class="form-control end_date" name="to_date" placeholder="DD-MM-YYYY">
+                    <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">Customer</label>
-                    <select class="form-select select2" data-placeholder="Select Customer">
+                    <select class="form-select select2" name="customer_id" data-placeholder="Select Customer">
                         <option value=""></option>
-                        <option value="1">Hero Mens Wear (CUS001)</option>
-                        <option value="2">Unlimited Fashion Store (CUS002)</option>
-                        <option value="3">Fashion Hub (CUS003)</option>
+                        @foreach($customers as $customer)
+                        <option value="{{ $customer->id }}" {{ request('customer_id') == $customer->id ? 'selected' : '' }}>
+                            {{ $customer->name }} ({{ $customer->code }})
+                        </option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">Sales Executive</label>
-                    <select class="form-select select2" data-placeholder="Select Executive">
+                    <select class="form-select select2" name="agent_id" data-placeholder="Select Executive">
                         <option value=""></option>
-                        <option value="1">John Doe (EXE01)</option>
-                        <option value="2">Jane Smith (EXE02)</option>
-                        <option value="3">Michael Brown (EXE03)</option>
+                        @foreach($executives as $executive)
+                        <option value="{{ $executive->id }}" {{ request('agent_id') == $executive->id ? 'selected' : '' }}>
+                            {{ $executive->name }} ({{ $executive->code }})
+                        </option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill">
                         <i class="ri ri-search-line me-1"></i> Search
                     </button>
-                    <button type="reset" class="btn btn-light w-100 rounded-pill border">
+                    <a href="{{ url('sales-marketing-report') }}" class="btn btn-outline-light w-100 rounded-pill border">
                         <i class="ri ri-refresh-line me-1"></i> Reset
-                    </button>
+                    </a>
                 </div>
             </form>
         </div>
@@ -116,324 +120,133 @@
             <div class="tab-content" id="reportTabsContent">
                 <!-- 1. Order Report -->
                 <div class="tab-pane fade show active" id="order-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Order No</th>
-                                    <th>Order Date</th>
-                                    <th>Customer</th>
-                                    <th>Item</th>
-                                    <th class="text-center">Qty</th>
-                                    <th class="text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>SO-2024-001</strong></td>
-                                    <td>05-Mar-2026</td>
-                                    <td>Hero Mens Wear</td>
-                                    <td>Slim Fit Formal Shirt - White</td>
-                                    <td class="text-center">150</td>
-                                    <td class="text-center"><span class="badge bg-label-info rounded-pill">Processing</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>SO-2024-002</strong></td>
-                                    <td>04-Mar-2026</td>
-                                    <td>Unlimited Fashion Store</td>
-                                    <td>Casual Denim Shirt - Blue</td>
-                                    <td class="text-center">85</td>
-                                    <td class="text-center"><span class="badge bg-label-success rounded-pill">Completed</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._order_report')
                 </div>
 
                 <!-- 2. Pending Order Report -->
                 <div class="tab-pane fade" id="pending-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Customer</th>
-                                    <th>Item</th>
-                                    <th class="text-center">Completion %</th>
-                                    <th class="text-center">Ord. Qty</th>
-                                    <th class="text-center">Bal. Qty</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Fashion Hub (CUS003)</td>
-                                    <td>Checked Flannel Shirt - Red</td>
-                                    <td style="width: 250px;">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress w-100" style="height: 8px;">
-                                                <div class="progress-bar bg-primary" role="progressbar" style="width: 60%"></div>
-                                            </div>
-                                            <span class="small fw-bold text-primary">60%</span>
-                                        </div>
-                                    </td>
-                                    <td class="text-center fw-medium">200</td>
-                                    <td class="text-center text-danger fw-bold">80</td>
-                                </tr>
-                                <tr>
-                                    <td>Style Studio (CUS005)</td>
-                                    <td>Linen Short Sleeve - Olive</td>
-                                    <td style="width: 250px;">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress w-100" style="height: 8px;">
-                                                <div class="progress-bar bg-warning" role="progressbar" style="width: 35%"></div>
-                                            </div>
-                                            <span class="small fw-bold text-warning">35%</span>
-                                        </div>
-                                    </td>
-                                    <td class="text-center fw-medium">500</td>
-                                    <td class="text-center text-danger fw-bold">325</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._pending_report')
                 </div>
 
                 <!-- 3. Zonewise Incentive Report -->
                 <div class="tab-pane fade" id="incentive-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Zone</th>
-                                    <th>Sales Executive</th>
-                                    <th class="text-end">Total Sales</th>
-                                    <th class="text-center">Incentive %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>South Zone</td>
-                                    <td>John Doe</td>
-                                    <td class="text-end fw-bold text-primary">₹12,45,000</td>
-                                    <td class="text-center"><span class="badge bg-label-primary rounded-pill px-3">2.5%</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._incentive_report')
                 </div>
 
                 <!-- 4. Sales Comparison -->
                 <div class="tab-pane fade" id="comparison-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Month</th>
-                                    <th class="text-end">Sales Year 2024</th>
-                                    <th class="text-end">Sales Year 2025</th>
-                                    <th class="text-center">Growth %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>February</td>
-                                    <td class="text-end">₹4,50,000</td>
-                                    <td class="text-end">₹5,20,000</td>
-                                    <td class="text-center text-success fw-bold"><i class="ri ri-arrow-up-s-line me-1"></i>15.5%</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._comparison_report')
                 </div>
 
                 <!-- 5. Zonewise Outstanding Report -->
                 <div class="tab-pane fade" id="outstanding-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Zone</th>
-                                    <th>Customer</th>
-                                    <th>Invoice No</th>
-                                    <th class="text-end">Outstanding Amount</th>
-                                    <th>Due Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>North Zone</td>
-                                    <td>Style Studio</td>
-                                    <td>INV/24/552</td>
-                                    <td class="text-end fw-bold text-danger">₹28,500</td>
-                                    <td><span class="badge bg-label-danger rounded-pill px-2">15-Mar-2026</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._outstanding_report')
                 </div>
 
                 <!-- 6. Sales Executive Tracker -->
                 <div class="tab-pane fade" id="tracker-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Executive</th>
-                                    <th>Customer</th>
-                                    <th>Visit Date</th>
-                                    <th>Feedback</th>
-                                    <th>Next Followup</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Jane Smith</td>
-                                    <td>Retail King</td>
-                                    <td>04-Mar-2026</td>
-                                    <td>Ordered 500 units for new season. Samples approved.</td>
-                                    <td><span class="text-primary fw-medium">10-Mar-2026</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._tracker_report')
                 </div>
 
                 <!-- 7. Sales Executive Location Tracking -->
                 <div class="tab-pane fade" id="location-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Executive</th>
-                                    <th>Date</th>
-                                    <th>Location</th>
-                                    <th class="text-center">Check In</th>
-                                    <th class="text-center">Check Out</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Michael Brown</td>
-                                    <td>05-Mar-2026</td>
-                                    <td>Main Market St, Bangalore</td>
-                                    <td class="text-center text-success fw-medium"><i class="ri ri-map-pin-2-line me-1"></i>09:30 AM</td>
-                                    <td class="text-center text-danger fw-medium">11:15 AM</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._location_report')
                 </div>
 
                 <!-- 8. Sales Executive Trip Sheet -->
                 <div class="tab-pane fade" id="trip-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Executive</th>
-                                    <th>Date</th>
-                                    <th>From Location</th>
-                                    <th>To Location</th>
-                                    <th>Purpose</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Jane Smith</td>
-                                    <td>05-Mar-2026</td>
-                                    <td>Head Office</td>
-                                    <td>Salem Depot</td>
-                                    <td>Inventory Check & Dealer Meeting</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._trip_report')
                 </div>
 
                 <!-- 9. Sales Executive Expenses Cost Sheet -->
                 <div class="tab-pane fade" id="expense-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Executive</th>
-                                    <th class="text-end">Travel</th>
-                                    <th class="text-end">Food</th>
-                                    <th class="text-end">Hotel</th>
-                                    <th class="text-end">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>04-Mar-2026</td>
-                                    <td>John Doe</td>
-                                    <td class="text-end">₹450</td>
-                                    <td class="text-end">₹220</td>
-                                    <td class="text-end">₹0</td>
-                                    <td class="text-end fw-bold text-success">₹670</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._expense_report')
                 </div>
 
                 <!-- 10. Swatch Card In & Out -->
                 <div class="tab-pane fade" id="swatch-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Swatch Card No</th>
-                                    <th>Given To</th>
-                                    <th class="text-center">Date Out</th>
-                                    <th class="text-center">Date In</th>
-                                    <th class="text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>SWT-2024-55</strong></td>
-                                    <td>Michael (Exec)</td>
-                                    <td class="text-center">28-Feb-2026</td>
-                                    <td class="text-center">-</td>
-                                    <td class="text-center"><span class="badge bg-label-warning rounded-pill px-3">With Executive</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._swatch_report')
                 </div>
 
                 <!-- 11. Sales Complaint Report -->
                 <div class="tab-pane fade" id="complaint-report" role="tabpanel">
-                    <div class="card-datatable">
-                        <table class="datatables-products table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Complaint No</th>
-                                    <th>Customer</th>
-                                    <th>Item</th>
-                                    <th>Complaint</th>
-                                    <th class="text-center">Status</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>CMP-004</strong></td>
-                                    <td>Hero Mens Wear</td>
-                                    <td>Linen Shirt - Ivory</td>
-                                    <td>Color bleeding issue reported by end customer.</td>
-                                    <td class="text-center"><span class="badge bg-label-danger rounded-pill px-3">Open</span></td>
-                                    <td>06-Mar-2026</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @include('reports.sales_marketing_reports._complaint_report')
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Order Items Modal -->
+<div class="modal fade" id="orderItemsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px; overflow: hidden;">
+            <div class="modal-header bg-primary text-white border-0 py-3">
+                <h5 class="modal-title fw-bold text-white mb-0">
+                    <i class="ri ri-shopping-bag-line me-2"></i>Order Items: <span id="modalOrderNo" class="text-warning"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4 py-3 text-uppercase small fw-bold">Item Name</th>
+                                <th class="text-center py-3 text-uppercase small fw-bold">Size</th>
+                                <th class="text-center py-3 text-uppercase small fw-bold">Sleeve</th>
+                                <th class="text-center pe-4 py-3 text-uppercase small fw-bold">Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalItemsBody">
+                            <!-- Items will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light py-2">
+                <button type="button" class="btn btn-label-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const orderItemsModal = document.getElementById('orderItemsModal');
+    if (orderItemsModal) {
+        orderItemsModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const orderNo = button.getAttribute('data-order-no');
+            const items = JSON.parse(button.getAttribute('data-items'));
+
+            const modalOrderNo = document.getElementById('modalOrderNo');
+            const modalItemsBody = document.getElementById('modalItemsBody');
+
+            modalOrderNo.textContent = orderNo;
+            modalItemsBody.innerHTML = '';
+
+            items.forEach(item => {
+                const row = `
+                    <tr>
+                        <td class="ps-4 py-3 fw-medium text-dark">${item.name}</td>
+                        <td class="text-center py-3">
+                            <span class="badge bg-label-secondary rounded-pill">${item.size}</span>
+                        </td>
+                        <td class="text-center py-3">
+                            <span class="badge bg-label-info rounded-pill">${item.sleeve}</span>
+                        </td>
+                        <td class="text-center pe-4 py-3">
+                            <span class="badge bg-label-primary rounded-pill px-3">${item.qty}</span>
+                        </td>
+                    </tr>
+                `;
+                modalItemsBody.insertAdjacentHTML('beforeend', row);
+            });
+        });
+    }
+});
+</script>
 
 <style>
     .premium-filter-card {

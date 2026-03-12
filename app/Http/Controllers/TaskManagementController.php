@@ -13,10 +13,14 @@ use App\Models\OperationStage;
 use App\Models\Shift;
 use App\Models\TaskAdjustment;
 use App\Models\ProductionStageConsumable;
+use App\Models\StoreType;
 use App\Models\StockEntryItem;
 use App\Models\RawMaterial;
 use App\Models\TaskAssignEmployee;
 use App\Models\TaskLog;
+use App\Models\ProductionService;
+use App\Models\JobCardIssueItem;
+use App\Models\GrnEntry;
 use Illuminate\Support\Facades\DB;
 
 use Carbon\Carbon;
@@ -43,21 +47,16 @@ class TaskManagementController extends Controller
 
         $boards = [];
         foreach ($allStatuses as $status) {
-            // Initialize boards using status name as key for fast lookup
             $boards[$status->name] = ['id' => $status->name, 'title' => $status->name, 'item' => []];
         }
 
         foreach ($tasks as $t) {
             $statusName = $t->status ?: 'Planned';
             
-            // --- Date Fallback Logic ---
             $stage = $t->stage;
             if (!$stage && $t->job_card_entry_id) {
-                // Try to find current schedule if orphaned
                 $osId = $t->operation_stage_id ?? $t->stage_id; 
-                $stage = \App\Models\ProcessSchedule::where('job_card_entry_id', $t->job_card_entry_id)
-                    ->where('operation_stage_id', $osId)
-                    ->first();
+                $stage = ProcessSchedule::where('job_card_entry_id', $t->job_card_entry_id)->where('operation_stage_id', $osId)->first();
             }
 
             $jcStart = $stage && $stage->start_date ? Carbon::parse($stage->start_date)->format('d-m-Y') : ($t->jobCard && $t->jobCard->job_card_date ? Carbon::parse($t->jobCard->job_card_date)->format('d-m-Y') : 'N/A');
@@ -69,7 +68,6 @@ class TaskManagementController extends Controller
             } elseif ($t->operationStage) {
                 $stageName = $t->operationStage->operation_stage_name ?: 'No Stage';
             }
-            // ---------------------------
 
             $targetQty = (float)($t->jobCard->grand_total_qty ?? 0);
             if ($targetQty == 0 && $stage) {
@@ -83,7 +81,6 @@ class TaskManagementController extends Controller
             foreach ($t->assignments as $assign) {
                 $totalReceived += (float)$assign->completed_qty + (float)$assign->wastage_qty;
             }
-
 
             if (isset($boards[$statusName])) {
                 $boards[$statusName]['item'][] = [
@@ -236,7 +233,7 @@ class TaskManagementController extends Controller
                         if (!empty($removedNames)) {
                             $this->logActivity($task->id, 'Assignment', 'Employee(s) removed: ' . implode(', ', $removedNames));
                         }
-                    }
+                    }   
                 }
 
                 $allServiceIds = [];
@@ -310,14 +307,14 @@ class TaskManagementController extends Controller
         }
         $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT); 
         $users = User::where('id', '!=', 1)->where('status', 'Active')->get();
-        $stores = \App\Models\StoreType::where('status', 'Active')->get();
+        $stores = StoreType::where('status', 'Active')->get();
         
         $allStatuses = TaskStatus::pluck('name')->toArray();
         if (empty($allStatuses)) {
             $allStatuses = ['Planned', 'In Progress', 'Completed', 'Hold'];
         }
 
-        $shifts = \App\Models\Shift::active()->get();
+        $shifts = Shift::active()->get();
 
         $nextAdjNo = 'ADJ-' . date('Y') . '-' . str_pad(TaskAdjustment::count() + 1, 3, '0', STR_PAD_LEFT);
         
@@ -326,10 +323,7 @@ class TaskManagementController extends Controller
         $taskAdjustment = null;
         $taskAdjustments = collect([]);
         if ($task) {
-            $taskAdjustments = TaskAdjustment::with(['items.rawMaterial', 'items.uom', 'items.service'])
-                ->where('task_id', $task->id)
-                ->latest()
-                ->get();
+            $taskAdjustments = TaskAdjustment::with(['items.rawMaterial', 'items.uom', 'items.service'])->where('task_id', $task->id)->latest()->get();
 
             $taskAdjustment = $taskAdjustments->first();
             if ($taskAdjustment) {
@@ -349,10 +343,7 @@ class TaskManagementController extends Controller
         }
         
         if ($selectedSchedule) {
-            $services = \App\Models\ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)
-                ->where('status', 'Active')
-                ->get()
-                ->map(function($s) use ($selectedSchedule) {
+            $services = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($selectedSchedule) {
                     return [
                         'id' => $s->id,
                         'name' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
@@ -364,7 +355,7 @@ class TaskManagementController extends Controller
 
         $jobCardGrnNo = '';
         if ($jobCard) {
-            $jobCardGrnNo = \App\Models\StockEntryItem::whereIn('id', function($q) use ($jobCard) {
+            $jobCardGrnNo = StockEntryItem::whereIn('id', function($q) use ($jobCard) {
                 $q->select('stock_entry_item_id')
                 ->from('job_card_issue_items')
                 ->where('job_card_entry_id', $jobCard->id)
@@ -605,14 +596,14 @@ class TaskManagementController extends Controller
         }
 
         if (!$jobCard && $request->has('job_card_id')) {
-            $jobCard = \App\Models\JobCardEntry::with(['fabricDetails', 'item'])->find($request->job_card_id);
+            $jobCard = JobCardEntry::with(['fabricDetails', 'item'])->find($request->job_card_id);
         }
 
         if (!$jobCard) return response()->json(['success' => false, 'message' => 'Job Card not found']);
         
         $consumableConfigs = [];
         if ($stageName) {
-            $consumableConfigs = \App\Models\ProductionStageConsumable::where('stage', $stageName)->where('status', 'Active')->pluck('raw_material_id')->toArray();
+            $consumableConfigs = ProductionStageConsumable::where('stage', $stageName)->where('status', 'Active')->pluck('raw_material_id')->toArray();
         }
 
         $rmIdsFromArt = [];
@@ -626,14 +617,11 @@ class TaskManagementController extends Controller
                 $q->whereIn('code', $artNumbers)->orWhereIn('name', $artNumbers);
             })->pluck('id')->toArray();
             
-            $rmIdsFromGrn = \App\Models\StockEntryItem::whereIn('grn_entry_item_id', function($query) use ($artNumbers) {
+            $rmIdsFromGrn = StockEntryItem::whereIn('grn_entry_item_id', function($query) use ($artNumbers) {
                 $query->select('id')->from('grn_entry_items')->whereIn('art_no', $artNumbers);
             })->pluck('raw_material_id')->toArray();
 
-            $rmIdsFromIssues = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
-                ->whereNotNull('stock_entry_item_id')
-                ->pluck('raw_material_id')
-                ->toArray();
+            $rmIdsFromIssues = JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->whereNotNull('stock_entry_item_id')->pluck('raw_material_id')->toArray();
 
             if ($jobCard->item && !empty($jobCard->item->related_materials)) {
                 $rmIdsFromItemMaster = (array) $jobCard->item->related_materials;
@@ -650,7 +638,7 @@ class TaskManagementController extends Controller
 
         $grnIdsForJobCard = [];
         if ($jobCard && $jobCard->purchase_order_id) {
-            $grnIdsForJobCard = \App\Models\GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
+            $grnIdsForJobCard = GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
                 $q->select('id')->from('purchase_invoices')->where('purchase_order_id', $jobCard->purchase_order_id);
             })->pluck('id')->toArray();
         }
@@ -658,7 +646,7 @@ class TaskManagementController extends Controller
         $formatted = $materials->map(function($m) use ($jobCard, $grnIdsForJobCard) {
             $grnItem = null;
             
-            $grnItem = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
+            $grnItem = StockEntryItem::where('raw_material_id', $m->id)
                 ->whereIn('id', function($q) use ($jobCard) {
                     $q->select('stock_entry_item_id')
                     ->from('job_card_issue_items')
@@ -666,14 +654,14 @@ class TaskManagementController extends Controller
                 })->with('grnEntryItem.grnEntry')->first();
 
             if (!$grnItem && !empty($grnIdsForJobCard)) {
-                $grnItem = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
+                $grnItem = StockEntryItem::where('raw_material_id', $m->id)
                     ->whereHas('grnEntryItem', function($q) use ($grnIdsForJobCard) {
                         $q->whereIn('grn_entry_id', $grnIdsForJobCard);
                     })->with('grnEntryItem.grnEntry')->first();
             }
 
             if (!$grnItem) {
-                $grnItem = \App\Models\StockEntryItem::where('raw_material_id', $m->id)
+                $grnItem = StockEntryItem::where('raw_material_id', $m->id)
                     ->with('grnEntryItem.grnEntry')
                     ->latest()
                     ->first();
@@ -756,7 +744,7 @@ class TaskManagementController extends Controller
 
             $adjustedItems = [];
             foreach ($request->items as $itemData) {
-                $currentStock = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])->sum(DB::raw('qty_in - qty_out'));
+                $currentStock = StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])->sum(DB::raw('qty_in - qty_out'));
                 
                 $diff = (float)$itemData['qty'];
                 $newStock = in_array($itemData['adjustment_type'], $decreaseTypes) ? ($currentStock - $diff) : ($currentStock + $diff);
@@ -765,7 +753,7 @@ class TaskManagementController extends Controller
                 $grnNo = $itemData['grn_no'] ?? null;
 
                 if ((empty($artNo) || empty($grnNo))) {
-                    $stockItemQuery = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id']);
+                    $stockItemQuery = StockEntryItem::where('raw_material_id', $itemData['raw_material_id']);
                     
                     if ($request->job_card_id) {
                         $stockItemQuery->whereIn('id', function($q) use ($request) {
@@ -778,14 +766,14 @@ class TaskManagementController extends Controller
                     $stockItem = $stockItemQuery->with('grnEntryItem.grnEntry')->first();
 
                     if (!$stockItem && $request->job_card_id) {
-                        $jobCard = \App\Models\JobCardEntry::find($request->job_card_id);
+                        $jobCard = JobCardEntry::find($request->job_card_id);
                         if ($jobCard && $jobCard->purchase_order_id) {
-                            $grnIds = \App\Models\GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
+                            $grnIds = GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
                                 $q->select('id')->from('purchase_invoices')->where('purchase_order_id', $jobCard->purchase_order_id);
                             })->pluck('id')->toArray();
 
                             if (!empty($grnIds)) {
-                                $stockItem = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])
+                                $stockItem = StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])
                                     ->whereHas('grnEntryItem', function($q) use ($grnIds) {
                                         $q->whereIn('grn_entry_id', $grnIds);
                                     })->with('grnEntryItem.grnEntry')->first();
@@ -794,7 +782,7 @@ class TaskManagementController extends Controller
                     }
 
                     if (!$stockItem) {
-                        $stockItem = \App\Models\StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])->with('grnEntryItem.grnEntry')->latest()->first();
+                        $stockItem = StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])->with('grnEntryItem.grnEntry')->latest()->first();
                     }
 
                     if ($stockItem) {
@@ -815,7 +803,7 @@ class TaskManagementController extends Controller
                     'new_stock' => $newStock
                 ]);
 
-                $materialName = \App\Models\RawMaterial::find($itemData['raw_material_id'])->name ?? 'Unknown Material';
+                $materialName = RawMaterial::find($itemData['raw_material_id'])->name ?? 'Unknown Material';
                 $adjustedItems[] = "$materialName (" . $itemData['adjustment_type'] . ": " . (float)$diff . ")";
             }
 

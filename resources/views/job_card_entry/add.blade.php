@@ -408,10 +408,9 @@
                                                     @if($jobCard)
                                                     @php
                                                         $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
-
                                                         $taskData = $stageTaskStatus[$currentStageId] ?? null;
                                                         $hasTask = !empty($taskData);
-
+                                                        
                                                         $taskStatus = $taskData['status'] ?? null;
                                                         $taskNo = $taskData['task_no'] ?? null;
 
@@ -532,7 +531,7 @@
                                                 }
                                             @endphp
                                             <td>
-                                                <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int)$val : '' }}">
+                                                <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int)$val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
                                                 <input type="hidden" name="matrix_items[{{ $idx }}][size]" value="{{ $s }}">
                                                 <input type="hidden" name="matrix_items[{{ $idx }}][article_no]" value="{{ old("matrix_items.$idx.article_no", $jobCard ? $jobCard->article_no : '') }}">
                                             </td>
@@ -565,7 +564,7 @@
                                                 }
                                             @endphp
                                             <td>
-                                                <input type="number" name="matrix_items[{{ $idx }}][qty_hs]" class="form-control form-control-sm text-center fw-bold qty-direct-input hs-summary-{{ $s }}" data-type="hs" data-size="{{ $s }}" value="{{ $val ? (int)$val : '' }}">
+                                                <input type="number" name="matrix_items[{{ $idx }}][qty_hs]" class="form-control form-control-sm text-center fw-bold qty-direct-input hs-summary-{{ $s }}" data-type="hs" data-size="{{ $s }}" value="{{ $val ? (int)$val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
                                             </td>
                                         @endforeach
                                         <td class=""></td><td class=""></td>
@@ -845,6 +844,7 @@
     $(document).ready(function() {
         const oldFabrics = @json(old('fabrics', []));
         const oldMatrix = @json(old('article_matrix', []));
+        const hasTasks = @json($hasTasks);
         const existingImages = @json($jobCard && $jobCard->images ? $jobCard->images : []);
         const existingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails : []);
         const matrixItems = @json(old('matrix_items', $jobCard && $jobCard->cuttingSizeRatios ? $jobCard->cuttingSizeRatios : []));
@@ -1372,7 +1372,8 @@
                     }
                 }
                 
-                const readonlyAttr = (catId != 1) ? 'readonly tabindex="-1"' : '';
+                const isTaskReadOnly = hasTasks ? 'readonly tabindex="-1"' : '';
+                const readonlyAttr = (catId != 1) ? 'readonly tabindex="-1"' : isTaskReadOnly;
                 const rowClass = (catId != 1) ? 'cat2-row' : 'cat1-row';
                 const sectionId = (catId == 1) ? 1 : 2;
                 const $targetTbody = $(`#article-qty-matrix-${sectionId}-body`);
@@ -1683,10 +1684,11 @@
                     }
                 }
 
-                widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center" value="${vWidth}"></td>`;
-                mtrRow += `<td class="fw-bold">Mtr/B.M</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}"></td>`;
-                inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center" value="${vInOut}"></td>`;
-                nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center" value="${vNPatti}"></td>`;
+                const isTaskReadOnly = hasTasks ? 'readonly' : '';
+                widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center" value="${vWidth}" ${isTaskReadOnly}></td>`;
+                mtrRow += `<td class="fw-bold">Mtr/B.M</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}></td>`;
+                inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center" value="${vInOut}" ${isTaskReadOnly}></td>`;
+                nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center" value="${vNPatti}" ${isTaskReadOnly}></td>`;
                 
                 let uom = '';
                 let catId = 0;
@@ -1729,8 +1731,8 @@
 
                             sizeTableHtml += `<tr>
                                 <td>${sz}</td>
-                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][fs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vSzFs}"></td>
-                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][hs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vSzHs}"></td>
+                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][fs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vSzFs}" ${isTaskReadOnly}></td>
+                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][hs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vSzHs}" ${isTaskReadOnly}></td>
                             </tr>`;
                         });
                         sizeTableHtml += `</tbody></table>`;
@@ -1756,9 +1758,9 @@
                     <td>
                         <div class="input-group input-group-sm flex-nowrap">
                             <span class="input-group-text px-1">F/S</span>
-                            <input type="text" name="fabrics[${index}][fs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vFsQty}">
+                            <input type="text" name="fabrics[${index}][fs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vFsQty}" ${isTaskReadOnly}>
                             <span class="input-group-text px-1">H/S</span>
-                            <input type="text" name="fabrics[${index}][hs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vHsQty}">
+                            <input type="text" name="fabrics[${index}][hs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vHsQty}" ${isTaskReadOnly}>
                             <span class="input-group-text px-1 uom-label">${uom}</span>
                         </div>
                     </td>`;

@@ -97,20 +97,26 @@ class AjaxController extends Controller
     }
     public function getServicesByStage($stageId)
     {
-        $schedule = ProcessSchedule::with(['operationStage'])->find($stageId);
+        $schedule = ProcessSchedule::with(['operationStage', 'jobCard'])->find($stageId);
         
         if (!$schedule) {
-            $schedule = ProcessSchedule::with(['operationStage'])->where('operation_stage_id', $stageId)->first();
+            $schedule = ProcessSchedule::with(['operationStage', 'jobCard'])->where('operation_stage_id', $stageId)->first();
         }
         
         if (!$schedule) {
             return response()->json(['success' => false, 'results' => [], 'message' => 'Schedule not found']);
         }
         $services = ProductionService::where('operation_stage_id', $schedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($schedule) {
+            $qty = $schedule->planned_qty ?? 0;
+            if ($s->base_quantity_source == 'FS Qty' && $schedule->jobCard) {
+                $qty = $schedule->jobCard->total_qty_fs ?? $qty;
+            } elseif ($s->base_quantity_source == 'HS Qty' && $schedule->jobCard) {
+                $qty = $schedule->jobCard->total_qty_hs ?? $qty;
+            }
             return [
                 'id' => $s->id,
                 'text' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
-                'qty' => $schedule->planned_qty ?? 0
+                'qty' => $qty
             ];
         })->values()->all();
         return response()->json(['success' => true, 'results' => $services]);

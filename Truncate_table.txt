@@ -51,8 +51,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 DELETE FROM task_adjustments;
 ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
 
-
-
 DELETE FROM tasks;
 ALTER TABLE tasks AUTO_INCREMENT = 1;
 
@@ -92,8 +90,8 @@ ALTER TABLE job_card_images AUTO_INCREMENT = 1;
 
 DELETE FROM job_card_entries;
 ALTER TABLE job_card_entries AUTO_INCREMENT = 1;
-DELETE FROM job_card_issue_stock_details;
-ALTER TABLE job_card_issue_stock_details AUTO_INCREMENT = 1;
+DELETE FROM job_card_fabric_consumptions;
+ALTER TABLE job_card_fabric_consumptions AUTO_INCREMENT = 1;
 -- =========================
 -- GRN / STOCK
 -- =========================
@@ -149,5 +147,17 @@ DELETE FROM task_adjustments;
 ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
 DELETE FROM task_assign_employees;
 ALTER TABLE task_assign_employees AUTO_INCREMENT = 1;
+DELETE FROM task_logs;
+ALTER TABLE task_logs AUTO_INCREMENT = 1;	
+DELETE FROM sales_orders;
+ALTER TABLE sales_orders AUTO_INCREMENT = 
+DELETE FROM sales_order_items;
+ALTER TABLE sales_order_items AUTO_INCREMENT = 1;
+DELETE FROM sales_invoices;
+ALTER TABLE sales_invoices AUTO_INCREMENT = 1;
+DELETE FROM sales_invoice_items;
+ALTER TABLE sales_invoice_items AUTO_INCREMENT = 1;
+DELETE FROM credit_note_items;
+ALTER TABLE credit_note_items AUTO_INCREMENT = 1;
 
 SET FOREIGN_KEY_CHECKS = 1;
