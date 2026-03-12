@@ -189,32 +189,43 @@ class StockEntryController extends Controller
                 '*.required' => 'This field is required.',
                 'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
+                'items.*.store_location_id.required' => 'Location is required.',
             ];
 
-            if ($request->has('items') && is_array($request->items) && count($request->items) > 0) {
+            $rules['reference_document'] = 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048';
+
+            $hasSelectedItem = false;
+            if ($request->has('items') && is_array($request->items)) {
                 foreach ($request->items as $index => $item) {
-                    $rules["items.$index.store_location_id"] = 'required';
+                    if (isset($item['selected'])) {
+                        $hasSelectedItem = true;
+                        $rules["items.$index.qty_in"] = 'required|numeric|min:0.01';
+                        $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
+                    }
                 }
-            } else {
-                $rules['grn_entry_item_id'] = 'required|exists:grn_entry_items,id';
-                $rules['qty_in'] = 'required|numeric|min:1';
-                $rules['qty_in'] = 'required|numeric|min:1';
-                $rules['store_location_id'] = 'required|exists:store_locations,id';
-                $rules['price'] = 'nullable|numeric|min:0';
-                $rules['reference_document'] = 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048';
             }
 
             $request->validate($rules, $messages);
 
-            $grnItem = GrnEntryItem::findOrFail($request->grn_entry_item_id);
-            $totalStocked = StockEntryItem::where('grn_entry_item_id', $request->grn_entry_item_id)
-                ->when($id, function($q) use ($id) {
-                    $q->where('stock_entry_id', '!=', $id);
-                })->sum('qty_in');
-            $availableBalance = $grnItem->qty_accepted - $totalStocked;
+            if (!$hasSelectedItem) {
+                return back()->withInput()->withErrors(['items' => 'Please select at least one item to stock.']);
+            }
 
-            if ($request->qty_in > $availableBalance) {
-                return back()->withInput()->withErrors(['qty_in' => "The quantity entered ($request->qty_in) exceeds the available balance ($availableBalance) for this GRN item."]);
+            if ($request->has('items') && is_array($request->items)) {
+                foreach ($request->items as $index => $item) {
+                    if (isset($item['selected'])) {
+                        $grnItem = GrnEntryItem::findOrFail($item['grn_entry_item_id']);
+                        $totalStocked = StockEntryItem::where('grn_entry_item_id', $item['grn_entry_item_id'])
+                            ->when($id, function($q) use ($id) {
+                                $q->where('stock_entry_id', '!=', $id);
+                            })->sum('qty_in');
+                        $availableBalance = $grnItem->qty_accepted - $totalStocked;
+            
+                        if ($item['qty_in'] > $availableBalance) {
+                            return back()->withInput()->withErrors(['items' => "The quantity entered ({$item['qty_in']}) exceeds the available balance ($availableBalance) for a GRN item."]);
+                        }
+                    }
+                }
             }
 
             DB::beginTransaction();
@@ -223,8 +234,8 @@ class StockEntryController extends Controller
                     'stock_date' => Carbon::createFromFormat('d-m-Y', $request->stock_date)->format('Y-m-d'),
                     'grn_entry_id' => $request->grn_entry_id,
                     'entry_type' => 'Raw Material',
-                    'from_store_location_id' => $request->from_store_location_id ?? null,
-                    'to_store_location_id' => $request->store_location_id,
+                    'from_store_location_id' => null,
+                    'to_store_location_id' => null,
                     'remarks' => $request->remarks,
                     'status' => $request->status ?? 'Draft',
                     'price' => $request->price ?? 0,
@@ -256,20 +267,26 @@ class StockEntryController extends Controller
                     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
                 }
 
-                $grnEntryItem = GrnEntryItem::find($request->grn_entry_item_id);
-                StockEntryItem::create([
-                    'stock_entry_id' => $stockEntry->id,
-                    'stock_type' => 'raw_material',
-                    'grn_entry_item_id' => $request->grn_entry_item_id ?? null,
-                    'art_no' => $grnEntryItem->art_no ?? null,
-                    'raw_material_id' => $request->raw_material_id ?? null,
-                    'store_category_id' => $request->store_category_id ?? null,
-                    'store_location_id' => $request->store_location_id,
-                    'uom_id' => $request->uom_id ?? null,
-                    'qty_in' => $request->qty_in ?? 1,
-                    'qty_out' => 0,
-                    'price' => $request->price ?? 0,
-                ]);
+                if ($request->has('items') && is_array($request->items)) {
+                    foreach ($request->items as $item) {
+                        if (isset($item['selected']) && $item['selected'] == 1) {
+                            $grnEntryItem = GrnEntryItem::find($item['grn_entry_item_id']);
+                            StockEntryItem::create([
+                                'stock_entry_id' => $stockEntry->id,
+                                'stock_type' => 'raw_material',
+                                'grn_entry_item_id' => $item['grn_entry_item_id'] ?? null,
+                                'art_no' => $grnEntryItem->art_no ?? null,
+                                'raw_material_id' => $item['raw_material_id'] ?? null,
+                                'store_category_id' => $item['store_category_id'] ?? null,
+                                'store_location_id' => $item['store_location_id'],
+                                'uom_id' => $item['uom_id'] ?? null,
+                                'qty_in' => $item['qty_in'] ?? 0,
+                                'qty_out' => 0,
+                                'price' => $item['price'] ?? 0,
+                            ]);
+                        }
+                    }
+                }
                 DB::commit();
                 return redirect('stock_entries')->with('success', 'Stock Entry saved successfully');
             } catch (\Exception $e) {

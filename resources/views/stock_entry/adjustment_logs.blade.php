@@ -6,8 +6,8 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-12 text-end mb-3">
-            <a href="{{ url('/stock_entries') }}" class="btn btn-primary">
-                <i class="ri-arrow-left-line me-1"></i> Back to List
+            <a href="{{ url('/stock_entries') }}" class="btn btn-secondary">
+                <i class="ri ri-arrow-left-line back-arrow"></i> Back to List
             </a>
         </div>
     </div>
@@ -37,7 +37,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($logs as $index => $log)
+                        @if($logs->count() > 0)
+                        @foreach($logs as $index => $log)
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
@@ -62,7 +63,8 @@
                                 <span class="text-wrap d-inline-block" style="max-width: 250px;">{{ $log->reason }}</span>
                             </td>
                         </tr>
-                        @empty
+                        @endforeach
+                        @else
                         <tr>
                             <td colspan="10" class="text-center py-4">
                                 <div class="empty-state">
@@ -71,7 +73,7 @@
                                 </div>
                             </td>
                         </tr>
-                        @endforelse
+                        @endif
                     </tbody>
                 </table>
             </div>

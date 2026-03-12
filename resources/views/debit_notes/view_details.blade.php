@@ -107,6 +107,12 @@
                                     <span>Tax Amount:</span>
                                     <strong>₹{{ number_format($debitNote->tax_amount, 2) }}</strong>
                                 </div>
+                                @if($debitNote->round_off > 0)
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Round Off ({{ $debitNote->round_off_type }}):</span>
+                                    <strong>{{ $debitNote->round_off_type == 'Less' ? '-' : '+' }}₹{{ number_format($debitNote->round_off, 2) }}</strong>
+                                </div>
+                                @endif
                                 <div class="d-flex justify-content-between border-top pt-2 mt-2">
                                     <span class="h5 mb-0">Grand Total:</span>
                                     <span class="h5 mb-0 text-primary">₹{{ number_format($debitNote->grand_total, 2) }}</span>

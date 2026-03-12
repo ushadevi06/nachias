@@ -239,7 +239,7 @@
                                                 step="0.01"
                                                 data-max-qty="{{ $balancedQty }}">
                                                 <small class="text-secondary">
-                                                    Note: Received quantity should not exceed 50% of ordered quantity.
+                                                    Note: Received quantity can exceed ordered quantity by up to 50% (Max: {{ number_format($invItem->qty_ordered * 1.5, 2) }}).
                                                 </small>
                                             @error('items.'.$index.'.quantity')
                                             <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -670,39 +670,14 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
 
-                                    {{-- Paid So Far --}}
-                                    @if(isset($invoice))
-                                    <div class="d-flex justify-content-between py-2 border-bottom">
-                                        <span>Paid So Far:</span>
-                                        <div class="d-flex align-items-center">
-                                            <strong id="paid_so_far_display">₹{{ number_format($paid_so_far, 2) }}</strong>
-                                            <button type="button" class="btn btn-link p-0 ms-1 text-info" id="view_history_btn" title="View Payment History"><i class="ri ri-history-line" style="font-size: 1.1rem;"></i></button>
-                                        </div>
-                                        <input type="hidden" id="paid_so_far_input" value="{{ $paid_so_far }}">
-                                    </div>
-                                    @else
-                                    <input type="hidden" id="paid_so_far_input" value="0">
-                                    @endif
+                                    {{-- Paid So Far (Hidden) --}}
+                                    <input type="hidden" id="paid_so_far_input" value="{{ $paid_so_far ?? 0 }}">
 
-                                    {{-- Received --}}
-                                    @if(!isset($invoice) || (isset($invoice) && $paid_so_far < $grandTotal))
-                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
-                                        <span>{{ isset($invoice) ? 'Add New Payment:' : 'Initial Payment:' }}</span>
-                                        <div class="d-flex flex-column align-items-end">
-                                            <input type="number" name="received_amount" id="received_amount_input" class="form-control form-control-sm text-end @error('received_amount') is-invalid @enderror" style="width:120px;" value="{{ isset($invoice) ? 0 : ($receivedAmt ?? 0) }}" step="0.01">
-                                        </div>
-                                    </div>
-                                    @error('received_amount')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                    @endif
-
-                                    {{-- Due --}}
-                                    <div class="d-flex justify-content-between py-2 fw-semibold text-secondary">
-                                        <span>Due Amount:</span>
-                                        <strong id="due_amount">{{ number_format($dueAmount, 2) }}</strong>
-                                        <input type="hidden" name="due_amount" id="due_amount_input" value="{{ $dueAmount }}">
-                                    </div>
+                                    {{-- Received (Hidden) --}}
+                                    <input type="hidden" name="received_amount" id="received_amount_input" value="{{ isset($invoice) ? 0 : ($receivedAmt ?? 0) }}">
+                                    
+                                    {{-- Due Amount (Hidden) --}}
+                                    <input type="hidden" name="due_amount" id="due_amount_input" value="{{ $dueAmount }}">
 
                                     <div class="text-end mt-4">
                                         <button type="submit" class="btn btn-primary">Submit</button>
@@ -710,7 +685,6 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -896,7 +870,7 @@
                                                 data-max-qty="${balancedQty}"
                                                 data-ordered-qty="${item.qty_ordered}">
                                                 <small class="text-secondary">
-                                                Note: Received quantity should not exceed 50% of ordered quantity.
+                                                Note: Received quantity can exceed ordered quantity by up to 50% (Max: ${(item.qty_ordered * 1.5).toFixed(2)}).
                                             </small>
                                         </td>
 
@@ -1031,7 +1005,8 @@
             let $input = $(this);
             let row = $input.closest('tr');
             let qty = parseFloat($input.val()) || 0;
-            let orderedQty = parseFloat(row.find('input[name*="[qty_ordered]"]').val()) || 0;
+            let orderedQty = parseFloat(row.find('.qty-ordered-val').val()) || 0;
+            let invoicedQty = parseFloat(row.find('.qty-invoiced-val').val()) || 0;
             let rate = parseFloat(row.find('.item-rate').val()) || 0;
             let checkbox = row.find('.item-checkbox');
 
@@ -1044,12 +1019,28 @@
                 return;
             }
 
-            if (qty > (orderedQty * 1.5)) {
-                $input.addClass('is-invalid');
-                $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ordered quantity + 50% (${(orderedQty * 1.5).toFixed(2)})</div>`);
-                row.find('.item-amount').text('0.00');
-                calculateTotals();
-                return;
+            const maxTotalQty = orderedQty * 1.5;
+            let oldQty = 0;
+            let isEditMode = $('#isEditMode').val() == '1';
+            if (isEditMode) {
+            }
+            let maxAllowed = maxTotalQty - invoicedQty;
+            if (isEditMode) {
+                 maxAllowed = maxTotalQty; 
+            }
+
+            if (qty > maxAllowed && !isEditMode) {
+                 $input.addClass('is-invalid');
+                 $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${maxAllowed.toFixed(2)} (Order + 50% Tolerance minus already invoiced)</div>`);
+                 row.find('.item-amount').text('0.00');
+                 calculateTotals();
+                 return;
+            } else if (qty > maxTotalQty) {
+                 $input.addClass('is-invalid');
+                 $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${(maxTotalQty).toFixed(2)} (Total Order + 50% Tolerance)</div>`);
+                 row.find('.item-amount').text('0.00');
+                 calculateTotals();
+                 return;
             }
 
             let amount = qty * rate;

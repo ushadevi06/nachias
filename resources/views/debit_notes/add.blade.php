@@ -217,7 +217,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">IGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;">
+                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="igst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -228,7 +228,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">CGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;">
+                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="cgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -236,7 +236,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">SGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;">
+                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="sgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -248,6 +248,16 @@
                                     <div class="text-end">
                                         <input type="hidden" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $debitNote->tax_amount ?? '0.00') }}">
                                         <span id="tax_amount_display" class="fw-bold">₹{{ number_format(old('tax_amount', $debitNote->tax_amount ?? 0), 2) }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between mb-3">
+                                    <label class="fw-bold text-muted">Round Off:</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="hidden" id="round_off_type" name="round_off_type" value="{{ old('round_off_type', $debitNote->round_off_type ?? 'Add') }}">
+                                        <input type="hidden" id="round_off" name="round_off" value="{{ old('round_off', $debitNote->round_off ?? '0.00') }}">
+                                        <span id="round_off_type_display" class="badge bg-label-{{ old('round_off_type', $debitNote->round_off_type ?? 'Add') === 'Add' ? 'primary' : 'danger' }}">{{ old('round_off_type', $debitNote->round_off_type ?? 'Add') }}</span>
+                                        <span id="round_off_display" class="fw-bold">₹{{ number_format(old('round_off', $debitNote->round_off ?? 0), 2) }}</span>
                                     </div>
                                 </div>
 

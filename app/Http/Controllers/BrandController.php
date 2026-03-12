@@ -63,23 +63,24 @@ class BrandController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit brands')) {
                 return unauthorizedRedirect();
             }
-        } else {
+        }
+        else {
             if (auth()->id() != 1 && !auth()->user()->can('create brands')) {
                 return unauthorizedRedirect();
             }
         }
-        $brand = $id ? Brand::findOrFail($id) : null;
+        $brand = $id ?Brand::findOrFail($id) : null;
         if ($request->isMethod('post')) {
             $rules = [
                 'brand_name' => 'required|string|min:3|max:100|unique:brands,brand_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'code' => 'required|string|min:3|max:50|unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|min:2|max:50|unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
+                '*.unique' => 'This field already exists.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
             ];
             $validated = $request->validate($rules, $messages);
             $data = [
@@ -95,7 +96,8 @@ class BrandController extends Controller
                 $newData = $brand->fresh()->toArray();
                 addLog('update', 'Brand', 'brands', $id, $oldData, $newData);
                 return redirect('brands')->with('success', 'Brand updated successfully');
-            } else {
+            }
+            else {
                 $data['created_by'] = auth()->id();
                 $created = Brand::create($data);
                 addLog('create', 'Brand', 'brands', $created->id, null, $created->toArray());

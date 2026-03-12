@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>View Stock Entry</h4>
-                <a href="{{ url('stock_entries') }}" class="btn btn-primary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
+                <a href="{{ url('stock_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
             </div>
             <div class="card detail-card">
                 <div class="card-body">
@@ -52,51 +52,65 @@
                             <div class="text-muted">{{ $stockEntry->entry_type ?? '-' }}</div>
                         </div>
 
-                        @if($isRawMaterial && $firstItem)
-                        <div class="col-md-4">
-                            <label class="detail-title">Category:</label>
-                            <div class="text-muted">{{ $firstItem->storeCategory->category_name ?? '-' }} ({{ $firstItem->storeCategory->code ?? '-' }})</div>
-                        </div>
-                        @endif
-
-                        @if($firstItem)
-                        <div class="col-md-4">
-                            <label class="detail-title">{{ $isFinishedGoods ? 'Item' : 'Material / Item' }}:</label>
-                            <div class="text-muted">
-                                @if($firstItem->stock_type == 'raw_material')
-                                    {{ $firstItem->rawMaterial->name ?? '-' }} ({{ $firstItem->rawMaterial->code ?? '-' }})
-                                @else
-                                    {{ $firstItem->finished_item_code ?? '-' }}
-                                @endif
+                        @if($isRawMaterial)
+                        <div class="col-md-12 mt-4">
+                            <h5>Stock Entry Items</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Material / Category</th>
+                                            <th>Art No</th>
+                                            <th>UOM</th>
+                                            <th>Qty In</th>
+                                            <th>Unit Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($stockEntry->stockEntryItems as $item)
+                                        <tr>
+                                            <td>
+                                                {{ $item->rawMaterial->name ?? '-' }} <br>
+                                                <small class="text-muted">{{ $item->storeCategory->category_name ?? '-' }}</small>
+                                            </td>
+                                            <td>{{ $item->grnEntryItem->art_no ?? '-' }}</td>
+                                            <td>{{ $item->uom->uom_code ?? '-' }}</td>
+                                            <td class="text-success fw-bold">+{{ floatval($item->qty_in) }}</td>
+                                            <td>{{ $item->price > 0 ? '₹' . number_format($item->price, 2) : '-' }}</td>
+                                            <td>{{ $item->price > 0 && $item->qty_in > 0 ? '₹' . number_format($item->price * $item->qty_in, 2) : '-' }}</td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th colspan="3" class="text-end">Total:</th>
+                                            <th class="text-success fw-bold">+{{ floatval($totalQtyIn) }}</th>
+                                            <th></th>
+                                            <th></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         </div>
-                        @endif
-
-                        @if($isRawMaterial && $firstItem)
+                        @else
+                        @if($firstItem)
                         <div class="col-md-4">
-                            <label class="detail-title">Art No:</label>
+                            <label class="detail-title">Item:</label>
                             <div class="text-muted">
-                                {{ $firstItem->grnEntryItem->art_no ?? '-' }}
+                                {{ $firstItem->finished_item_code ?? '-' }}
                             </div>
                         </div>
-                        @endif
-
-                        @if($firstItem)
                         <div class="col-md-4">
                             <label class="detail-title">UOM:</label>
                             <div class="text-muted">{{ $firstItem->uom->uom_code ?? '-' }}</div>
                         </div>
-
                         <div class="col-md-4">
-                            <label class="detail-title">Unit Price:</label>
-                            <div class="text-muted">{{ $firstItem->price > 0 ? '₹' . number_format($firstItem->price, 2) : '-' }}</div>
-                        </div>
-                        @endif
-
-                        <div class="col-md-4">
-                            <label class="detail-title">{{ $isFinishedGoods ? 'Quantity In' : 'Total Quantity In' }}:</label>
+                            <label class="detail-title">Quantity In:</label>
                             <div class="text-muted text-success fw-bold">+{{ $totalQtyIn + 0 }}</div>
                         </div>
+                        @endif
+                        @endif
 
                         <div class="col-md-4">
                             <label class="detail-title">Remarks:</label>

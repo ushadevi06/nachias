@@ -48,94 +48,31 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-lg-4 mb-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="grn_entry_item_id" name="grn_entry_item_id" class="select2 form-select" data-placeholder="Select GRN Item">
-                                        <option value="">Select GRN Item</option>
-                                    </select>
-                                    <label for="grn_entry_item_id">Select GRN Item <span class="text-danger">*</span></label>
-                                    @error('grn_entry_item_id')
-                                        <div class="text-danger small">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
                             <input type="hidden" name="entry_type_radio" value="raw_material">
                         </div>
-                        {{-- <div class="row mb-4" id="grn_items_section" style="display:none;"> ... </div> --}}
-                        <div class="row mb-4">
-                        <div class="row mb-4" id="raw_material_section" style="display:none;">
-                            <div class="col-lg-4 mb-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="store_category" name="store_category_id" class="select2 form-select" data-placeholder="Select Store Category" disabled>
-                                        <option value="">Select Store Category</option>
-                                        @foreach($storeCategories as $cat)
-                                            <option value="{{ $cat->id }}" data-code="{{ $cat->code }}" {{ old('store_category_id', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->store_category_id : '') == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}({{ $cat->code }})</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="store_category">Store Category <span class="text-danger">*</span></label>
-                                    <input type="hidden" id="store_category_val" name="store_category_id" value="{{ old('store_category_id', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->store_category_id : '') }}">
+
+                        <div class="row mb-4" id="grn_items_section" style="display:none;">
+                            <div class="col-12">
+                                <h5>GRN Items</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Material Category</th>
+                                                <th>Material</th>
+                                                <th style="width: 150px;">UOM</th>
+                                                <th style="width: 250px;">Qty In</th>
+                                                <th style="width: 150px;">Price</th>
+                                                <th style="width: 250px;">Location</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="grn_items_tbody">
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </div>
-                            <div class="col-lg-4 mb-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="material" name="raw_material_id" class="select2 form-select" data-placeholder="Select Material" disabled>
-                                        <option value="">Select Material</option>
-                                        @foreach($rawMaterials as $mat)
-                                            <option value="{{ $mat->id }}" data-uom="{{ $mat->uom_id }}" data-category="{{ $mat->store_category_id }}" {{ old('raw_material_id', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->raw_material_id : '') == $mat->id ? 'selected' : '' }}>{{ $mat->name }}({{ $mat->code }})</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="material">Material <span class="text-danger">*</span></label>
-                                    <input type="hidden" id="material_val" name="raw_material_id" value="{{ old('raw_material_id', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->raw_material_id : '') }}">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-4" id="single_item_fields">
-                            <div class="col-lg-4 mb-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="uom" name="uom_id" class="select2 form-select" data-placeholder="Select UOM">
-                                        <option value="">Select UOM</option>
-                                        @foreach($uoms as $uom)
-                                            <option value="{{ $uom->id }}" {{ old('uom_id', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->uom_id : '') == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="uom">UOM </label>
-                                    @error('uom_id')
-                                        <div class="text-danger small">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-lg-4 mb-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" name="qty_in" id="qty_in" class="form-control" placeholder="Enter Quantity In" value="{{ old('qty_in', $stockEntry ? $stockEntry->stockEntryItems->sum('qty_in') : '') }}" step="0.01" />
-                                    <label for="qty_in">Quantity In <span class="text-danger">*</span></label>
-                                    @error('qty_in')
-                                        <div class="text-danger small">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-lg-4 mb-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="number" name="price" id="price" class="form-control" placeholder="Enter Unit Price" value="{{ old('price', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->price : '') }}" step="0.01" min="0" />
-                                    <label for="price">Unit Price</label>
-                                    @error('price')
-                                        <div class="text-danger small">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <input type="hidden" name="qty_out" value="0">
-                            <div class="col-lg-4 mb-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="store_location" name="store_location_id" class="select2 form-select" data-placeholder="Select Location/Store">
-                                        <option value="">Select Location/Store</option>
-                                        @foreach($storeLocations as $loc)
-                                            <option value="{{ $loc->id }}" {{ old('store_location_id', ($stockEntry && $stockEntry->stockEntryItems->first()) ? $stockEntry->stockEntryItems->first()->store_location_id : '') == $loc->id ? 'selected' : '' }}>{{ $loc->store_location }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="store_location">Location/Store <span class="text-danger">*</span></label>
-                                    @error('store_location_id')
-                                        <div class="text-danger small">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                @error('items')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         <div class="row mb-4">
@@ -180,76 +117,97 @@
     $(document).ready(function() {
         const savedItems = @json($savedItems);
         const stockEntry = @json($stockEntry);
+        const oldItems = @json(old('items', []));
+        const validationErrors = @json($errors->toArray());
         let grnItemsData = [];
+        let storeLocationsOptions = `<option value="">Select Location</option>`;
+        @foreach($storeLocations as $loc)
+            storeLocationsOptions += `<option value="{{ $loc->id }}">{{ $loc->store_location }}</option>`;
+        @endforeach
+
+
         $('#grn_entry_id').on('change', function() {
             let grnId = $(this).val();
             if (grnId) {
                 $.get("{{ url('stock_entries/get-grn-items') }}/" + grnId + "?stock_entry_id=" + (stockEntry ? stockEntry.id : ''), function(res) {
                     if (res.success && res.items.length > 0) {
                         grnItemsData = res.items;                    
-                        $('#raw_material_section').show();
-                        let itemSelect = $('#grn_entry_item_id');
-                        itemSelect.empty();
-                        itemSelect.append('<option value="">Select GRN Item</option>');                        
-                        let hasSelection = false;
-                        res.items.forEach((item) => {
-                            let isSelected = '';
-                            if (savedItems && savedItems.length > 0 && savedItems[0].grn_entry_item_id == item.id) {
-                                isSelected = 'selected';
-                                hasSelection = true;
-                            } else if ((!savedItems || savedItems.length === 0) && res.items.length === 1) {
-                                isSelected = 'selected';
-                                hasSelection = true;
+                        $('#grn_items_section').show();
+                        let tbody = $('#grn_items_tbody');
+                        tbody.empty();
+                        
+
+                        res.items.forEach((item, index) => {
+                            let oldItem = oldItems && oldItems[index] ? oldItems[index] : null;
+                            let savedItem = null;
+                            if (savedItems && savedItems.length > 0) {
+                                savedItem = savedItems.find(s => s.grn_entry_item_id == item.id);
                             }
-                            itemSelect.append(`<option value="${item.id}" ${isSelected}>${item.raw_material_name} (Qty Available: ${item.qty_accepted})</option>`);
+
+                            let qtyIn = oldItem ? oldItem.qty_in : (savedItem ? savedItem.qty_in : item.qty_accepted);
+                            let price = oldItem ? oldItem.price : (savedItem ? savedItem.price : item.rate);
+                            let locId = oldItem ? oldItem.store_location_id : (savedItem ? savedItem.store_location_id : '');
+
+                            let locError = validationErrors['items.' + index + '.store_location_id'] ? validationErrors['items.' + index + '.store_location_id'][0] : '';
+
+                            let row = `
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="items[${index}][selected]" value="1">
+                                        <input type="hidden" name="items[${index}][grn_entry_item_id]" value="${item.id}">
+                                        <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
+                                        <input type="hidden" name="items[${index}][store_category_id]" value="${item.store_category_id}">
+                                        <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
+                                        ${item.store_category_name}
+                                    </td>
+                                    <td>${item.raw_material_name}</td>
+                                    <td>${item.uom_name}</td>
+                                    <td>
+                                        <input type="number" name="items[${index}][qty_in]" class="form-control form-control-sm item-qty" value="${qtyIn}" step="0.01" max="${item.qty_accepted}" placeholder="Max: ${item.qty_accepted}">
+                                    </td>
+                                    <td>
+                                        <input type="number" name="items[${index}][price]" class="form-control form-control-sm" value="${price}" step="0.01">
+                                    </td>
+                                    <td>
+                                        <select name="items[${index}][store_location_id]" class="form-select select2 form-select-sm item-location">
+                                            ${storeLocationsOptions}
+                                        </select>
+                                        <div class="text-danger small loc-error" style="${locError ? '' : 'display:none;'}">${locError || 'Location is required'}</div>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.append(row);
+                            
+                            let locSelect = tbody.find(`select[name="items[${index}][store_location_id]"]`);
+                            if (locId) {
+                                locSelect.val(locId);
+                            }
+                            $('.select2').each(function() {
+                                $(this).select2({
+                                    dropdownParent: $(this).parent(),
+                                    placeholder: $(this).data('placeholder'),
+                                    width: '100%'
+                                });
+                            });
                         });
-                        $('#single_item_fields').show();
-                        if (hasSelection) {
-                            setTimeout(() => {
-                                itemSelect.trigger('change');
-                            }, 100);
-                        }
                     }
                 });
             } else {
-                $('#grn_entry_item_id').empty().append('<option value="">Select GRN Item</option>');
+                $('#grn_items_section').hide();
+                $('#grn_items_tbody').empty();
                 grnItemsData = [];
-                $('#store_category, #material').prop('disabled', false).find('option').prop('disabled', false);
-                $('.select2').trigger('change.select2');
+            }
+        });
 
-                $('#store_category, #material, #uom, #qty_in, #store_location, #price').val('').trigger('change');
-            }
-        });
-        $('#grn_entry_item_id').on('change', function() {
-            let itemId = $(this).val();
-            if (itemId) {
-                let item = grnItemsData.find(i => i.id == itemId);
-                if (item) {
-                    $('#store_category').val(item.store_category_id).trigger('change');
-                    $('#store_category_val').val(item.store_category_id);
-                    setTimeout(() => {
-                        $('#material').val(item.raw_material_id).trigger('change');
-                        $('#material_val').val(item.raw_material_id);
-                        $('.select2').trigger('change.select2');
-                    }, 100);
-                    $('#uom').val(item.uom_id).trigger('change');
-                    if (!$('#qty_in').val() || !stockEntry) {
-                        $('#qty_in').val(item.qty_accepted);
-                    }
-                    // $('#qty_in').attr('max', item.qty_accepted);
-                    $('#price').val(item.rate);
-                    $('#store_location').val(item.store_location_id).trigger('change');
-                }
-            }
-        });
-        $('#qty_in').on('input', function() {
+        $(document).on('input', '.item-qty', function() {
             let max = parseFloat($(this).attr('max'));
             let current = parseFloat($(this).val());
             if (current > max) {
                 $(this).val(max);
-                alert('Quantity cannot be greater than available quantity (' + max + ')');
             }
         });
+        // Removed JS frontend validation for location
+
         if (stockEntry || $('#grn_entry_id').val()) {
             $('#grn_entry_id').trigger('change');
         }
