@@ -343,11 +343,21 @@ class TaskManagementController extends Controller
         }
         
         if ($selectedSchedule) {
-            $services = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($selectedSchedule) {
+            $services = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($selectedSchedule, $jobCard) {
+                    $qty = $selectedSchedule->planned_qty ?? 0;
+                    if ($jobCard) {
+                        if ($s->base_quantity_source == 'FS Qty') {
+                            $qty = $jobCard->total_qty_fs ?? $qty;
+                        } elseif ($s->base_quantity_source == 'HS Qty') {
+                            $qty = $jobCard->total_qty_hs ?? $qty;
+                        } else {
+                            $qty = $jobCard->grand_total_qty ?? $qty;
+                        }
+                    }
                     return [
                         'id' => $s->id,
                         'name' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
-                        'qty' => $selectedSchedule->planned_qty ?? 0
+                        'qty' => $qty
                     ];
                 })->values()->all();
         }

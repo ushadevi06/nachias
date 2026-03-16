@@ -60,7 +60,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($invoice->items as $index => $item)
+                                        @if($invoice->items->count() > 0)
+                                        @foreach($invoice->items as $index => $item)
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
                                             <td>
@@ -74,11 +75,12 @@
                                             <td>₹{{ number_format($item->rate, 2) }}</td>
                                             <td>₹{{ number_format($item->quantity * $item->rate, 2) }}</td>
                                         </tr>
-                                        @empty
+                                        @endforeach
+                                        @else
                                         <tr>
                                             <td colspan="7" class="text-center text-muted">No items found</td>
                                         </tr>
-                                        @endforelse
+                                        @endif
                                         <tr>
                                             <td colspan="5" class="text-end"><strong>Subtotal</strong></td>
                                             <td colspan="2"><strong>₹{{ number_format($invoice->sub_total, 2) }}</strong></td>

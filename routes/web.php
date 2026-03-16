@@ -20,6 +20,8 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ServiceProviderController;
 use App\Http\Controllers\SalesAgentController;
+use App\Http\Controllers\ShippingMethodController;
+use App\Http\Controllers\TransportModeController;
 use App\Http\Controllers\StoreCategoryController;
 use App\Http\Controllers\RawMaterialController;
 use App\Http\Controllers\BrandCategoryController;
@@ -102,6 +104,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Ajax */
     Route::get('get-cities/{state_id}', [AjaxController::class , 'fetchCities']);
+    Route::get('get-zones/{state_id}', [AjaxController::class , 'fetchZones']);
     Route::get('/get-places/{city_id}', [AjaxController::class , 'fetchPlaces']);
     Route::get('/raw-materials-by-category/{categoryId}', [AjaxController::class , 'getRawMaterialsByCategory']);
     Route::get('/get_charges', [AjaxController::class , 'getCharges']);
@@ -112,6 +115,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('get-item-details/{id}', [AjaxController::class , 'getItemDetails']);
     Route::get('get-items-by-brand-category/{brandCategoryId}', [AjaxController::class , 'getItemsByBrandCategory']);
     Route::get('get-customer-details/{id}', [AjaxController::class , 'getCustomerDetails']);
+    Route::get('get-agents-by-zone/{zone_id}', [AjaxController::class , 'fetchAgentsByZone']);
 
     /* Employees */
     Route::get('employees', [EmployeeController::class , 'index']);
@@ -120,6 +124,18 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('employees/add/{id?}', [EmployeeController::class , 'add']);
     Route::post('employees/status/{id}', [EmployeeController::class , 'updateStatus']);
     Route::get('employees/delete/{id}', [EmployeeController::class , 'destroy']);
+
+    /* Shipping Methods */
+    Route::get('shipping_methods', [ShippingMethodController::class , 'index']);
+    Route::match (['get', 'post'], 'shipping_methods/add/{id?}', [ShippingMethodController::class , 'add']);
+    Route::get('shipping_methods/delete/{id}', [ShippingMethodController::class , 'destroy']);
+    Route::post('shipping_methods/status/{id}', [ShippingMethodController::class , 'updateStatus']);
+
+    /* Transport Modes */
+    Route::get('transport_modes', [TransportModeController::class , 'index']);
+    Route::match (['get', 'post'], 'transport_modes/add/{id?}', [TransportModeController::class , 'add']);
+    Route::get('transport_modes/delete/{id}', [TransportModeController::class , 'destroy']);
+    Route::post('transport_modes/status/{id}', [TransportModeController::class , 'updateStatus']);
 
     /* States */
     Route::get('/states', [StateController::class , 'index']);

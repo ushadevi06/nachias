@@ -15,6 +15,9 @@ use App\Models\TaskLog;
 use App\Models\ProcessSchedule;
 use App\Models\ProductionService;
 use App\Models\ServiceProvider;
+use App\Models\Zone;
+use App\Models\SalesAgent;
+use App\Models\StockEntryItem;
 
 class AjaxController extends Controller
 {
@@ -22,6 +25,22 @@ class AjaxController extends Controller
     {
         $cities = City::active()->where('state_id', $state_id)->select('id', 'city_name')->get();
         return response()->json($cities);
+    }
+
+    public function fetchZones($state_id)
+    {
+        $zones = Zone::active()->where('state_id', $state_id)->select('id', 'zone_name')->get();
+        return response()->json($zones);
+    }
+
+    public function fetchAgentsByZone($zone_id)
+    {
+        $query = SalesAgent::active();
+        if ($zone_id && $zone_id != 0) {
+            $query->where('zone_id', $zone_id);
+        }
+        $agents = $query->select('id', 'name')->get();
+        return response()->json($agents);
     }
 
     public function fetchPlaces($city_id)
@@ -112,6 +131,8 @@ class AjaxController extends Controller
                 $qty = $schedule->jobCard->total_qty_fs ?? $qty;
             } elseif ($s->base_quantity_source == 'HS Qty' && $schedule->jobCard) {
                 $qty = $schedule->jobCard->total_qty_hs ?? $qty;
+            } elseif ($schedule->jobCard) {
+                $qty = $schedule->jobCard->grand_total_qty ?? $qty;
             }
             return [
                 'id' => $s->id,
@@ -144,7 +165,7 @@ class AjaxController extends Controller
             return response()->json(['success' => false, 'message' => 'Item not found']);
         }
 
-        $stockDetails = \App\Models\StockEntryItem::where('finished_item_code', 'like', $item->code . '%')->whereNull('deleted_at')->select('id', 'size', 'finished_item_code', 'price', DB::raw('(qty_in - qty_out) as balance'))->get();
+        $stockDetails = StockEntryItem::where('finished_item_code', 'like', $item->code . '%')->whereNull('deleted_at')->select('id', 'size', 'finished_item_code', 'price', DB::raw('(qty_in - qty_out) as balance'))->get();
 
         $stockData = $stockDetails->map(function($s) {
             $sleeve = null;
@@ -207,7 +228,9 @@ class AjaxController extends Controller
         }
         return response()->json([
             'success' => true,
-            'customer' => $customer
+            'customer' => $customer,
+            'box_discount' => (float)$customer->box_discount,
+            'sales_discount' => (float)$customer->sales_discount
         ]);
     }
 }

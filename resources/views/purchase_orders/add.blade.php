@@ -781,12 +781,8 @@
             </tr>`;
 
             $('#item-rows tbody').append(rowHtml);
-            $('.select2').each(function() {
-                $(this).select2({
-                    dropdownParent: $(this).parent(),
-                    placeholder: $(this).data('placeholder'),
-                    width: '100%'
-                });
+            $(".select2").each(function() {
+	            $(this).select2();
             });
             itemIndex++;
         });
@@ -804,7 +800,6 @@
 
             if (!category_id) {
                 materialSelect.select2({
-                    dropdownParent: materialSelect.parent(),
                     placeholder: materialSelect.data('placeholder'),
                     width: '100%'
                 });
@@ -833,7 +828,6 @@
 
                     materialSelect.html(materialsHtml);
                     materialSelect.select2({
-                        dropdownParent: materialSelect.parent(),
                         placeholder: materialSelect.data('placeholder'),
                         width: '100%'
                     });
@@ -841,7 +835,6 @@
                 },
                 error: function () {
                     materialSelect.html('<option value="">Select Raw Material</option>').select2({
-                        dropdownParent: materialSelect.parent(),
                         width: '100%'
                     });
                 }

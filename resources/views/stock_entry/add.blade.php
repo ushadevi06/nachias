@@ -6,6 +6,9 @@
         <div class="col-lg-11">
             <form action="{{ url('stock_entries/add' . ($stockEntry ? '/' . $stockEntry->id : '')) }}" method="POST" enctype="multipart/form-data" autocomplete="off">
                 @csrf
+                 <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
                 <div class="card mb-6">
                     <div class="card-header">
                         <h4>{{ $stockEntry ? 'Edit' : 'Add' }} Stock Entry</h5>

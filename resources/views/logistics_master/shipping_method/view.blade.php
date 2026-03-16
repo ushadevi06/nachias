@@ -1,13 +1,13 @@
 @extends('layouts.common')
-@section('title', 'Seasons - ' . env('WEBSITE_NAME'))
+@section('title', 'Shipping Methods - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Seasons</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create seasons'))
-                <a class="btn btn-primary" href="{{ url('seasons/add') }}">
+                <h4>Shipping Methods</h4>
+                @if(auth()->id() == 1 || auth()->user()->can('create shipping-methods'))
+                <a class="btn btn-primary" href="{{ url('shipping_methods/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
                 @endif
@@ -18,12 +18,11 @@
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="table" id="seasonTable">
+                        <table class="table" id="shippingMethodTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Season Name</th>
-                                    <th>Season Code</th>
+                                    <th>Method Name</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -41,7 +40,7 @@
 @section('scripts')
 <script>
     $(function() {
-        $('#seasonTable').DataTable({
+        $('#shippingMethodTable').DataTable({
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -50,11 +49,10 @@
             info: true,
             lengthChange: true,
             pageLength: 10,
-            ajax: "{{ url('seasons') }}",
+            ajax: "{{ url('shipping_methods') }}",
             columns: [
                 { data: 'DT_RowIndex' },
                 { data: 'name' },
-                { data: 'season_code' },
                 {
                     data: 'status',
                     orderable: false,
@@ -68,12 +66,12 @@
             ]
         });
 
-        $(document).on('change', '.season-status-toggle', function() {
+        $(document).on('change', '.shipping-method-status-toggle', function() {
             let id = $(this).data('id');
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
 
             $.ajax({
-                url: "{{ url('seasons/status') }}/" + id,
+                url: "{{ url('shipping_methods/status') }}/" + id,
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",

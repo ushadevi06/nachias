@@ -22,6 +22,22 @@ $(document).ready(function () {
                     });
                 }
             });
+
+            $.ajax({
+                url: APP_URL + '/get-zones/' + state_id,
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    $('#zone_id').empty();
+                    $('#zone_id').append('<option value="">-- Select Zone --</option>');
+
+                    $.each(data, function (key, zone) {
+                        $('#zone_id').append(
+                            '<option value="' + zone.id + '">' + zone.zone_name + '</option>'
+                        );
+                    });
+                }
+            });
         }
     });
 

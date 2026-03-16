@@ -102,9 +102,20 @@
 
                             <div class="col-md-4">
                                 <div class="row gx-2">
-                                    <div class="col-8">
+                                    <div class="col-6">
                                         <div class="form-floating form-floating-outline">
-                                            <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Agent/Executive">
+                                            <select id="zone_id" name="zone_id" class="select2 form-select" data-placeholder="Select Zone">
+                                                <option value="0">Select Zone</option>
+                                                @foreach($zones as $zone)
+                                                <option value="{{ $zone->id }}" {{ old('zone_id', $salesOrder->zone_id ?? '') == $zone->id ? 'selected' : '' }}>{{ $zone->zone_name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <label for="zone_id">Select Zone</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="form-floating form-floating-outline">
+                                            <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Agent">
                                                 <option value="">Select Sales Agent/Executive</option>
                                                 @foreach($sales_agent as $agent)
                                                 <option value="{{ $agent->id }}" {{ old('agent_id', $salesOrder->agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }}</option>
@@ -113,15 +124,15 @@
                                             <label for="agent_id">Sales Agent/Executive</label>
                                         </div>
                                     </div>
-                                    <div class="col-4">
-                                        <div class="input-group input-group-merge">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" class="form-control" id="commission_percent" name="commission_percent" step="0.01" min="0" placeholder="0.00" value="{{ old('commission_percent', $salesOrder->commission_percent ?? '') }}">
-                                                <label for="commission_percent">Comm.</label>
-                                            </div>
-                                            <span class="input-group-text">%</span>
-                                        </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group input-group-merge">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="number" class="form-control" id="commission_percent" name="commission_percent" step="0.01" min="0" placeholder="0.00" value="{{ old('commission_percent', $salesOrder->commission_percent ?? '') }}">
+                                        <label for="commission_percent">Comm.</label>
                                     </div>
+                                    <span class="input-group-text">%</span>
                                 </div>
                             </div>
                         </div>
@@ -162,20 +173,13 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-4">
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control delivery_date @error('delivery_date') is-invalid @enderror" id="delivery_date" name="delivery_date" placeholder="Delivery Date" value="{{ old('delivery_date', $salesOrder ? $salesOrder->delivery_date?->format('d-m-Y') : date('d-m-Y', strtotime('+7 days'))) }}">
-                                    <label for="delivery_date">Expected Delivery Date <span class="text-danger">*</span></label>
-                                </div>
-                                @error('delivery_date')<div class="text-danger mt-1">{{ $message }}</div>@enderror
-                            </div>
 
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="shipping_method" name="shipping_method" class="select2 form-select" data-placeholder="Select Shipping Method">
+                                    <select id="shipping_method_id" name="shipping_method_id" class="select2 form-select" data-placeholder="Select Shipping Method">
                                         <option value="">Select Shipping Method</option>
-                                        @foreach(['DTDC','BlueDart','Self Pickup','Local Courier'] as $sm)
-                                        <option value="{{ $sm }}" {{ old('shipping_method', $salesOrder->shipping_method ?? '') == $sm ? 'selected' : '' }}>{{ $sm }}</option>
+                                        @foreach($shippingMethods as $sm)
+                                        <option value="{{ $sm->id }}" {{ old('shipping_method_id', $salesOrder->shipping_method_id ?? '') == $sm->id ? 'selected' : '' }}>{{ $sm->name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="shipping_method">Shipping Method</label>
@@ -184,10 +188,10 @@
 
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="transport_mode" name="transport_mode" class="select2 form-select" data-placeholder="Select Transport Mode">
+                                    <select id="transport_mode_id" name="transport_mode_id" class="select2 form-select" data-placeholder="Select Transport Mode">
                                         <option value="">Select Transport Mode</option>
-                                        @foreach(['Truck','Tempo','Courier','By Hand','Rail','Air'] as $tm)
-                                        <option value="{{ $tm }}" {{ old('transport_mode', $salesOrder->transport_mode ?? '') == $tm ? 'selected' : '' }}>{{ $tm }}</option>
+                                        @foreach($transportModes as $tm)
+                                        <option value="{{ $tm->id }}" {{ old('transport_mode_id', $salesOrder->transport_mode_id ?? '') == $tm->id ? 'selected' : '' }}>{{ $tm->name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="transport_mode">Transport Mode</label>
@@ -196,8 +200,13 @@
 
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <textarea class="form-control" id="dispatch_from" name="dispatch_from" placeholder="Dispatch From" style="height: 52px;">{{ old('dispatch_from', $salesOrder->dispatch_from ?? '') }}</textarea>
-                                    <label for="dispatch_from">Dispatch From</label>
+                                    <select id="dispatch_from_id" name="dispatch_from_id" class="select2 form-select" data-placeholder="Select Dispatch From">
+                                        <option value="">Select Dispatch From</option>
+                                        @foreach($serviceProviders as $sp)
+                                            <option value="{{ $sp->id }}" {{ old('dispatch_from_id', $salesOrder->dispatch_from_id ?? '') == $sp->id ? 'selected' : '' }}>{{ $sp->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="dispatch_from_id">Dispatch From</label>
                                 </div>
                             </div>
 
@@ -229,15 +238,8 @@
 
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="eway_bill_no" name="eway_bill_no" placeholder="E-Way Bill No" value="{{ old('eway_bill_no', $salesOrder->eway_bill_no ?? '') }}">
-                                    <label for="eway_bill_no">E-Way Bill No</label>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="lr_no" name="lr_no" placeholder="LR No" value="{{ old('lr_no', $salesOrder->lr_no ?? '') }}">
-                                    <label for="lr_no">LR No</label>
+                                    <input type="text" class="form-control" id="transport_gst_no" name="transport_gst_no" placeholder="Transport GST No" value="{{ old('transport_gst_no', $salesOrder->transport_gst_no ?? '') }}">
+                                    <label for="transport_gst_no">Transport GST No</label>
                                 </div>
                             </div>
 
@@ -257,349 +259,322 @@
                 </div>
                 <div class="card mb-4">
                     <div class="card-body">
-                        <div class="card-header-box d-flex justify-content-between align-items-center mb-4">
-                            <h4>Item Details</h4>
-                            <button type="button" class="btn btn-sm btn-outline-primary add_item"><i class="ri ri-add-line me-1"></i>Add Item</button>
-                        </div>
-                        @error('items')
-                        <div class="alert alert-danger mt-2">{{ $message }}</div>
-                        @enderror
-
-                        <div id="item-rows">
+                        <div class="table-responsive text-nowrap">
+                            <table class="table table-bordered align-middle" id="item-rows">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 180px;">Brand Category *</th>
+                                        <th style="min-width: 220px;">Item *</th>
+                                        <th style="min-width: 150px;">Color</th>
+                                        <th style="min-width: 150px;">Art No *</th>
+                                        <th style="min-width: 100px;">UOM *</th>
+                                        <th style="min-width: 120px;">Size *</th>
+                                        <th style="min-width: 120px;">Quantity *</th>
+                                        <th style="min-width: 120px;">Rate *</th>
+                                        <th style="min-width: 120px;">MRP *</th>
+                                        <th style="min-width: 120px;">Amount</th>
+                                        <th style="min-width: 140px;">Sleeve Type</th>
+                                        <th style="min-width: 50px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                             @if(old('items'))
                                 @foreach(old('items') as $index => $item)
-                                    <div class="item-block" id="row-{{ $index }}">
-                                        <div class="item-block-header">
-                                            <span class="item-number">Item #{{ $index + 1 }}</span>
-                                            <button type="button" class="remove_item_btn" onclick="removeRow({{ $index }})"><i class="ri ri-delete-bin-line"></i></button>
-                                        </div>
-                                        <div class="row g-3">
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][brand_cat_id]" class="select2 form-select brand-select @error("items.$index.brand_cat_id") is-invalid @enderror" data-placeholder="Brand Category">
-                                                        <option value="">Select</option>
-                                                        @foreach($brandCategories as $bc)
-                                                            <option value="{{ $bc->id }}" {{ ($item['brand_cat_id'] ?? '') == $bc->id ? 'selected' : '' }}>{{ $bc->name }} - {{ $bc->code }}</option>
+                                    <tr class="item-row">
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <select name="items[{{ $index }}][brand_cat_id]" class="select2 form-select brand-select @error("items.$index.brand_cat_id") is-invalid @enderror" data-placeholder="Brand Category">
+                                                    <option value="">Select</option>
+                                                    @foreach($brandCategories as $bc)
+                                                        <option value="{{ $bc->id }}" {{ ($item['brand_cat_id'] ?? '') == $bc->id ? 'selected' : '' }}>{{ $bc->name }} - {{ $bc->code }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            @error("items.$index.brand_cat_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <select name="items[{{ $index }}][item_id]" class="select2 form-select item-select @error("items.$index.item_id") is-invalid @enderror" data-placeholder="Item">
+                                                    <option value="">Select Item</option>
+                                                    @if(isset($item['brand_cat_id']) && $item['brand_cat_id'])
+                                                        @foreach($items->where('brand_category_id', $item['brand_cat_id']) as $it)
+                                                            <option value="{{ $it->id }}" {{ ($item['item_id'] ?? '') == $it->id ? 'selected' : '' }}>{{ $it->name }} - {{ $it->code }}</option>
                                                         @endforeach
-                                                    </select>
-                                                    <label>Brand Category *</label>
-                                                </div>
-                                                @error("items.$index.brand_cat_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                    @endif
+                                                </select>
                                             </div>
-                                            <div class="col-md-3">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][item_id]" class="select2 form-select item-select @error("items.$index.item_id") is-invalid @enderror" data-placeholder="Item">
-                                                        <option value="">Select Item</option>
-                                                        @if(isset($item['brand_cat_id']) && $item['brand_cat_id'])
-                                                            @foreach($items->where('brand_category_id', $item['brand_cat_id']) as $it)
-                                                                <option value="{{ $it->id }}" {{ ($item['item_id'] ?? '') == $it->id ? 'selected' : '' }}>{{ $it->name }} - {{ $it->code }}</option>
-                                                            @endforeach
-                                                        @endif
-                                                    </select>
-                                                    <label>Item *</label>
-                                                </div>
-                                                @error("items.$index.item_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                            @error("items.$index.item_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <select name="items[{{ $index }}][color_id]" class="select2 form-select @error("items.$index.color_id") is-invalid @enderror" data-placeholder="Color">
+                                                    <option value="">Select Color</option>
+                                                    @foreach($colors as $col)
+                                                        <option value="{{ $col->id }}" {{ ($item['color_id'] ?? '') == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
+                                                    @endforeach
+                                                </select>
                                             </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][color_id]" class="select2 form-select @error("items.$index.color_id") is-invalid @enderror" data-placeholder="Color">
-                                                        <option value="">Select Color</option>
-                                                        @foreach($colors as $col)
-                                                            <option value="{{ $col->id }}" {{ ($item['color_id'] ?? '') == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <label>Color</label>
-                                                </div>
-                                                @error("items.$index.color_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                            @error("items.$index.color_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="text" name="items[{{ $index }}][art_no]" class="form-control @error("items.$index.art_no") is-invalid @enderror" placeholder="Art No" value="{{ $item['art_no'] ?? '' }}">
                                             </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="text" name="items[{{ $index }}][art_no]" class="form-control @error("items.$index.art_no") is-invalid @enderror" placeholder="Art No" value="{{ $item['art_no'] ?? '' }}">
-                                                    <label>Art No *</label>
-                                                </div>
-                                                @error("items.$index.art_no")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                            @error("items.$index.art_no")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <select name="items[{{ $index }}][uom_id]" class="select2 form-select @error("items.$index.uom_id") is-invalid @enderror" data-placeholder="UOM">
+                                                    <option value="">UOM</option>
+                                                    @foreach($uoms as $u)
+                                                        <option value="{{ $u->id }}" {{ ($item['uom_id'] ?? '') == $u->id ? 'selected' : '' }}>{{ $u->uom_code }}</option>
+                                                    @endforeach
+                                                </select>
                                             </div>
-                                            <div class="col-md-1">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][uom_id]" class="select2 form-select @error("items.$index.uom_id") is-invalid @enderror" data-placeholder="UOM">
-                                                        <option value="">UOM</option>
-                                                        @foreach($uoms as $u)
-                                                            <option value="{{ $u->id }}" {{ ($item['uom_id'] ?? '') == $u->id ? 'selected' : '' }}>{{ $u->uom_code }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <label>UOM *</label>
-                                                </div>
-                                                @error("items.$index.uom_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                            @error("items.$index.uom_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select @error("items.$index.size_id") is-invalid @enderror" data-selected="{{ $item['size_id'] ?? '' }}">
+                                                    <option value="">Select Size</option>
+                                                </select>
                                             </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select @error("items.$index.size_id") is-invalid @enderror" data-selected="{{ $item['size_id'] ?? '' }}">
-                                                        <option value="">Select Size</option>
-                                                    </select>
-                                                    <label>Size *</label>
-                                                </div>
-                                                @error("items.$index.size_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0.01" step="0.01">
-                                                    <label>Quantity *</label>
-                                                    <div class="stock-info-wrapper mt-1">
-                                                        <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                                                        <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
-                                                    </div>
-                                                </div>
-                                                @error("items.$index.qty")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
-                                                    <label>Rate *</label>
-                                                </div>
-                                                 @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
-                                                    <label>MRP *</label>
-                                                </div>
-                                                @error("items.$index.mrp")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format(($item['qty'] ?? 0) * ($item['rate'] ?? 0), 2, '.', '') }}" readonly>
-                                                    <label>Amount</label>
+                                            @error("items.$index.size_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0.01" step="0.01">
+                                                <div class="stock-info-wrapper mt-1">
+                                                    <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                                                    <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <div class="sleeve-container">
-                                                    <span class="sleeve-label">Sleeve Type</span>
-                                                    <div class="segmented-control mt-1">
-                                                        <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_full_{{ $index }}" value="Full" {{ (is_array($item['sleeve'] ?? 'Full') ? in_array('Full', (array)$item['sleeve']) : ($item['sleeve'] ?? 'Full') == 'Full') ? 'checked' : '' }}>
-                                                        <label for="sleeve_full_{{ $index }}">Full</label>
-                                                        <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_half_{{ $index }}" value="Half" {{ (is_array($item['sleeve'] ?? '') ? in_array('Half', (array)$item['sleeve']) : ($item['sleeve'] ?? '') == 'Half') ? 'checked' : '' }}>
-                                                        <label for="sleeve_half_{{ $index }}">Half</label>
-                                                    </div>
-                                                </div>
-                                                @error("items.$index.sleeve")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                            @error("items.$index.qty")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
                                             </div>
-                                        </div>
-                                        <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item['stock_entry_item_id'] ?? '' }}">
-                                    </div>
+                                            @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
+                                            </div>
+                                            @error("items.$index.mrp")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format(($item['qty'] ?? 0) * ($item['rate'] ?? 0), 2, '.', '') }}" readonly>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="segmented-control">
+                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_full_{{ $index }}" value="Full" {{ (is_array($item['sleeve'] ?? 'Full') ? in_array('Full', (array)$item['sleeve']) : ($item['sleeve'] ?? 'Full') == 'Full') ? 'checked' : '' }}>
+                                                <label for="sleeve_full_{{ $index }}">Full</label>
+                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_half_{{ $index }}" value="Half" {{ (is_array($item['sleeve'] ?? '') ? in_array('Half', (array)$item['sleeve']) : ($item['sleeve'] ?? '') == 'Half') ? 'checked' : '' }}>
+                                                <label for="sleeve_half_{{ $index }}">Half</label>
+                                            </div>
+                                            @error("items.$index.sleeve")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item['stock_entry_item_id'] ?? '' }}">
+                                            </div>
+                                        </td>
+                                    </tr>
                                 @endforeach
                             @elseif(isset($salesOrder) && $salesOrder->items->count() > 0)
                                 @foreach($salesOrder->items as $index => $item) 
-                                    <div class="item-block" id="row-{{ $index }}">
-                                        <div class="item-block-header">
-                                            <span class="item-number">Item #{{ $index + 1 }}</span>
-                                            <button type="button" class="remove_item_btn" onclick="removeRow({{ $index }})"><i class="ri ri-delete-bin-line"></i></button>
-                                        </div>
-                                        <div class="row g-3">
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">
-                                                        <option value="">Select</option>
-                                                        @foreach($brandCategories as $bc)
-                                                            <option value="{{ $bc->id }}" {{ $item->brand_cat_id == $bc->id ? 'selected' : '' }}>{{ $bc->name }} - {{ $bc->code }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <label>Brand Category *</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][item_id]" class="select2 form-select item-select" data-placeholder="Item">
-                                                        <option value="">Select Item</option>
-                                                        @foreach($items->where('brand_category_id', $item->brand_cat_id) as $it)
-                                                            <option value="{{ $it->id }}" {{ $item->item_id == $it->id ? 'selected' : '' }}>{{ $it->name }} - {{ $it->code }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <label>Item *</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][color_id]" class="select2 form-select" data-placeholder="Color">
-                                                        <option value="">Select Color</option>
-                                                        @foreach($colors as $col)
-                                                            <option value="{{ $col->id }}" {{ $item->color_id == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <label>Color</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="text" name="items[{{ $index }}][art_no]" class="form-control" placeholder="Art No" value="{{ $item->art_no }}">
-                                                    <label>Art No *</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-1">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][uom_id]" class="select2 form-select" data-placeholder="UOM">
-                                                        <option value="">UOM</option>
-                                                        @foreach($uoms as $u)
-                                                            <option value="{{ $u->id }}" {{ $item->uom_id == $u->id ? 'selected' : '' }}>{{ $u->uom_code }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <label>UOM *</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select" data-selected="{{ $item->size_id }}">
-                                                        <option value="">Select Size</option>
-                                                    </select>
-                                                    <label>Size *</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0.01" step="0.01">
-                                                    <label>Quantity *</label>
-                                                    <div class="stock-info-wrapper mt-1">
-                                                        <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                                                        <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
-                                                    <label>Rate *</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
-                                                    <label>MRP *</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->amount, 2, '.', '') }}" readonly>
-                                                    <label>Amount</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="sleeve-container">
-                                                    <span class="sleeve-label">Sleeve Type</span>
-                                                    <div class="segmented-control mt-1">
-                                                        <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_full_{{ $index }}" value="Full" {{ (is_array($item->sleeve) ? in_array('Full', $item->sleeve) : $item->sleeve == 'Full') ? 'checked' : '' }}>
-                                                        <label for="sleeve_full_{{ $index }}">Full</label>
-                                                        <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_half_{{ $index }}" value="Half" {{ (is_array($item->sleeve) ? in_array('Half', $item->sleeve) : $item->sleeve == 'Half') ? 'checked' : '' }}>
-                                                        <label for="sleeve_half_{{ $index }}">Half</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item->stock_entry_item_id ?? '' }}">
-                                    </div>
-                                @endforeach
-                            @else
-                                <div class="item-block" id="row-0">
-                                    <div class="item-block-header">
-                                        <span class="item-number">Item #1</span>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-2">
+                                    <tr class="item-row">
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[0][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">
+                                                <select name="items[{{ $index }}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">
                                                     <option value="">Select</option>
                                                     @foreach($brandCategories as $bc)
-                                                        <option value="{{ $bc->id }}">{{ $bc->name }} - {{ $bc->code }}</option>
+                                                        <option value="{{ $bc->id }}" {{ $item->brand_cat_id == $bc->id ? 'selected' : '' }}>{{ $bc->name }} - {{ $bc->code }}</option>
                                                     @endforeach
                                                 </select>
-                                                <label>Brand Category *</label>
                                             </div>
-                                        </div>
-                                        <div class="col-md-3">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[0][item_id]" class="select2 form-select item-select" data-placeholder="Item">
+                                                <select name="items[{{ $index }}][item_id]" class="select2 form-select item-select" data-placeholder="Item">
                                                     <option value="">Select Item</option>
+                                                    @foreach($items->where('brand_category_id', $item->brand_cat_id) as $it)
+                                                        <option value="{{ $it->id }}" {{ $item->item_id == $it->id ? 'selected' : '' }}>{{ $it->name }} - {{ $it->code }}</option>
+                                                    @endforeach
                                                 </select>
-                                                <label>Item *</label>
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[0][color_id]" class="select2 form-select" data-placeholder="Color">
+                                                <select name="items[{{ $index }}][color_id]" class="select2 form-select" data-placeholder="Color">
                                                     <option value="">Select Color</option>
                                                     @foreach($colors as $col)
-                                                        <option value="{{ $col->id }}">{{ $col->color_name }}</option>
+                                                        <option value="{{ $col->id }}" {{ $item->color_id == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
                                                     @endforeach
                                                 </select>
-                                                <label>Color</label>
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[0][art_no]" class="form-control" placeholder="Art No">
-                                                <label>Art No *</label>
+                                                <input type="text" name="items[{{ $index }}][art_no]" class="form-control" placeholder="Art No" value="{{ $item->art_no }}">
                                             </div>
-                                        </div>
-                                        <div class="col-md-1">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[0][uom_id]" class="select2 form-select" data-placeholder="UOM">
+                                                <select name="items[{{ $index }}][uom_id]" class="select2 form-select" data-placeholder="UOM">
                                                     <option value="">UOM</option>
                                                     @foreach($uoms as $u)
-                                                        <option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>
+                                                        <option value="{{ $u->id }}" {{ $item->uom_id == $u->id ? 'selected' : '' }}>{{ $u->uom_code }}</option>
                                                     @endforeach
                                                 </select>
-                                                <label>UOM *</label>
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[0][size_id]" class="form-select select2 size-select">
+                                                <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select" data-selected="{{ $item->size_id }}">
                                                     <option value="">Select Size</option>
                                                 </select>
-                                                <label>Size *</label>
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
-                                                <label>Quantity *</label>
+                                                <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0.01" step="0.01">
                                                 <div class="stock-info-wrapper mt-1">
                                                     <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                                                    <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
+                                                    <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
-                                                <label>Rate *</label>
+                                                <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">
-                                                <label>MRP *</label>
+                                                <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
                                             </div>
-                                        </div>
-                                        <div class="col-md-2">
+                                        </td>
+                                        <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[0][amount]" class="form-control amount-input" value="0.00" readonly>
-                                                <label>Amount</label>
+                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->amount, 2, '.', '') }}" readonly>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="segmented-control">
+                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_full_{{ $index }}" value="Full" {{ (is_array($item->sleeve) ? in_array('Full', $item->sleeve) : $item->sleeve == 'Full') ? 'checked' : '' }}>
+                                                <label for="sleeve_full_{{ $index }}">Full</label>
+                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_half_{{ $index }}" value="Half" {{ (is_array($item->sleeve) ? in_array('Half', $item->sleeve) : $item->sleeve == 'Half') ? 'checked' : '' }}>
+                                                <label for="sleeve_half_{{ $index }}">Half</label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item->stock_entry_item_id ?? '' }}">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @else
+                                <tr class="item-row">
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <select name="items[0][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">
+                                                <option value="">Select</option>
+                                                @foreach($brandCategories as $bc)
+                                                    <option value="{{ $bc->id }}">{{ $bc->name }} - {{ $bc->code }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <select name="items[0][item_id]" class="select2 form-select item-select" data-placeholder="Item">
+                                                <option value="">Select Item</option>
+                                            </select>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <select name="items[0][color_id]" class="select2 form-select" data-placeholder="Color">
+                                                <option value="">Select Color</option>
+                                                @foreach($colors as $col)
+                                                    <option value="{{ $col->id }}">{{ $col->color_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" name="items[0][art_no]" class="form-control" placeholder="Art No">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <select name="items[0][uom_id]" class="select2 form-select" data-placeholder="UOM">
+                                                <option value="">UOM</option>
+                                                @foreach($uoms as $u)
+                                                    <option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <select name="items[0][size_id]" class="form-select select2 size-select">
+                                                <option value="">Select Size</option>
+                                            </select>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
+                                            <div class="stock-info-wrapper mt-1">
+                                                <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                                                <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
-                                            <div class="sleeve-container">
-                                                <span class="sleeve-label">Sleeve Type</span>
-                                                <div class="segmented-control mt-1">
-                                                    <input type="radio" name="items[0][sleeve]" id="sleeve_full_0" value="Full" checked>
-                                                    <label for="sleeve_full_0">Full</label>
-                                                    <input type="radio" name="items[0][sleeve]" id="sleeve_half_0" value="Half">
-                                                    <label for="sleeve_half_0">Half</label>
-                                                </div>
-                                            </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
                                         </div>
-                                        <input type="hidden" name="items[0][stock_entry_item_id]" class="stock-entry-item-id" value="">
-                                    </div>
-                                </div>
-                            @endif
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="number" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" name="items[0][amount]" class="form-control amount-input" value="0.00" readonly>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="segmented-control">
+                                            <input type="radio" name="items[0][sleeve]" id="sleeve_full_0" value="Full" checked>
+                                            <label for="sleeve_full_0">Full</label>
+                                            <input type="radio" name="items[0][sleeve]" id="sleeve_half_0" value="Half">
+                                            <label for="sleeve_half_0">Half</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-primary btn-sm add_item">
+                                                <i class="ri ri-add-line"></i>
+                                            </button>
+                                            <input type="hidden" name="items[0][stock_entry_item_id]" class="stock-entry-item-id" value="">
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endif
+                                </tbody>
+                            </table>
                             <input type="hidden" id="itemIndex" value="{{ (old('items') ? count(old('items')) : (isset($salesOrder) ? $salesOrder->items->count() : 1)) }}">
                         </div>
                     </div>
@@ -750,7 +725,7 @@
                                                     <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $salesOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="round_off_less">Less</label>
                                                 </div>
-                                                <input type="number" class="form-control form-control-sm text-end" style="width:100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $salesOrder->round_off ?? '0.00') }}" autocomplete="off" readonly>
+                                                <input type="number" class="form-control form-control-sm text-end" style="width:100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $salesOrder->round_off ?? '0.00') }}" autocomplete="off">
                                             </div>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
@@ -772,56 +747,6 @@
     </div>
 </div>
 <style>
-    .item-block {
-        background: #fdfdfd;
-        border: 1px solid #eee;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        position: relative;
-        transition: all 0.3s ease;
-    }
-    .item-block-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-        border-bottom: 1px solid #f0f0f0;
-        padding-bottom: 10px;
-    }
-    .item-number {
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #666;
-    }
-    .remove_item_btn {
-        background: #fff0f0;
-        border: 1px solid #ffe0e0;
-        border-radius: 8px;
-        padding: 5px 10px;
-        color: #ff4d4d;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .remove_item_btn:hover {
-        background: #ff4d4d;
-        color: #fff !important;
-    }
-    .sleeve-container {
-        padding: 10px;
-        border: 1px solid #eee;
-        border-radius: 8px;
-        background: #fff;
-    }
-    .sleeve-label {
-        font-size: 11px;
-        color: #999;
-        margin-bottom: 2px;
-        display: block;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
     .segmented-control {
         display: inline-flex;
         background: #f4f5fb;
@@ -833,7 +758,7 @@
         display: none;
     }
     .segmented-control label {
-        padding: 8px 24px;
+        padding: 5px 12px;
         border-radius: 8px;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -872,14 +797,6 @@ $(document).ready(function () {
     $('.delivery_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
     function createRow() {
-    let sleeveCbs = `
-        <div class="segmented-control mt-1">
-            <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_full_${itemIndex}" value="Full" checked>
-            <label for="sleeve_full_${itemIndex}">Full</label>
-            <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_half_${itemIndex}" value="Half">
-            <label for="sleeve_half_${itemIndex}">Half</label>
-        </div>`;
-
     let brandOpts = `<option value="">Select</option>`;
     @foreach($brandCategories as $bc)
     brandOpts += `<option value="{{ $bc->id }}">{{ addslashes($bc->name) }} - {{ addslashes($bc->code) }}</option>`;
@@ -896,98 +813,86 @@ $(document).ready(function () {
     @endforeach
 
     let rowHtml = `
-        <div class="item-block" id="row-${itemIndex}">
-            <div class="item-block-header">
-                <span class="item-number">Item #</span>
-                <button type="button" class="remove_item_btn" onclick="removeRow(${itemIndex})"><i class="ri ri-delete-bin-line"></i></button>
-            </div>
-            <div class="row g-3">
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">${brandOpts}</select>
-                        <label>Brand Category *</label>
+        <tr class="item-row">
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <select name="items[${itemIndex}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">${brandOpts}</select>
+                </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <select name="items[${itemIndex}][item_id]" class="select2 form-select item-select" data-placeholder="Item"><option value="">Select Item</option></select>
+                </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <select name="items[${itemIndex}][color_id]" class="select2 form-select" data-placeholder="Color">${colorOpts}</select>
+                </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <input type="text" name="items[${itemIndex}][art_no]" class="form-control" placeholder="Art No">
+                </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <select name="items[${itemIndex}][uom_id]" class="select2 form-select" data-placeholder="UOM">${uomOpts}</select>
+                </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
+                        <option value="">Select Size</option>
+                    </select>
+                </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <input type="number" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
+                    <div class="stock-info-wrapper mt-1">
+                        <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                        <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][item_id]" class="select2 form-select item-select" data-placeholder="Item"><option value="">Select Item</option></select>
-                        <label>Item *</label>
-                    </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
                 </div>
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][color_id]" class="select2 form-select" data-placeholder="Color">${colorOpts}</select>
-                        <label>Color</label>
-                    </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
                 </div>
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <input type="text" name="items[${itemIndex}][art_no]" class="form-control" placeholder="Art No">
-                        <label>Art No *</label>
-                    </div>
+            </td>
+            <td>
+                <div class="form-floating form-floating-outline">
+                    <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
                 </div>
-                <div class="col-md-1">
-                    <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][uom_id]" class="select2 form-select" data-placeholder="UOM">${uomOpts}</select>
-                        <label>UOM *</label>
-                    </div>
+            </td>
+            <td>
+                <div class="segmented-control">
+                    <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_full_${itemIndex}" value="Full" checked>
+                    <label for="sleeve_full_${itemIndex}">Full</label>
+                    <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_half_${itemIndex}" value="Half">
+                    <label for="sleeve_half_${itemIndex}">Half</label>
                 </div>
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
-                            <option value="">Select Size</option>
-                        </select>
-                        <label>Size *</label>
-                    </div>
+            </td>
+            <td>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                    <input type="hidden" name="items[${itemIndex}][stock_entry_item_id]" class="stock-entry-item-id" value="">
                 </div>
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
-                        <label>Quantity *</label>
-                        <div class="stock-info-wrapper mt-1">
-                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
-                        <label>Rate *</label>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
-                        <label>MRP *</label>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-floating form-floating-outline">
-                        <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
-                        <label>Amount</label>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="sleeve-container">
-                        <span class="sleeve-label">Sleeve Type</span>
-                        ${sleeveCbs}
-                    </div>
-                </div>
-                <input type="hidden" name="items[${itemIndex}][stock_entry_item_id]" class="stock-entry-item-id" value="">
-            </div>
-        </div>`;
+            </td>
+        </tr>`;
 
-    $('#item-rows').append(rowHtml);
+    $('#item-rows tbody').append(rowHtml);
 
-    $('#item-rows .item-block:last .select2').each(function() {
-        $(this).select2({ dropdownParent: $(this).closest('.item-block') });
+    $('#item-rows tr:last .select2').each(function() {
+        $(this).select2();
     });
 
     itemIndex++;
-
-    // Renumber all items after appending
-    reindexItems();
 }
     $('.add_item').on('click', createRow);
 
@@ -1042,25 +947,22 @@ $(document).ready(function () {
         calculateTotals();
     });
 
-    window.removeRow = function(id) {
-        if ($('.item-block').length > 1) {
-            $(`#row-${id}`).remove();
-            reindexItems();
+    $(document).on('click', '.delete_row', function() {
+        if ($('.item-row').length > 1) {
+            $(this).closest('.item-row').remove();
             calculateTotals();
         } else {
             alert("At least one item is required.");
         }
-    }
+    });
 
     function reindexItems() {
-        $('.item-block').each(function(index) {
-            $(this).find('.item-number').text('Item #' + (index + 1));
-        });
+        // Not strictly needed for table display but good to keep if logic depends on counting
     }
 
     $(document).on('change', '.brand-select', function() {
         let brandId = $(this).val();
-        let $row = $(this).closest('.item-block');
+        let $row = $(this).closest('.item-row');
         let $itemSelect = $row.find('.item-select');
         
         $itemSelect.html('<option value="">Loading...</option>').trigger('change');
@@ -1086,7 +988,7 @@ $(document).ready(function () {
 
     $(document).on('change', '.item-select', function() {
         let itemId = $(this).val();
-        let $row = $(this).closest('.item-block');
+        let $row = $(this).closest('.item-row');
         
         if (itemId) {
             $.ajax({
@@ -1177,10 +1079,10 @@ $(document).ready(function () {
     }
 
     $(document).on('change', '.size-select', function() {
-        updateStockAndRate($(this).closest('.item-block'));
+        updateStockAndRate($(this).closest('.item-row'));
     });
 
-    $('.item-block').each(function() {
+    $('.item-row').each(function() {
         let $row = $(this);
         let itemId = $row.find('.item-select').val();
         if (itemId) {
@@ -1190,12 +1092,12 @@ $(document).ready(function () {
 
     $(document).on('change', 'input[type="radio"][name*="[sleeve]"]', function() {
         if (this.checked) {
-            updateStockAndRate($(this).closest('.item-block'));
+            updateStockAndRate($(this).closest('.item-row'));
         }
     });
 
     $(document).on('input', '.qty-input, .rate-input', function() {
-        let $row = $(this).closest('.item-block');
+        let $row = $(this).closest('.item-row');
         let qtyInput = $row.find('.qty-input');
         let qty = parseFloat(qtyInput.val()) || 0;
         let rate = parseFloat($row.find('.rate-input').val()) || 0;
@@ -1221,7 +1123,7 @@ $(document).ready(function () {
 
     function calculateTotals() {
         let totalQty = 0, subTotal = 0;
-        $('.item-block').each(function() {
+        $('.item-row').each(function() {
             totalQty += parseFloat($(this).find('.qty-input').val()) || 0;
             subTotal += parseFloat($(this).find('.amount-input').val()) || 0;
         });
@@ -1287,10 +1189,52 @@ $(document).ready(function () {
     $(document).on('change', 'input[name="other_state"], input[name="round_off_type"]', calculateTotals);
 
     $(".select2").each(function() {
-        $(this).select2({ dropdownParent: $(this).closest('.card-body').length ? $(this).closest('.card-body') : $('body') });
+        $(this).select2();
+    });
+    
+    // Close Select2 dropdowns when table scrolls to prevent detachment
+    $('.table-responsive').on('scroll', function() {
+        $('.select2').each(function() {
+            if ($(this).data('select2') && $(this).data('select2').isOpen()) {
+                $(this).select2('close');
+            }
+        });
     });
 
     calculateTotals();
+
+    $('#zone_id_filter').on('change', function() {
+        const zoneId = $(this).val();
+        const agentSelect = $('#agent_id');
+        
+        agentSelect.html('<option value="">Loading...</option>').trigger('change');
+        
+        if (zoneId) {
+            $.ajax({
+                url: `{{ url('get-agents-by-zone') }}/${zoneId}`,
+                type: 'GET',
+                success: function(data) {
+                    let opts = '<option value="">Select Sales Agent/Executive</option>';
+                    data.forEach(agent => {
+                        opts += `<option value="${agent.id}">${agent.name}</option>`;
+                    });
+                    agentSelect.html(opts).trigger('change');
+                }
+            });
+        } else {
+             $.ajax({
+                url: `{{ url('get-agents-by-zone') }}/0`, 
+                type: 'GET',
+                success: function(data) {
+                    let opts = '<option value="">Select Sales Agent/Executive</option>';
+                    data.forEach(agent => {
+                        opts += `<option value="${agent.id}">${agent.name}</option>`;
+                    });
+                    agentSelect.html(opts).trigger('change');
+                }
+            });
+        }
+    });
 });
 </script>
 @endsection

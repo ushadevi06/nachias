@@ -9,12 +9,16 @@ use App\Models\Season;
 use App\Models\Customer;
 use App\Models\StoreType;
 use App\Models\SalesAgent;
+use App\Models\ShippingMethod;
+use App\Models\TransportMode;
+use App\Models\ServiceProvider;
 use App\Models\BrandCategory;
 use App\Models\Item;
 use App\Models\Color;
 use App\Models\Uom;
 use App\Models\SizeRatio;
 use App\Models\Setting;
+use App\Models\Zone;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -97,7 +101,6 @@ class SalesOrderController extends Controller
                     'customer_name' => $so->customer ? $so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>' : '-',
                     'customer_po_ref' => $so->customer_po_ref ?? '-',
                     'total_qty' => number_format($so->total_qty, 2),
-                    'delivery_date' => $so->delivery_date ? $so->delivery_date->format('d-m-Y') : '-',
                     'sales_agent' => $so->salesAgent ? $so->salesAgent->name : '-',
                     'status' => $statusDropdown,
                     'total_amount' => '₹' . number_format($so->total_amount, 2),
@@ -142,10 +145,10 @@ class SalesOrderController extends Controller
                 'customer_po_ref' => 'nullable|string|min:3|max:50',
                 'store_id' => 'required|exists:store_types,id',
                 'agent_id' => 'nullable|exists:sales_agents,id',
-                'delivery_date' => 'required|date',
-                'shipping_method' => 'nullable|string|max:50',
-                'transport_mode' => 'nullable|string|max:50',
-                'dispatch_from' => 'nullable|string|max:255',
+                'zone_id' => 'nullable|exists:zones,id',
+                'shipping_method_id' => 'nullable|exists:shipping_methods,id',
+                'transport_mode_id' => 'nullable|exists:transport_modes,id',
+                'dispatch_from_id' => 'nullable|exists:service_providers,id',
                 'status' => 'required|in:Draft,Approved,Rejected,Pending,In Production,Dispatched,Cancelled',
                 'items' => 'required|array|min:1',
                 'items.*.brand_cat_id' => 'required|exists:brand_categories,id',
@@ -157,11 +160,12 @@ class SalesOrderController extends Controller
                 'items.*.qty' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'required|numeric|min:0',
                 'items.*.mrp' => 'required|numeric|min:0',
-                'commission_percent' => 'nullable|numeric|min:0|max:100',
+                'commission_percent' => 'nullable|numeric|min:0',
                 'commission_amount' => 'nullable|numeric|min:0',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
                 'round_off_type' => 'nullable|in:Add,Less',
                 'round_off' => 'nullable|numeric|min:0',
+                'apply_box_discount' => 'nullable|boolean',
                 'attachment' => 'nullable|array',
                 'attachment.*' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
                 'billing_address' => 'nullable|string|regex:/^[^<>]*$/',
@@ -170,8 +174,7 @@ class SalesOrderController extends Controller
                 'transporter_name' => 'nullable|string|max:50',
                 'freight_type' => 'nullable|in:Paid,To Pay',
                 'freight_amount' => 'nullable|numeric|min:0',
-                'eway_bill_no' => 'nullable|string|max:50',
-                'lr_no' => 'nullable|string|max:50',
+                'transport_gst_no' => 'nullable|string|max:50',
                 'dispatch_through' => 'nullable|string|max:100',
                 'terms_conditions' => 'nullable|string|regex:/^[^<>]*$/',
             ];
@@ -222,10 +225,10 @@ class SalesOrderController extends Controller
                     'customer_po_ref' => $request->customer_po_ref,
                     'store_id' => $request->store_id,
                     'agent_id' => $request->agent_id,
-                    'delivery_date' => Carbon::createFromFormat('d-m-Y', $request->delivery_date)->format('Y-m-d'),
-                    'shipping_method' => $request->shipping_method,
-                    'transport_mode' => $request->transport_mode,
-                    'dispatch_from' => $request->dispatch_from,
+                    'zone_id' => $request->zone_id,
+                    'shipping_method_id' => $request->shipping_method_id,
+                    'transport_mode_id' => $request->transport_mode_id,
+                    'dispatch_from_id' => $request->dispatch_from_id,
                     'status' => $request->status,
                     'total_qty' => $request->total_qty ?? 0,
                     'sub_total_qty' => $request->sub_total_qty ?? 0,
@@ -249,10 +252,10 @@ class SalesOrderController extends Controller
                     'transporter_name' => $request->transporter_name,
                     'freight_type' => $request->freight_type,
                     'freight_amount' => $request->freight_amount ?? 0,
-                    'eway_bill_no' => $request->eway_bill_no,
-                    'lr_no' => $request->lr_no,
+                    'transport_gst_no' => $request->transport_gst_no,
                     'dispatch_through' => $request->dispatch_through,
                     'terms_conditions' => $request->terms_conditions,
+                    'apply_box_discount' => $request->has('apply_box_discount'),
                 ];
 
                 if ($request->status === 'Approved') {
@@ -314,8 +317,7 @@ class SalesOrderController extends Controller
                     }
                     elseif ($reqSleeve == 'Full') {
                         $stockQuery->where(function ($q) {
-                            $q->where('finished_item_code', 'like', '%Full%')
-                                ->orWhere('finished_item_code', 'like', '%F/S%');
+                            $q->where('finished_item_code', 'like', '%Full%')->orWhere('finished_item_code', 'like', '%F/S%');
                         });
                     }
                     else {
@@ -394,15 +396,7 @@ class SalesOrderController extends Controller
         $colors = Color::where('status', 'Active')->orderBy('id', 'desc')->get();
         $uoms = Uom::where('status', 'Active')->orderBy('id', 'desc')->get();
         $sizes = SizeRatio::where('status', 'Active')->orderBy('id', 'desc')->get();
-        $dynamicSizes = DB::table('stock_entry_items')
-            ->join('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
-            ->where('stock_entries.entry_type', 'Finished Goods')
-            ->whereNotNull('stock_entry_items.size')
-            ->where('stock_entry_items.size', '!=', '')
-            ->whereNull('stock_entry_items.deleted_at')
-            ->distinct()
-            ->pluck('stock_entry_items.size')
-            ->toArray();
+        $dynamicSizes = DB::table('stock_entry_items')->join('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')->where('stock_entries.entry_type', 'Finished Goods')->whereNotNull('stock_entry_items.size')->where('stock_entry_items.size', '!=', '')->whereNull('stock_entry_items.deleted_at')->distinct()->pluck('stock_entry_items.size')->toArray();
 
         $nextSoNumber = '';
         if (!$id) {
@@ -420,7 +414,12 @@ class SalesOrderController extends Controller
             }
         }
 
-        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'brandCategories', 'items', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber'));
+        $zones = Zone::where('status', 'Active')->get();
+        $shippingMethods = ShippingMethod::where('status', 'Active')->get();
+        $transportModes = TransportMode::where('status', 'Active')->get();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
+
+        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'brandCategories', 'items', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders'));
     }
 
     public function view($id)
@@ -428,7 +427,7 @@ class SalesOrderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view sales-order')) {
             return unauthorizedRedirect();
         }
-        $salesOrder = SalesOrder::with(['customer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item', 'items.color', 'items.uom'])->findOrFail($id);
+        $salesOrder = SalesOrder::with(['customer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom'])->findOrFail($id);
         return view('sales_order.view_details', compact('salesOrder'));
     }
 

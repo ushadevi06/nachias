@@ -22,10 +22,11 @@ class SalesOrder extends Model
         'customer_po_ref',
         'store_id',
         'agent_id',
+        'zone_id',
         'delivery_date',
-        'shipping_method',
-        'transport_mode',
-        'dispatch_from',
+        'shipping_method_id',
+        'transport_mode_id',
+        'dispatch_from_id',
         'status',
         'total_qty',
         'sub_total_qty',
@@ -48,8 +49,8 @@ class SalesOrder extends Model
         'transporter_name',
         'freight_type',
         'freight_amount',
-        'eway_bill_no',
-        'lr_no',
+        'transport_gst_no',
+
         'dispatch_through',
         'approved_by',
         'approved_date',
@@ -58,12 +59,17 @@ class SalesOrder extends Model
         'attachment',
         'created_by',
         'updated_by',
+        'apply_box_discount',
     ];
 
     protected $casts = [
         'so_date'         => 'date',
         'request_date'    => 'date',
         'delivery_date'   => 'date',
+        'zone_id'         => 'integer',
+        'shipping_method_id' => 'integer',
+        'transport_mode_id'  => 'integer',
+        'dispatch_from_id'   => 'integer',
         'other_state'     => 'boolean',
         'total_qty'       => 'decimal:2',
         'sub_total_qty'   => 'decimal:2',
@@ -80,6 +86,7 @@ class SalesOrder extends Model
         'freight_amount'  => 'decimal:2',
         'approved_date'   => 'datetime',
         'total_amount'    => 'decimal:2',
+        'apply_box_discount' => 'boolean',
     ];
 
     public function customer()
@@ -100,6 +107,26 @@ class SalesOrder extends Model
     public function season()
     {
         return $this->belongsTo(Season::class);
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
+    public function shippingMethod()
+    {
+        return $this->belongsTo(ShippingMethod::class, 'shipping_method_id');
+    }
+
+    public function transportMode()
+    {
+        return $this->belongsTo(TransportMode::class, 'transport_mode_id');
+    }
+
+    public function dispatchFrom()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'dispatch_from_id');
     }
 
     public function approvedBy()

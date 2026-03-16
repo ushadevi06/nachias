@@ -98,7 +98,7 @@
                 <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
                     <h6 class="mb-0 fw-bold text-primary"><i class="ri ri-information-line me-2"></i>General Information</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-5">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="text-muted small fw-bold d-block mb-1">Commission Agent</label>
@@ -158,7 +158,7 @@
                 <div class="card-header bg-transparent py-3 border-bottom d-flex align-items-center">
                     <h6 class="mb-0 fw-bold text-primary"><i class="ri ri-bank-card-line me-2"></i>Financial Summary</h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-5">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small text-muted fw-bold">Sub Total</span>
                         <span class="fw-bold fs-6 text-dark text-end">₹{{ number_format($purchaseOrder->sub_total, 2) }}</span>

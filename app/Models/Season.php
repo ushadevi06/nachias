@@ -10,7 +10,7 @@ class Season extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'status', 'created_by', 'updated_by'];
+    protected $fillable = ['name', 'season_code', 'status', 'created_by', 'updated_by'];
 
     public function scopeActive($query)
     {

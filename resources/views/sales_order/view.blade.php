@@ -56,7 +56,6 @@
                                     <th>Customer Name</th>
                                     <th>Customer PO Ref</th>
                                     <th>Total Qty</th>
-                                    <th>Delivery Date</th>
                                     <th>Sales Agent</th>
                                     <th>Status</th>
                                     <th>Total Amount</th>
@@ -100,7 +99,6 @@
                 { data: 'customer_name' },
                 { data: 'customer_po_ref' },
                 { data: 'total_qty' },
-                { data: 'delivery_date' },
                 { data: 'sales_agent' },
                 { data: 'status', orderable: false, searchable: false },
                 { data: 'total_amount' },

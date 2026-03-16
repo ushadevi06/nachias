@@ -20,6 +20,7 @@ class SalesAgent extends Model
         'state_id',
         'city_id',
         'place_id',
+        'zone_id',
         'address_line_1',
         'address_line_2',
         'zip_code',
@@ -48,6 +49,11 @@ class SalesAgent extends Model
     public function place()
     {
         return $this->belongsTo(Place::class);
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
     }
     public function scopeActive($query)
     {

@@ -1608,6 +1608,21 @@
             calculateSummaryOnly();
         });
 
+        // Form submission validation
+        $('form.common-form').on('submit', function(e) {
+            let hasSelectedItems = $('.item-checkbox:checked').length > 0;
+            if (!hasSelectedItems && $('#purchase_order').val()) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Validation Error',
+                    text: 'Please select at least one item from the Item Details section before submitting.',
+                    confirmButtonColor: '#8c57ff'
+                });
+                return false;
+            }
+        });
+
     });
 </script>
 <script>

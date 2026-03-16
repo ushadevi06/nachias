@@ -60,12 +60,17 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($debitNote->items as $index => $item)
-                                        <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td>
-                                                {{ $item->rawMaterial->name ?? 'N/A' }}
-                                                @if($item->rawMaterial && $item->rawMaterial->material_code)
+                                        @if($debitNote->items->isEmpty())
+                                            <tr>
+                                                <td colspan="5" class="text-center">No items found</td>
+                                            </tr>
+                                        @else
+                                            @foreach($debitNote->items as $index => $item)
+                                            <tr>
+                                                <td>{{ $index + 1 }}</td>
+                                                <td>
+                                                    {{ $item->rawMaterial->name ?? 'N/A' }}
+                                                    @if($item->rawMaterial && $item->rawMaterial->material_code)
                                                 <span class="mini-title">({{ $item->rawMaterial->material_code }})</span>
                                                 @endif
                                             </td>
@@ -73,11 +78,7 @@
                                             <td>₹{{ number_format($item->rate, 2) }}</td>
                                             <td>₹{{ number_format($item->amount, 2) }}</td>
                                         </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted">No items found</td>
-                                        </tr>
-                                        @endforelse
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>

@@ -16,7 +16,6 @@
             <div class="card detail-card">
                 <div class="card-body">
                     <div class="row g-4">
-
                         {{-- ===== ORDER DETAILS ===== --}}
                         <div class="col-lg-12">
                             <h6>Order Details:</h6>
@@ -57,6 +56,10 @@
                             <label class="detail-title">Sales Agent:</label>
                             <div class="text-muted">{{ $salesOrder->salesAgent->name ?? '-' }}</div>
                         </div>
+                        <div class="col-md-4">
+                            <label class="detail-title">Zone:</label>
+                            <div class="text-muted">{{ $salesOrder->zone->zone_name ?? '-' }}</div>
+                        </div>
 
                         <div class="col-lg-12"><hr></div>
 
@@ -84,20 +87,16 @@
                             <h6>Logistics &amp; Destination:</h6>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">Expected Delivery Date:</label>
-                            <div class="text-muted">{{ $salesOrder->delivery_date ? $salesOrder->delivery_date->format('d-M-Y') : '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
                             <label class="detail-title">Shipping Method:</label>
-                            <div class="text-muted">{{ $salesOrder->shipping_method ?? '-' }}</div>
+                            <div class="text-muted">{{ $salesOrder->shippingMethod->name ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Transport Mode:</label>
-                            <div class="text-muted">{{ $salesOrder->transport_mode ?? '-' }}</div>
+                            <div class="text-muted">{{ $salesOrder->transportMode->name ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Dispatch From:</label>
-                            <div class="text-muted">{{ $salesOrder->dispatch_from ?? '-' }}</div>
+                            <div class="text-muted">{{ $salesOrder->dispatchFrom->name ?? '-' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Transporter Name:</label>
@@ -112,13 +111,10 @@
                             <div class="text-muted">₹{{ number_format($salesOrder->freight_amount, 2) }}</div>
                         </div>
                         <div class="col-md-4">
-                            <label class="detail-title">E-Way Bill No:</label>
-                            <div class="text-muted">{{ $salesOrder->eway_bill_no ?? '-' }}</div>
+                            <label class="detail-title">Transport GST No:</label>
+                            <div class="text-muted">{{ $salesOrder->transport_gst_no ?? '-' }}</div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">LR No:</label>
-                            <div class="text-muted">{{ $salesOrder->lr_no ?? '-' }}</div>
-                        </div>
+
                         <div class="col-md-4">
                             <label class="detail-title">Dispatch Through:</label>
                             <div class="text-muted">{{ $salesOrder->dispatch_through ?? '-' }}</div>
@@ -150,24 +146,26 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($salesOrder->items as $idx => $item)
-                                        <tr>
-                                            <td>{{ $idx + 1 }}</td>
-                                            <td>{{ $item->brandCategory->name ?? '-' }} ({{ $item->brandCategory->code ?? '-' }})</td>
-                                            <td>{{ $item->item->item_name ?? $item->item->name ?? '-' }} ({{ $item->item->code ?? '-' }})</td>
-                                            <td>{{ $item->color->color_name ?? '-' }}</td>
-                                            <td>{{ $item->art_no ?? '-' }}</td>
-                                            <td>{{ $item->uom->uom_code ?? '-' }}</td>
-                                            <td>{{ $item->size_id ?? '-' }}</td>
-                                            <td>{{ number_format($item->qty, 2) }}</td>
-                                            <td>₹{{ number_format($item->rate, 2) }}</td>
-                                            <td>₹{{ number_format($item->mrp ?? 0, 2) }}</td>
-                                            <td>₹{{ number_format($item->amount, 2) }}</td>
-                                            <td>{{ $item->sleeve ? implode(', ', $item->sleeve) : '-' }}</td>
-                                        </tr>
-                                        @empty
+                                        @if($salesOrder->items->count() > 0)
+                                            @foreach($salesOrder->items as $idx => $item)
+                                            <tr>
+                                                <td>{{ $idx + 1 }}</td>
+                                                <td>{{ $item->brandCategory->name ?? '-' }} ({{ $item->brandCategory->code ?? '-' }})</td>
+                                                <td>{{ $item->item->item_name ?? $item->item->name ?? '-' }} ({{ $item->item->code ?? '-' }})</td>
+                                                <td>{{ $item->color->color_name ?? '-' }}</td>
+                                                <td>{{ $item->art_no ?? '-' }}</td>
+                                                <td>{{ $item->uom->uom_code ?? '-' }}</td>
+                                                <td>{{ $item->size_id ?? '-' }}</td>
+                                                <td>{{ number_format($item->qty, 2) }}</td>
+                                                <td>₹{{ number_format($item->rate, 2) }}</td>
+                                                <td>₹{{ number_format($item->mrp ?? 0, 2) }}</td>
+                                                <td>₹{{ number_format($item->amount, 2) }}</td>
+                                                <td>{{ $item->sleeve ? implode(', ', $item->sleeve) : '-' }}</td>
+                                            </tr>
+                                            @endforeach
+                                        @else
                                         <tr><td colspan="12" class="text-center text-muted">No items found</td></tr>
-                                        @endforelse
+                                        @endif
                                     </tbody>
                                 </table>
                             </div>
@@ -259,9 +257,12 @@
                                                 <span class="fw-bold">₹{{ number_format($salesOrder->sub_total_qty, 2) }}</span>
                                             </div>
                                             <div class="row align-items-center g-2">
-                                                <div class="col-6"><span class="fw-semibold">Discount:</span></div>
+                                                <div class="col-6"><span class="fw-semibold">Box Discount:</span></div>
                                                 <div class="col-6 text-end">
-                                                    <span class="badge bg-label-danger">{{ $salesOrder->discount_percent }}%</span>
+                                                    <span class="badge bg-label-{{ $salesOrder->apply_box_discount ? 'danger' : 'secondary' }}">
+                                                        {{ $salesOrder->apply_box_discount ? 'Applied' : 'Not Applied' }}
+                                                    </span>
+                                                    <span class="ms-1 small text-muted">({{ $salesOrder->discount_percent }}%)</span>
                                                     <div class="fw-bold mt-1">₹{{ number_format($salesOrder->discount_amount, 2) }}</div>
                                                 </div>
                                             </div>

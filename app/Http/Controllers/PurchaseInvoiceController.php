@@ -215,9 +215,9 @@ class PurchaseInvoiceController extends Controller
                 }
             }
 
-            if (!$hasSelectedItems) {
+            if (!$hasSelectedItems && $request->has('purchase_order_id')) {
                 return back()->withInput()->withErrors([
-                    'items' => 'Please select at least one item'
+                    'items' => 'Please select at least one item from the Item Details section.'
                 ]);
             }
 

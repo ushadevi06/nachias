@@ -81,6 +81,10 @@
                                     <span class="text-dark">{{ $salesAgent->place->place_name ?? '-' }}</span>
                                 </li>
                                 <li class="mb-3">
+                                    <span class="fw-bold d-block text-muted small text-uppercase mb-1">Zone</span>
+                                    <span class="text-dark">{{ $salesAgent->zone->zone_name ?? '-' }}</span>
+                                </li>
+                                <li class="mb-3">
                                     <span class="fw-bold d-block text-muted small text-uppercase mb-1">Address</span>
                                     <span class="text-dark">
                                         {{ $salesAgent->address_line_1 }}<br>

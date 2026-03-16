@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', ($season ? 'Edit Season' : 'Add Season') . ' - ' . env('WEBSITE_NAME'))
+@section('title', ($shippingMethod ? 'Edit Shipping Method' : 'Add Shipping Method') . ' - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row justify-content-center">
@@ -7,15 +7,15 @@
             <div class="card">
                 <div class="card-body">
                     <div class="card-header-box">
-                        <h4>{{ $season ? 'Edit' : 'Add' }} Season</h4>
+                        <h4>{{ $shippingMethod ? 'Edit' : 'Add' }} Shipping Method</h4>
                     </div>
-                    <form action="{{ url('seasons/add' . ($season ? '/' . $season->id : '')) }}" method="POST" class="common-form" autocomplete="off">
+                    <form action="{{ url('shipping_methods/add' . ($shippingMethod ? '/' . $shippingMethod->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" placeholder="Enter Season Name" name="name" value="{{ old('name', $season->name ?? '') }}">
-                                    <label for="name">Season Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" placeholder="Enter Method Name" name="name" value="{{ old('name', $shippingMethod->name ?? '') }}">
+                                    <label for="name">Method Name <span class="text-danger">*</span></label>
                                 </div>
                                 @error('name')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -23,19 +23,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('season_code') is-invalid @enderror" id="season_code" placeholder="Enter Season Code" name="season_code" value="{{ old('season_code', $season->season_code ?? '') }}">
-                                    <label for="season_code">Season Code</label>
-                                </div>
-                                @error('season_code')
-                                <div class="text-danger mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-12">
-                                <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active" {{ old('status', $season->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
-                                        <option value="Inactive" {{ old('status', $season->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
+                                        <option value="Active" {{ old('status', $shippingMethod->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $shippingMethod->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
@@ -45,7 +36,7 @@
                             </div>
                             <div class="col-lg-12 text-end">
                                 <button type="submit" class="btn btn-primary">Submit</button>
-                                <a href="{{ url('seasons') }}" class="btn btn-secondary">Cancel</a>
+                                <a href="{{ url('shipping_methods') }}" class="btn btn-secondary">Cancel</a>
                             </div>
                         </div>
                     </form>

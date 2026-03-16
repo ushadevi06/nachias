@@ -14,6 +14,7 @@ use App\Models\Color;
 use App\Models\Style;
 use App\Models\Brand;
 use App\Models\SizeRatio;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -39,7 +40,8 @@ class PurchaseOrderController extends Controller
                     $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
                     $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
                     $query->whereBetween('po_date', [$startDate, $endDate]);
-                } elseif (count($dates) == 1) {
+                }
+                elseif (count($dates) == 1) {
                     $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
                     $query->whereDate('po_date', $startDate);
                 }
@@ -96,7 +98,7 @@ class PurchaseOrderController extends Controller
                 // if (auth()->id() == 1 || auth()->user()->can('delete purchase-order')) {
                 //     $action .= '<button class="btn btn-delete" onclick="delete_data(\'' . url('purchase_orders/delete/' . $po->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></button>';
                 // }
-                
+
                 $action .= '</div>';
 
                 $data[] = [
@@ -127,7 +129,8 @@ class PurchaseOrderController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit purchase-order')) {
                 return unauthorizedRedirect();
             }
-        } else {
+        }
+        else {
             if (auth()->id() != 1 && !auth()->user()->can('create purchase-order')) {
                 return unauthorizedRedirect();
             }
@@ -136,9 +139,10 @@ class PurchaseOrderController extends Controller
         if ($id) {
             $purchaseOrder = PurchaseOrder::with(['items.storeCategory', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
             if ($purchaseOrder->status !== 'Draft') {
-                return redirect('purchase_orders')->with('error','Only Draft Purchase Orders can be edited.');
+                return redirect('purchase_orders')->with('error', 'Only Draft Purchase Orders can be edited.');
             }
         }
+
         $purchaseOrder = $purchaseOrder ?? null;
 
         if (request()->isMethod('post')) {
@@ -182,8 +186,8 @@ class PurchaseOrderController extends Controller
                 '*.date' => 'Please enter a valid date.',
                 '*.after_or_equal' => 'Due date must be after or equal to PO date.',
                 '*.numeric' => 'This field must be a number.',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
                 'items.required' => 'At least one item is required.',
                 'items.*.*' => 'This field is required.',
                 'items.*.attached_file.image' => 'File must be an image.',
@@ -198,7 +202,7 @@ class PurchaseOrderController extends Controller
             try {
                 $taxableAmount = $request->taxable_amount ?? 0;
                 $taxAmount = $request->tax_amount ?? 0;
-                
+
                 $totalBeforeRoundOff = round($taxableAmount + $taxAmount, 2);
                 $roundOffAmount = $request->round_off ?? 0;
                 $roundOffType = $request->round_off_type ?? 'Add';
@@ -206,19 +210,20 @@ class PurchaseOrderController extends Controller
                 $finalTotal = $totalBeforeRoundOff;
                 if ($roundOffType === 'Add') {
                     $finalTotal += $roundOffAmount;
-                } elseif ($roundOffType === 'Less') {
+                }
+                elseif ($roundOffType === 'Less') {
                     $finalTotal -= $roundOffAmount;
                 }
 
                 $poData = [
                     'po_number' => $request->po_number,
-                    'po_date'        => Carbon::createFromFormat('d-m-Y', $request->po_date)->format('Y-m-d'),
+                    'po_date' => Carbon::createFromFormat('d-m-Y', $request->po_date)->format('Y-m-d'),
                     'purchase_commission_agent_id' => $request->purchase_commission_agent_id,
                     'commission' => $request->commission ?? 0,
                     'supplier_id' => $request->supplier_id,
                     'reference_no' => $request->reference_no,
                     'reference_date' => Carbon::createFromFormat('d-m-Y', $request->reference_date)->format('Y-m-d'),
-                    'due_date'       => Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d'),
+                    'due_date' => Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d'),
                     'store_type_id' => $request->store_type_id,
                     'payment_terms' => $request->payment_terms,
                     'status' => $request->status,
@@ -246,7 +251,8 @@ class PurchaseOrderController extends Controller
                     $newData = $purchaseOrder->fresh()->toArray();
                     addLog('update', 'Purchase Order', 'purchase_orders', $id, $oldData, $newData);
                     $message = 'Purchase Order updated successfully';
-                } else {
+                }
+                else {
                     $poData['created_by'] = auth()->id();
                     $purchaseOrder = PurchaseOrder::create($poData);
                     $newData = $purchaseOrder->toArray();
@@ -256,7 +262,7 @@ class PurchaseOrderController extends Controller
 
                 if ($request->hasFile('additional_attachments')) {
                     if ($id && !empty($purchaseOrder->additional_attachments)) {
-                        $oldFilePath = public_path('uploads/purchase_orders/'.$purchaseOrder->additional_attachments);
+                        $oldFilePath = public_path('uploads/purchase_orders/' . $purchaseOrder->additional_attachments);
                         if (file_exists($oldFilePath)) {
                             @unlink($oldFilePath);
                         }
@@ -292,7 +298,7 @@ class PurchaseOrderController extends Controller
 
                     if ($request->hasFile("items.{$index}.attached_file")) {
                         if ($id && !empty($item->attached_file)) {
-                            $oldFilePath = public_path('uploads/purchase_orders/'.$item->attached_file);
+                            $oldFilePath = public_path('uploads/purchase_orders/' . $item->attached_file);
                             if (file_exists($oldFilePath)) {
                                 @unlink($oldFilePath);
                             }
@@ -314,7 +320,8 @@ class PurchaseOrderController extends Controller
 
                 DB::commit();
                 return redirect('purchase_orders')->with('success', $message);
-            } catch (\Exception $e) {
+            }
+            catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => 'Failed to save purchase order: ' . $e->getMessage()]);
             }
@@ -325,23 +332,24 @@ class PurchaseOrderController extends Controller
         $storeTypes = StoreType::get();
         $storeCategories = StoreCategory::active()->get();
         $uoms = Uom::active()->get();
-        $colors = Color::where('status', 'Active')->get();
+        $colors = Color::active()->get();
         $styles = Style::active()->get();
-        $brands = Brand::where('status', 'Active')->get();
-        $sizeRatios = SizeRatio::where('status', 'Active')->get();
+        $brands = Brand::active()->get();
+        $sizeRatios = SizeRatio::active()->get();
 
         $nextPoNumber = '';
         if (!$id) {
-            $setting = \App\Models\Setting::first();
+            $setting = Setting::first();
             if ($setting && $setting->po_prefix) {
                 $prefix = $setting->po_prefix;
                 $lastPo = PurchaseOrder::where('po_number', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
-                
+
                 if ($lastPo) {
                     $lastNumberStr = substr($lastPo->po_number, strlen($prefix));
                     $lastNumber = intval($lastNumberStr);
                     $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
-                } else {
+                }
+                else {
                     $nextNumber = '0001';
                 }
                 $nextPoNumber = $prefix . $nextNumber;

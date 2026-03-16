@@ -47,6 +47,7 @@
                                     <th>Agent Type</th>
                                     <th>Contact Info</th>
                                     <th>Location</th>
+                                    <th>Zone</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -95,9 +96,12 @@
                 },
                 {
                     data: 'contact_info'
-                }, // ✅ EMAIL + PHONE IN ONE COLUMN
+                }, 
                 {
                     data: 'location'
+                },
+                {
+                    data: 'zone'
                 },
                 {
                     data: 'status',

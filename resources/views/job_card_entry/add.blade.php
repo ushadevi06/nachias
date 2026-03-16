@@ -640,7 +640,7 @@
                                         </tr>
                                         <tr>
                                             @foreach($fabrics as $index => $fabric)
-                                                <td class="fw-bold">Mtr/B.M</td>
+                                                <td class="fw-bold">ISSUED METERS</td>
                                                 <td><input type="text" name="fabrics[{{ $index }}][mtr]" class="form-control form-control-sm text-center" value="{{ $fabric['mtr'] ?? '' }}"></td>
                                             @endforeach
                                         </tr>
@@ -1686,7 +1686,7 @@
 
                 const isTaskReadOnly = hasTasks ? 'readonly' : '';
                 widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center" value="${vWidth}" ${isTaskReadOnly}></td>`;
-                mtrRow += `<td class="fw-bold">Mtr/B.M</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}></td>`;
+                mtrRow += `<td class="fw-bold">ISSUED METERS</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}></td>`;
                 inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center" value="${vInOut}" ${isTaskReadOnly}></td>`;
                 nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center" value="${vNPatti}" ${isTaskReadOnly}></td>`;
                 

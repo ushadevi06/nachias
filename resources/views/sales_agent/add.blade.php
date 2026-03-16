@@ -129,6 +129,20 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select name="zone_id" id="zone_id" class="select2 form-select @error('zone_id') is-invalid @enderror" data-placeholder="Select Zone">
+                                        <option value="">Select Zone</option>
+                                        @foreach($zones as $zone)
+                                        <option value="{{ $zone->id }}" {{ old('zone_id', $salesAgent->zone_id ?? '') == $zone->id ? 'selected' : '' }}>{{ $zone->zone_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="zone_id">Zone <span class="text-danger">*</span></label>
+                                </div>
+                                @error('zone_id')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('address_line_1') is-invalid @enderror" id="address_line_1" placeholder="Enter Address Line 1" name="address_line_1" value="{{ old('address_line_1', $salesAgent->address_line_1 ?? '') }}">
                                     <label for="address_line_1">Address Line 1 <span class="text-danger">*</span></label>
                                 </div>

@@ -16,7 +16,7 @@ class SalesAgentController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = SalesAgent::with(['state', 'city']);
+            $query = SalesAgent::with(['state', 'city', 'zone']);
             if (!empty($request->agent_type)) {
                 $query->where('agent_type', $request->agent_type);
             }
@@ -62,13 +62,14 @@ class SalesAgentController extends Controller
                 </div>';
 
                 $data[] = [
-                    'DT_RowIndex'   => $count++,
-                    'name'          => $agent->name . ' (' . $agent->code . ')',
-                    'agent_type'    => $agent->agent_type,
+                    'DT_RowIndex' => $count++,
+                    'name' => $agent->name . ' (' . $agent->code . ')',
+                    'agent_type' => $agent->agent_type,
                     'contact_info' => $contactInfo,
-                    'location'      => ($agent->city->city_name ?? '-') . ', ' . ($agent->state->state_name ?? '-'),
-                    'status'        => $status,
-                    'action'        => $action,
+                    'location' => ($agent->city->city_name ?? '-') . ', ' . ($agent->state->state_name ?? '-'),
+                    'zone' => $agent->zone->zone_name ?? '-',
+                    'status' => $status,
+                    'action' => $action,
                 ];
             }
 
@@ -84,14 +85,15 @@ class SalesAgentController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit sales-agents')) {
                 return unauthorizedRedirect();
             }
-        } else {
+        }
+        else {
             if (auth()->id() != 1 && !auth()->user()->can('create sales-agents')) {
                 return unauthorizedRedirect();
             }
         }
         $salesAgent = null;
         if ($id) {
-            $salesAgent = SalesAgent::with(['state', 'city', 'place'])->findOrFail($id);
+            $salesAgent = SalesAgent::with(['state', 'city', 'place', 'zone'])->findOrFail($id);
         }
 
         if (request()->isMethod('post')) {
@@ -106,6 +108,7 @@ class SalesAgentController extends Controller
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
+                'zone_id' => 'required|exists:zones,id',
                 'address_line_1' => 'required|string|max:150',
                 'address_line_2' => 'nullable|string|max:150',
                 'zip_code' => 'required|min:3|max:10',
@@ -129,11 +132,11 @@ class SalesAgentController extends Controller
 
             $messages = [
                 '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
+                '*.unique' => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
-                '*.numeric'  => 'This field must be a number.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
+                '*.numeric' => 'This field must be a number.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',
             ];
 
@@ -149,6 +152,7 @@ class SalesAgentController extends Controller
                 'state_id' => $request->state_id,
                 'city_id' => $request->city_id,
                 'place_id' => $request->place_id,
+                'zone_id' => $request->zone_id,
                 'address_line_1' => $request->address_line_1,
                 'address_line_2' => $request->address_line_2,
                 'zip_code' => $request->zip_code,
@@ -169,7 +173,8 @@ class SalesAgentController extends Controller
                 $newData = SalesAgent::find($id)->toArray();
                 addLog('update', 'Sales Agent', 'sales_agents', $id, $oldData, $newData);
                 $message = 'Sales Agent updated successfully';
-            } else {
+            }
+            else {
                 $data['created_by'] = auth()->id();
                 $agent = SalesAgent::create($data);
                 $newData = $agent->toArray();
@@ -183,25 +188,27 @@ class SalesAgentController extends Controller
         $states = State::active()->get();
         $cities = [];
         $places = [];
+        $zones = [];
 
         $stateId = old('state_id', $salesAgent->state_id ?? null);
         $cityId = old('city_id', $salesAgent->city_id ?? null);
 
         if ($stateId) {
             $cities = City::active()->where('state_id', $stateId)->get();
+            $zones = \App\Models\Zone::active()->where('state_id', $stateId)->get();
         }
         if ($cityId) {
             $places = Place::active()->where('city_id', $cityId)->get();
         }
 
-        return view('sales_agent.add', compact('salesAgent', 'states', 'cities', 'places'));
+        return view('sales_agent.add', compact('salesAgent', 'states', 'cities', 'places', 'zones'));
     }
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view_details sales-agents')) {
             return unauthorizedRedirect();
         }
-        $salesAgent = SalesAgent::with(['state', 'city', 'place'])->findOrFail($id);
+        $salesAgent = SalesAgent::with(['state', 'city', 'place', 'zone'])->findOrFail($id);
         return view('sales_agent.view_details', compact('salesAgent'));
     }
     public function destroy($id)

@@ -26,7 +26,8 @@ class Zone extends Model
 
     public function getCityNamesAttribute()
     {
-        if (!$this->city_ids) return '';
+        if (!$this->city_ids)
+            return '';
 
         $cityIds = explode(',', $this->city_ids);
         $cities = City::whereIn('id', $cityIds)->pluck('city_name')->toArray();

@@ -51,6 +51,7 @@ class SeasonController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $i++,
                     'name'        => $row->name,
+                    'season_code' => $row->season_code,
                     'status'      => $status,
                     'action'      => $action,
                 ];
@@ -79,6 +80,7 @@ class SeasonController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'name'   => 'required|string|min:3|max:50|unique:seasons,name,' . $id . ',id,deleted_at,NULL',
+                'season_code' => 'nullable|string|max:50',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -89,7 +91,7 @@ class SeasonController extends Controller
             ];
             $request->validate($rules, $messages);
 
-            $data = $request->only(['name', 'status']);
+            $data = $request->only(['name', 'season_code', 'status']);
 
             if ($id) {
                 $data['updated_by'] = auth()->id();

@@ -85,11 +85,16 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($grn->grnEntryItems as $index => $item)
+                                        @if($grn->grnEntryItems->isEmpty())
                                             <tr>
-                                                <td>{{ $index + 1 }}</td>
-                                                <td>
-                                                    @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
+                                                <td colspan="15" class="text-center">No items found</td>
+                                            </tr>
+                                        @else
+                                            @foreach($grn->grnEntryItems as $index => $item)
+                                                <tr>
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>
+                                                        @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
                                                         {{ $item->purchaseInvoiceItem->rawMaterial->name }}
                                                         <span class="mini-title">({{ $item->purchaseInvoiceItem->rawMaterial->code }})</span>
                                                     @else
@@ -141,11 +146,7 @@
                                                     @endif
                                                 </td>
                                             </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="16" class="text-center">No items found</td>
-                                            </tr>
-                                        @endforelse
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>
