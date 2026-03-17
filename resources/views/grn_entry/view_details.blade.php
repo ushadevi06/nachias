@@ -68,6 +68,9 @@
                                         <tr>
                                             <th>S.No.</th>
                                             <th>Supplier Design Name (Code)</th>
+                                            <th>Brand</th>
+                                            <th>Style</th>
+                                            <th>Fabric Width</th>
                                             <th>Item Image</th>
                                             <th>Art No.</th>
                                             <th>UOM</th>
@@ -87,7 +90,7 @@
                                     <tbody>
                                         @if($grn->grnEntryItems->isEmpty())
                                             <tr>
-                                                <td colspan="15" class="text-center">No items found</td>
+                                                <td colspan="19" class="text-center">No items found</td>
                                             </tr>
                                         @else
                                             @foreach($grn->grnEntryItems as $index => $item)
@@ -101,6 +104,9 @@
                                                         N/A
                                                     @endif
                                                 </td>
+                                                <td>{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->brand?->brand_name ?? '-' }}</td>
+                                                <td>{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->style?->style_name ?? '-' }}</td>
+                                                <td>{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->fabricWidth?->size ?? '-' }}</td>
                                                 <td>
                                                     @if($item->image)
                                                         <a href="{{ url('uploads/grn_items/' . $item->image) }}" target="_blank">
@@ -138,15 +144,14 @@
                                                 <td>{{ $item->storeLocation->store_location ?? '-' }}</td>
                                                 <td>
                                                     @if($item->variants->count() > 0)
-                                                        <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#variantModal{{ $item->id }}">
-                                                            View Variants
-                                                        </button>
+                                                        <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#variantModal{{ $item->id }}">View Variants</button>
                                                     @else
                                                         <span class="text-muted">No Variants</span>
                                                     @endif
                                                 </td>
                                             </tr>
-                                        @endforeach
+                                            @endforeach
+                                        @endif
                                     </tbody>
                                 </table>
                             </div>

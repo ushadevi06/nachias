@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\ProductionStageConsumable;
 use App\Models\Fit;
 use App\Models\PattiType;
 use App\Models\CollarType;
@@ -132,7 +133,6 @@ class JobCardEntryController extends Controller
                 'production_stages' => 'nullable|array',
                 'production_stages.*.stage_id' => 'required|exists:operation_stages,id',
                 'production_stages.*.service_provider_id' => 'required|exists:service_providers,id',
-                'production_stages.*.employee_id' => 'required|exists:users,id',
                 'production_stages.*.issue_date' => 'required|date_format:d-m-Y',
                 'production_stages.*.deadline_date' => 'required|date_format:d-m-Y',
                 'stages' => 'nullable|array|min:1',
@@ -145,7 +145,6 @@ class JobCardEntryController extends Controller
                 'reference_no.same' => 'Reference No must be the same as Job Card No.',
                 'production_stages.*.stage_id.required' => 'This field is required',
                 'production_stages.*.service_provider_id.required' => 'This field is required',
-                'production_stages.*.employee_id.required' => 'This field is required',
                 'production_stages.*.issue_date.required' => 'This field is required',
                 'production_stages.*.deadline_date.required' => 'This field is required',
                 '*.min'      => 'This field must be at least :min characters.',
@@ -545,7 +544,6 @@ class JobCardEntryController extends Controller
                 }
             }
 
-            // Fallback to PO items
             if ($jobCard->purchaseOrder && $jobCard->purchaseOrder->items) {
                 foreach ($jobCard->purchaseOrder->items as $poItem) {
                     if (!isset($artMaterialMap[$poItem->art_no])) {
@@ -669,15 +667,14 @@ class JobCardEntryController extends Controller
                                         $query->whereHas('grnEntryItem.purchaseInvoiceItem.purchaseOrderItem', function($q) use ($artNo) {
                                             $q->where('art_no', $artNo);
                                         });
-                        }
-                    }
+                                    }
+                                }
                             }
                         }
 
                         $stockItemsToRevert = $query->get();
                         $remainingToRevert = $qtyToRevert;
 
-                        // Revert FIFO style (reverse of deduction)
                         foreach ($stockItemsToRevert as $stockItem) {
                             if ($remainingToRevert <= 0) break;
                             
@@ -692,7 +689,6 @@ class JobCardEntryController extends Controller
                         }
                     }
                     
-                    // Second pass: Now deduct fresh stock for all items
                     foreach ($request->items as $matrixId => $itemData) {
                         $qtyIssue = floatval($itemData['qty_issue'] ?? 0);
                         $qtyUsed = floatval($itemData['qty_used'] ?? 0);
@@ -922,9 +918,7 @@ class JobCardEntryController extends Controller
                 if ($item->raw_material_id) {
                     $fallbackStock = StockEntryItem::whereIn('grn_entry_item_id', function($q) use ($grnIds) {
                         $q->select('id')->from('grn_entry_items')->whereIn('grn_entry_id', $grnIds);
-                    })
-                    ->where('raw_material_id', $item->raw_material_id)
-                    ->sum(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)'));
+                    })->where('raw_material_id', $item->raw_material_id)->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
                 }
 
                 return [
@@ -1218,7 +1212,7 @@ class JobCardEntryController extends Controller
 
     private function generateProductionConsumables($jobCard)
     {
-        \App\Models\ProductionStageConsumable::where('job_card_id', $jobCard->id)->forceDelete();
+        ProductionStageConsumable::where('job_card_id', $jobCard->id)->forceDelete();
 
         $stages = $jobCard->operations;
         if ($stages->isEmpty()) return;
@@ -1268,7 +1262,7 @@ class JobCardEntryController extends Controller
                     if ($totalFsCons > 0 && $totalHsCons == 0) $sleeveType = 'F/S';
                     elseif ($totalHsCons > 0 && $totalFsCons == 0) $sleeveType = 'H/S';
 
-                    \App\Models\ProductionStageConsumable::create([
+                    ProductionStageConsumable::create([
                         'job_card_id' => $jobCard->id,
                         'production_stage_id' => $stageId,
                         'stage' => $stageName,
@@ -1305,7 +1299,7 @@ class JobCardEntryController extends Controller
                     if ($fsCons > 0 && $hsCons == 0) $sleeveType = 'F/S';
                     elseif ($hsCons > 0 && $fsCons == 0) $sleeveType = 'H/S';
 
-                    \App\Models\ProductionStageConsumable::create([
+                    ProductionStageConsumable::create([
                         'job_card_id' => $jobCard->id,
                         'production_stage_id' => $stageId,
                         'stage' => $stageName,

@@ -12,6 +12,7 @@ use App\Models\StockEntryItem;
 use App\Models\Task;
 use App\Models\StoreLocation;
 use App\Models\Item;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -93,6 +94,7 @@ class ProductionReceiptController extends Controller
         }
         $storeTypes = StoreType::where('status', 'Active')->orderBy('store_type_name')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->get();
+        $employees = User::where('status', 'Active')->where('id', '!=', 1)->get();
 
         if ($request->isMethod('post')) {
             $rules = [
@@ -123,7 +125,7 @@ class ProductionReceiptController extends Controller
                 $data = [
 
                     'job_card_id'   => $request->job_card_id,
-                    'customer_name' => $request->customer_name,
+                    'employee_id'   => $request->employee_id,
                     'order_due_date'=> $request->order_due_date ? date('Y-m-d', strtotime($request->order_due_date)) : null,
                     'receipt_no'    => $request->receipt_no ?: ('RCPT-' . date('Y') . '-' . str_pad(ProductionReceipt::count() + 1, 4, '0', STR_PAD_LEFT)),
                     'receipt_date'  => date('Y-m-d', strtotime($request->receipt_date)),
@@ -222,7 +224,7 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations'));
+        return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations', 'employees'));
     }
 
     private function createStockEntry($receipt, $storeLocationId)
@@ -533,7 +535,7 @@ class ProductionReceiptController extends Controller
             'success' => true,
             'data' => [
                 'job_card_no' => $jobCard->job_card_no,
-                'customer_name' => ($jobCard->purchaseOrder && $jobCard->purchaseOrder->supplier) ? $jobCard->purchaseOrder->supplier->name : '-',
+                'employee_id' => null, // Left empty because employee shouldn't be auto-fetched from job card, it's manually selected
                 'purchase_order_id' => $jobCard->purchase_order_id,
                 'po_number' => $jobCard->purchaseOrder ? $jobCard->purchaseOrder->po_number : '',
                 'plant_id' => $jobCard->service_provider_id, 

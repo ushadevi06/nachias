@@ -1,1 +1,0 @@
-id, task_no, job_card_entry_id, job_card_no, stage_id, services, issued_to, issue_date, due_date, total_hrs, issue_qty, issue_store, remarks, status, created_by, updated_by, created_at, updated_at, deleted_at

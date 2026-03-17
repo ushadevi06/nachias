@@ -33,6 +33,7 @@ class OperationStageController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'operation_stage_name' => $stage->operation_stage_name,
+                    'working_days' => $stage->working_days ?? 0,
                     'status' => $status,
                 ];
             }
@@ -70,6 +71,7 @@ class OperationStageController extends Controller
                         ->ignore($id)
                         ->whereNull('deleted_at')
                 ],
+                'working_days' => 'nullable|integer|min:0',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -81,6 +83,7 @@ class OperationStageController extends Controller
             $validated = $request->validate($rules, $messages);
             $data = [
                 'operation_stage_name' => $request->operation_stage_name,
+                'working_days' => $request->working_days ?? 0,
                 'status' => $request->status
             ];
             if ($id) {

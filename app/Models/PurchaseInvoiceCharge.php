@@ -15,6 +15,7 @@ class PurchaseInvoiceCharge extends Model
         'charge_id',
         'charge_name',
         'charge_amount',
+        'tax_type',
     ];
 
     public function purchaseInvoice()

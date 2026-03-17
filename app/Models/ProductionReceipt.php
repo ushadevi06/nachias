@@ -11,7 +11,7 @@ class ProductionReceipt extends Model
 
     protected $fillable = [
         'job_card_id',
-        'customer_name',
+        'employee_id',
         'order_due_date',
         'receipt_no',
         'receipt_date',
@@ -25,21 +25,24 @@ class ProductionReceipt extends Model
         'updated_by',
     ];
 
-
+    public function employee()
+    {
+        return $this->belongsTo(User::class, 'employee_id');
+    }
 
     public function jobCard()
     {
-        return $this->belongsTo(JobCardEntry::class, 'job_card_id');
+        return $this->belongsTo(JobCardEntry::class , 'job_card_id');
     }
 
     public function storeType()
     {
-        return $this->belongsTo(StoreType::class, 'store_type_id');
+        return $this->belongsTo(StoreType::class , 'store_type_id');
     }
 
     public function storeLocation()
     {
-        return $this->belongsTo(StoreLocation::class, 'store_location_id');
+        return $this->belongsTo(StoreLocation::class , 'store_location_id');
     }
 
     public function items()

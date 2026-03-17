@@ -106,13 +106,14 @@ class AjaxController extends Controller
     }
     public function getServiceProvidersByStage($stageId)
     {
-        $providers = ServiceProvider::active()->where('operation_stage_id', $stageId)->get(['id', 'name']);
+        $providers = ServiceProvider::active()->where('operation_stage_id', $stageId)->get(['id', 'name', 'code']);
         
         $results = $providers->map(function($p) {
-            return ['id' => $p->id, 'text' => $p->name];
+            $displayName = $p->code ? ($p->name . ' - ' . $p->code) : $p->name;
+            return ['id' => $p->id, 'text' => $displayName, 'name' => $displayName];
         });
 
-        return response()->json(['success' => true, 'providers' => $providers, 'results' => $results]);
+        return response()->json(['success' => true, 'providers' => $results, 'results' => $results]);
     }
     public function getServicesByStage($stageId)
     {

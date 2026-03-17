@@ -255,7 +255,7 @@ class SalesOrderController extends Controller
                     'transport_gst_no' => $request->transport_gst_no,
                     'dispatch_through' => $request->dispatch_through,
                     'terms_conditions' => $request->terms_conditions,
-                    'apply_box_discount' => $request->has('apply_box_discount'),
+                    'apply_box_discount' => $request->apply_box_discount == '1',
                 ];
 
                 if ($request->status === 'Approved') {

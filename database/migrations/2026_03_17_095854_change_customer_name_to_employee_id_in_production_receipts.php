@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('production_receipts', function (Blueprint $table) {
+            $table->dropColumn('customer_name');
+            $table->unsignedBigInteger('employee_id')->nullable()->after('job_card_id');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('production_receipts', function (Blueprint $table) {
+            $table->dropColumn('employee_id');
+            $table->string('customer_name', 255)->nullable()->after('job_card_id');
+        });
+    }
+};

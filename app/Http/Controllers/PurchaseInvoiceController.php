@@ -389,6 +389,7 @@ class PurchaseInvoiceController extends Controller
                     $chargeIds = $request->charges['charge_id'];
                     $chargeNames = $request->charges['name'];
                     $chargeAmounts = $request->charges['amount'];
+                    $taxTypes = $request->charges['tax_type'] ?? [];
 
                     foreach ($chargeIds as $index => $chargeId) {
                         PurchaseInvoiceCharge::create([
@@ -396,6 +397,7 @@ class PurchaseInvoiceController extends Controller
                             'charge_id' => $chargeId,
                             'charge_name' => $chargeNames[$index],
                             'charge_amount' => $chargeAmounts[$index],
+                            'tax_type' => $taxTypes[$index] ?? 'Post-GST',
                         ]);
                     }
                 }

@@ -1,0 +1,32 @@
+Nachias Feedback for sales order:
+	1. In sales order, sales agent should show based on zone. so add zone field in sales agent master
+	2. To add season code field in season master 
+	3. Remove Expected Delivery date field in sales order
+	4. Shipping Method and Transport Mode fields remove in sales order
+	5. Dispatch from field should show nachias branch in sales order
+	6. Eway bill no into transport gst no in sales order
+	7. LR no field remove in sales order it should come in sales invoice
+	8. Dispatch Through field remove in sales order
+	9. Item Details should be in one line format 
+	10. Change size select option should be came from size ratios table (Doubt)
+	11. Discount should be autofetched from customer master
+	12. To add with box discount and without box discount
+	13. Payment terms autofetched from customers table
+	14. Scanning OPtions in items - Doubt
+	15. Brand Wise based on sales invoice no
+	16. Sales Return Management - Doubt.
+	
+Sales Invoice:
+
+	14. Brand wise based on sales invoice number - Doubt.
+	15. Payment mode remove mandatory
+
+Feedback points:
+	16. GST (Pre and post) in purchase invoice
+	17. PO Remove in job card
+	18. In job card item details
+	19. Sleeve Type in Job card
+	20. Stages auto fetched in job card - (Doubt: when we create operation stage with working days if any stage qty to be higher how we define it)
+	21. Employee remove in job card
+	22. Production receipts, Employee instead of customer name
+	23. Task Management view page change format into datatable format - Doubt.

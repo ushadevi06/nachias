@@ -357,7 +357,6 @@
                                     <tr>
                                         <th>Stage *</th>
                                         <th>Issue Unit (Plant) *</th>
-                                        <th>Employee *</th>
                                         <th>Issue Date *</th>
                                         <th>Deadline Date *</th>
                                         <th>Remarks</th>
@@ -385,12 +384,6 @@
                                                         <option value="">Select Unit</option>
                                                     </select>
                                                     @error('production_stages.' . $index . '.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                </td>
-                                                <td>
-                                                    <select name="production_stages[{{ $index }}][employee_id]" class="form-select select2 employee-select" data-placeholder="Select Employee" data-selected="{{ $stage['employee_id'] ?? '' }}">
-                                                        <option value="">Select Employee</option>
-                                                    </select>
-                                                    @error('production_stages.' . $index . '.employee_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                                 </td>
                                                 <td>
                                                     <input type="text" name="production_stages[{{ $index }}][issue_date]" class="form-control issue-date" value="{{ !empty($stage['issue_date']) ? $stage['issue_date'] : (!empty($stage['assigned_date']) ? date('d-m-Y', strtotime($stage['assigned_date'])) : '') }}" placeholder="Enter Issue Date">
@@ -439,12 +432,6 @@
                                                     <option value="">Select Unit</option>
                                                 </select>
                                                 @error('production_stages.0.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
-                                            </td>
-                                            <td>
-                                                <select name="production_stages[0][employee_id]" class="form-select select2 employee-select" data-placeholder="Select Employee">
-                                                    <option value="">Select Employee</option>
-                                                </select>
-                                                @error('production_stages.0.employee_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                             </td>
                                             <td>
                                                 <input type="text" name="production_stages[0][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
@@ -2161,11 +2148,6 @@
                     </select>
                 </td>
                 <td>
-                    <select name="production_stages[${stageRowIndex}][employee_id]" class="form-select select2 employee-select" data-placeholder="Select Employee">
-                        <option value="">Select Employee</option>
-                    </select>
-                </td>
-                <td>
                     <input type="text" name="production_stages[${stageRowIndex}][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
                 </td>
                 <td>
@@ -2206,10 +2188,9 @@
             let $row = $(this).closest('tr');
             let stageId = $(this).val();
             let $providerSelect = $row.find('.provider-select');
-            let $employeeSelect = $row.find('.employee-select');
+            let $issueDate = $row.find('.issue-date');
 
             $providerSelect.html('<option value="">Select Unit</option>').trigger('change');
-            $employeeSelect.html('<option value="">Select Employee</option>').trigger('change');
 
             if (stageId) {
                 $.ajax({
@@ -2225,65 +2206,65 @@
                         }
                     }
                 });
+                if ($issueDate.val()) {
+                    $issueDate.trigger('change');
+                }
             }
         });
-        $(document).on('change', '.provider-select', function() {
+        
+        const operationStagesData = @json($operationStages->keyBy('id'));
+        
+        $(document).on('change', '.issue-date', function(e) {
             let $row = $(this).closest('tr');
-            let providerId = $(this).val();
             let stageId = $row.find('.stage-select').val();
-            let $employeeSelect = $row.find('.employee-select');
-            $employeeSelect.html('<option value="">Select Employee</option>').trigger('change');
-
-            if (providerId) {
-                let url = `{{ url('get-employees-by-plant') }}/${providerId}`;
-                if (stageId) {
-                    url += `/${stageId}`;
-                }
-                url += '?role_id=5';
-                $.ajax({
-                    url: url,
-                    type: 'GET',
-                    success: function(response) {
-                        if (response.success) {
-                            response.employees.forEach(e => {
-                                let selected = ($employeeSelect.data('selected') == e.id) ? 'selected' : '';
-                                let label = e.emp_id ? `${e.name} (${e.emp_id})` : e.name;
-                                $employeeSelect.append(`<option value="${e.id}" ${selected}>${label}</option>`);
-                            });
-                            $employeeSelect.trigger('change');
+            let issueDateStr = $(this).val();
+            if (stageId && issueDateStr) {
+                let stageData = operationStagesData[stageId];
+                if (stageData && stageData.working_days) {
+                    let parts = issueDateStr.split('-');
+                    if (parts.length === 3) {
+                        let issueDateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+                        issueDateObj.setDate(issueDateObj.getDate() + parseInt(stageData.working_days));
+                        
+                        let d = String(issueDateObj.getDate()).padStart(2, '0');
+                        let m = String(issueDateObj.getMonth() + 1).padStart(2, '0');
+                        let y = issueDateObj.getFullYear();
+                        
+                        let deadlineDateStr = d + '-' + m + '-' + y;
+                        let $deadlineInput = $row.find('.deadline-date');
+                        $deadlineInput.val(deadlineDateStr);
+                        if ($deadlineInput[0]._flatpickr) {
+                            $deadlineInput[0]._flatpickr.setDate(deadlineDateStr, true);
                         }
                     }
-                });
+                }
             }
         });
 
-        $('.stage-select').each(function() {
-            if ($(this).val()) {
+        $('.stage-select, .issue-date').each(function() {
+            if ($(this).val() && !$(this).hasClass('issue-date')) {
                 $(this).trigger('change');
             }
         });
 
+
         $(document).on('click', '.assign-task-btn', function() {
             let $row = $(this).closest('tr');
             let stageId = $row.find('.stage-select').val();
-            let employeeId = $row.find('.employee-select').val();
             let issueDate = $row.find('.issue-date').val();
             let deadlineDate = $row.find('.deadline-date').val();
             let remarks = $row.find('textarea').val();
             let jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
 
-            if (!stageId || !employeeId) {
-                alert('Please select BOTH Stage and Employee before assigning.');
+            if (!stageId) {
+                alert('Please select a Stage before assigning.');
                 return;
             }
 
-            let employeeName = $row.find('.employee-select option:selected').text();
             let baseUrl = '{{ route("task_management.add") }}';
             let params = new URLSearchParams({
                 job_card_id: jobCardId,
                 stage_id: stageId,
-                issued_to: employeeId,
-                employee_name: employeeName,
                 issue_date: issueDate,
                 due_date: deadlineDate,
                 remarks: remarks

@@ -54,7 +54,7 @@
                                     <th>Supplier Name</th>
                                     <th>Supplier Invoice No.</th>
                                     <th>Total Items</th>
-                                    <th>Amount (₹)</th>
+                                    <th>Amount (???)</th>
                                     <th>QC Status</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -112,18 +112,7 @@
             $('#qc_status').val('').trigger('change');
             table.ajax.reload();
         });
-    });
 
-    function delete_data(url) {
-        if (confirm('Are you sure you want to delete this GRN entry?')) {
-            $.post(url, {
-                _token: "{{ csrf_token() }}",
-            }, function(res) {
-                if (res.success) {
-                    $('#grn-table').DataTable().ajax.reload();
-                }
-            });
-        }
-    }
+    });
 </script>
 @endsection

@@ -241,7 +241,7 @@
                                                 <option value="Bank (Cheque)" {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Bank (Cheque)' ? 'selected' : '' }}>Bank (Cheque)</option>
                                                 <option value="Online (UPI)" {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Online (UPI)' ? 'selected' : '' }}>Online (UPI)</option>
                                             </select>
-                                            <label for="payment_mode">Payment Mode *</label>
+                                            <label for="payment_mode">Payment Mode</label>
                                             @error('payment_mode')
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror

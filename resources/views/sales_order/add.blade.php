@@ -639,6 +639,28 @@
                                 </div>
                                 <div class="row g-4">
                                     <div class="col-md-12">
+                                        <div class="mb-4">
+                                            <label class="fw-bold mb-2">Box Discount Option:</label>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="d-flex flex-wrap gap-3 align-items-center">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="discount_type" id="disc_none" value="none" {{ (old('discount_type', $salesOrder ? ($salesOrder->apply_box_discount ? 'box' : 'none') : 'none')) == 'none' ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="disc_none">Without Box Discount</label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="discount_type" id="disc_box" value="box" {{ (old('discount_type', $salesOrder ? ($salesOrder->apply_box_discount ? 'box' : '') : '')) == 'box' ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="disc_box">With Box Discount</label>
+                                                    </div>
+                                                </div>
+                                                <div class="input-group input-group-sm" style="width:100px;">
+                                                    <input type="number" class="form-control form-control-sm text-end" id="discount_percent" name="discount_percent" step="0.01" min="0" max="100" value="{{ old('discount_percent', $salesOrder->discount_percent ?? '0') }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="apply_box_discount" id="apply_box_discount_hidden" value="{{ old('apply_box_discount', $salesOrder->apply_box_discount ?? false) ? '1' : '0' }}">
+                                            <input type="hidden" id="customer_sales_discount" value="0">
+                                            <input type="hidden" id="customer_box_discount" value="0">
+                                        </div>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Total Qty:</label>
                                             <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="total_qty" name="total_qty" value="{{ old('total_qty', $salesOrder->total_qty ?? '0.00') }}" readonly>
@@ -648,14 +670,8 @@
                                             <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="sub_total_qty" name="sub_total_qty" value="{{ old('sub_total_qty', $salesOrder->sub_total_qty ?? '0.00') }}" readonly>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <label class="fw-medium">Discount:</label>
-                                            <div class="input-group input-group-sm" style="width:120px;">
-                                                <input type="number" class="form-control form-control-sm text-end" id="discount_percent" name="discount_percent" step="0.01" min="0" max="100" value="{{ old('discount_percent', $salesOrder->discount_percent ?? '0') }}">
-                                                <span class="input-group-text px-1">%</span>
-                                            </div>
-                                        </div>
-                                        <div class="text-end mt-1">
-                                            <input type="text" class="form-control-plaintext form-control-sm text-end py-0" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $salesOrder->discount_amount ?? '0.00') }}" readonly>
+                                            <label class="fw-medium">Discount Amount:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $salesOrder->discount_amount ?? '0.00') }}" readonly>
                                         </div>
                                         <div class="mb-2 d-none" id="commission_row">
                                             <div class="d-flex justify-content-between align-items-center">
@@ -787,7 +803,8 @@
         font-weight: 600;
     }
 </style>
-
+@endsection
+@section('scripts')
 <script>
 $(document).ready(function () {
     let itemIndex = Number($('#itemIndex').val()) || 0;
@@ -797,105 +814,108 @@ $(document).ready(function () {
     $('.delivery_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
     function createRow() {
-    let brandOpts = `<option value="">Select</option>`;
-    @foreach($brandCategories as $bc)
-    brandOpts += `<option value="{{ $bc->id }}">{{ addslashes($bc->name) }} - {{ addslashes($bc->code) }}</option>`;
-    @endforeach
+        let brandOpts = `<option value="">Select</option>`;
+        @foreach($brandCategories as $bc)
+        brandOpts += `<option value="{{ $bc->id }}">{{ addslashes($bc->name) }} - {{ addslashes($bc->code) }}</option>`;
+        @endforeach
 
-    let colorOpts = `<option value="">Select Color</option>`;
-    @foreach($colors as $col)
-    colorOpts += `<option value="{{ $col->id }}">{{ addslashes($col->color_name) }}</option>`;
-    @endforeach
+        let colorOpts = `<option value="">Select Color</option>`;
+        @foreach($colors as $col)
+        colorOpts += `<option value="{{ $col->id }}">{{ addslashes($col->color_name) }}</option>`;
+        @endforeach
 
-    let uomOpts = `<option value="">UOM</option>`;
-    @foreach($uoms as $u)
-    uomOpts += `<option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>`;
-    @endforeach
+        let uomOpts = `<option value="">UOM</option>`;
+        @foreach($uoms as $u)
+        uomOpts += `<option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>`;
+        @endforeach
 
-    let rowHtml = `
-        <tr class="item-row">
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <select name="items[${itemIndex}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">${brandOpts}</select>
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <select name="items[${itemIndex}][item_id]" class="select2 form-select item-select" data-placeholder="Item"><option value="">Select Item</option></select>
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <select name="items[${itemIndex}][color_id]" class="select2 form-select" data-placeholder="Color">${colorOpts}</select>
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <input type="text" name="items[${itemIndex}][art_no]" class="form-control" placeholder="Art No">
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <select name="items[${itemIndex}][uom_id]" class="select2 form-select" data-placeholder="UOM">${uomOpts}</select>
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
-                        <option value="">Select Size</option>
-                    </select>
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <input type="number" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
-                    <div class="stock-info-wrapper mt-1">
-                        <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                        <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+        let rowHtml = `
+            <tr class="item-row">
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">${brandOpts}</select>
                     </div>
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
-                </div>
-            </td>
-            <td>
-                <div class="form-floating form-floating-outline">
-                    <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
-                </div>
-            </td>
-            <td>
-                <div class="segmented-control">
-                    <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_full_${itemIndex}" value="Full" checked>
-                    <label for="sleeve_full_${itemIndex}">Full</label>
-                    <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_half_${itemIndex}" value="Half">
-                    <label for="sleeve_half_${itemIndex}">Half</label>
-                </div>
-            </td>
-            <td>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
-                    <input type="hidden" name="items[${itemIndex}][stock_entry_item_id]" class="stock-entry-item-id" value="">
-                </div>
-            </td>
-        </tr>`;
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][item_id]" class="select2 form-select item-select" data-placeholder="Item"><option value="">Select Item</option></select>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][color_id]" class="select2 form-select" data-placeholder="Color">${colorOpts}</select>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[${itemIndex}][art_no]" class="form-control" placeholder="Art No">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][uom_id]" class="select2 form-select" data-placeholder="UOM">${uomOpts}</select>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
+                            <option value="">Select Size</option>
+                        </select>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[${itemIndex}][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
+                        <div class="stock-info-wrapper mt-1">
+                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
+                    </div>
+                </td>
+                <td>
+                    <div class="segmented-control">
+                        <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_full_${itemIndex}" value="Full" checked>
+                        <label for="sleeve_full_${itemIndex}">Full</label>
+                        <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_half_${itemIndex}" value="Half">
+                        <label for="sleeve_half_${itemIndex}">Half</label>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                        <input type="hidden" name="items[${itemIndex}][stock_entry_item_id]" class="stock-entry-item-id" value="">
+                    </div>
+                </td>
+            </tr>`;
 
-    $('#item-rows tbody').append(rowHtml);
+        $('#item-rows tbody').append(rowHtml);
 
-    $('#item-rows tr:last .select2').each(function() {
-        $(this).select2();
-    });
+        $('#item-rows tr:last .select2').each(function() {
+            if ($(this).hasClass("select2-hidden-accessible")) {
+                $(this).select2('destroy');
+            }
+            $(this).select2({ dropdownParent: $(this).closest('.card-body').length ? $(this).closest('.card-body') : $('body') });
+        });
 
-    itemIndex++;
-}
+        itemIndex++;
+    }
     $('.add_item').on('click', createRow);
-
+    
     $('#customer_id').on('change', function() {
         let customerId = $(this).val();
         if (customerId) {
@@ -911,6 +931,16 @@ $(document).ready(function () {
                         if (c.payment_terms) $('#payment_terms').val(c.payment_terms);
                         if (c.transport_name) $('#transporter_name').val(c.transport_name);
                         
+                        // Auto-fetch ONLY sales discount and ONLY if "Without Box Discount" is checked
+                        let discountType = $('input[name="discount_type"]:checked').val();
+                        if (discountType === 'none') {
+                            let val = res.sales_discount || 0;
+                            $('#discount_percent').val(parseFloat(val) > 0 ? val : '');
+                        } else {
+                            // If "With Box Discount" is selected, don't auto-fill from master (keep it clean)
+                            $('#discount_percent').val('');
+                        }
+
                         let customerStateId = c.state_id;
                         let companyStateId = "{{ $web_settings->state_id ?? '' }}";
 
@@ -1188,11 +1218,28 @@ $(document).ready(function () {
     $(document).on('input', '#discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off, #commission_percent', calculateTotals);
     $(document).on('change', 'input[name="other_state"], input[name="round_off_type"]', calculateTotals);
 
+    $(document).on('change', 'input[name="discount_type"]', function() {
+        let type = $(this).val();
+        $('#apply_box_discount_hidden').val(type === 'box' ? 1 : 0);
+        
+        // Clear the field on toggle to keep it "clean" as per user request
+        $('#discount_percent').val('');
+        
+        calculateTotals();
+    });
+
+    function initDiscountState() {
+        $('#discount_percent').prop('disabled', false);
+    }
+    initDiscountState();
+
     $(".select2").each(function() {
-        $(this).select2();
+        if ($(this).hasClass("select2-hidden-accessible")) {
+            $(this).select2('destroy');
+        }
+        $(this).select2({ dropdownParent: $(this).closest('.card-body').length ? $(this).closest('.card-body') : $('body') });
     });
     
-    // Close Select2 dropdowns when table scrolls to prevent detachment
     $('.table-responsive').on('scroll', function() {
         $('.select2').each(function() {
             if ($(this).data('select2') && $(this).data('select2').isOpen()) {
@@ -1203,7 +1250,7 @@ $(document).ready(function () {
 
     calculateTotals();
 
-    $('#zone_id_filter').on('change', function() {
+    $('#zone_id').on('change', function() {
         const zoneId = $(this).val();
         const agentSelect = $('#agent_id');
         

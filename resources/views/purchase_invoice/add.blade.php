@@ -278,10 +278,8 @@
                         <div class="card-header-box">
                             <h4>Tax & Charges</h4>
                         </div>
-
                         <div class="row g-4">
-
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <select id="charges_select" class="select2 form-select @error('charges_select') is-invalid @enderror" data-placeholder="Select Charge">
                                         <option value="">Loading charges...</option>
@@ -293,7 +291,7 @@
                                 @enderror
                             </div>
 
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-md-6 col-xl-2">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" min="0" step="0.01" class="form-control @error('charge_amount') is-invalid @enderror" id="charge_amount"
                                         placeholder="Charge Amount">
@@ -304,8 +302,18 @@
                                 @enderror
                             </div>
 
-                            <div class="col-md-12 col-xl-4 d-flex align-items-center">
-                                <button type="button" id="add_charge_btn" class="btn btn-primary">
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="charge_tax_type" class="form-select select2">
+                                        <option value="Pre-GST">Pre-GST (Taxable)</option>
+                                        <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
+                                    </select>
+                                    <label>Tax Type</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-xl-2 d-flex align-items-center">
+                                <button type="button" id="add_charge_btn" class="btn btn-primary w-100">
                                     Add Charge
                                 </button>
                             </div>
@@ -316,6 +324,7 @@
                                 <thead>
                                     <tr>
                                         <th>Charge Name</th>
+                                        <th>Tax Type</th>
                                         <th>Amount</th>
                                         <th width="80px">Action</th>
                                     </tr>
@@ -345,16 +354,22 @@
                                         $chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
                                         $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
                                         $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+                                        $taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
                                         $invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ?? null);
                                     @endphp
 
                                     <tr class="charge-row"
                                         data-charge-id="{{ $chargeId }}"
-                                        data-invoice-charge-id="{{ $invoiceChargeId }}">
+                                        data-invoice-charge-id="{{ $invoiceChargeId }}"
+                                        data-tax-type="{{ $taxType }}">
                                         <td>
                                             {{ $chargeName }}
                                             <input type="hidden" name="charges[charge_id][]" value="{{ $chargeId }}">
                                             <input type="hidden" name="charges[name][]" value="{{ $chargeName }}">
+                                        </td>
+                                        <td>
+                                            {{ $taxType }}
+                                            <input type="hidden" name="charges[tax_type][]" value="{{ $taxType }}">
                                         </td>
                                         <td>
                                             {{ number_format($chargeAmount, 2) }}
@@ -530,6 +545,15 @@
                                 $grandTotal = old('grand_total', $invoice->grand_total ?? 0);
                                 $receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
                                 $dueAmount = old('due_amount', $invoice->due_amount ?? 0);
+
+                                $preGstTotal = 0;
+                                $postGstTotal = 0;
+                                foreach($chargesToLoop as $c) {
+                                    $amt = is_array($c) ? ($c['amount'] ?? 0) : ($c->charge_amount ?? 0);
+                                    $type = is_array($c) ? ($c['tax_type'] ?? 'Post-GST') : ($c->tax_type ?? 'Post-GST');
+                                    if ($type === 'Pre-GST') $preGstTotal += $amt;
+                                    else $postGstTotal += $amt;
+                                }
                             @endphp
 
                             <div class="col-lg-6">
@@ -557,9 +581,16 @@
                                     @error('discount_percent')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
-                                    {{-- Taxable --}}
+                                    {{-- Pre-GST Charges --}}
                                     <div class="d-flex justify-content-between py-2 border-bottom">
-                                        <span>Total:</span>
+                                        <span>Pre-GST Charges:</span>
+                                        <strong id="pre_gst_total_display">{{ number_format($preGstTotal, 2) }}</strong>
+                                        <input type="hidden" id="pre_gst_total_input" value="{{ $preGstTotal }}">
+                                    </div>
+
+                                    {{-- Taxable Total --}}
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
+                                        <span>Taxable Total:</span>
                                         <strong id="total">{{ number_format($taxableAmount, 2) }}</strong>
                                         <input type="hidden" name="taxable_amount" id="taxable_amount_input" value="{{ $taxableAmount }}">
                                     </div>
@@ -634,11 +665,11 @@
                                         <input type="hidden" name="tax_amount" id="tax_amount_input" value="{{ $taxAmount }}">
                                     </div>
 
-                                    {{-- Other Charges --}}
+                                    {{-- Post-GST Charges --}}
                                     <div class="d-flex justify-content-between py-2 border-bottom">
-                                        <span>Other Charges:</span>
-                                        <strong id="other_charges">{{ number_format($otherCharges, 2) }}</strong>
-                                        <input type="hidden" name="other_charges" id="other_charges_input" value="{{ $otherCharges }}">
+                                        <span>Post-GST Charges:</span>
+                                        <strong id="post_gst_total_display">{{ number_format($postGstTotal, 2) }}</strong>
+                                        <input type="hidden" name="other_charges" id="other_charges_input" value="{{ $postGstTotal }}">
                                     </div>
                                     @error('other_charges')
                                     <div class="text-danger mt-1">{{ $message }}</div>
@@ -1142,7 +1173,22 @@
             $('#discount_value').text(discountAmount.toFixed(2));
             $('#discount_amount_input').val(discountAmount.toFixed(2));
 
-            let taxableAmount = subTotal - discountAmount;
+            let itemTotal = subTotal - discountAmount;
+            
+            // Separate charges
+            let preGstCharges = 0;
+            let postGstCharges = 0;
+            $('.charge-row').each(function() {
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                if (taxType === 'Pre-GST') {
+                    preGstCharges += amount;
+                } else {
+                    postGstCharges += amount;
+                }
+            });
+
+            let taxableAmount = itemTotal + preGstCharges;
             $('#total').text(taxableAmount.toFixed(2));
             $('#taxable_amount_input').val(taxableAmount.toFixed(2));
 
@@ -1181,16 +1227,16 @@
             $('#tax_amount').text(taxAmount.toFixed(2));
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
-            let otherCharges = 0;
-            $('#added_charges_list tr').each(function() {
-                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-                otherCharges += amount;
-            });
+            let totalOtherCharges = preGstCharges + postGstCharges;
+            
+            // Update display labels
+            $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
+            $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
 
-            $('#other_charges').text(otherCharges.toFixed(2));
-            $('#other_charges_input').val(otherCharges.toFixed(2));
+            $('#post_gst_total_display').text(postGstCharges.toFixed(2));
+            $('#other_charges_input').val(postGstCharges.toFixed(2));
 
-            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
             
             let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
             let roundOffType = $('input[name="round_off_type"]:checked').val();
@@ -1201,9 +1247,6 @@
             } else {
                 finalTotal = totalBeforeRoundOff - roundOffAmount;
             }
-
-            // $('#round_off_display').text(roundOffAmount.toFixed(2)); // Removed display element
-            // $('#round_off_input').val(roundOffAmount.toFixed(2)); // Don't overwrite user input
 
             $('#grand_total').text(finalTotal.toFixed(2));
             $('#grand_total_input').val(finalTotal.toFixed(2));
@@ -1260,6 +1303,7 @@
             let chargeId = $('#charges_select').val();
             let chargeText = $('#charges_select option:selected').text();
             let amount = parseFloat($('#charge_amount').val());
+            let taxType = $('#charge_tax_type').val();
 
             if (!chargeId) {
                 alert("Please select a charge");
@@ -1274,11 +1318,15 @@
             $('#charges_table').removeClass('d-none');
 
             let row = `
-                <tr class="charge-row" data-charge-id="${chargeId}">
+                <tr class="charge-row" data-charge-id="${chargeId}" data-tax-type="${taxType}">
                     <td>
                         ${chargeText}
                         <input type="hidden" name="charges[charge_id][]" value="${chargeId}">
                         <input type="hidden" name="charges[name][]" value="${chargeText}">
+                    </td>
+                    <td>
+                        ${taxType}
+                        <input type="hidden" name="charges[tax_type][]" value="${taxType}">
                     </td>
                     <td>
                         ${amount.toFixed(2)}
@@ -1400,7 +1448,25 @@
 
         function calculateTaxOnly() {
 
-            let taxableAmount = parseFloat($('#taxable_amount_input').val()) || 0;
+            let itemTotal = (parseFloat($('#sub_total_input').val()) || 0) - (parseFloat($('#discount_amount_input').val()) || 0);
+            
+            // Separate charges
+            let preGstCharges = 0;
+            let postGstCharges = 0;
+            $('.charge-row').each(function() {
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                if (taxType === 'Pre-GST') {
+                    preGstCharges += amount;
+                } else {
+                    postGstCharges += amount;
+                }
+            });
+
+            let taxableAmount = itemTotal + preGstCharges;
+            $('#total').text(taxableAmount.toFixed(2));
+            $('#taxable_amount_input').val(taxableAmount.toFixed(2));
+
             let taxAmount = 0;
 
             if ($('input[name="other_state"]:checked').val() === 'Y') {
@@ -1430,12 +1496,16 @@
                 taxAmount = cgstAmount + sgstAmount;
             }
 
-            $('#tax_amount').text(taxAmount.toFixed(2));
-            $('#tax_amount_input').val(taxAmount.toFixed(2));
-
-            let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
+            let totalOtherCharges = preGstCharges + postGstCharges;
             
-            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
+            // Update display labels
+            $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
+            $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
+
+            $('#post_gst_total_display').text(postGstCharges.toFixed(2));
+            $('#other_charges_input').val(postGstCharges.toFixed(2));
+            
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
             
             let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
             let roundOffType = $('input[name="round_off_type"]:checked').val();
@@ -1459,19 +1529,6 @@
 
 
         function calculateChargesOnly() {
-            let otherCharges = 0;
-
-            $('#added_charges_list tr').each(function() {
-                let amt = parseFloat(
-                    $(this).find('input[name="charges[amount][]"]').val()
-                ) || 0;
-
-                otherCharges += amt;
-            });
-
-            $('#other_charges').text(otherCharges.toFixed(2));
-            $('#other_charges_input').val(otherCharges.toFixed(2));
-
             calculateTotals();
         }
 
@@ -1507,7 +1564,22 @@
             $('#discount_value').text(discountAmount.toFixed(2));
             $('#discount_amount_input').val(discountAmount.toFixed(2));
 
-            let taxableAmount = subTotal - discountAmount;
+            let itemTotal = subTotal - discountAmount;
+            
+            // Separate charges
+            let preGstCharges = 0;
+            let postGstCharges = 0;
+            $('.charge-row').each(function() {
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                if (taxType === 'Pre-GST') {
+                    preGstCharges += amount;
+                } else {
+                    postGstCharges += amount;
+                }
+            });
+
+            let taxableAmount = itemTotal + preGstCharges;
             $('#total').text(taxableAmount.toFixed(2));
             $('#taxable_amount_input').val(taxableAmount.toFixed(2));
 
@@ -1528,10 +1600,17 @@
             $('#tax_amount').text(taxAmount.toFixed(2));
             $('#tax_amount_input').val(taxAmount.toFixed(2));
 
-            let otherCharges = parseFloat($('#other_charges_input').val()) || 0;
+            let totalOtherCharges = preGstCharges + postGstCharges;
+            
+            // Update display labels
+            $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
+            $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
+
+            $('#post_gst_total_display').text(postGstCharges.toFixed(2));
+            $('#other_charges_input').val(postGstCharges.toFixed(2));
             
             // Automated Round Off
-            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + otherCharges).toFixed(2));
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
             
             let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
             let roundOffType = $('input[name="round_off_type"]:checked').val();
@@ -1542,10 +1621,6 @@
             } else {
                 finalTotal = totalBeforeRoundOff - roundOffAmount;
             }
-
-            // $('#round_off_display').text(roundOffAmount.toFixed(2));
-            // $('#round_off_input').val(roundOffAmount.toFixed(2));
-            // $('#round_off_type').val(roundOffType);
 
             $('#grand_total').text(finalTotal.toFixed(2));
             $('#grand_total_input').val(finalTotal.toFixed(2));

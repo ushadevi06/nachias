@@ -116,7 +116,7 @@ class SalesInvoiceController extends Controller
                 'delivery_address' => 'required|min:3|max:255|regex:/^[^<>]*$/',
                 'remarks' => 'nullable|min:3|max:255|regex:/^[^<>]*$/',
                 'invoice_status' => 'required|in:Draft,Unpaid/Credit,Paid,Partially Paid',
-                'payment_mode' => 'required',
+                'payment_mode' => 'nullable',
                 'items' => 'required|array|min:1',
                 'items.*.item_id' => 'required',
                 'items.*.quantity' => 'required|numeric|min:0.01',
@@ -182,13 +182,10 @@ class SalesInvoiceController extends Controller
 
                 if ($id) {
                     $invoice = SalesInvoice::with('items')->findOrFail($id);
-
-                    // Revert old stock deductions before removing old items
                     $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
                     if (in_array($invoice->invoice_status, $activeStatuses)) {
                         $this->revertStockDeduction($invoice);
                     }
-
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
                     $invoice->update($invoiceData);
                     $invoice->items()->forceDelete();
@@ -215,10 +212,9 @@ class SalesInvoiceController extends Controller
                     ]);
                 }
 
-                // Apply stock deduction if invoice status is active
                 $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
                 if (in_array($invoice->invoice_status, $activeStatuses)) {
-                    $invoice->load('items'); // Reload fresh items
+                    $invoice->load('items');
                     $this->applyStockDeduction($invoice);
                 }
 
@@ -363,7 +359,6 @@ class SalesInvoiceController extends Controller
                 'stock_entry_item_id' => $i->stock_entry_item_id,
             ])->toArray()
         ]);
-
         foreach ($invoice->items as $item) {
             if (empty($item->stock_entry_item_id)) continue;
             StockEntryItem::where('id', $item->stock_entry_item_id)->increment('qty_out', $item->quantity);

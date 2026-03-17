@@ -51,10 +51,17 @@
                                 </div>
                                 @error('doc_date') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4" id="customer_name_wrapper">
+                            <div class="col-md-6 col-xl-4" id="employee_id_wrapper">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="customer_name" id="customer_name" class="form-control" placeholder="Customer Name" value="{{ old('customer_name', $receipt->customer_name ?? '') }}" readonly>
-                                    <label for="customer_name">Customer Name</label>
+                                    <select name="employee_id" id="employee_id" class="form-select select2" data-placeholder="Select Responsible Person">
+                                        <option value="">Select Responsible Person</option>
+                                        @foreach($employees as $employee)
+                                            <option value="{{ $employee->id }}" {{ old('employee_id', $receipt->employee_id ?? '') == $employee->id ? 'selected' : '' }}>
+                                                {{ $employee->name }}{{ $employee->emp_id ? ' [' . $employee->emp_id . ']' : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="employee_id">Responsible Person (Employee)</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
@@ -347,7 +354,7 @@
                 success: function(response) {
                     if (response.success && response.data) {
                         $('#plant').val(response.data.plant_name || '');
-                        $('#customer_name').val(response.data.customer_name || '');
+                        // $('#employee_id').val(response.data.employee_id || '').trigger('change');
                         $('#order_due_date').val(response.data.order_due_date || '');
                         $('#doc_no').val(response.data.job_card_no || '');
                         $('#doc_date').val(response.data.job_card_date || '');

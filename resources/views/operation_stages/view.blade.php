@@ -24,8 +24,9 @@
                         <table class="table" id="operationStagesTable">
                             <thead>
                                 <tr>
-                                    <th>#</th>
-                                    <th>Operation Stage Name</th>
+                                    <th>S.NO</th>
+                                    <th>Operation Stage name</th>
+                                    <th>Working Days</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -57,19 +58,11 @@
                 url: "{{ url('operation_stages') }}",
                 type: "GET"
             },
-            columns: [{
-                    data: 'DT_RowIndex',
-                    orderable: false,
-                    searchable: false
-                },
-                {
-                    data: 'operation_stage_name'
-                },
-                {
-                    data: 'status',
-                    orderable: false,
-                    searchable: false
-                }
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'operation_stage_name', name: 'operation_stage_name' },
+                { data: 'working_days', name: 'working_days' },
+                { data: 'status', name: 'status', orderable: false, searchable: false },
             ]
         });
 

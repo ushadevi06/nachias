@@ -23,6 +23,15 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
+                                    <input type="number" min="0" class="form-control @error('working_days') is-invalid @enderror" id="working-days" placeholder="Enter Working Days" name="working_days" value="{{ old('working_days', $operationStage->working_days ?? 0) }}">
+                                    <label for="working-days">Working Days (Default Deadline Duration)</label>
+                                </div>
+                                @error('working_days')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-12">
+                                <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
                                         <option value="Active" {{ old('status', $operationStage->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>

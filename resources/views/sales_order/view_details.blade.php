@@ -257,12 +257,9 @@
                                                 <span class="fw-bold">₹{{ number_format($salesOrder->sub_total_qty, 2) }}</span>
                                             </div>
                                             <div class="row align-items-center g-2">
-                                                <div class="col-6"><span class="fw-semibold">Box Discount:</span></div>
+                                                <div class="col-6"><span class="fw-semibold">{{ $salesOrder->apply_box_discount ? 'Box Discount' : 'Discount' }}:</span></div>
                                                 <div class="col-6 text-end">
-                                                    <span class="badge bg-label-{{ $salesOrder->apply_box_discount ? 'danger' : 'secondary' }}">
-                                                        {{ $salesOrder->apply_box_discount ? 'Applied' : 'Not Applied' }}
-                                                    </span>
-                                                    <span class="ms-1 small text-muted">({{ $salesOrder->discount_percent }}%)</span>
+                                                    <span class="small text-muted">({{ $salesOrder->discount_percent }}%)</span>
                                                     <div class="fw-bold mt-1">₹{{ number_format($salesOrder->discount_amount, 2) }}</div>
                                                 </div>
                                             </div>

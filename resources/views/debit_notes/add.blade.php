@@ -165,9 +165,9 @@
                                         @error('remarks') <div class="text-danger small">{{ $message }}</div> @enderror
                                     </div>
                                     <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="reference_document" class="form-label fw-bold small text-muted">Reference Document (Attachment)</label>
+                                        <div class="form-floating form-floating-outline text-black">
                                             <input type="file" id="reference_document" name="reference_document" class="form-control">
+                                            <label for="reference_document" class="form-label small text-muted">Reference Document (Attachment)</label>
                                             <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                             @if(isset($debitNote) && $debitNote->reference_document)
                                                 <div class="mb-2">
@@ -217,7 +217,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">IGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;" step="0.01">
+                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="igst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -228,7 +228,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">CGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;" step="0.01">
+                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="cgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -236,7 +236,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="fw-bold text-muted">SGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px; border: 1px solid #d4d4d4;" step="0.01">
+                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="sgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -251,13 +251,18 @@
                                     </div>
                                 </div>
 
-                                <div class="d-flex justify-content-between mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
                                     <label class="fw-bold text-muted">Round Off:</label>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <input type="hidden" id="round_off_type" name="round_off_type" value="{{ old('round_off_type', $debitNote->round_off_type ?? 'Add') }}">
-                                        <input type="hidden" id="round_off" name="round_off" value="{{ old('round_off', $debitNote->round_off ?? '0.00') }}">
-                                        <span id="round_off_type_display" class="badge bg-label-{{ old('round_off_type', $debitNote->round_off_type ?? 'Add') === 'Add' ? 'primary' : 'danger' }}">{{ old('round_off_type', $debitNote->round_off_type ?? 'Add') }}</span>
-                                        <span id="round_off_display" class="fw-bold">₹{{ number_format(old('round_off', $debitNote->round_off ?? 0), 2) }}</span>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-check-inline me-2 m-0 mt-1">
+                                            <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $debitNote->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
+                                            <label class="form-check-label small" for="round_off_add">Add</label>
+                                        </div>
+                                        <div class="form-check form-check-inline me-2 m-0 mt-1">
+                                            <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $debitNote->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
+                                            <label class="form-check-label small" for="round_off_less">Less</label>
+                                        </div>
+                                        <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $debitNote->round_off ?? '0.00') }}" autocomplete="off">
                                     </div>
                                 </div>
 
@@ -382,7 +387,11 @@
             calculateTotals();
         });
 
-        $(document).on('change', '.item-checkbox', function() {
+        $(document).on('change', '.item-checkbox, input[name="round_off_type"]', function() {
+            calculateTotals();
+        });
+
+        $(document).on('input', '#round_off', function() {
             calculateTotals();
         });
 
@@ -419,21 +428,15 @@
             $('#tax_amount_display').text('₹' + taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
 
             let totalBeforeRoundOff = subTotal + taxAmount;
-            let grandTotal = Math.round(totalBeforeRoundOff);
-            let roundOff = grandTotal - totalBeforeRoundOff;
-            let roundOffAmt = Math.abs(roundOff);
-            let roundOffType = roundOff >= 0 ? 'Add' : 'Less';
-
-            $('#round_off').val(roundOffAmt.toFixed(2));
-            $('#round_off_display').text('₹' + roundOffAmt.toFixed(2));
-            $('#round_off_type').val(roundOffType);
             
-            let roundOffBadge = $('#round_off_type_display');
-            roundOffBadge.text(roundOffType);
+            let roundOffAmount = parseFloat($('#round_off').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val() || 'Add';
+            let grandTotal = 0;
+
             if (roundOffType === 'Add') {
-                roundOffBadge.removeClass('bg-label-danger').addClass('bg-label-primary');
+                grandTotal = totalBeforeRoundOff + roundOffAmount;
             } else {
-                roundOffBadge.removeClass('bg-label-primary').addClass('bg-label-danger');
+                grandTotal = totalBeforeRoundOff - roundOffAmount;
             }
 
             $('#grand_total').val(grandTotal.toFixed(2));
