@@ -400,7 +400,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/view/{id}', [SalesInvoiceController::class , 'view']);
     Route::get('sales_invoices/download-pdf/{id}', [SalesInvoiceController::class , 'downloadPdf']);
     Route::get('sales_invoices/print/{id}', [SalesInvoiceController::class , 'print']);
-    Route::get('sales_invoices/download/{id}', [SalesInvoiceController::class , 'download']);
+    Route::get('sales_invoices/download/{id}', [SalesInvoiceController::class , 'downloadPdf']);
     Route::post('sales_invoices/status/{id}', [SalesInvoiceController::class , 'updateStatus']);
     Route::get('sales_invoices/get-sale-order-details/{id}', [SalesInvoiceController::class , 'getSaleOrderDetails']);
 

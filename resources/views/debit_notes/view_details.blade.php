@@ -11,7 +11,7 @@
                     <h3 class="fw-bold text-primary mb-1">Debit Note Details</h3>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{{ url('debit_notes/download/' . $debitNote->id) }}" class="btn btn-primary d-flex align-items-center">
+                    <a href="{{ url('debit_notes/download/' . $debitNote->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center">
                         <i class="ri ri-download-line me-1"></i> Download
                     </a>
                     <a href="{{ url('debit_notes/print/' . $debitNote->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center">

@@ -273,22 +273,13 @@ class CreditNoteController extends Controller
             return unauthorizedRedirect();
         }
 
-        $creditNote = CreditNote::with(['customer', 'salesInvoice', 'items.item', 'items.uom'])->findOrFail($id);
-        $setting = Setting::first();
+        $creditNote = CreditNote::with(['customer.state', 'customer.city', 'salesInvoice', 'items.item', 'items.uom', 'items.brandCategory'])->findOrFail($id);
+        $setting = Setting::with(['state', 'city'])->first();
 
         $totalInWords = numberToWords($creditNote->grand_total);
         $is_print = true;
 
-        $data = [
-            'creditNote' => $creditNote,
-            'setting' => $setting,
-            'totalInWords' => $totalInWords
-        ];
-
-        $pdf = Pdf::loadView('credit_notes.credit_note_pdf', $data);
-        $pdf->setPaper('A4', 'portrait');
-
-        return $pdf->stream('CreditNote_' . $creditNote->note_no . '.pdf');
+        return view('credit_notes.credit_note_pdf', compact('creditNote', 'setting', 'totalInWords', 'is_print'));
     }
 
     public function download($id)
@@ -297,8 +288,8 @@ class CreditNoteController extends Controller
             return unauthorizedRedirect();
         }
 
-        $creditNote = CreditNote::with(['customer', 'salesInvoice', 'items.item', 'items.uom'])->findOrFail($id);
-        $setting = Setting::first();
+        $creditNote = CreditNote::with(['customer.state', 'customer.city', 'salesInvoice', 'items.item', 'items.uom', 'items.brandCategory'])->findOrFail($id);
+        $setting = Setting::with(['state', 'city'])->first();
 
         $totalInWords = numberToWords($creditNote->grand_total);
 

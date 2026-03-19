@@ -153,7 +153,7 @@
                                     <select id="season" name="season_id" class="form-select select2" data-placeholder="Select Season Code">
                                         <option value="">Select Season Code</option>
                                         @foreach($seasons as $season)
-                                            <option value="{{ $season->id }}" {{ (old('season_id', $jobCard ? $jobCard->season_id : '') == $season->id) ? 'selected' : '' }}>{{ $season->name }}
+                                            <option value="{{ $season->id }}" {{ (old('season_id', $jobCard ? $jobCard->season_id : '') == $season->id) ? 'selected' : '' }}>{{ $season->name }}({{ $season->season_code }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -166,8 +166,7 @@
                                     <select id="brand" name="brand_id" class="form-select select2" data-placeholder="Select Brand">
                                         <option value="">Select Brand</option>
                                         @foreach($brands as $brand)
-                                            <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }}
-                                            </option>
+                                            <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="brand">Brand * </label>

@@ -201,51 +201,47 @@
                                     <div class="text-muted text-uppercase small fw-bold mb-1">Internal Remarks</div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->internal_remarks ?? '-' }}</p>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Attachments -->
-                    @if($salesOrder->attachment)
-                    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
-                        <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0; border-bottom: 1px solid #f0f0f0;">
-                            <h6 class="mb-0 fw-bold text-dark text-uppercase small">Attachments</h6>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="d-flex flex-wrap gap-3">
-                                @foreach(explode(',', $salesOrder->attachment) as $file)
-                                    @php
-                                        $ext = pathinfo($file, PATHINFO_EXTENSION);
-                                        $isImg = in_array(strtolower($ext), ['jpg','jpeg','png','webp','gif']);
-                                        $url = url('uploads/so/' . $salesOrder->id . '/' . $file);
-                                    @endphp
-                                    <div class="text-center">
-                                        @if($isImg)
-                                            <a href="{{ $url }}" target="_blank">
-                                                <img src="{{ $url }}" class="rounded shadow-sm mb-1 border" style="width: 80px; height: 80px; object-fit: cover;">
-                                            </a>
-                                        @else
-                                            <a href="{{ $url }}" target="_blank" class="btn btn-outline-primary d-flex flex-column align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                                                <i class="ri ri-file-text-line ri-2xl"></i>
-                                                <span class="small mt-1 text-uppercase">{{ $ext }}</span>
-                                            </a>
-                                        @endif
+                                @if($salesOrder->attachment)
+                                <div class="col-12 mt-3">
+                                    <div class="text-muted text-uppercase small fw-bold mb-1">Attachments</div>
+                                    <div class="d-flex flex-wrap gap-3 mt-2">
+                                        @foreach(explode(',', $salesOrder->attachment) as $file)
+                                            @php
+                                                $ext = pathinfo($file, PATHINFO_EXTENSION);
+                                                $isImg = in_array(strtolower($ext), ['jpg','jpeg','png','webp','gif']);
+                                                $url = url('uploads/so/' . $salesOrder->id . '/' . $file);
+                                            @endphp
+                                            <div class="text-center">
+                                                @if($isImg)
+                                                    <a href="{{ $url }}" target="_blank">
+                                                        <img src="{{ $url }}" class="rounded shadow-sm mb-1 border" style="width: 80px; height: 80px; object-fit: cover;">
+                                                    </a>
+                                                @else
+                                                    <a href="{{ $url }}" target="_blank" class="btn btn-outline-primary d-flex flex-column align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                                        <i class="ri ri-file-text-line ri-2xl"></i>
+                                                        <span class="small mt-1 text-uppercase">{{ $ext }}</span>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        @endforeach
                                     </div>
-                                @endforeach
+                                </div>
+                                @endif
                             </div>
                         </div>
                     </div>
-                    @endif
                 </div>
 
                 <!-- Billing Summary -->
                 <div class="col-lg-5">
                     <div class="card border-0 shadow-sm sticky-top" style="border-radius: 12px; top: 1rem;">
+                        <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0; border-bottom: 1px solid #f0f0f0;">
+                            <h5 class="mb-0 fw-bold text-dark">Billing Summary</h5>
+                        </div>
                         <div class="card-body p-4">
-                            <h5 class="fw-bold text-dark mb-4 pb-2 border-bottom">Billing Summary</h5>
                             
                             <div class="d-flex justify-content-between mb-3">
-                                <span class="text-muted fw-medium">Total Qty</span>
+                                <span class="text-muted fw-medium">Total Quantity</span>
                                 <span class="fw-bold">{{ number_format($salesOrder->total_qty, 2) }}</span>
                             </div>
 
@@ -282,13 +278,6 @@
                                 </div>
                             @endif
 
-                            @if($salesOrder->freight_amount > 0)
-                            <div class="d-flex justify-content-between mb-3 text-info">
-                                <span class="fw-medium">Freight Charges</span>
-                                <span class="fw-bold">+₹{{ number_format($salesOrder->freight_amount, 2) }}</span>
-                            </div>
-                            @endif
-
                             @if($salesOrder->round_off > 0)
                             <div class="d-flex justify-content-between mb-3 text-muted italic small">
                                 <span>Round Off ({{ $salesOrder->round_off_type }})</span>
@@ -296,9 +285,11 @@
                             </div>
                             @endif
 
-                            <div class="d-flex justify-content-between align-items-center mt-4 p-4 bg-primary bg-opacity-10 rounded-3">
-                                <h4 class="mb-0 fw-bold text-primary">Grand Total</h4>
-                                <h3 class="mb-0 fw-bold text-primary">₹{{ number_format($salesOrder->total_amount, 2) }}</h3>
+                            <div class="bg-primary-soft p-3 rounded-3 mt-4 border-start border-primary border-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-primary small uppercase">Grand Total</span>
+                                    <span class="fs-5 fw-bold text-primary">₹{{ number_format($salesOrder->total_amount, 2) }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

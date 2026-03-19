@@ -93,11 +93,11 @@
 
                             <tr>
                                 <!-- SEASON VALUE -->
-                                <td style="font-weight:bold; font-size:16px;">B28</td>
+                                <td style="font-weight:bold; font-size:16px;">{{ $jobCard->season->season_code }}</td>
 
                                 <!-- STYLE NAME -->
                                 <td colspan="4" style="font-weight:bold; font-size:18px;">
-                                    CASINO FORMAL
+                                    {{ strtoupper($jobCard->brand->brand_name ?? '') }} 
                                 </td>
 
                                 <!-- LOGO -->

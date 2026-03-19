@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Credit Note</title>
+  <title>Credit Note - {{ $creditNote->note_no }}</title>
 
   <style>
     @page {
@@ -302,9 +302,13 @@
     </table>
   </div>
 
-  <div style="margin-top:20px; font-size:8px; text-align:center; color:#666;">
-    This is a computer generated document.
-  </div>
+  @if(isset($is_print) && $is_print)
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+  @endif
 </body>
 
 </html>

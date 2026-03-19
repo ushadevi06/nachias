@@ -352,13 +352,6 @@ class SalesInvoiceController extends Controller
 
     private function applyStockDeduction(SalesInvoice $invoice): void
     {
-        \Log::info('applyStockDeduction called for invoice #' . $invoice->id, [
-            'items' => $invoice->items->map(fn($i) => [
-                'item_id' => $i->item_id,
-                'quantity' => $i->quantity,
-                'stock_entry_item_id' => $i->stock_entry_item_id,
-            ])->toArray()
-        ]);
         foreach ($invoice->items as $item) {
             if (empty($item->stock_entry_item_id)) continue;
             StockEntryItem::where('id', $item->stock_entry_item_id)->increment('qty_out', $item->quantity);
@@ -462,52 +455,5 @@ class SalesInvoiceController extends Controller
         $is_print = true;
 
         return view('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print'));
-    }
-
-    public function download($id)
-    {
-        $invoice = SalesInvoice::with([
-            'customer.state', 
-            'customer.city', 
-            'salesOrder.salesAgent', 
-            'items.brandCategory', 
-            'items.item.uom', 
-            'items.uom'
-        ])->findOrFail($id);
-        
-        $setting = Setting::with(['state', 'city'])->first();
-        
-        $taxSummary = [];
-        foreach ($invoice->items as $item) {
-            $hsn = $item->hsn_sac ?: 'N/A';
-            if (!isset($taxSummary[$hsn])) {
-                $taxSummary[$hsn] = [
-                    'hsn' => $hsn,
-                    'taxable_value' => 0,
-                    'cgst_rate' => $invoice->cgst_percent,
-                    'cgst_amount' => 0,
-                    'sgst_rate' => $invoice->sgst_percent,
-                    'sgst_amount' => 0,
-                    'igst_rate' => $invoice->igst_percent,
-                    'igst_amount' => 0,
-                ];
-            }
-            $taxSummary[$hsn]['taxable_value'] += $item->amount;
-        }
-
-        foreach ($taxSummary as &$summary) {
-            $summary['cgst_amount'] = ($summary['taxable_value'] * $summary['cgst_rate']) / 100;
-            $summary['sgst_amount'] = ($summary['taxable_value'] * $summary['sgst_rate']) / 100;
-            $summary['igst_amount'] = ($summary['taxable_value'] * $summary['igst_rate']) / 100;
-        }
-
-        $totalInWords = numberToWords($invoice->grand_total);
-        $totalTaxInWords = numberToWords($invoice->tax_amount);
-
-        $pdf = Pdf::loadView('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords'));
-        $pdf->setPaper('A4', 'portrait');
-        
-        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
-        return $pdf->download('Sales_Invoice_' . $safeInvoiceNo . '.pdf');
     }
 }
