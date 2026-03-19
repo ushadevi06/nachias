@@ -9,14 +9,14 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 class="fw-bold text-primary mb-1">Debit Note Details</h3>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb mb-0">
-                            <li class="breadcrumb-item"><a href="{{ url('debit_notes') }}">Debit Notes</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">View #{{ $debitNote->debit_note_no }}</li>
-                        </ol>
-                    </nav>
                 </div>
                 <div class="d-flex gap-2">
+                    <a href="{{ url('debit_notes/download/' . $debitNote->id) }}" class="btn btn-primary d-flex align-items-center">
+                        <i class="ri ri-download-line me-1"></i> Download
+                    </a>
+                    <a href="{{ url('debit_notes/print/' . $debitNote->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center">
+                        <i class="ri ri-printer-line me-1"></i> Print
+                    </a>
                     <a href="{{ url('debit_notes') }}" class="btn btn-outline-secondary d-flex align-items-center">
                         <i class="ri ri-arrow-left-line me-1"></i> Back
                     </a>
@@ -29,9 +29,9 @@
             </div>
 
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
-                <div class="card-header bg-primary py-3" style="border-radius: 12px 12px 0 0;">
+                <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0;">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="text-white mb-0 fw-bold">General Information</h5>
+                        <h5 class="mb-0 fw-bold">General Information</h5>
                         <span class="badge bg-white text-primary px-3 py-2">#{{ $debitNote->debit_note_no }}</span>
                     </div>
                 </div>
@@ -127,7 +127,15 @@
                 </div>
                 <div class="col-lg-5">
                     <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0; border-bottom: 1px solid #f0f0f0;">
+                            <h5 class="mb-0 fw-bold text-dark">Billing Summary</h5>
+                        </div>
                         <div class="card-body p-4">
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Total Quantity</span>
+                                <span class="fw-bold">{{ number_format($debitNote->items->sum('quantity'), 2) }}</span>
+                            </div>
+                            
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-muted fw-medium">Sub Total</span>
                                 <span class="fw-bold">₹{{ number_format($debitNote->sub_total, 2) }}</span>
@@ -161,9 +169,11 @@
                             </div>
                             @endif
 
-                            <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-primary bg-opacity-10 rounded">
-                                <h4 class="mb-0 fw-bold text-primary">Grand Total</h4>
-                                <h3 class="mb-0 fw-bold text-primary">₹{{ number_format($debitNote->grand_total, 2) }}</h3>
+                            <div class="bg-primary-soft p-3 rounded-3 mt-4 border-start border-primary border-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-primary small uppercase">Grand Total</span>
+                                    <span class="fs-5 fw-bold text-primary">₹{{ number_format($debitNote->grand_total, 2) }}</span>
+                                </div>
                             </div>
                         </div>
                     </div>

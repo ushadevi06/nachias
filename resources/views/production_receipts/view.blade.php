@@ -6,7 +6,7 @@
         <div class="col-lg-12 d-flex justify-content-between align-items-center">
             <h4>Production Receipts</h4>
             <a href="{{ url('production_receipts/add') }}" class="btn btn-primary">
-                <i class="ri ri-add-line me-1"></i> Add Production Receipt
+                <i class="ri ri-add-circle-line me-1"></i> Add
             </a>
         </div>
         <div class="col-lg-12">

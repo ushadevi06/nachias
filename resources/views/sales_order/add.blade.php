@@ -6,15 +6,6 @@
         <div class="col-lg-12">
             <form action="{{ $salesOrder ? url('sales_orders/add/' . $salesOrder->id) : url('sales_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
                 @csrf
-                {{-- @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif --}}
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">{{ $salesOrder ? 'Edit' : 'Add' }} Sale Order</h5>
@@ -130,7 +121,7 @@
                                 <div class="input-group input-group-merge">
                                     <div class="form-floating form-floating-outline">
                                         <input type="number" class="form-control" id="commission_percent" name="commission_percent" step="0.01" min="0" placeholder="0.00" value="{{ old('commission_percent', $salesOrder->commission_percent ?? '') }}">
-                                        <label for="commission_percent">Comm.</label>
+                                        <label for="commission_percent">Commission</label>
                                     </div>
                                     <span class="input-group-text">%</span>
                                 </div>
@@ -243,21 +234,13 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="dispatch_through" name="dispatch_through" class="select2 form-select" data-placeholder="Dispatch Through">
-                                        <option value="">Select Dispatch Through</option>
-                                        @foreach(['Road','Air','Courier','Hand Delivery'] as $dt)
-                                        <option value="{{ $dt }}" {{ old('dispatch_through', $salesOrder->dispatch_through ?? '') == $dt ? 'selected' : '' }}>{{ $dt }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="dispatch_through">Dispatch Through</label>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Item Details</h5>
+                    </div>
                     <div class="card-body">
                         <div class="table-responsive text-nowrap">
                             <table class="table table-bordered align-middle" id="item-rows">
@@ -582,10 +565,10 @@
                 <div class="row g-4">
                     <div class="col-lg-6">
                         <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Additional Information</h5>
+                            </div>
                             <div class="card-body">
-                                <div class="card-header-box d-flex justify-content-between align-items-center mb-4">
-                                    <h4>Additional Information</h4>
-                                </div>
                                 <div class="row g-4">
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
@@ -931,15 +914,7 @@ $(document).ready(function () {
                         if (c.payment_terms) $('#payment_terms').val(c.payment_terms);
                         if (c.transport_name) $('#transporter_name').val(c.transport_name);
                         
-                        // Auto-fetch ONLY sales discount and ONLY if "Without Box Discount" is checked
-                        let discountType = $('input[name="discount_type"]:checked').val();
-                        if (discountType === 'none') {
-                            let val = res.sales_discount || 0;
-                            $('#discount_percent').val(parseFloat(val) > 0 ? val : '');
-                        } else {
-                            // If "With Box Discount" is selected, don't auto-fill from master (keep it clean)
-                            $('#discount_percent').val('');
-                        }
+                        $('#discount_percent').val('');
 
                         let customerStateId = c.state_id;
                         let companyStateId = "{{ $web_settings->state_id ?? '' }}";
@@ -1221,10 +1196,7 @@ $(document).ready(function () {
     $(document).on('change', 'input[name="discount_type"]', function() {
         let type = $(this).val();
         $('#apply_box_discount_hidden').val(type === 'box' ? 1 : 0);
-        
-        // Clear the field on toggle to keep it "clean" as per user request
         $('#discount_percent').val('');
-        
         calculateTotals();
     });
 

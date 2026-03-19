@@ -15,6 +15,7 @@ use App\Models\Style;
 use App\Models\Brand;
 use App\Models\SizeRatio;
 use App\Models\Setting;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -363,8 +364,50 @@ class PurchaseOrderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
             return unauthorizedRedirect();
         }
-        $purchaseOrder = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType', 'items.storeCategory', 'items.rawMaterial', 'items.uom', 'items.style', 'items.color'])->findOrFail($id);
+        $purchaseOrder = PurchaseOrder::with([
+            'purchaseCommissionAgent', 'supplier', 'storeType',
+            'items.storeCategory', 'items.rawMaterial', 'items.uom',
+            'items.style', 'items.color', 'items.brand', 'items.fabricWidth'
+        ])->findOrFail($id);
         return view('purchase_orders.view_details', compact('purchaseOrder'));
+    }
+
+    public function downloadPdf($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
+            return unauthorizedRedirect();
+        }
+
+        $purchaseOrder = PurchaseOrder::with([
+            'purchaseCommissionAgent', 'supplier', 'storeType',
+            'items.storeCategory', 'items.rawMaterial', 'items.uom',
+            'items.style', 'items.color', 'items.brand', 'items.fabricWidth'
+        ])->findOrFail($id);
+
+        $setting = Setting::first();
+        $totalInWords = numberToWords($purchaseOrder->total_amount);
+
+        $pdf = Pdf::loadView('purchase_orders.purchase_order_pdf', compact('purchaseOrder', 'setting', 'totalInWords'));
+        return $pdf->stream('PO-' . $purchaseOrder->po_number . '.pdf');
+    }
+
+    public function print($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
+            return unauthorizedRedirect();
+        }
+
+        $purchaseOrder = PurchaseOrder::with([
+            'purchaseCommissionAgent', 'supplier', 'storeType',
+            'items.storeCategory', 'items.rawMaterial', 'items.uom',
+            'items.style', 'items.color', 'items.brand', 'items.fabricWidth'
+        ])->findOrFail($id);
+
+        $setting = Setting::first();
+        $totalInWords = numberToWords($purchaseOrder->total_amount);
+        $is_print = true;
+
+        return view('purchase_orders.purchase_order_pdf', compact('purchaseOrder', 'setting', 'totalInWords', 'is_print'));
     }
 
     public function destroy($id)

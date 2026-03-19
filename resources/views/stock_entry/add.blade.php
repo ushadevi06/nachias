@@ -149,7 +149,7 @@
 
                             let qtyIn = oldItem ? oldItem.qty_in : (savedItem ? savedItem.qty_in : item.qty_accepted);
                             let price = oldItem ? oldItem.price : (savedItem ? savedItem.price : item.rate);
-                            let locId = oldItem ? oldItem.store_location_id : (savedItem ? savedItem.store_location_id : '');
+                            let locId = oldItem ? oldItem.store_location_id : (savedItem ? savedItem.store_location_id : (item.store_location_id ? item.store_location_id : ''));
 
                             let locError = validationErrors['items.' + index + '.store_location_id'] ? validationErrors['items.' + index + '.store_location_id'][0] : '';
 

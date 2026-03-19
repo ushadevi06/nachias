@@ -7,8 +7,11 @@
             <div class="table-header-box">
                 <h4>View Sales Invoice</h4>
                 <div class="d-flex gap-2">
-                    <a href="{{ url('sales_invoices/download-pdf/'.$invoice->id) }}" class="btn btn-primary" target="_blank">
-                    <i class="ri ri-arrow-down-line back-arrow"></i>Download PDF
+                    <a href="{{ url('sales_invoices/print/'.$invoice->id) }}" class="btn btn-primary" target="_blank">
+                        <i class="ri ri-printer-line back-arrow"></i>Print
+                    </a>
+                    <a href="{{ url('sales_invoices/download/'.$invoice->id) }}" class="btn btn-primary" target="_blank">
+                        <i class="ri ri-download-line back-arrow"></i>Download
                     </a>
                     <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
                         <i class="ri ri-arrow-left-line back-arrow"></i>Back

@@ -8,6 +8,8 @@ use App\Models\PurchaseInvoice;
 use App\Models\DebitNote;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Setting;
 
 class PaymentController extends Controller
 {
@@ -30,9 +32,13 @@ class PaymentController extends Controller
 
             foreach ($payments as $row) {
                 $payment_no = '<a href="' . url('payments/view/' . $row->id) . '">' . $row->payment_no . '</a>';
-                
+
                 $action = '<div class="button-box">';
-                $action .= '<a href="' . url('payments/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                $action .= '<a href="' . url('payments/view/' . $row->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a> ';
+                $action .= '<a href="' . url('payments/print/' . $row->id) . '" target="_blank" class="btn btn-print" title="Print"><i class="icon-base ri ri-printer-line"></i></a> ';
+                if (auth()->id() == 1 || auth()->user()->can('delete payments')) {
+                    $action .= '<button type="button" class="btn btn-delete" onclick="delete_data(\'' . url('payments/delete/' . $row->id) . '\')" title="Delete"><i class="icon-base ri ri-delete-bin-line"></i></button>';
+                }
                 $action .= '</div>';
 
                 $reference = $row->reference_no ?: ($row->reference_type);
@@ -60,7 +66,7 @@ class PaymentController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('create payments')) {
             return unauthorizedRedirect();
         }
-        if($request->isMethod('post')) {
+        if ($request->isMethod('post')) {
             $rules = [
                 'payment_type' => 'required',
                 'reference_document' => 'required',
@@ -98,7 +104,7 @@ class PaymentController extends Controller
                         ->where('reference_id', $invoice->id)
                         ->whereNull('deleted_at')
                         ->sum('amount');
-                    
+
                     $limit = $invoice->grand_total;
                     if ($request->payment_type == 'Agent Commission') {
                         $commPercent = $invoice->purchaseOrder->commission ?? 0;
@@ -121,10 +127,11 @@ class PaymentController extends Controller
                 $payment->payment_no = $paymentNo;
                 $payment->payment_type = $request->payment_type;
                 $payment->reference_type = $this->mapDocType($request->reference_document);
-                
+
                 if (is_numeric($request->reference_no)) {
                     $payment->reference_id = $request->reference_no;
-                } else {
+                }
+                else {
                     $payment->reference_no = $request->reference_no;
                 }
 
@@ -146,7 +153,7 @@ class PaymentController extends Controller
                     }
                     $file->move($uploadPath, $filename);
                     $payment->attachment = 'uploads/payments/' . $filename;
-                }   
+                }
 
                 $payment->created_by = auth()->id();
 
@@ -154,7 +161,8 @@ class PaymentController extends Controller
                     if ($payment->reference_type == 'Purchase Invoice') {
                         $invoice = PurchaseInvoice::find($payment->reference_id);
                         $payment->reference_no = $invoice ? $invoice->invoice_no : null;
-                    } elseif ($payment->reference_type == 'Debit Note') {
+                    }
+                    elseif ($payment->reference_type == 'Debit Note') {
                         $note = DebitNote::find($payment->reference_id);
                         $payment->reference_no = $note ? $note->debit_note_no : null;
                     }
@@ -167,10 +175,11 @@ class PaymentController extends Controller
                         if ($invoice) {
                             $invoice->received_amount += $payment->amount;
                             $invoice->due_amount = $invoice->grand_total - $invoice->received_amount;
-                            
+
                             if ($invoice->due_amount <= 0) {
                                 $invoice->invoice_status = 'Paid';
-                            } else {
+                            }
+                            else {
                                 $invoice->invoice_status = 'Partially Paid';
                             }
                             $invoice->save();
@@ -181,11 +190,12 @@ class PaymentController extends Controller
                 DB::commit();
                 addLog('create', 'Payment', 'payments', $payment->id, null, $payment->toArray());
                 return redirect('payments')->with('success', 'Payment recorded successfully. Reference No: ' . $paymentNo);
-            } catch (\Exception $e) {
+            }
+            catch (\Exception $e) {
                 DB::rollBack();
                 return redirect()->back()->with('danger', 'Error: ' . $e->getMessage())->withInput();
             }
-        
+
         }
         return view('payments/add');
     }
@@ -195,7 +205,7 @@ class PaymentController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view payments')) {
             return unauthorizedRedirect();
         }
-        $payment = $id ? Payment::findOrFail($id) : null;
+        $payment = $id ?Payment::findOrFail($id) : null;
         return view('payments/view_details', compact('payment'));
     }
 
@@ -208,16 +218,19 @@ class PaymentController extends Controller
         if ($paymentType == 'Supplier Payment') {
             if ($docType == 'po-invoice') {
                 $references = PurchaseInvoice::where('invoice_status', '!=', 'Paid')->whereNull('deleted_at')->select('id', 'invoice_no as text')->get();
-            } elseif ($docType == 'debit-note') {
+            }
+            elseif ($docType == 'debit-note') {
                 $references = DebitNote::where('status', 'Approved')->whereNull('deleted_at')->select('id', 'debit_note_no as text')->get();
             }
-        } elseif ($paymentType == 'Customer Collection') {
+        }
+        elseif ($paymentType == 'Customer Collection') {
             $references = [
                 ['id' => 'SO-1001', 'text' => 'SO-1001'],
                 ['id' => 'SO-1002', 'text' => 'SO-1002'],
                 ['id' => 'SO-1003', 'text' => 'SO-1003'],
             ];
-        } elseif ($paymentType == 'Agent Commission') {
+        }
+        elseif ($paymentType == 'Agent Commission') {
             if ($docType == 'po-invoice') {
                 $references = PurchaseInvoice::join('purchase_orders', 'purchase_invoices.purchase_order_id', '=', 'purchase_orders.id')
                     ->whereNotNull('purchase_orders.purchase_commission_agent_id')
@@ -253,31 +266,28 @@ class PaymentController extends Controller
                 if ($paymentType == 'Agent Commission') {
                     $commPercent = $invoice->purchaseOrder->commission ?? 0;
                     $details['total'] = ($invoice->sub_total * $commPercent) / 100;
-                    $details['paid'] = Payment::where('payment_type', 'Agent Commission')
-                        ->where('reference_type', 'Purchase Invoice')
-                        ->where('reference_id', $id)
-                        ->sum('amount');
+                    $details['paid'] = Payment::where('payment_type', 'Agent Commission')->where('reference_type', 'Purchase Invoice')->where('reference_id', $id)->sum('amount');
                     $details['outstanding'] = $details['total'] - $details['paid'];
                     $details['agent_name'] = $invoice->purchaseOrder->purchaseCommissionAgent->name ?? 'N/A';
                     $details['commission_percent'] = $commPercent;
                     $details['commission_amount'] = $details['total'];
-                } else {
+                }
+                else {
                     $details['total'] = $invoice->grand_total;
-                    $details['paid'] = Payment::where('payment_type', 'Supplier Payment')
-                        ->where('reference_type', 'Purchase Invoice')
-                        ->where('reference_id', $id)
-                        ->sum('amount');
+                    $details['paid'] = Payment::where('payment_type', 'Supplier Payment')->where('reference_type', 'Purchase Invoice')->where('reference_id', $id)->sum('amount');
                     $details['outstanding'] = $invoice->grand_total - $details['paid'];
                 }
             }
-        } elseif ($docType == 'debit-note') {
+        }
+        elseif ($docType == 'debit-note') {
             $note = DebitNote::find($id);
             if ($note) {
                 $details['total'] = $note->grand_total;
                 $details['paid'] = Payment::where('reference_type', 'Debit Note')->where('reference_id', $id)->sum('amount');
                 $details['outstanding'] = $note->grand_total - $details['paid'];
             }
-        } else {
+        }
+        else {
             $details = ['total' => 5000, 'paid' => 1000, 'outstanding' => 4000];
         }
 
@@ -300,10 +310,11 @@ class PaymentController extends Controller
                     if ($invoice) {
                         $invoice->received_amount -= $payment->amount;
                         $invoice->due_amount = $invoice->grand_total - $invoice->received_amount;
-                        
+
                         if ($invoice->received_amount <= 0) {
                             $invoice->invoice_status = 'Unpaid/Credit';
-                        } elseif ($invoice->due_amount > 0) {
+                        }
+                        elseif ($invoice->due_amount > 0) {
                             $invoice->invoice_status = 'Partially Paid';
                         }
                         $invoice->save();
@@ -318,10 +329,37 @@ class PaymentController extends Controller
             DB::commit();
             return redirect('payments')->with('success', 'Payment deleted successfully and balances reverted.');
 
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('danger', 'Error: ' . $e->getMessage());
         }
+    }
+
+    public function print($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view payments')) {
+            return unauthorizedRedirect();
+        }
+        $payment = Payment::findOrFail($id);
+        $setting = Setting::first();
+        $totalInWords = numberToWords($payment->amount);
+
+        $pdf = Pdf::loadView('payments.payment_pdf', compact('payment', 'setting', 'totalInWords'));
+        return $pdf->stream('payment_' . $payment->payment_no . '.pdf');
+    }
+
+    public function download($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view payments')) {
+            return unauthorizedRedirect();
+        }
+        $payment = Payment::findOrFail($id);
+        $setting = Setting::first();
+        $totalInWords = numberToWords($payment->amount);
+
+        $pdf = Pdf::loadView('payments.payment_pdf', compact('payment', 'setting', 'totalInWords'));
+        return $pdf->download('payment_' . $payment->payment_no . '.pdf');
     }
 
     private function mapDocType($type)

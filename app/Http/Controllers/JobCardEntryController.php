@@ -1147,7 +1147,7 @@ class JobCardEntryController extends Controller
         $filename = 'Work_Order_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';
         return $pdf->stream($filename);
     }
-    public function viewDetailsPdf($id)
+    public function viewDetailsPdf($id, $is_print = false)
     {
         $jobCard = JobCardEntry::with([
             'purchaseOrder', 
@@ -1168,11 +1168,26 @@ class JobCardEntryController extends Controller
             'bottomCut'
         ])->findOrFail($id);
 
+        if ($is_print) {
+            return view('job_card_entry.view_details_pdf', compact('jobCard', 'is_print'));
+        }
+
         $pdf = Pdf::loadView('job_card_entry.view_details_pdf', compact('jobCard'));
         $pdf->setPaper('A4', 'portrait');
         
         $filename = 'Job_Card_Details_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';
         return $pdf->stream($filename);
+    }
+
+    public function print_details($id)
+    {
+        $is_print = true;
+        return $this->viewDetailsPdf($id, $is_print);
+    }
+
+    public function download_details($id)
+    {
+        return $this->viewDetailsPdf($id);
     }
     public function getItemsByBrandCategory(Request $request)
     {

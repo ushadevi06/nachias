@@ -173,6 +173,16 @@
             padding: 5px;
             font-weight: bold;
         }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .container {
+                padding: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -551,5 +561,12 @@
             </tr>
         </table>
     </div>
+    @if(isset($is_print) && $is_print)
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+    @endif
 </body>
 </html>

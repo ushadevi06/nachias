@@ -7,9 +7,11 @@ use App\Models\CreditNoteItem;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceItem;
 use App\Models\Customer;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CreditNoteController extends Controller
 {
@@ -77,66 +79,70 @@ class CreditNoteController extends Controller
         }
 
         if ($request->isMethod('POST')) {
-            $request->validate([
-                'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'note_date' => 'required|date',
-                'sales_invoice_id' => 'required|exists:sales_invoices,id',
-                'customer_id' => 'required|exists:customers,id',
-                'reason' => 'nullable|string',
-                'items' => 'required|array|min:1',
-                'sub_total' => 'required|numeric',
-                'grand_total' => 'required|numeric',
-                'reference_document' => 'nullable|mimes:pdf,jpg,jpeg,png,webp,doc,docx|max:2048',
-                'remarks' => 'nullable|string|min:5|max:255|regex:/^[^<>]*$/',
-            ], [
-                '*.required' => 'This field is required.',
-                '*.exists' => 'Selected value is invalid.',
-                '*.unique' => 'This field already exists.',
-                '*.date' => 'Please enter a valid date.',
-                '*.after_or_equal' => 'Due date must be after or equal to PO date.',
-                '*.numeric' => 'This field must be a number.',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
-            ]);
+                $request->validate([
+                    'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                    'note_date' => 'required|date',
+                    'sales_invoice_id' => 'required|exists:sales_invoices,id',
+                    'customer_id' => 'required|exists:customers,id',
+                    'reason' => 'nullable|string',
+                    'items' => 'required|array|min:1',
+                    'sub_total' => 'required|numeric',
+                    'round_off' => 'nullable|numeric',
+                    'round_off_type' => 'nullable|string|in:Add,Less',
+                    'grand_total' => 'required|numeric',
+                    'reference_document' => 'nullable|mimes:pdf,jpg,jpeg,png,webp,doc,docx|max:2048',
+                    'remarks' => 'nullable|string|min:5|max:255|regex:/^[^<>]*$/',
+                ], [
+                    '*.required' => 'This field is required.',
+                    '*.exists' => 'Selected value is invalid.',
+                    '*.unique' => 'This field already exists.',
+                    '*.date' => 'Please enter a valid date.',
+                    '*.after_or_equal' => 'Due date must be after or equal to PO date.',
+                    '*.numeric' => 'This field must be a number.',
+                    '*.min'      => 'This field must be at least :min characters.',
+                    '*.max'      => 'This field should not be more than :max characters.',
+                ]);
 
-            DB::beginTransaction();
-            try {
-                $referenceDoc = $id ? $creditNote->reference_doc : null;
-                if ($request->hasFile('reference_document')) {
-                    $file = $request->file('reference_document');
-                    $filename = 'credit_note_' . time() . '.' . $file->getClientOriginalExtension();
-                    $uploadPath = public_path('uploads/credit_notes');
-                    if (!file_exists($uploadPath)) {
-                        mkdir($uploadPath, 0755, true);
+                DB::beginTransaction();
+                try {
+                    $referenceDoc = $id ? $creditNote->reference_doc : null;
+                    if ($request->hasFile('reference_document')) {
+                        $file = $request->file('reference_document');
+                        $filename = 'credit_note_' . time() . '.' . $file->getClientOriginalExtension();
+                        $uploadPath = public_path('uploads/credit_notes');
+                        if (!file_exists($uploadPath)) {
+                            mkdir($uploadPath, 0755, true);
+                        }
+                        $file->move($uploadPath, $filename);
+                        if ($id && $creditNote->reference_doc && file_exists(public_path('uploads/credit_notes/' . $creditNote->reference_doc))) {
+                            unlink(public_path('uploads/credit_notes/' . $creditNote->reference_doc));
+                        }
+
+                        $referenceDoc = $filename;
                     }
-                    $file->move($uploadPath, $filename);
-                    if ($id && $creditNote->reference_doc && file_exists(public_path('uploads/credit_notes/' . $creditNote->reference_doc))) {
-                        unlink(public_path('uploads/credit_notes/' . $creditNote->reference_doc));
-                    }
 
-                    $referenceDoc = $filename;
-                }
-
-                $creditNoteData = [
-                    'note_no' => $request->note_no,
-                    'note_date' => Carbon::parse($request->note_date)->format('Y-m-d'),
-                    'sales_invoice_id' => $request->sales_invoice_id,
-                    'customer_id' => $request->customer_id,
-                    'reason' => $request->reason,
-                    'other_state' => $request->is_other_state == 'yes',
-                    'igst_percent' => $request->igst_percent ?? 0,
-                    'igst' => $request->igst_amt ?? 0,
-                    'cgst_percent' => $request->cgst_percent ?? 0,
-                    'cgst' => $request->cgst_amt ?? 0,
-                    'sgst_percent' => $request->sgst_percent ?? 0,
-                    'sgst' => $request->sgst_amt ?? 0,
-                    'sub_total' => $request->sub_total,
-                    'tax_amount' => $request->tax_amount ?? 0,
-                    'grand_total' => $request->grand_total,
-                    'remarks' => $request->remarks,
-                    'reference_doc' => $referenceDoc,
-                    'status' => $request->status ?? 'Draft',
-                ];
+                    $creditNoteData = [
+                        'note_no' => $request->note_no,
+                        'note_date' => Carbon::parse($request->note_date)->format('Y-m-d'),
+                        'sales_invoice_id' => $request->sales_invoice_id,
+                        'customer_id' => $request->customer_id,
+                        'reason' => $request->reason,
+                        'other_state' => $request->is_other_state == 'yes',
+                        'igst_percent' => $request->igst_percent ?? 0,
+                        'igst' => $request->igst_amt ?? 0,
+                        'cgst_percent' => $request->cgst_percent ?? 0,
+                        'cgst' => $request->cgst_amt ?? 0,
+                        'sgst_percent' => $request->sgst_percent ?? 0,
+                        'sgst' => $request->sgst_amt ?? 0,
+                        'sub_total' => $request->sub_total,
+                        'tax_amount' => $request->tax_amount ?? 0,
+                        'round_off' => $request->round_off ?? 0,
+                        'round_off_type' => $request->round_off_type ?? 'Add',
+                        'grand_total' => $request->grand_total,
+                        'remarks' => $request->remarks,
+                        'reference_doc' => $referenceDoc,
+                        'status' => $request->status ?? 'Draft',
+                    ];
 
                 if ($id) {
                     $oldData = $creditNote->toArray();
@@ -255,5 +261,51 @@ class CreditNoteController extends Controller
         $note->delete();
         addLog('delete', 'Credit Note', 'credit_notes', $id, $oldData, null);
         return redirect(url('credit_notes'))->with('success', 'Credit Note deleted successfully');
+    }
+
+    public function print($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view credit-note')) {
+            return unauthorizedRedirect();
+        }
+
+        $creditNote = CreditNote::with(['customer', 'salesInvoice', 'items.item', 'items.uom'])->findOrFail($id);
+        $setting = Setting::first();
+
+        $totalInWords = numberToWords($creditNote->grand_total);
+
+        $data = [
+            'creditNote' => $creditNote,
+            'setting' => $setting,
+            'totalInWords' => $totalInWords
+        ];
+
+        $pdf = Pdf::loadView('credit_notes.credit_note_pdf', $data);
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->stream('CreditNote_' . $creditNote->note_no . '.pdf');
+    }
+
+    public function download($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view credit-note')) {
+            return unauthorizedRedirect();
+        }
+
+        $creditNote = CreditNote::with(['customer', 'salesInvoice', 'items.item', 'items.uom'])->findOrFail($id);
+        $setting = Setting::first();
+
+        $totalInWords = numberToWords($creditNote->grand_total);
+
+        $data = [
+            'creditNote' => $creditNote,
+            'setting' => $setting,
+            'totalInWords' => $totalInWords
+        ];
+
+        $pdf = Pdf::loadView('credit_notes.credit_note_pdf', $data);
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download('CreditNote_' . $creditNote->note_no . '.pdf');
     }
 }

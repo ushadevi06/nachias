@@ -25,6 +25,8 @@ class CreditNote extends Model
         'sgst',
         'sub_total',
         'tax_amount',
+        'round_off',
+        'round_off_type',
         'grand_total',
         'remarks',
         'reference_doc',

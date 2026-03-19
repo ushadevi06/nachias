@@ -6,7 +6,17 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>View Billing</h4>
-                <a href="{{ url('billing') }}" class="btn btn-primary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
+                <div class="d-flex gap-2">
+                    <a href="{{ url('billing/print/'.$billing->id) }}" class="btn btn-primary" target="_blank">
+                        <i class="ri ri-printer-line back-arrow"></i>Print
+                    </a>
+                    <a href="{{ url('billing/download/'.$billing->id) }}" class="btn btn-primary" target="_blank">
+                        <i class="ri ri-download-line back-arrow"></i>Download
+                    </a>
+                    <a href="{{ url('billing') }}" class="btn btn-secondary">
+                        <i class="ri ri-arrow-left-line back-arrow"></i>Back
+                    </a>
+                </div>
             </div>
             <div class="card detail-card mt-3">
                 <div class="card-body">

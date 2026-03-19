@@ -302,7 +302,20 @@
                                     </div>
                                 </div>
 
-                                <hr class="my-3">
+                                <div class="d-flex justify-content-between py-2">
+                                    <label class="fw-bold text-muted">Round Off:</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="form-check form-check-inline m-0">
+                                            <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $creditNote->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
+                                            <label class="form-check-label small" for="round_off_add">Add</label>
+                                        </div>
+                                        <div class="form-check form-check-inline m-0">
+                                            <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $creditNote->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
+                                            <label class="form-check-label small" for="round_off_less">Less</label>
+                                        </div>
+                                        <input type="number" class="form-control form-control-sm text-end" style="width: 80px;" id="round_off" name="round_off" value="{{ old('round_off', $creditNote->round_off ?? 0) }}" step="0.01" min="0">
+                                    </div>
+                                </div>
 
                                 <div class="d-flex justify-content-between align-items-center">
                                     <label class="fw-bold" style="font-size: 1.1rem;">Grand Total:</label>
@@ -430,7 +443,8 @@ $(document).ready(function() {
     });
 
     $(document).on('change', '.row-select', calculateTotal);
-    $(document).on('input', '#cgst_percent, #sgst_percent, #igst_percent', calculateTotal);
+    $(document).on('input', '#cgst_percent, #sgst_percent, #igst_percent, #round_off', calculateTotal);
+    $(document).on('change', '.round-off-type-radio', calculateTotal);
     $('input[name="is_other_state"]').on('change', function() {
         if ($('#state_yes').is(':checked')) {
             $('#igst_row').removeClass('d-none');
@@ -471,7 +485,15 @@ $(document).ready(function() {
             $('#sgst_amt').val(sgst.toFixed(2));
         }
 
+        let roundOff = parseFloat($('#round_off').val()) || 0;
+        let roundOffType = $('input[name="round_off_type"]:checked').val();
+        
         let grandTotal = subTotal + taxAmt;
+        if (roundOffType === 'Less') {
+            grandTotal -= roundOff;
+        } else {
+            grandTotal += roundOff;
+        }
 
         $('#sub_total_text').text(subTotal.toLocaleString(undefined, {minimumFractionDigits: 2}));
         $('#sub_total').val(subTotal.toFixed(2));

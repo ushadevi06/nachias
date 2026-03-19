@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Purchase Order - {{ $purchaseOrder->po_number }}</title>
+    <title>Sales Order - {{ $salesOrder->so_no }}</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -49,6 +49,12 @@
             margin-bottom: 5px;
             text-align: center;
         }
+        .company-logo {
+            max-width: 150px;
+        }
+        .qr-code {
+            max-width: 100px;
+        }
         .section-title {
             background-color: #f2f2f2;
             font-weight: bold;
@@ -56,7 +62,7 @@
             border: 1px solid #000;
         }
         .item-table {
-            border-bottom:none;
+            border-bottom: 1px solid #000;
         }
         .item-table th {
             background-color: #f2f2f2;
@@ -132,118 +138,108 @@
                 </tr>
             </table>
         </div>
-        <div class="header-title">Purchase Order</div>
+        <div class="header-title">Sales Order</div>
         <table style="width: 100%; border-collapse: collapse;">
             <tr>
-                <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: none;">
+                <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
                     <table class="no-border" style="margin: 0; width: 100%;">
                         <tr>
-                            <td width="20%">Supplier</td>
+                            <td width="20%">Customer</td>
                             <td width="5%">:</td>
                             <td>
-                                <strong>{{ $purchaseOrder->supplier->name }}</strong>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Address</td>
-                            <td>:</td>
-                            <td>
-                                @php
-                                    $s = $purchaseOrder->supplier;
-                                    $addr = array_filter([$s->address_line_1, $s->address_line_2, $s->address_line_3]);
-                                    echo implode(', ', $addr);
-                                    if($s->city) echo '<br>'.$s->city->city_name;
-                                    if($s->state) echo ' - '.$s->state->state_name;
-                                    if($s->zip_code) echo ' ('.$s->zip_code.')';
-                                @endphp
+                                <strong>{{ $salesOrder->customer->name }}</strong>
                             </td>
                         </tr>
                         <tr>
                             <td>State</td>
                             <td>:</td>
-                            <td>{{ $purchaseOrder->supplier->state->state_name ?? '-' }}</td>
+                            <td>{{ $salesOrder->customer->state->state_name ?? 'N/A' }}</td>
                         </tr>
                         <tr>
                             <td>GSTIN</td>
                             <td>:</td>
-                            <td>{{ $purchaseOrder->supplier->gst_no ?? '-' }}</td>
+                            <td>{{ $salesOrder->customer->gst_no ?? 'N/A' }}</td>
                         </tr>
                     </table>
                 </td>
-                <td width="50%" style="padding: 0; vertical-align: top; border-bottom: none;">
+                <td width="50%" style="padding: 0; vertical-align: top; border-bottom: 1px solid #000;">
                     <table class="no-border" style="margin: 0; width: 100%;">
                         <tr>
-                            <td width="30%">PO No.</td>
+                            <td width="30%">Order No.</td>
                             <td width="5%">:</td>
-                            <td width="65%">{{ $purchaseOrder->po_number }}</td>
+                            <td width="65%">{{ $salesOrder->so_no }}</td>
                         </tr>
                         <tr>
-                            <td>PO Date</td>
+                            <td>Order Date</td>
                             <td>:</td>
-                            <td>{{ $purchaseOrder->po_date->format('d/m/Y') }}</td>
+                            <td>{{ $salesOrder->so_date->format('d/m/Y') }}</td>
                         </tr>
                         <tr>
-                            <td>Due Date</td>
+                            <td>PO Ref.</td>
                             <td>:</td>
-                            <td>{{ $purchaseOrder->due_date->format('d/m/Y') }}</td>
+                            <td>{{ $salesOrder->customer_po_ref ?? 'N/A' }}</td>
                         </tr>
                         <tr>
-                            <td>Ref No.</td>
+                            <td>Sales Person</td>
                             <td>:</td>
-                            <td>{{ $purchaseOrder->reference_no ?? '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td>Ref Date</td>
-                            <td>:</td>
-                            <td>{{ $purchaseOrder->reference_date ? $purchaseOrder->reference_date->format('d/m/Y') : '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td>Agent</td>
-                            <td>:</td>
-                            <td>{{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}</td>
+                            <td>{{ $salesOrder->salesAgent->name ?? 'N/A' }}</td>
                         </tr>
                     </table>
                 </td>
             </tr>
         </table>
 
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
+            <tr>
+                <td width="50%" style="border-right: 1px solid #000; padding: 5px; vertical-align: top;">
+                    <div class="bold">Billing Address:</div>
+                    <div style="margin-top: 2px;">{{ $salesOrder->billing_address }}</div>
+                </td>
+                <td width="50%" style="padding: 5px; vertical-align: top;">
+                    <div class="bold">Shipping Address:</div>
+                    <div style="margin-top: 2px;">{{ $salesOrder->shipping_address }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="border-top: 1px solid #000; padding: 5px;">
+                    <span class="bold">Payment Terms:</span> {{ $salesOrder->payment_terms ?? 'N/A' }}
+                </td>
+            </tr>
+        </table>
         <table class="item-table" style="margin-top: 0;">
-            <thead style="border-bottom: 1px solid #000; border-top:1px solid #000;">
+            <thead style="border-bottom: 1px solid #000;">
                 <tr>
-                    <th width="4%">S.No</th>
-                    <th width="23%">Description</th>
-                    <th width="12%">Brand</th>
-                    <th width="8%">Color</th>
-                    <th width="8%">Style</th>
-                    <th width="8%">Width</th>
-                    <th width="7%">UOM</th>
-                    <th width="10%">Quantity</th>
-                    <th width="10%">Rate</th>
-                    <th width="10%">Amount</th>
+                    <th width="5%">S.No</th>
+                    <th width="32%">Description</th>
+                    <th width="10%">Color</th>
+                    <th width="8%">Size</th>
+                    <th width="10%">Art No.</th>
+                    <th width="8%">UOM</th>
+                    <th width="9%">Quantity</th>
+                    <th width="9%">Rate</th>
+                    <th width="9%">Amount</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($purchaseOrder->items as $index => $item)
+                @foreach($salesOrder->items as $index => $item)
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
-                            <strong>{{ $item->rawMaterial->name ?? '' }}</strong><br>
-                            <small>{{ $item->storeCategory->category_name ?? '' }}</small>
+                            {{ $item->brandCategory->name ?? '' }} 
+                            {{ $item->item->item_name ?? $item->item->name ?? '' }}
                         </td>
-                        <td class="text-center">{{ $item->brand->brand_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
-                        <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
-                        <td class="text-center">{{ $item->fabricWidth->size ?? '-' }}</td>
-                        <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
-                        <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
+                        <td class="text-center">{{ $item->size->size ?? $item->size_id ?? '-' }}</td>
+                        <td class="text-center">{{ $item->art_no }}</td>
+                        <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
+                        <td class="text-center">{{ number_format($item->qty, 2) }}</td>
                         <td class="text-right">{{ number_format($item->rate, 2) }}</td>
                         <td class="text-right">{{ number_format($item->amount, 2) }}</td>
                     </tr>
                 @endforeach
-                @for($i = count($purchaseOrder->items); $i < 10; $i++)
+                @for($i = count($salesOrder->items); $i < 10; $i++)
                     <tr>
                         <td style="height: 15px;">&nbsp;</td>
-                        <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
@@ -257,68 +253,66 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="7" class="text-right bold">Total</td>
-                    <td class="text-center bold">{{ number_format($purchaseOrder->total_qty, 2) }}</td>
+                    <td colspan="6" class="text-right bold">Total</td>
+                    <td class="text-center bold">{{ number_format($salesOrder->total_qty, 2) }}</td>
                     <td></td>
-                    <td class="text-right bold">{{ number_format($purchaseOrder->taxable_amount, 2) }}</td>
+                    <td class="text-right bold">{{ number_format($salesOrder->taxable_amount, 2) }}</td>
                 </tr>
             </tfoot>
         </table>
-
+        
         <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
             <tr>
                 <td style="width: 60%; padding: 8px; vertical-align: top; border-right: 1px solid #000;">
                     <div class="amount-words" style="border-top: none; padding: 0;">
                         Amount in Words: <strong>{{ strtoupper($totalInWords) }}</strong>
                     </div>
-                    @if(isset($purchaseOrder->remarks) && $purchaseOrder->remarks != '')
                     <div style="margin-top: 10px;">
-                        <strong>Remarks:</strong> {{ $purchaseOrder->remarks }}
+                        <strong>Remarks:</strong> {{ $salesOrder->internal_remarks ?? 'N/A' }}
                     </div>
-                    @endif
                 </td>
                 <td style="width: 40%; padding: 0; vertical-align: top;">
                     <table class="no-border" style="width: 100%;">
                         <tr>
-                            <td class="text-left" style="padding: 4px;">Total Qty:</td>
-                            <td class="text-right" style="padding: 4px;">{{ number_format($purchaseOrder->total_qty, 2) }}</td>
+                            <td class="text-right" style="padding: 4px;">Taxable Amount:</td>
+                            <td class="text-right" style="padding: 4px;">{{ number_format($salesOrder->taxable_amount, 2) }}</td>
                         </tr>
+                        @if($salesOrder->igst_percent > 0)
                         <tr>
-                            <td class="text-left" style="padding: 4px;">Sub Total:</td>
-                            <td class="text-right" style="padding: 4px;">{{ number_format($purchaseOrder->sub_total, 2) }}</td>
-                        </tr>
-                        @if($purchaseOrder->discount_amount > 0)
-                        <tr>
-                            <td class="text-left" style="padding: 4px;">Discount ({{ number_format($purchaseOrder->discount_percent, 2) }}%):</td>
-                            <td class="text-right" style="padding: 4px;">-{{ number_format($purchaseOrder->discount_amount, 2) }}</td>
-                        </tr>
-                        @endif
-                        <tr>
-                            <td class="text-left" style="padding: 4px;">Taxable Amount:</td>
-                            <td class="text-right" style="padding: 4px;">{{ number_format($purchaseOrder->taxable_amount, 2) }}</td>
-                        </tr>
-                        @if($purchaseOrder->other_state)
-                        <tr>
-                            <td class="text-left" style="padding: 4px;">IGST ({{ $purchaseOrder->igst_percent }}%):</td>
-                            <td class="text-right" style="padding: 4px;">{{ number_format($purchaseOrder->tax_amount, 2) }}</td>
+                            <td class="text-right" style="padding: 4px;">IGST ({{ $salesOrder->igst_percent }}%):</td>
+                            <td class="text-right" style="padding: 4px;">{{ number_format($salesOrder->tax_amount, 2) }}</td>
                         </tr>
                         @else
                         <tr>
-                            <td class="text-left" style="padding: 4px;">CGST ({{ $purchaseOrder->cgst_percent }}%):</td>
-                            <td class="text-right" style="padding: 4px;">{{ number_format($purchaseOrder->tax_amount/2, 2) }}</td>
+                            <td class="text-right" style="padding: 4px;">CGST ({{ $salesOrder->cgst_percent }}%):</td>
+                            <td class="text-right" style="padding: 4px;">{{ number_format($salesOrder->tax_amount/2, 2) }}</td>
                         </tr>
                         <tr>
-                            <td class="text-left" style="padding: 4px;">SGST ({{ $purchaseOrder->sgst_percent }}%):</td>
-                            <td class="text-right" style="padding: 4px;">{{ number_format($purchaseOrder->tax_amount/2, 2) }}</td>
+                            <td class="text-right" style="padding: 4px;">SGST ({{ $salesOrder->sgst_percent }}%):</td>
+                            <td class="text-right" style="padding: 4px;">{{ number_format($salesOrder->tax_amount/2, 2) }}</td>
                         </tr>
                         @endif
+                        @if($salesOrder->discount_amount > 0)
                         <tr>
-                            <td class="text-left" style="padding: 4px;">Round Off ({{ $purchaseOrder->round_off_type }}):</td>
-                            <td class="text-right" style="padding: 4px;">{{ $purchaseOrder->round_off_type == 'Less' ? '-' : '+' }}{{ number_format($purchaseOrder->round_off, 2) }}</td>
+                            <td class="text-right" style="padding: 4px;">Discount:</td>
+                            <td class="text-right" style="padding: 4px;">-{{ number_format($salesOrder->discount_amount, 2) }}</td>
                         </tr>
+                        @endif
+                        @if($salesOrder->commission_amount > 0)
+                        <tr>
+                            <td class="text-right" style="padding: 4px;">Commission ({{ $salesOrder->commission_percent }}%):</td>
+                            <td class="text-right" style="padding: 4px;">{{ number_format($salesOrder->commission_amount, 2) }}</td>
+                        </tr>
+                        @endif
+                        @if($salesOrder->round_off != 0)
+                        <tr>
+                            <td class="text-right" style="padding: 4px;">Round Off ({{ $salesOrder->round_off_type }}):</td>
+                            <td class="text-right" style="padding: 4px;">{{ $salesOrder->round_off_type == 'Less' ? '-' : '+' }}{{ number_format($salesOrder->round_off, 2) }}</td>
+                        </tr>
+                        @endif
                         <tr style="border-top: 1px solid #000; font-weight: bold;">
-                            <td class="text-left" style="padding: 4px;">Grand Total:</td>
-                            <td class="text-right" style="padding: 4px;">{{ number_format($purchaseOrder->total_amount, 2) }}</td>
+                            <td class="text-right" style="padding: 4px;">Grand Total:</td>
+                            <td class="text-right" style="padding: 4px;">{{ number_format($salesOrder->total_amount, 2) }}</td>
                         </tr>
                     </table>
                 </td>
@@ -328,12 +322,10 @@
         <table class="no-border" style="margin-top: 30px; width: 100%;">
             <tr>
                 <td width="50%">
-                    @if(isset($purchaseOrder->payment_terms) && $purchaseOrder->payment_terms != '')
-                    <div style="font-size: 10px;">
-                        <strong>Payment Terms:</strong><br>
-                        {{ $purchaseOrder->payment_terms }}
+                    <div style="font-size: 9px;">
+                        <strong>Terms & Conditions:</strong><br>
+                        {!! nl2br(e($salesOrder->terms_conditions ?? '1. Goods once sold will not be taken back.')) !!}
                     </div>
-                    @endif
                 </td>
                 <td width="50%" class="text-right">
                     <div style="border: 1px solid #000; border-radius: 2px; text-align: center; height: 80px; width: 200px; display: inline-block;">

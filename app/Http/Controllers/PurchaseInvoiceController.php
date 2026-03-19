@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\PurchaseInvoice;
+use App\Models\Setting;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\PurchaseInvoiceCharge;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Charge;
+use App\Models\PurchaseInvoicePayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -310,7 +312,7 @@ class PurchaseInvoiceController extends Controller
 
                     $newPayment = $request->received_amount ?? 0;
                     if ($newPayment > 0) {
-                        \App\Models\PurchaseInvoicePayment::create([
+                        PurchaseInvoicePayment::create([
                             'purchase_invoice_id' => $invoice->id,
                             'amount' => $newPayment,
                             'payment_date' => now(),
@@ -321,7 +323,7 @@ class PurchaseInvoiceController extends Controller
                         ]);
                     }
 
-                    $totalReceived = \App\Models\PurchaseInvoicePayment::where('purchase_invoice_id', $invoice->id)->sum('amount');
+                    $totalReceived = PurchaseInvoicePayment::where('purchase_invoice_id', $invoice->id)->sum('amount');
                     $invoice->update([
                         'received_amount' => $totalReceived,
                         'due_amount' => ($request->grand_total ?? $invoice->grand_total) - $totalReceived
@@ -332,7 +334,7 @@ class PurchaseInvoiceController extends Controller
                     $invoice = PurchaseInvoice::create($invoiceData);
 
                     if ($request->received_amount > 0) {
-                        \App\Models\PurchaseInvoicePayment::create([
+                        PurchaseInvoicePayment::create([
                             'purchase_invoice_id' => $invoice->id,
                             'amount' => $request->received_amount,
                             'payment_date' => now(),
@@ -442,7 +444,7 @@ class PurchaseInvoiceController extends Controller
 
         $nextInvoiceNumber = '';
         if (!$id) {
-            $setting = \App\Models\Setting::first();
+            $setting = Setting::first();
             if ($setting && $setting->purchase_invoice_prefix) {
                 $prefix = $setting->purchase_invoice_prefix;
                 $lastInvoice = PurchaseInvoice::where('invoice_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
@@ -557,14 +559,24 @@ class PurchaseInvoiceController extends Controller
         ]);
     }
 
-
     public function downloadPdf($id)
     {
-        $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
-        $pdf = Pdf::loadView('purchase_invoice.purchase_invoice_pdf', compact('invoice'));
+        $invoice = PurchaseInvoice::with(['supplier.state', 'supplier.city', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+        $setting = Setting::with(['city', 'state'])->first();
+        $totalInWords = numberToWords($invoice->grand_total);
+        $pdf = Pdf::loadView('purchase_invoice.purchase_invoice_pdf', compact('invoice', 'setting', 'totalInWords'));
         $pdf->setPaper('A4', 'portrait');
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->invoice_no);
         return $pdf->stream('Purchase_Invoice_' . $safeInvoiceNo . '.pdf');
+    }
+
+    public function print($id)
+    {
+        $invoice = PurchaseInvoice::with(['supplier.state', 'supplier.city', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+        $setting = Setting::with(['city', 'state'])->first();
+        $totalInWords = numberToWords($invoice->grand_total);
+        $is_print = true;
+        return view('purchase_invoice.purchase_invoice_pdf', compact('invoice', 'setting', 'totalInWords', 'is_print'));
     }
     public function deleteCharge($id)
     {
@@ -587,10 +599,7 @@ class PurchaseInvoiceController extends Controller
 
     public function getPaymentHistory($id)
     {
-        $payments = \App\Models\PurchaseInvoicePayment::where('purchase_invoice_id', $id)
-            ->orderBy('payment_date', 'desc')
-            ->get();
-
+        $payments = PurchaseInvoicePayment::where('purchase_invoice_id', $id)->orderBy('payment_date', 'desc')->get();
         return response()->json([
             'success' => true,
             'payments' => $payments

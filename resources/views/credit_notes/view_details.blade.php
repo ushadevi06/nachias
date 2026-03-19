@@ -1,4 +1,3 @@
-
 @extends('layouts.common')
 @section('title', 'Credit Note Details - ' . env('WEBSITE_NAME'))
 @section('content')
@@ -7,9 +6,17 @@
         <div class="col-lg-12">
             <div class="card mb-4">
                 <div class="card-body">
-                    <div class="card-header-box d-flex justify-content-between align-items-center border-bottom pb-2 mb-4">
-                        <h4 class="mb-0">Credit Note Details</h4>
-                        <a href="{{ url('credit_notes') }}" class="btn btn-secondary btn-sm">Back</a>
+                    <div class="card-header-box d-flex justify-content-between align-items-center  pb-2 mb-4">
+                        <h4 class="mb-0">Credit Note Details <strong class="text-primary">[{{ $creditNote->note_no }}]</strong></h4>
+                        <div class="header-actions">
+                            <a href="{{ url('credit_notes/print/' . $creditNote->id) }}" target="_blank" class="btn btn-primary me-2">
+                                <i class="ri ri-printer-line me-1"></i> PRINT
+                            </a>
+                            <a href="{{ url('credit_notes/download/' . $creditNote->id) }}" class="btn btn-primary me-2">
+                                <i class="ri ri-download-line me-1"></i> DOWNLOAD
+                            </a>
+                            <a href="{{ url('credit_notes') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line me-1"></i>Back</a>
+                        </div>
                     </div>
                     
                     <div class="row g-4 mb-5">
@@ -113,6 +120,12 @@
                                                 <th class="ps-0">Tax Amount:</th>
                                                 <td class="text-end pe-0">₹{{ number_format($creditNote->tax_amount, 2) }}</td>
                                             </tr>
+                                            @if($creditNote->round_off > 0)
+                                            <tr>
+                                                <th class="ps-0">Round Off ({{ $creditNote->round_off_type }}):</th>
+                                                <td class="text-end pe-0"><strong>{{ $creditNote->round_off_type == 'Less' ? '-' : '+' }}₹{{ number_format($creditNote->round_off, 2) }}</strong></td>
+                                            </tr>
+                                            @endif
                                             <tr class="border-top fw-bold">
                                                 <th class="ps-0 h5 mb-0">Grand Total:</th>
                                                 <td class="text-end pe-0 h5 mb-0 text-success">₹{{ number_format($creditNote->grand_total, 2) }}</td>

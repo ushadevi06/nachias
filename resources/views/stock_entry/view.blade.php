@@ -228,7 +228,7 @@
                 table.column(3).visible(false); // Hide Store Category
                 table.column(4).visible(false); // Hide Art No
                 $(table.column(5).header()).text('Finished Goods');
-                $(table.column(6).header()).text('PO No.');
+                $(table.column(6).header()).text('Job Card No.');
             } else {
                 $('.filter-box').show();
                 table.column(1).visible(true); // Show Stock Entry No

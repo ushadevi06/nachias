@@ -4,165 +4,206 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <div class="table-header-box d-flex justify-content-between align-items-center">
-                <h4>View GRN Entry</h4>
-                <a href="{{ url('grn_entries') }}" class="btn btn-primary">
-                    <i class="ri ri-arrow-left-line back-arrow"></i> Back
-                </a>
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="fw-bold text-primary mb-1">GRN Entry Details</h3>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url('grn_entries/download-pdf/' . $grn->id) }}" class="btn btn-primary d-flex align-items-center" target="_blank">
+                        <i class="ri ri-download-line me-1"></i> Download
+                    </a>
+                    <a href="{{ url('grn_entries/print/' . $grn->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center">
+                        <i class="ri ri-printer-line me-1"></i> Print
+                    </a>
+                    <a href="{{ url('grn_entries') }}" class="btn btn-outline-secondary d-flex align-items-center">
+                        <i class="ri ri-arrow-left-line me-1"></i> Back
+                    </a>
+                </div>
             </div>
 
-            <div class="card detail-card">
-                <div class="card-body">
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <label class="detail-title">GRN No:</label>
-                            <div class="text-muted">{{ $grn->grn_number }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">GRN Date:</label>
-                            <div class="text-muted">{{ $grn->grn_date->format('d-m-Y') }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">PO Invoice Number:</label>
-                            <div class="text-muted">{{ $grn->purchaseInvoice->invoice_no ?? 'N/A' }}</div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="detail-title">Supplier:</label>
-                            <div class="text-muted">
-                                {{ $grn->supplier->name ?? 'N/A' }} 
-                                @if($grn->supplier)
-                                    <span class="mini-title">({{ $grn->supplier->code }})</span>
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">General Information</h5>
+                        <span class="badge bg-white text-primary px-3 py-2">#{{ $grn->grn_number }}</span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4 text-break">
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
+                            <div class="fw-bold text-dark">
+                                {{ $grn->supplier->name ?? 'N/A' }}
+                                @if($grn->supplier && $grn->supplier->code)
+                                    <span class="text-primary small">({{ $grn->supplier->code }})</span>
                                 @endif
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Supplier Invoice No:</label>
-                            <div class="text-muted">{{ $grn->purchaseInvoice->po_reference ?? 'N/A' }}</div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">PO Invoice No</div>
+                            <div class="fw-bold text-dark">{{ $grn->purchaseInvoice->invoice_no ?? 'N/A' }}</div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Supplier Invoice Date:</label>
-                            <div class="text-muted">{{ $grn->supplier_invoice_date->format('d-m-Y') }}</div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">GRN Date</div>
+                            <div class="fw-bold text-dark">{{ $grn->grn_date->format('d M, Y') }}</div>
                         </div>
-
-                        <div class="col-md-4">
-                            <label class="detail-title">Status:</label>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
                             <div>
                                 @php
-                                    $statusBadgeClass = 'bg-secondary';
-                                    if ($grn->status == 'Received') $statusBadgeClass = 'bg-success';
-                                    if ($grn->status == 'Invoiced') $statusBadgeClass = 'bg-info';
-                                    if ($grn->status == 'Closed') $statusBadgeClass = 'bg-dark';
-                                    if ($grn->status == 'Cancelled') $statusBadgeClass = 'bg-danger';
+                                    $statusBadgeClass = match($grn->status) {
+                                        'Received' => 'bg-success',
+                                        'Invoiced' => 'bg-info',
+                                        'Closed' => 'bg-dark',
+                                        'Cancelled' => 'bg-danger',
+                                        default => 'bg-secondary'
+                                    };
                                 @endphp
-                                <span class="badge {{ $statusBadgeClass }}">{{ $grn->status }}</span>
+                                <span class="badge {{ $statusBadgeClass }} px-3 py-2">{{ $grn->status }}</span>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier Invoice No</div>
+                            <div class="fw-bold text-dark">{{ $grn->purchaseInvoice->po_reference ?? 'N/A' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier Invoice Date</div>
+                            <div class="fw-bold text-dark">{{ $grn->supplier_invoice_date->format('d M, Y') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                        <!-- Item Details Table -->
-                        <div class="col-lg-12 mt-4">
-                            <h6 class="fw-bold">Item Details</h6>
-                            <div class="table-responsive" style="overflow-x:auto; white-space:nowrap;">
-                                <table class="table table-bordered align-middle text-center">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>S.No.</th>
-                                            <th>Supplier Design Name (Code)</th>
-                                            <th>Brand</th>
-                                            <th>Style</th>
-                                            <th>Fabric Width</th>
-                                            <th>Item Image</th>
-                                            <th>Art No.</th>
-                                            <th>UOM</th>
-                                            <th>Fabric Type</th>
-                                            <th>Quantity Ordered</th>
-                                            <th>Quantity Received</th>
-                                            <th>Quantity Accepted</th>
-                                            <th>Quantity Rejected</th>
-                                            <th>Quantity Balanced</th>
-                                            <th>Rate</th>
-                                            <th>Amount</th>
-                                            <th>Quality Check Status</th>
-                                            <th>Store Location</th>
-                                            <th>Variants</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @if($grn->grnEntryItems->isEmpty())
-                                            <tr>
-                                                <td colspan="19" class="text-center">No items found</td>
-                                            </tr>
-                                        @else
-                                            @foreach($grn->grnEntryItems as $index => $item)
-                                                <tr>
-                                                    <td>{{ $index + 1 }}</td>
-                                                    <td>
-                                                        @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
-                                                        {{ $item->purchaseInvoiceItem->rawMaterial->name }}
-                                                        <span class="mini-title">({{ $item->purchaseInvoiceItem->rawMaterial->code }})</span>
-                                                    @else
-                                                        N/A
-                                                    @endif
-                                                </td>
-                                                <td>{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->brand?->brand_name ?? '-' }}</td>
-                                                <td>{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->style?->style_name ?? '-' }}</td>
-                                                <td>{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->fabricWidth?->size ?? '-' }}</td>
-                                                <td>
-                                                    @if($item->image)
-                                                        <a href="{{ url('uploads/grn_items/' . $item->image) }}" target="_blank">
-                                                            <img src="{{ url('uploads/grn_items/' . $item->image) }}" width="50" class="border rounded">
-                                                        </a>
-                                                    @else
-                                                        -
-                                                    @endif
-                                                </td>
-                                                <td>{{ $item->art_no ?? '-' }}</td>
-                                                <td>
-                                                    @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->uom)
-                                                        {{ $item->purchaseInvoiceItem->uom->uom_code }}
-                                                    @else
-                                                        MTR
-                                                    @endif
-                                                </td>
-                                                <td>{{ $item->fabricType->fabric_type ?? '-' }}</td>
-                                                <td>{{ number_format($item->qty_ordered, 2) }}</td>
-                                                <td>{{ number_format($item->qty_received, 2) }}</td>
-                                                <td>{{ number_format($item->qty_accepted, 2) }}</td>
-                                                <td>{{ number_format($item->qty_rejected, 2) }}</td>
-                                                <td>{{ number_format($item->qty_balanced, 2) }}</td>
-                                                <td>₹{{ number_format($item->rate, 2) }}</td>
-                                                <td>₹{{ number_format($item->amount, 2) }}</td>
-                                                <td>
-                                                    @php
-                                                        $qcBadgeClass = 'bg-secondary';
-                                                        if ($item->quality_check_status == 'Pass') $qcBadgeClass = 'bg-success';
-                                                        if ($item->quality_check_status == 'Fail') $qcBadgeClass = 'bg-danger';
-                                                        if ($item->quality_check_status == 'Hold') $qcBadgeClass = 'bg-warning';
-                                                    @endphp
-                                                    <span class="badge {{ $qcBadgeClass }}">{{ $item->quality_check_status ?? 'N/A' }}</span>
-                                                </td>
-                                                <td>{{ $item->storeLocation->store_location ?? '-' }}</td>
-                                                <td>
-                                                    @if($item->variants->count() > 0)
-                                                        <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#variantModal{{ $item->id }}">View Variants</button>
-                                                    @else
-                                                        <span class="text-muted">No Variants</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                            @endforeach
-                                        @endif
-                                    </tbody>
-                                </table>
+            <!-- Item Details Table -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0; border-bottom: 1px solid #f0f0f0;">
+                    <h5 class="mb-0 fw-bold text-dark">Item Details</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="60">S.No</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold">Description</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Brand/Style</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Image</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Art No</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Ordered</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Received</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Accepted</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Rejected</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if($grn->grnEntryItems->isEmpty())
+                                    <tr>
+                                        <td colspan="11" class="text-center py-5 text-muted">No items found</td>
+                                    </tr>
+                                @else
+                                    @foreach($grn->grnEntryItems as $index => $item)
+                                    <tr>
+                                        <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
+                                        <td>
+                                            @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
+                                                <div class="fw-bold text-dark">{{ $item->purchaseInvoiceItem->rawMaterial->name }}</div>
+                                                <small class="text-primary fw-medium">({{ $item->purchaseInvoiceItem->rawMaterial->code }})</small>
+                                            @else
+                                                <div class="text-muted">N/A</div>
+                                            @endif
+                                            <div class="small text-muted mb-1">{{ $item->fabricType->fabric_type ?? '' }}</div>
+                                            @php
+                                                $qcBadgeClass = match($item->quality_check_status) {
+                                                    'Pass' => 'bg-success',
+                                                    'Fail' => 'bg-danger',
+                                                    'Hold' => 'bg-warning',
+                                                    default => 'bg-secondary'
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $qcBadgeClass }} x-small" style="font-size: 10px;">{{ $item->quality_check_status ?? 'N/A' }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="small fw-bold text-dark">{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->brand?->brand_name ?? '-' }}</div>
+                                            <div class="small text-muted">{{ $item->purchaseInvoiceItem?->purchaseOrderItem?->style?->style_name ?? '-' }}</div>
+                                            @if($item->variants->count() > 0)
+                                                <button type="button" class="btn btn-link btn-sm p-0 text-info text-decoration-none mt-1" data-bs-toggle="modal" data-bs-target="#variantModal{{ $item->id }}" style="font-size: 11px;">
+                                                    <i class="ri-list-check me-1"></i>View Variants
+                                                </button>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($item->image)
+                                                <a href="{{ url('uploads/grn_items/' . $item->image) }}" target="_blank">
+                                                    <img src="{{ url('uploads/grn_items/' . $item->image) }}" width="45" height="45" class="rounded shadow-sm object-fit-cover border">
+                                                </a>
+                                            @else
+                                                <span class="text-muted small">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center small fw-bold">{{ $item->art_no ?? '-' }}</td>
+                                        <td class="text-center">
+                                            <div class="small fw-bold">{{ number_format($item->qty_ordered, 2) }}</div>
+                                            <div class="text-muted" style="font-size: 10px;">{{ $item->purchaseInvoiceItem?->uom?->uom_code ?? 'MTR' }}</div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark px-2 py-1 fw-medium border">{{ number_format($item->qty_received, 2) }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success-subtle text-success px-2 py-1 fw-medium border border-success-subtle">{{ number_format($item->qty_accepted, 2) }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger-subtle text-danger px-2 py-1 fw-medium border border-danger-subtle">{{ number_format($item->qty_rejected, 2) }}</span>
+                                        </td>
+                                        <td class="text-end small">₹{{ number_format($item->rate, 2) }}</td>
+                                        <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
+                                    </tr>
+                                    @endforeach
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 justify-content-end">
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0; border-bottom: 1px solid #f0f0f0;">
+                            <h5 class="mb-0 fw-bold text-dark">Summary</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Total Items</span>
+                                <span class="fw-bold">{{ $grn->grnEntryItems->count() }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Ordered Quantity</span>
+                                <span class="fw-bold">{{ number_format($grn->grnEntryItems->sum('qty_ordered'), 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Received Quantity</span>
+                                <span class="fw-bold">{{ number_format($grn->grnEntryItems->sum('qty_received'), 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3 border-top pt-3">
+                                <span class="text-dark fw-bold">Accepted Quantity</span>
+                                <span class="fw-bold text-success">{{ number_format($grn->grnEntryItems->sum('qty_accepted'), 2) }}</span>
+                            </div>
+                            <div class="bg-primary-soft p-3 rounded-3 mt-4 border-start border-primary border-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-primary small uppercase">Total Amount</span>
+                                    <span class="fs-5 fw-bold text-primary">₹{{ number_format($grn->grnEntryItems->sum('amount'), 2) }}</span>
+                                </div>
                             </div>
                         </div>
-
-
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
     <!-- Variants Modals -->
     @foreach($grn->grnEntryItems as $item)

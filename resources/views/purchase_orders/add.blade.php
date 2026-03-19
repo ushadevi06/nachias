@@ -60,7 +60,7 @@
                                     <select id="supplier_id" name="supplier_id" class="select2 form-select @error('supplier_id') is-invalid @enderror" data-placeholder="Select Supplier">
                                         <option value="">Select Supplier</option>
                                         @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}" data-state-id="{{ $supplier->state_id }}" {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }} ({{ $supplier->code }})</option>
+                                            <option value="{{ $supplier->id }}" data-state-id="{{ $supplier->state_id }}" data-payment-terms="{{ $supplier->payment_terms ?? '' }}" {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }} ({{ $supplier->code }})</option>
                                         @endforeach
                                     </select>
                                     <label for="supplier_id">Supplier <span class="text-danger">*</span></label>
@@ -166,7 +166,7 @@
                                                     <select class="select2 form-select brand @error('items.'.$index.'.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
                                                         <option value="">Select Brand</option>
                                                         @foreach($brands as $brand)
-                                                            <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}</option>
+                                                            <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
                                                         @endforeach
                                                     </select>
                                                     @error('items.'.$index.'.brand_id')
@@ -294,7 +294,7 @@
                                                     <select class="select2 form-select brand @error('items.'.$index.'.brand_id') is-invalid @enderror" name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
                                                         <option value="">Select Brand</option>
                                                         @foreach($brands as $brand)
-                                                            <option value="{{ $brand->id }}" {{ ($item->brand_id ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}</option>
+                                                            <option value="{{ $brand->id }}" {{ ($item->brand_id ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
                                                         @endforeach
                                                     </select>
                                                     @error('items.'.$index.'.brand_id')
@@ -415,7 +415,7 @@
                                                 <select class="select2 form-select brand" name="items[0][brand_id]" data-placeholder="Select Brand">
                                                     <option value="">Select Brand</option>
                                                     @foreach($brands as $brand)
-                                                        <option value="{{ $brand->id }}">{{ $brand->brand_name }}</option>
+                                                        <option value="{{ $brand->id }}">{{ $brand->brand_name }} ({{ $brand->code }})</option>
                                                     @endforeach
                                                 </select>
                                             </td>
@@ -712,7 +712,7 @@
                     <select class="select2 form-select brand" name="items[${itemIndex}][brand_id]" data-placeholder="Select Brand">
                         <option value="">Select Brand</option>
                         @foreach($brands as $brand)
-                        <option value="{{ $brand->id }}">{{ $brand->brand_name }}</option>
+                        <option value="{{ $brand->id }}">{{ $brand->brand_name }} ({{ $brand->code }})</option>
                         @endforeach
                     </select>
                 </td>
@@ -969,8 +969,15 @@
         }
 
         $(document).on('change', '#supplier_id', function() {
-            let supplierStateId = $(this).find(':selected').data('state-id');
+            let selected = $(this).find(':selected');
+            let supplierStateId = selected.data('state-id');
+            let paymentTerms = selected.data('payment-terms');
             let companyStateId = "{{ $web_settings->state_id ?? '' }}";
+            
+            if (paymentTerms !== undefined) {
+                $('#payment_terms').val(paymentTerms);
+            }
+
             if (supplierStateId && companyStateId) {
                 if (supplierStateId == companyStateId) {
                     $('#other_state_no').prop('checked', true).trigger('change');

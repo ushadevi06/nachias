@@ -11,6 +11,12 @@
                     <p class="text-muted mb-0">Record of transaction #{{ $payment->payment_no }}</p>
                 </div>
                 <div class="d-flex gap-2">
+                    <a href="{{ url('payments/print/' . $payment->id) }}" target="_blank" class="btn btn-primary">
+                        <i class="ri ri-printer-line me-1"></i> Print
+                    </a>
+                    <a href="{{ url('payments/download/' . $payment->id) }}" class="btn btn-primary">
+                        <i class="ri ri-download-line me-1"></i> Download
+                    </a>
                     <a href="{{ url('payments') }}" class="btn btn-outline-secondary">
                         <i class="ri ri-arrow-left-line me-1"></i> Back
                     </a>

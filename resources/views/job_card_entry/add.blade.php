@@ -214,6 +214,7 @@
                                     <select id="status" name="status" class="form-select select2" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
                                         <option value="Production Hold" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Hold') ? 'selected' : '' }}>Production Hold</option>
+                                        <option value="Production In Progress" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production In Progress') ? 'selected' : '' }}>Production In Progress</option>
                                         <option value="Production Completed" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Completed') ? 'selected' : '' }}>Production Completed</option>
                                     </select>
                                     <label for="status">Status *</label>

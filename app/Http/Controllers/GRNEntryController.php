@@ -14,6 +14,7 @@ use App\Models\Color;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class GrnEntryController extends Controller
 {
@@ -27,7 +28,7 @@ class GrnEntryController extends Controller
             }
 
             if ($request->status) {
-                $query->whereHas('grnEntryItems', function($q) use ($request) {
+                $query->whereHas('grnEntryItems', function ($q) use ($request) {
                     $q->where('quality_check_status', $request->status);
                 });
             }
@@ -39,9 +40,12 @@ class GrnEntryController extends Controller
             foreach ($grnEntries as $grn) {
                 $statusLabel = $grn->status ?? 'Draft';
                 $statusBadgeClass = 'bg-secondary';
-                if ($statusLabel == 'Received') $statusBadgeClass = 'bg-success';
-                if ($statusLabel == 'Invoiced') $statusBadgeClass = 'bg-info';
-                if ($statusLabel == 'Closed') $statusBadgeClass = 'bg-dark';
+                if ($statusLabel == 'Received')
+                    $statusBadgeClass = 'bg-success';
+                if ($statusLabel == 'Invoiced')
+                    $statusBadgeClass = 'bg-info';
+                if ($statusLabel == 'Closed')
+                    $statusBadgeClass = 'bg-dark';
 
                 $statusDisplay = '<span class="badge ' . $statusBadgeClass . '">' . $statusLabel . '</span>';
 
@@ -64,7 +68,8 @@ class GrnEntryController extends Controller
                 if ($qcStatuses->contains('Fail')) {
                     $finalQcStatus = 'Fail';
                     $badgeClass = 'bg-danger';
-                } elseif ($qcStatuses->contains('Hold')) {
+                }
+                elseif ($qcStatuses->contains('Hold')) {
                     $finalQcStatus = 'Hold';
                     $badgeClass = 'bg-warning';
                 }
@@ -99,7 +104,8 @@ class GrnEntryController extends Controller
             $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) use ($id) {
                 $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.grn_entry_id != ? AND grn_entry_items.deleted_at IS NULL)', [$id]);
             })->orWhere('id', $grn->purchase_invoice_id)->orderBy('invoice_no')->get();
-        } else {
+        }
+        else {
             if (auth()->id() != 1 && !auth()->user()->can('create grn-entry')) {
                 return unauthorizedRedirect();
             }
@@ -134,7 +140,7 @@ class GrnEntryController extends Controller
 
             $request->validate($headerRules, $messages);
 
-            $selectedItems = collect($request->items)->filter(function($item) {
+            $selectedItems = collect($request->items)->filter(function ($item) {
                 return ($item['row_selected'] ?? 0) == 1;
             });
 
@@ -151,21 +157,21 @@ class GrnEntryController extends Controller
                     $rules["items.$index.art_no"] = [
                         'required',
                         function ($attribute, $value, $fail) use ($request) {
-                            $allArtNos = collect($request->items)->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))->pluck('art_no')->map(fn($art) => (string)$art)->toArray();
-                            
-                            $counts = array_count_values($allArtNos);
-                            
-                            if (isset($counts[$value]) && $counts[$value] > 1) {
-                                $fail('This article number is duplicated within this entry.');
-                            }
+                        $allArtNos = collect($request->items)->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))->pluck('art_no')->map(fn($art) => (string)$art)->toArray();
 
-                            $id = $request->route('id'); 
-                            $exists = GrnEntryItem::where('art_no', $value)->whereNull('deleted_at')->where('grn_entry_id', '!=', $id ?? 0)->exists();
+                        $counts = array_count_values($allArtNos);
 
-                            if ($exists) {
-                                $fail('This article number already exists in another GRN entry.');
-                            }
+                        if (isset($counts[$value]) && $counts[$value] > 1) {
+                            $fail('This article number is duplicated within this entry.');
                         }
+
+                        $id = $request->route('id');
+                        $exists = GrnEntryItem::where('art_no', $value)->whereNull('deleted_at')->where('grn_entry_id', '!=', $id ?? 0)->exists();
+
+                        if ($exists) {
+                            $fail('This article number already exists in another GRN entry.');
+                        }
+                    }
                     ];
                     $rules["items.$index.qty_received"] = 'required|numeric|gt:0';
                     $rules["items.$index.qty_accepted"] = 'required|numeric|min:0';
@@ -173,7 +179,7 @@ class GrnEntryController extends Controller
                     $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     $rules["items.$index.fabric_type_id"] = 'nullable|exists:fabric_types,id';
                     $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048';
-                    
+
                     $pi_item = PurchaseInvoiceItem::find($item['purchase_invoice_item_id']);
                     if ($pi_item) {
                         $alreadyReceived = GrnEntryItem::where('purchase_invoice_item_id', $pi_item->id)->where('grn_entry_id', '!=', $id ?? 0)->sum('qty_received');
@@ -218,7 +224,8 @@ class GrnEntryController extends Controller
                     $grn->update($headerData);
                     $newData = $grn->fresh()->toArray();
                     addLog('update', 'GRN Entry', 'grn_entries', $id, $oldData, $newData);
-                } else {
+                }
+                else {
                     $lastGrn = GrnEntry::latest('id')->first();
                     $nextNumber = $lastGrn ? (int)substr($lastGrn->grn_number, 3) + 1 : 1;
                     $headerData['grn_number'] = 'GRN' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
@@ -229,7 +236,8 @@ class GrnEntryController extends Controller
                 }
                 $processedItemIds = [];
                 foreach ($request->items as $idx => $itemData) {
-                    if (($itemData['row_selected'] ?? 0) == 0) continue;
+                    if (($itemData['row_selected'] ?? 0) == 0)
+                        continue;
 
                     $imagePath = $itemData['old_image'] ?? null;
                     if ($request->hasFile("items.$idx.item_image")) {
@@ -244,7 +252,7 @@ class GrnEntryController extends Controller
                     }
 
                     $piItemId = $itemData['purchase_invoice_item_id'] ?? null;
-                    
+
                     $item = null;
                     if ($id) {
                         $item = GrnEntryItem::where('grn_entry_id', $grn->id)->where('purchase_invoice_item_id', $piItemId)->first();
@@ -268,7 +276,8 @@ class GrnEntryController extends Controller
                             $updateData['image'] = $imagePath;
                         }
                         $item->update($updateData);
-                    } else {
+                    }
+                    else {
                         $item = GrnEntryItem::create([
                             'grn_entry_id' => $grn->id,
                             'purchase_invoice_item_id' => $piItemId,
@@ -315,16 +324,16 @@ class GrnEntryController extends Controller
                     if ($po) {
                         $isFullyReceived = true;
                         foreach ($po->items as $poItem) {
-                            $totalReceived = \App\Models\GrnEntryItem::whereHas('purchaseInvoiceItem', function($q) use ($poItem) {
+                            $totalReceived = \App\Models\GrnEntryItem::whereHas('purchaseInvoiceItem', function ($q) use ($poItem) {
                                 $q->where('purchase_order_item_id', $poItem->id);
                             })->sum('qty_received');
-                            
+
                             if ($totalReceived < $poItem->quantity) {
                                 $isFullyReceived = false;
                                 break;
                             }
                         }
-                        
+
                         if ($isFullyReceived && $po->status != 'Received') {
                             $po->update(['status' => 'Received']);
                             addLog('update', 'Purchase Order Status (Auto)', 'purchase_orders', $po->id, ['status' => 'Approved'], ['status' => 'Received']);
@@ -334,7 +343,8 @@ class GrnEntryController extends Controller
 
                 $message = $id ? 'GRN Entry updated successfully' : 'GRN Entry saved successfully';
                 return redirect('grn_entries')->with('success', $message);
-            } catch (\Exception $e) {
+            }
+            catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => $e->getMessage()]);
             }
@@ -348,20 +358,20 @@ class GrnEntryController extends Controller
     public function getInvoiceDetails($id)
     {
         $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'items.purchaseOrderItem'])->findOrFail($id);
-        
-        $items = $invoice->items->map(function($item) {
+
+        $items = $invoice->items->map(function ($item) {
             $already_received = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_received');
             return [
-                'id' => $item->id,
-                'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
-                'art_no' => $item->purchaseOrderItem->art_no ?? '',
-                'uom' => $item->uom->uom_code ?? 'MTR',
-                'qty_ordered' => $item->quantity,
-                'qty_already_received' => $already_received,
-                'rate' => $item->rate,
-                'amount' => $item->amount,
+            'id' => $item->id,
+            'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
+            'art_no' => $item->purchaseOrderItem->art_no ?? '',
+            'uom' => $item->uom->uom_code ?? 'MTR',
+            'qty_ordered' => $item->quantity,
+            'qty_already_received' => $already_received,
+            'rate' => $item->rate,
+            'amount' => $item->amount,
             ];
-        })->filter(function($item) {
+        })->filter(function ($item) {
             return ($item['qty_ordered'] - $item['qty_already_received']) > 0;
         })->values();
 
@@ -377,7 +387,7 @@ class GrnEntryController extends Controller
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view grn-entry')) {
-             return unauthorizedRedirect();
+            return unauthorizedRedirect();
         }
         $grn = GrnEntry::with([
             'purchaseInvoice',
@@ -399,13 +409,53 @@ class GrnEntryController extends Controller
         }
         $grn = GrnEntry::findOrFail($id);
         $oldData = $grn->toArray();
-        $grn->grnEntryItems()->each(function($item) {
+        $grn->grnEntryItems()->each(function ($item) {
             $item->variants()->delete();
-            $item->delete(); 
+            $item->delete();
         });
         $grn->delete();
         addLog('delete', 'GRN Entry', 'grn_entries', $id, $oldData, null);
 
         return redirect('grn_entries')->with('success', 'GRN Entry deleted successfully');
+    }
+
+    public function downloadPdf($id)
+    {
+        $grn = GrnEntry::with([
+            'purchaseInvoice.purchaseOrder',
+            'supplier.city',
+            'grnEntryItems.purchaseInvoiceItem.rawMaterial',
+            'grnEntryItems.purchaseInvoiceItem.uom',
+            'grnEntryItems.fabricType',
+            'grnEntryItems.storeLocation',
+            'grnEntryItems.variants.color',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.brand',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.style',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
+        ])->findOrFail($id);
+
+        $pdf = Pdf::loadView('grn_entry.grn_pdf', compact('grn'));
+        $pdf->setPaper('A4', 'portrait');
+        $safeGrnNumber = str_replace(['/', '\\'], '_', $grn->grn_number);
+        return $pdf->stream('GRN_' . $safeGrnNumber . '.pdf');
+    }
+
+    public function print($id)
+    {
+        $grn = GrnEntry::with([
+            'purchaseInvoice.purchaseOrder',
+            'supplier.city',
+            'grnEntryItems.purchaseInvoiceItem.rawMaterial',
+            'grnEntryItems.purchaseInvoiceItem.uom',
+            'grnEntryItems.fabricType',
+            'grnEntryItems.storeLocation',
+            'grnEntryItems.variants.color',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.brand',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.style',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
+        ])->findOrFail($id);
+
+        $is_print = true;
+        return view('grn_entry.grn_pdf', compact('grn', 'is_print'));
     }
 }

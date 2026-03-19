@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Billing;
+use App\Models\Setting;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BillingController extends Controller
 {
@@ -114,5 +116,28 @@ class BillingController extends Controller
             'success' => true,
             'message' => 'Status updated successfully'
         ]);
+    }
+
+    public function print($id)
+    {
+        $billing = Billing::findOrFail($id);
+        $setting = Setting::with(['state', 'city'])->first();
+        $totalInWords = numberToWords($billing->amount);
+        $is_print = true;
+
+        return view('billings.pdf', compact('billing', 'setting', 'totalInWords', 'is_print'));
+    }
+
+    public function download($id)
+    {
+        $billing = Billing::findOrFail($id);
+        $setting = Setting::with(['state', 'city'])->first();
+        $totalInWords = numberToWords($billing->amount);
+
+        $pdf = Pdf::loadView('billings.pdf', compact('billing', 'setting', 'totalInWords'));
+        $pdf->setPaper('A4', 'portrait');
+
+        $safeBillNo = str_replace(['/', '\\'], '_', $billing->bill_no);
+        return $pdf->download('Billing_' . $safeBillNo . '.pdf');
     }
 }

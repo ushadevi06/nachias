@@ -7,6 +7,8 @@ use App\Models\DebitNoteItem;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\Supplier;
+use App\Models\Setting;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -50,8 +52,8 @@ class DebitNoteController extends Controller
                     $action .= '<a href="' . url('debit_notes/add/' . $note->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 /* if (auth()->id() == 1 || auth()->user()->can('delete debit-note')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('debit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                } */
+                 $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('debit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                 } */
                 $action .= '</div>';
 
                 $data[] = [
@@ -80,7 +82,8 @@ class DebitNoteController extends Controller
                 return unauthorizedRedirect();
             }
             $debitNote = DebitNote::with(['items.rawMaterial', 'items.uom'])->findOrFail($id);
-        } else {
+        }
+        else {
             if (auth()->id() != 1 && !auth()->user()->can('create debit-note')) {
                 return unauthorizedRedirect();
             }
@@ -107,18 +110,17 @@ class DebitNoteController extends Controller
 
             $messages = [
                 '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
+                '*.unique' => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
                 'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
                 '*.attached_file.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
                 '*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
-                '*.regex' => 'This field is an invalid format',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
             ];
 
-            $validated = $request->validate($rules,$messages);
+            $validated = $request->validate($rules, $messages);
 
             DB::beginTransaction();
             try {
@@ -132,7 +134,6 @@ class DebitNoteController extends Controller
                     }
                     $file->move($uploadPath, $filename);
 
-                    // Unlink old file if exists and a new one is uploaded
                     if ($id && $debitNote->reference_document && file_exists(public_path('uploads/debit_notes/' . $debitNote->reference_document))) {
                         unlink(public_path('uploads/debit_notes/' . $debitNote->reference_document));
                     }
@@ -165,7 +166,8 @@ class DebitNoteController extends Controller
                     DebitNoteItem::where('debit_note_id', $id)->delete();
                     $message = 'Debit Note updated successfully';
                     addLog('update', 'Debit Note', 'debit_notes', $id, null, $debitNoteData);
-                } else {
+                }
+                else {
                     $debitNoteData['created_by'] = auth()->id();
                     $debitNote = DebitNote::create($debitNoteData);
                     $message = 'Debit Note created successfully';
@@ -188,23 +190,25 @@ class DebitNoteController extends Controller
 
                 DB::commit();
                 return redirect('debit_notes')->with('success', $message);
-            } catch (\Exception $e) {
+            }
+            catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => 'Failed to save: ' . $e->getMessage()]);
             }
         }
 
         $purchaseInvoices = PurchaseInvoice::with('supplier')->orderBy('id', 'desc')->get();
-        
+
         $nextDebitNoteNo = '';
         if (!$id) {
-            $setting = \App\Models\Setting::first();
+            $setting = Setting::first();
             $prefix = ($setting && $setting->debit_note_prefix) ? $setting->debit_note_prefix : 'DN-';
             $lastDebitNote = DebitNote::where('debit_note_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
             if ($lastDebitNote) {
                 $lastNumber = intval(substr($lastDebitNote->debit_note_no, strlen($prefix)));
                 $nextDebitNoteNo = $prefix . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-            } else {
+            }
+            else {
                 $nextDebitNoteNo = $prefix . '0001';
             }
         }
@@ -234,18 +238,18 @@ class DebitNoteController extends Controller
     public function getInvoiceDetails($id)
     {
         $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
-        
-        $items = $invoice->items->map(function($item) {
+
+        $items = collect($invoice->items)->map(function ($item) {
             return [
-                'id' => $item->id,
-                'raw_material_id' => $item->raw_material_id,
-                'raw_material_name' => $item->rawMaterial ? $item->rawMaterial->name : '-',
-                'uom_id' => $item->uom_id,
-                'uom_code' => $item->uom ? $item->uom->uom_code : '-',
-                'hsn_code' => $item->hsn_code,
-                'quantity' => $item->quantity,
-                'rate' => $item->rate,
-                'amount' => $item->amount,
+            'id' => $item->id,
+            'raw_material_id' => $item->raw_material_id,
+            'raw_material_name' => $item->rawMaterial ? $item->rawMaterial->name : '-',
+            'uom_id' => $item->uom_id,
+            'uom_code' => $item->uom ? $item->uom->uom_code : '-',
+            'hsn_code' => $item->hsn_code,
+            'quantity' => $item->quantity,
+            'rate' => $item->rate,
+            'amount' => $item->amount,
             ];
         });
 
@@ -266,7 +270,7 @@ class DebitNoteController extends Controller
         $invoices = PurchaseInvoice::where('supplier_id', $supplierId)
             ->orderBy('id', 'desc')
             ->get(['id', 'invoice_no']);
-        
+
         return response()->json([
             'success' => true,
             'invoices' => $invoices
@@ -282,7 +286,43 @@ class DebitNoteController extends Controller
         addLog('update_status', 'Debit Note Status', 'debit_notes', $id, $oldData, $newData);
         return response()->json([
             'success' => true,
-            'status'  => $debitNote->status
+            'status' => $debitNote->status
         ]);
+    }
+    public function print($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view debit-note')) {
+            return unauthorizedRedirect();
+        }
+
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $setting = Setting::first();
+
+        $totalInWords = numberToWords($debitNote->grand_total);
+
+        $is_print = true;
+        return view('debit_notes.debit_note_pdf', compact('debitNote', 'setting', 'totalInWords', 'is_print'));
+    }
+    public function download($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view debit-note')) {
+            return unauthorizedRedirect();
+        }
+
+        $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $setting = Setting::first();
+
+        $totalInWords = numberToWords($debitNote->grand_total);
+
+        $data = [
+            'debitNote' => $debitNote,
+            'setting' => $setting,
+            'totalInWords' => $totalInWords
+        ];
+
+        $pdf = Pdf::loadView('debit_notes.debit_note_pdf', $data);
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download('DebitNote_' . $debitNote->debit_note_no . '.pdf');
     }
 }

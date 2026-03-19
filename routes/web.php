@@ -318,6 +318,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('/purchase_orders/add/{id?}', [PurchaseOrderController::class , 'add']);
     Route::get('/purchase_orders/view/{id}', [PurchaseOrderController::class , 'view'])->name('purchase_orders.view');
     Route::get('purchase_orders/download-pdf/{id}', [PurchaseOrderController::class , 'downloadPdf']);
+    Route::get('purchase_orders/print/{id}', [PurchaseOrderController::class , 'print']);
     Route::get('/purchase_orders/delete/{id}', [PurchaseOrderController::class , 'destroy'])->name('purchase_orders.delete');
     Route::post('/purchase_orders/status/{id}', [PurchaseOrderController::class , 'updateStatus'])->name('purchase_orders.status');
 
@@ -331,6 +332,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('purchase_invoices/get-po-details/{id}', [PurchaseInvoiceController::class , 'getPurchaseOrderDetails']);
     Route::get('purchase_invoices/get-items/{id}', [PurchaseInvoiceController::class , 'getInvoiceItems']);
     Route::get('purchase_invoices/download-pdf/{id}', [PurchaseInvoiceController::class , 'downloadPdf']);
+    Route::get('purchase_invoices/print/{id}', [PurchaseInvoiceController::class , 'print']);
     Route::delete('purchase_invoices/delete-charge/{id}', [PurchaseInvoiceController::class , 'deleteCharge']);
     Route::get('purchase_invoices/payment-history/{id}', [PurchaseInvoiceController::class , 'getPaymentHistory']);
 
@@ -367,6 +369,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('grn_entries/status/{id}', [GrnEntryController::class , 'updateStatus']);
     Route::get('grn_entries/get-invoice-details/{id}', [GrnEntryController::class , 'getInvoiceDetails']);
     Route::get('grn_entries/view/{id}', [GrnEntryController::class , 'view']);
+    Route::get('grn_entries/print/{id}', [GrnEntryController::class , 'print']);
+    Route::get('grn_entries/download-pdf/{id}', [GrnEntryController::class , 'downloadPdf']);
 
     /* Stock Entry */
     Route::get('stock_entries/get-grn-items/{id}', [StockEntryController::class , 'getGrnEntryItems']);
@@ -385,6 +389,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_orders', [SalesOrderController::class , 'index']);
     Route::match (['GET', 'POST'], 'sales_orders/add/{id?}', [SalesOrderController::class , 'add']);
     Route::get('sales_orders/view/{id}', [SalesOrderController::class , 'view']);
+    Route::get('sales_orders/download-pdf/{id}', [SalesOrderController::class , 'downloadPdf']);
+    Route::get('sales_orders/print/{id}', [SalesOrderController::class , 'print']);
     Route::get('sales_orders/delete/{id}', [SalesOrderController::class , 'destroy']);
     Route::post('sales_orders/status/{id}', [SalesOrderController::class , 'updateStatus']);
 
@@ -393,6 +399,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match (['GET', 'POST'], 'sales_invoices/add/{id?}', [SalesInvoiceController::class , 'add']);
     Route::get('sales_invoices/view/{id}', [SalesInvoiceController::class , 'view']);
     Route::get('sales_invoices/download-pdf/{id}', [SalesInvoiceController::class , 'downloadPdf']);
+    Route::get('sales_invoices/print/{id}', [SalesInvoiceController::class , 'print']);
+    Route::get('sales_invoices/download/{id}', [SalesInvoiceController::class , 'download']);
     Route::post('sales_invoices/status/{id}', [SalesInvoiceController::class , 'updateStatus']);
     Route::get('sales_invoices/get-sale-order-details/{id}', [SalesInvoiceController::class , 'getSaleOrderDetails']);
 
@@ -403,6 +411,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('credit_notes/delete/{id}', [CreditNoteController::class , 'destroy']);
     Route::get('credit_notes/get-invoice-details/{id}', [CreditNoteController::class , 'getInvoiceDetails']);
     Route::post('credit_notes/status/{id}', [CreditNoteController::class , 'updateStatus']);
+    Route::get('credit_notes/print/{id}', [CreditNoteController::class , 'print']);
+    Route::get('credit_notes/download/{id}', [CreditNoteController::class , 'download']);
 
     /* Debit Notes */
     Route::get('debit_notes', [DebitNoteController::class , 'index']);
@@ -411,6 +421,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('debit_notes/delete/{id}', [DebitNoteController::class , 'destroy']);
     Route::get('debit_notes/get-invoice-details/{id}', [DebitNoteController::class , 'getInvoiceDetails']);
     Route::get('debit_notes/get-supplier-invoices/{id}', [DebitNoteController::class , 'getSupplierInvoices']);
+    Route::get('debit_notes/print/{id}', [DebitNoteController::class , 'print']);
+    Route::get('debit_notes/download/{id}', [DebitNoteController::class , 'download']);
     Route::post('debit_notes/status/{id}', [DebitNoteController::class , 'updateStatus']);
 
     /* Job Card Entry */
@@ -429,6 +441,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/fabric-consumption-pdf/{id}', [JobCardEntryController::class , 'fabricConsumptionPdf'])->name('job_card_entries.fabric_consumption_pdf');
     Route::get('job_card_entries/work-order-pdf/{id}', [JobCardEntryController::class , 'workOrderPdf'])->name('job_card_entries.work_order_pdf');
     Route::get('job_card_entries/view-details-pdf/{id}', [JobCardEntryController::class , 'viewDetailsPdf'])->name('job_card_entries.view_details_pdf');
+    Route::get('job_card_entries/print/{id}', [JobCardEntryController::class , 'print_details'])->name('job_card_entries.print');
+    Route::get('job_card_entries/download/{id}', [JobCardEntryController::class , 'download_details'])->name('job_card_entries.download');
     Route::get('job_card_entries/costing-analysis/{id}', [JobCardEntryController::class , 'costing_analysis'])->name('job_card_entries.costing_analysis');
 
     /* Task Management */
@@ -457,6 +471,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Production Receipts */
     Route::get('production_receipts', [ProductionReceiptController::class , 'index']);
     Route::match (['GET', 'POST'], 'production_receipts/add/{id?}', [ProductionReceiptController::class , 'add']);
+    Route::get('production_receipts/view/{id}', [ProductionReceiptController::class , 'view'])->name('production_receipts.view');
+    Route::get('production_receipts/print/{id}', [ProductionReceiptController::class , 'print'])->name('production_receipts.print');
+    Route::get('production_receipts/download-pdf/{id}', [ProductionReceiptController::class , 'downloadPdf'])->name('production_receipts.download_pdf');
     Route::get('production_receipts/get-job-card-details/{id}', [ProductionReceiptController::class , 'getJobCardDetails']);
     Route::get('production_receipts/delete/{id}', [ProductionReceiptController::class , 'destroy']);
 
@@ -488,6 +505,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('billing', [BillingController::class , 'index']);
     Route::match (['GET', 'POST'], 'billing/add/{id?}', [BillingController::class , 'add']);
     Route::get('billing/view/{id}', [BillingController::class , 'view']);
+    Route::get('billing/print/{id}', [BillingController::class , 'print']);
+    Route::get('billing/download/{id}', [BillingController::class , 'download']);
     Route::get('billing/delete/{id}', [BillingController::class , 'destroy']);
     Route::post('billing/update-status/{id}', [BillingController::class , 'updateStatus']);
 
@@ -495,6 +514,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('payments', [PaymentController::class , 'index']);
     Route::match (['GET', 'POST'], 'payments/add/{id?}', [PaymentController::class , 'add']);
     Route::get('payments/view/{id}', [PaymentController::class , 'view']);
+    Route::get('payments/print/{id}', [PaymentController::class , 'print']);
+    Route::get('payments/download/{id}', [PaymentController::class , 'download']);
     Route::get('payments/delete/{id}', [PaymentController::class , 'destroy']);
     Route::get('get_references', [PaymentController::class , 'getReferences']);
     Route::get('get_reference_details', [PaymentController::class , 'getReferenceDetails']);

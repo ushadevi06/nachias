@@ -21,6 +21,7 @@ use App\Models\Setting;
 use App\Models\Zone;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SalesOrderController extends Controller
 {
@@ -175,7 +176,6 @@ class SalesOrderController extends Controller
                 'freight_type' => 'nullable|in:Paid,To Pay',
                 'freight_amount' => 'nullable|numeric|min:0',
                 'transport_gst_no' => 'nullable|string|max:50',
-                'dispatch_through' => 'nullable|string|max:100',
                 'terms_conditions' => 'nullable|string|regex:/^[^<>]*$/',
             ];
 
@@ -253,7 +253,6 @@ class SalesOrderController extends Controller
                     'freight_type' => $request->freight_type,
                     'freight_amount' => $request->freight_amount ?? 0,
                     'transport_gst_no' => $request->transport_gst_no,
-                    'dispatch_through' => $request->dispatch_through,
                     'terms_conditions' => $request->terms_conditions,
                     'apply_box_discount' => $request->apply_box_discount == '1',
                 ];
@@ -389,7 +388,7 @@ class SalesOrderController extends Controller
                 ->havingRaw('SUM(qty_in) - SUM(qty_out) > 0');
         });
         if ($id && $salesOrder) {
-            $existingItemIds = $salesOrder->items->pluck('item_id')->toArray();
+            $existingItemIds = collect($salesOrder->items)->pluck('item_id')->toArray();
             $itemsQuery->orWhereIn('id', $existingItemIds);
         }
         $items = $itemsQuery->orderBy('id', 'desc')->get();
@@ -454,5 +453,99 @@ class SalesOrderController extends Controller
         $salesOrder->save();
         addLog('update_status', 'Sale Order Status', 'sales_orders', $id, null, $salesOrder->toArray());
         return response()->json(['success' => true, 'message' => 'Status updated successfully']);
+    }
+    public function downloadPdf($id)
+    {
+        $salesOrder = SalesOrder::with([
+            'customer.state',
+            'customer.city',
+            'salesAgent',
+            'items.brandCategory',
+            'items.item',
+            'items.uom',
+            'items.size',
+            'items.color'
+        ])->findOrFail($id);
+
+        $setting = Setting::with(['state', 'city'])->first();
+
+        $taxSummary = [];
+        foreach ($salesOrder->items as $item) {
+            $hsn = $item->hsn_sac ?: 'N/A';
+            if (!isset($taxSummary[$hsn])) {
+                $taxSummary[$hsn] = [
+                    'hsn' => $hsn,
+                    'taxable_value' => 0,
+                    'cgst_rate' => $salesOrder->cgst_percent,
+                    'cgst_amount' => 0,
+                    'sgst_rate' => $salesOrder->sgst_percent,
+                    'sgst_amount' => 0,
+                    'igst_rate' => $salesOrder->igst_percent,
+                    'igst_amount' => 0,
+                ];
+            }
+            $taxSummary[$hsn]['taxable_value'] += $item->amount;
+        }
+
+        foreach ($taxSummary as &$summary) {
+            $summary['cgst_amount'] = ($summary['taxable_value'] * $summary['cgst_rate']) / 100;
+            $summary['sgst_amount'] = ($summary['taxable_value'] * $summary['sgst_rate']) / 100;
+            $summary['igst_amount'] = ($summary['taxable_value'] * $summary['igst_rate']) / 100;
+        }
+
+        $totalInWords = numberToWords($salesOrder->total_amount);
+        $totalTaxInWords = numberToWords($salesOrder->tax_amount);
+
+        $pdf = Pdf::loadView('sales_order.pdf', compact('salesOrder', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords'));
+        $pdf->setPaper('A4', 'portrait');
+
+        $safeSoNo = str_replace(['/', '\\'], '_', $salesOrder->so_no);
+        return $pdf->stream('Sales_Order_' . $safeSoNo . '.pdf');
+    }
+
+    public function print($id)
+    {
+        $salesOrder = SalesOrder::with([
+            'customer.state',
+            'customer.city',
+            'salesAgent',
+            'items.brandCategory',
+            'items.item',
+            'items.uom',
+            'items.size',
+            'items.color'
+        ])->findOrFail($id);
+
+        $setting = Setting::with(['state', 'city'])->first();
+
+        $taxSummary = [];
+        foreach ($salesOrder->items as $item) {
+            $hsn = $item->hsn_sac ?: 'N/A';
+            if (!isset($taxSummary[$hsn])) {
+                $taxSummary[$hsn] = [
+                    'hsn' => $hsn,
+                    'taxable_value' => 0,
+                    'cgst_rate' => $salesOrder->cgst_percent,
+                    'cgst_amount' => 0,
+                    'sgst_rate' => $salesOrder->sgst_percent,
+                    'sgst_amount' => 0,
+                    'igst_rate' => $salesOrder->igst_percent,
+                    'igst_amount' => 0,
+                ];
+            }
+            $taxSummary[$hsn]['taxable_value'] += $item->amount;
+        }
+
+        foreach ($taxSummary as &$summary) {
+            $summary['cgst_amount'] = ($summary['taxable_value'] * $summary['cgst_rate']) / 100;
+            $summary['sgst_amount'] = ($summary['taxable_value'] * $summary['sgst_rate']) / 100;
+            $summary['igst_amount'] = ($summary['taxable_value'] * $summary['igst_rate']) / 100;
+        }
+
+        $totalInWords = numberToWords($salesOrder->total_amount);
+        $totalTaxInWords = numberToWords($salesOrder->tax_amount);
+
+        $is_print = true;
+        return view('sales_order.pdf', compact('salesOrder', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print'));
     }
 }

@@ -38,10 +38,10 @@
                         </div>
                         @elseif($isFinishedGoods)
                         <div class="col-md-4">
-                            <label class="detail-title">PO Number:</label>
+                            <label class="detail-title">Job Card Number:</label>
                             <div class="text-muted">
-                                {{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard && $stockEntry->productionReceipt->jobCard->purchaseOrder) 
-                                    ? $stockEntry->productionReceipt->jobCard->purchaseOrder->po_number 
+                                {{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard) 
+                                    ? $stockEntry->productionReceipt->jobCard->job_card_no 
                                     : '-' }}
                             </div>
                         </div>
