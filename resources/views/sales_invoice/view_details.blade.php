@@ -72,7 +72,7 @@
                                             <th>Brand</th>
                                             <th>Item (Code)</th>
                                             <th>Art No</th>
-                                            <th>HSN/SAC</th>
+
                                             <th>Size</th>
                                             <th>Sleeve</th>
                                             <th>UOM</th>
@@ -89,7 +89,7 @@
                                             <td>{{ $item->brandCategory ? $item->brandCategory->name : 'N/A' }}</td>
                                             <td>{{ $item->item ? $item->item->name : 'N/A' }} <span class="mini-title">({{ $item->item ? $item->item->code : '' }})</span></td>
                                             <td>{{ $item->art_no ?? '-' }}</td>
-                                            <td>{{ $item->hsn_sac ?? '-' }}</td>
+
                                             <td>{{ $item->size ?? '-' }}</td>
                                             <td>{{ $item->sleeve_type ?? '-' }}</td>
                                             <td>{{ $item->uom ? $item->uom->uom_code : ($item->item && $item->item->uom ? $item->item->uom->uom_code : '-') }}</td>
@@ -171,7 +171,7 @@
                                             <label class="detail-title">Total:</label>
                                             <div class="text-muted fw-bold">₹{{ number_format($invoice->total, 2) }}</div>
                                         </div>
-                                        <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-3">
                                             <label class="detail-title">Other State:</label>
                                             <div class="text-muted">{{ $invoice->other_state ? 'Yes' : 'No' }}</div>
                                         </div>
@@ -211,14 +211,6 @@
 
                                 <div class="col-md-6">
                                     <div class="summary-right border rounded p-3 h-100">
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <label class="detail-title">Received Amount:</label>
-                                            <div class="text-muted fw-bold">₹{{ number_format($invoice->received_amount, 2) }}</div>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2 text-danger">
-                                            <label class="detail-title">Due Amount:</label>
-                                            <div class="fw-bold h5">₹{{ number_format($invoice->due_amount, 2) }}</div>
-                                        </div>
                                         <div class="d-flex justify-content-between mb-2">
                                             <label class="detail-title">Invoice Status:</label>
                                             <div class="text-right"><span class="badge bg-primary">{{ $invoice->invoice_status }}</span></div>

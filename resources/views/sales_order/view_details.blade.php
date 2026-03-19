@@ -17,7 +17,7 @@
                 </div>
                 <div class="d-flex gap-2">
                     <a href="{{ url('sales_orders/download-pdf/'.$salesOrder->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center shadow-sm">
-                        <i class="ri ri-file-pdf-line me-1"></i> PDF
+                        <i class="ri ri-download-line me-1"></i> Download
                     </a>
                     <a href="{{ url('sales_orders/print/'.$salesOrder->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center shadow-sm">
                         <i class="ri ri-printer-line me-1"></i> Print

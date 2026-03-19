@@ -65,84 +65,85 @@ class CreditNoteController extends Controller
 
     public function add(Request $request, $id = null)
     {
-        $creditNote = $id ? CreditNote::with('items.item', 'items.uom', 'items.brandCategory')->findOrFail($id) : null;
-        
+        $creditNote = $id ?CreditNote::with('items.item', 'items.uom', 'items.brandCategory')->findOrFail($id) : null;
+
         $nextNoteNo = '';
         if (!$id) {
             $lastNote = CreditNote::withTrashed()->orderBy('id', 'desc')->first();
             if ($lastNote && preg_match('/CN-(\d+)/', $lastNote->note_no, $matches)) {
                 $number = intval($matches[1]) + 1;
                 $nextNoteNo = 'CN-' . str_pad($number, 3, '0', STR_PAD_LEFT);
-            } else {
+            }
+            else {
                 $nextNoteNo = 'CN-001';
             }
         }
 
         if ($request->isMethod('POST')) {
-                $request->validate([
-                    'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                    'note_date' => 'required|date',
-                    'sales_invoice_id' => 'required|exists:sales_invoices,id',
-                    'customer_id' => 'required|exists:customers,id',
-                    'reason' => 'nullable|string',
-                    'items' => 'required|array|min:1',
-                    'sub_total' => 'required|numeric',
-                    'round_off' => 'nullable|numeric',
-                    'round_off_type' => 'nullable|string|in:Add,Less',
-                    'grand_total' => 'required|numeric',
-                    'reference_document' => 'nullable|mimes:pdf,jpg,jpeg,png,webp,doc,docx|max:2048',
-                    'remarks' => 'nullable|string|min:5|max:255|regex:/^[^<>]*$/',
-                ], [
-                    '*.required' => 'This field is required.',
-                    '*.exists' => 'Selected value is invalid.',
-                    '*.unique' => 'This field already exists.',
-                    '*.date' => 'Please enter a valid date.',
-                    '*.after_or_equal' => 'Due date must be after or equal to PO date.',
-                    '*.numeric' => 'This field must be a number.',
-                    '*.min'      => 'This field must be at least :min characters.',
-                    '*.max'      => 'This field should not be more than :max characters.',
-                ]);
+            $request->validate([
+                'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'note_date' => 'required|date',
+                'sales_invoice_id' => 'required|exists:sales_invoices,id',
+                'customer_id' => 'required|exists:customers,id',
+                'reason' => 'nullable|string',
+                'items' => 'required|array|min:1',
+                'sub_total' => 'required|numeric',
+                'round_off' => 'nullable|numeric',
+                'round_off_type' => 'nullable|string|in:Add,Less',
+                'grand_total' => 'required|numeric',
+                'reference_document' => 'nullable|mimes:pdf,jpg,jpeg,png,webp,doc,docx|max:2048',
+                'remarks' => 'nullable|string|min:5|max:255|regex:/^[^<>]*$/',
+            ], [
+                '*.required' => 'This field is required.',
+                '*.exists' => 'Selected value is invalid.',
+                '*.unique' => 'This field already exists.',
+                '*.date' => 'Please enter a valid date.',
+                '*.after_or_equal' => 'Due date must be after or equal to PO date.',
+                '*.numeric' => 'This field must be a number.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
+            ]);
 
-                DB::beginTransaction();
-                try {
-                    $referenceDoc = $id ? $creditNote->reference_doc : null;
-                    if ($request->hasFile('reference_document')) {
-                        $file = $request->file('reference_document');
-                        $filename = 'credit_note_' . time() . '.' . $file->getClientOriginalExtension();
-                        $uploadPath = public_path('uploads/credit_notes');
-                        if (!file_exists($uploadPath)) {
-                            mkdir($uploadPath, 0755, true);
-                        }
-                        $file->move($uploadPath, $filename);
-                        if ($id && $creditNote->reference_doc && file_exists(public_path('uploads/credit_notes/' . $creditNote->reference_doc))) {
-                            unlink(public_path('uploads/credit_notes/' . $creditNote->reference_doc));
-                        }
-
-                        $referenceDoc = $filename;
+            DB::beginTransaction();
+            try {
+                $referenceDoc = $id ? $creditNote->reference_doc : null;
+                if ($request->hasFile('reference_document')) {
+                    $file = $request->file('reference_document');
+                    $filename = 'credit_note_' . time() . '.' . $file->getClientOriginalExtension();
+                    $uploadPath = public_path('uploads/credit_notes');
+                    if (!file_exists($uploadPath)) {
+                        mkdir($uploadPath, 0755, true);
+                    }
+                    $file->move($uploadPath, $filename);
+                    if ($id && $creditNote->reference_doc && file_exists(public_path('uploads/credit_notes/' . $creditNote->reference_doc))) {
+                        unlink(public_path('uploads/credit_notes/' . $creditNote->reference_doc));
                     }
 
-                    $creditNoteData = [
-                        'note_no' => $request->note_no,
-                        'note_date' => Carbon::parse($request->note_date)->format('Y-m-d'),
-                        'sales_invoice_id' => $request->sales_invoice_id,
-                        'customer_id' => $request->customer_id,
-                        'reason' => $request->reason,
-                        'other_state' => $request->is_other_state == 'yes',
-                        'igst_percent' => $request->igst_percent ?? 0,
-                        'igst' => $request->igst_amt ?? 0,
-                        'cgst_percent' => $request->cgst_percent ?? 0,
-                        'cgst' => $request->cgst_amt ?? 0,
-                        'sgst_percent' => $request->sgst_percent ?? 0,
-                        'sgst' => $request->sgst_amt ?? 0,
-                        'sub_total' => $request->sub_total,
-                        'tax_amount' => $request->tax_amount ?? 0,
-                        'round_off' => $request->round_off ?? 0,
-                        'round_off_type' => $request->round_off_type ?? 'Add',
-                        'grand_total' => $request->grand_total,
-                        'remarks' => $request->remarks,
-                        'reference_doc' => $referenceDoc,
-                        'status' => $request->status ?? 'Draft',
-                    ];
+                    $referenceDoc = $filename;
+                }
+
+                $creditNoteData = [
+                    'note_no' => $request->note_no,
+                    'note_date' => Carbon::parse($request->note_date)->format('Y-m-d'),
+                    'sales_invoice_id' => $request->sales_invoice_id,
+                    'customer_id' => $request->customer_id,
+                    'reason' => $request->reason,
+                    'other_state' => $request->is_other_state == 'yes',
+                    'igst_percent' => $request->igst_percent ?? 0,
+                    'igst' => $request->igst_amt ?? 0,
+                    'cgst_percent' => $request->cgst_percent ?? 0,
+                    'cgst' => $request->cgst_amt ?? 0,
+                    'sgst_percent' => $request->sgst_percent ?? 0,
+                    'sgst' => $request->sgst_amt ?? 0,
+                    'sub_total' => $request->sub_total,
+                    'tax_amount' => $request->tax_amount ?? 0,
+                    'round_off' => $request->round_off ?? 0,
+                    'round_off_type' => $request->round_off_type ?? 'Add',
+                    'grand_total' => $request->grand_total,
+                    'remarks' => $request->remarks,
+                    'reference_doc' => $referenceDoc,
+                    'status' => $request->status ?? 'Draft',
+                ];
 
                 if ($id) {
                     $oldData = $creditNote->toArray();
@@ -150,7 +151,8 @@ class CreditNoteController extends Controller
                     CreditNoteItem::where('credit_note_id', $id)->delete();
                     addLog('update', 'Credit Note', 'credit_notes', $id, $oldData, $creditNote->fresh()->toArray());
                     $msg = 'Credit Note updated successfully';
-                } else {
+                }
+                else {
                     $creditNoteData['created_by'] = auth()->id();
                     $creditNote = CreditNote::create($creditNoteData);
                     addLog('create', 'Credit Note', 'credit_notes', $creditNote->id, null, $creditNote->toArray());
@@ -177,7 +179,8 @@ class CreditNoteController extends Controller
 
                 DB::commit();
                 return redirect(url('credit_notes'))->with('success', $msg);
-            } catch (\Exception $e) {
+            }
+            catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => 'Failed to save: ' . $e->getMessage()]);
             }
@@ -191,7 +194,8 @@ class CreditNoteController extends Controller
             if ($lastNote && preg_match('/CN-(\d+)/', $lastNote->note_no, $matches)) {
                 $number = intval($matches[1]) + 1;
                 $nextNoteNo = 'CN-' . str_pad($number, 3, '0', STR_PAD_LEFT);
-            } else {
+            }
+            else {
                 $nextNoteNo = 'CN-001';
             }
         }
@@ -202,23 +206,23 @@ class CreditNoteController extends Controller
     public function getInvoiceDetails($id)
     {
         $invoice = SalesInvoice::with(['customer', 'items.item', 'items.uom', 'items.brandCategory'])->findOrFail($id);
-        
-        $items = $invoice->items->map(function($item) {
+
+        $items = $invoice->items->map(function ($item) {
             return [
-                'id' => $item->id,
-                'item_id' => $item->item_id,
-                'item_name' => $item->item ? $item->item->name : '-',
-                'item_code' => $item->item ? $item->item->code : '-',
-                'brand_category_id' => $item->brand_id,
-                'brand_category_name' => $item->brandCategory ? $item->brandCategory->name : '-',
-                'size' => $item->size,
-                'uom_id' => $item->uom_id,
-                'uom_code' => $item->uom ? $item->uom->uom_code : '-',
-                'quantity' => $item->quantity,
-                'sleeve_type' => $item->sleeve_type,
-                'mrp' => $item->mrp,
-                'rate' => $item->rate,
-                'amount' => $item->amount,
+            'id' => $item->id,
+            'item_id' => $item->item_id,
+            'item_name' => $item->item ? $item->item->name : '-',
+            'item_code' => $item->item ? $item->item->code : '-',
+            'brand_category_id' => $item->brand_id,
+            'brand_category_name' => $item->brandCategory ? $item->brandCategory->name : '-',
+            'size' => $item->size,
+            'uom_id' => $item->uom_id,
+            'uom_code' => $item->uom ? $item->uom->uom_code : '-',
+            'quantity' => $item->quantity,
+            'sleeve_type' => $item->sleeve_type,
+            'mrp' => $item->mrp,
+            'rate' => $item->rate,
+            'amount' => $item->amount,
             ];
         });
 
@@ -273,6 +277,7 @@ class CreditNoteController extends Controller
         $setting = Setting::first();
 
         $totalInWords = numberToWords($creditNote->grand_total);
+        $is_print = true;
 
         $data = [
             'creditNote' => $creditNote,

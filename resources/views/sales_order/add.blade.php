@@ -96,7 +96,7 @@
                                     <div class="col-6">
                                         <div class="form-floating form-floating-outline">
                                             <select id="zone_id" name="zone_id" class="select2 form-select" data-placeholder="Select Zone">
-                                                <option value="0">Select Zone</option>
+                                                <option value="">Select Zone</option>
                                                 @foreach($zones as $zone)
                                                 <option value="{{ $zone->id }}" {{ old('zone_id', $salesOrder->zone_id ?? '') == $zone->id ? 'selected' : '' }}>{{ $zone->zone_name }}</option>
                                                 @endforeach

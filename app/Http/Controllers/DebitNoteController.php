@@ -323,6 +323,6 @@ class DebitNoteController extends Controller
         $pdf = Pdf::loadView('debit_notes.debit_note_pdf', $data);
         $pdf->setPaper('A4', 'portrait');
 
-        return $pdf->download('DebitNote_' . $debitNote->debit_note_no . '.pdf');
+        return $pdf->stream('DebitNote_' . $debitNote->debit_note_no . '.pdf');
     }
 }

@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <form action="{{ isset($invoice) ? url('sales_invoices/add/'.$invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
-                @if ($errors->any())
+                {{-- @if ($errors->any())
                     <div class="alert alert-danger">
                         <ul>
                             @foreach ($errors->all() as $error)
@@ -14,7 +14,7 @@
                             @endforeach
                         </ul>
                     </div>
-                @endif
+                @endif --}}
 
                 <div class="card mb-4">
                     <div class="card-body">
@@ -102,7 +102,7 @@
                                         <th style="width: 18%;">Item with Sleeve Type</th>
                                         <th style="width: 8%;">Size</th>
                                         <th style="width: 10%;">Art No</th>
-                                        <th style="width: 10%;">HSN/SAC</th>
+
                                         <th style="width: 8%;">UOM</th>
                                         <th style="width: 8%;">Qty *</th>
                                         <th style="width: 10%;">Rate *</th>
@@ -161,12 +161,7 @@
                                                 <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
                                             </td>
-                                            <td>
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="text" class="form-control" name="items[{{ $index }}][hsn_sac]" value="{{ $row->hsn_sac ?? '' }}" placeholder="HSN">
-                                                    <label>HSN/SAC</label>
-                                                </div>
-                                            </td>
+
                                             <td>
                                                 <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id }}">
@@ -200,7 +195,7 @@
                                         @endforeach
                                     @else
                                         <tr class="item-row">
-                                            <td colspan="9" class="text-center">No items found</td>
+                                            <td colspan="8" class="text-center">No items found</td>
                                         </tr>
                                     @endif
                                 </tbody>
@@ -557,12 +552,7 @@
                                         <span class="art-no-text">${item.art_no || ''}</span>
                                         <input type="hidden" name="items[${index}][art_no]" class="art-no" value="${item.art_no}">
                                     </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control" name="items[${index}][hsn_sac]" placeholder="HSN">
-                                            <label>HSN/SAC</label>
-                                        </div>
-                                    </td>
+
                                     <td>
                                         <span class="uom-text">${item.uom_code}</span>
                                         <input type="hidden" name="items[${index}][uom_id]" class="uom-id" value="${item.uom_id}">

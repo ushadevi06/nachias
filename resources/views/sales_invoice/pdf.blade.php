@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Tax Invoice - {{ $invoice->inv_no }}</title>
+    <title>Sales Invoice - {{ $invoice->inv_no }}</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -194,7 +194,7 @@
                         <table style="border: none;">
                             <tr>
                                 <td style="border: none; vertical-align: top; width:30%;">
-                                    <img src="{{ public_path('assets/images/jc_logo.png') }}" style="width: 180px;">
+                                    <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 180px;">
                                 </td>
                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;">
                                     <div style="font-size: 11px; line-height: 1.3;">
@@ -223,7 +223,7 @@
                     </td>
                     <td width="40%" class="text-right" style="vertical-align: top;">
                         <div style="margin-right: 10px;">ORIGINAL</div>
-                        <img src="{{ public_path('assets/images/qr_code.png') }}" class="qr-code">
+                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" class="qr-code">
                     </td>
                 </tr>
             </table>
@@ -338,16 +338,15 @@
             <thead style="border-bottom: 1px solid #000;">
                 <tr>
                     <th width="5%">S.No</th>
-                    <th width="30%">Description</th>
+                    <th width="35%">Description</th>
                     <th width="8%">Size</th>
                     <th width="10%">Art</th>
-                    <th width="10%">HSN/SAC</th>
-                    <th width="7%">Tax (%)</th>
-                    <th width="5%">UOM</th>
+                    <th width="8%">Tax (%)</th>
+                    <th width="6%">UOM</th>
                     <th width="8%">Quantity</th>
                     <th width="8%">MRP</th>
                     <th width="8%">Price</th>
-                    <th width="12%">Amount</th>
+                    <th width="14%">Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -362,7 +361,6 @@
                         </td>
                         <td class="text-center">{{ $item->size }}</td>
                         <td class="text-center">{{ $item->art_no }}</td>
-                        <td class="text-center">{{ $item->hsn_sac }}</td>
                         <td class="text-center">{{ $invoice->other_state ? $invoice->igst_percent : ($invoice->cgst_percent + $invoice->sgst_percent) }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
@@ -383,13 +381,12 @@
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
-                        <td>&nbsp;</td>
                     </tr>
                 @endfor
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="7" class="text-right bold"></td>
+                    <td colspan="6" class="text-right bold"></td>
                     <td class="text-center bold">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
                     <td colspan="2" class="text-right">Gross</td>
                     <td class="text-right bold">{{ number_format($invoice->sub_total, 2) }}</td>
@@ -413,7 +410,7 @@
                             </td>
                             <td style="width: 25%; padding: 4px; vertical-align: top; text-align: center; border-bottom: none; border-right: none;">
                                 <span style="font-weight: bold;">For UPI Payment</span><br>
-                                <img src="{{ public_path('assets/images/qr_code.png') }}" style="max-width: 85px; margin-top: 0px;">
+                                <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="max-width: 85px; margin-top: 0px;">
                             </td>
                         </tr>
                     </table>
@@ -534,7 +531,7 @@
             </tfoot>
         </table>
         <div style="margin-top: 4px; padding-left: 4px;">
-            <span style="font-size: 11px;">Remarks &nbsp;&nbsp;: {{ $invoice->remarks ?? 'order axe no 100004896' }}</span>
+            <span style="font-size: 11px;">Additional Notes &nbsp;&nbsp;: {{ $invoice->notes ?? 'order axe no 100004896' }}</span>
         </div>
         <table class="no-border" style="margin-top: 15px; width: 100%;">
             <tr>
