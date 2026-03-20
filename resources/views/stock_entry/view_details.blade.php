@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>View Stock Entry</h4>
-                <a href="{{ url('stock_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
+                <a href="{{ url('stock_entries') }}" class="btn btn-outline-secondary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
             </div>
             <div class="card detail-card">
                 <div class="card-body">
@@ -122,9 +122,30 @@
                             <label class="detail-title">Reference Document:</label>
                             <div class="text-muted">
                                 @if($stockEntry->reference_document)
-                                    <a href="{{ url('uploads/stock_entries/' . $stockEntry->reference_document) }}" target="_blank">View Document</a>
+                                    @php
+                                        $ext = pathinfo($stockEntry->reference_document, PATHINFO_EXTENSION);
+                                        $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                        $fileUrl = url('uploads/stock_entries/' . $stockEntry->reference_document);
+                                    @endphp
+                                    <div class="d-inline-flex align-items-center border rounded shadow-sm">
+                                        @if($isImage)
+                                            <img src="{{ $fileUrl }}" class="rounded cursor-pointer shadow-sm view-image border" data-image="{{ $fileUrl }}" width="50" height="50" style="object-fit: cover;" alt="Reference">
+                                        @else
+                                            <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
+                                                @if(strtolower($ext) == 'pdf')
+                                                    <i class="ri-file-pdf-fill text-danger fs-1"></i>
+                                                @else
+                                                    <i class="ri-file-text-fill text-primary fs-1"></i>
+                                                @endif
+                                                <div class="ms-2">
+                                                    <div class="fw-bold text-dark small text-uppercase">{{ $ext }} Document</div>
+                                                    <div class="text-muted small" style="font-size: 10px;">Click to view</div>
+                                                </div>
+                                            </a>
+                                        @endif
+                                    </div>
                                 @else
-                                    -
+                                    <span class="text-muted small">No document attached</span>
                                 @endif
                             </div>
                         </div>

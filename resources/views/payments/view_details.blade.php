@@ -14,7 +14,7 @@
                     <a href="{{ url('payments/print/' . $payment->id) }}" target="_blank" class="btn btn-primary">
                         <i class="ri ri-printer-line me-1"></i> Print
                     </a>
-                    <a href="{{ url('payments/download/' . $payment->id) }}" class="btn btn-primary">
+                    <a href="{{ url('payments/download/' . $payment->id) }}" class="btn btn-primary" target="_blank">
                         <i class="ri ri-download-line me-1"></i> Download
                     </a>
                     <a href="{{ url('payments') }}" class="btn btn-outline-secondary">
@@ -106,10 +106,22 @@
                                 @if($payment->attachment)
                                 <div class="col-md-4">
                                     <h6 class="text-uppercase text-primary small font-bold tracking-wider mb-3">Attachment</h6>
-                                    <div class="p-3 border rounded text-center">
-                                        <a href="{{ asset($payment->attachment) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                            <i class="ri ri-file-download-line me-1"></i> View Attachment
-                                        </a>
+                                    @php
+                                        $attachment = $payment->attachment;
+                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                        $url = asset($attachment);
+                                    @endphp
+
+                                    <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ basename($attachment) }}">
+                                        @if($isImage)
+                                            <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Attachment">
+                                        @else
+                                            <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                <i class="ri ri-file-text-line fs-2"></i>
+                                                <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                            </a>
+                                        @endif
                                     </div>
                                 </div>
                                 @endif

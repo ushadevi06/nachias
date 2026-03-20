@@ -235,9 +235,27 @@
                                             <label class="detail-title">Authorized Signature:</label>
                                             <div class="text-muted">
                                                 @if($invoice->signature_file)
-                                                    <a href="{{ asset($invoice->signature_file) }}" target="_blank">
-                                                        <i class="ri ri-file-line"></i> View
-                                                    </a>
+                                                    @php
+                                                        $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
+                                                        $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                        $sigUrl = asset($invoice->signature_file);
+                                                    @endphp
+                                                    <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
+                                                        @if($isSigImage)
+                                                            <img src="{{ $sigUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $sigUrl }}" width="45" height="45" style="object-fit: cover;" alt="Signature">
+                                                        @else
+                                                            <a href="{{ $sigUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
+                                                                @if(strtolower($sigExt) == 'pdf')
+                                                                    <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                                @else
+                                                                    <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                                @endif
+                                                                <span class="ms-1 small text-dark fw-bold text-uppercase" style="font-size: 10px;">{{ $sigExt }}</span>
+                                                            </a>
+                                                        @endif
+                                                    </div>
+                                                @else
+                                                    N/A
                                                 @endif
                                             </div>
                                         </div>
@@ -245,9 +263,27 @@
                                             <label class="detail-title">Attachments:</label>
                                             <div class="text-muted">
                                                 @if($invoice->attachment_file)
-                                                    <a href="{{ asset($invoice->attachment_file) }}" target="_blank">
-                                                        <i class="ri ri-file-line"></i> View
-                                                    </a>
+                                                    @php
+                                                        $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
+                                                        $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                        $attUrl = asset($invoice->attachment_file);
+                                                    @endphp
+                                                    <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
+                                                        @if($isAttImage)
+                                                            <img src="{{ $attUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $attUrl }}" width="45" height="45" style="object-fit: cover;" alt="Attachment">
+                                                        @else
+                                                            <a href="{{ $attUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
+                                                                @if(strtolower($attExt) == 'pdf')
+                                                                    <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                                @else
+                                                                    <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                                @endif
+                                                                <span class="ms-1 small text-dark fw-bold text-uppercase" style="font-size: 10px;">{{ $attExt }}</span>
+                                                            </a>
+                                                        @endif
+                                                    </div>
+                                                @else
+                                                    N/A
                                                 @endif
                                             </div>
                                         </div>

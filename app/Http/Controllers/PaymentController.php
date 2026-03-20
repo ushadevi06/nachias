@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Payment;
 use App\Models\PurchaseInvoice;
+use App\Models\SalesInvoice;
 use App\Models\DebitNote;
+use App\Models\CreditNote;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -35,7 +37,6 @@ class PaymentController extends Controller
 
                 $action = '<div class="button-box">';
                 $action .= '<a href="' . url('payments/view/' . $row->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a> ';
-                $action .= '<a href="' . url('payments/print/' . $row->id) . '" target="_blank" class="btn btn-print" title="Print"><i class="icon-base ri ri-printer-line"></i></a> ';
                 if (auth()->id() == 1 || auth()->user()->can('delete payments')) {
                     $action .= '<button type="button" class="btn btn-delete" onclick="delete_data(\'' . url('payments/delete/' . $row->id) . '\')" title="Delete"><i class="icon-base ri ri-delete-bin-line"></i></button>';
                 }
@@ -162,9 +163,17 @@ class PaymentController extends Controller
                         $invoice = PurchaseInvoice::find($payment->reference_id);
                         $payment->reference_no = $invoice ? $invoice->invoice_no : null;
                     }
+                    elseif ($payment->reference_type == 'Sales Invoice') {
+                        $invoice = SalesInvoice::find($payment->reference_id);
+                        $payment->reference_no = $invoice ? $invoice->inv_no : null;
+                    }
                     elseif ($payment->reference_type == 'Debit Note') {
                         $note = DebitNote::find($payment->reference_id);
                         $payment->reference_no = $note ? $note->debit_note_no : null;
+                    }
+                    elseif ($payment->reference_type == 'Credit Note') {
+                        $note = CreditNote::find($payment->reference_id);
+                        $payment->reference_no = $note ? $note->note_no : null;
                     }
                 }
 
@@ -172,6 +181,21 @@ class PaymentController extends Controller
                 if ($payment->reference_id) {
                     if ($payment->reference_type == 'Purchase Invoice' && $payment->payment_type == 'Supplier Payment') {
                         $invoice = PurchaseInvoice::find($payment->reference_id);
+                        if ($invoice) {
+                            $invoice->received_amount += $payment->amount;
+                            $invoice->due_amount = $invoice->grand_total - $invoice->received_amount;
+
+                            if ($invoice->due_amount <= 0) {
+                                $invoice->invoice_status = 'Paid';
+                            }
+                            else {
+                                $invoice->invoice_status = 'Partially Paid';
+                            }
+                            $invoice->save();
+                        }
+                    }
+                    elseif ($payment->reference_type == 'Sales Invoice' && $payment->payment_type == 'Customer Collection') {
+                        $invoice = SalesInvoice::find($payment->reference_id);
                         if ($invoice) {
                             $invoice->received_amount += $payment->amount;
                             $invoice->due_amount = $invoice->grand_total - $invoice->received_amount;
@@ -224,11 +248,12 @@ class PaymentController extends Controller
             }
         }
         elseif ($paymentType == 'Customer Collection') {
-            $references = [
-                ['id' => 'SO-1001', 'text' => 'SO-1001'],
-                ['id' => 'SO-1002', 'text' => 'SO-1002'],
-                ['id' => 'SO-1003', 'text' => 'SO-1003'],
-            ];
+            if ($docType == 'so-invoice') {
+                $references = SalesInvoice::where('invoice_status', '!=', 'Paid')->whereNull('deleted_at')->select('id', 'inv_no as text')->get();
+            }
+            elseif ($docType == 'credit-note') {
+                $references = CreditNote::where('status', 'Approved')->whereNull('deleted_at')->select('id', 'note_no as text')->get();
+            }
         }
         elseif ($paymentType == 'Agent Commission') {
             if ($docType == 'po-invoice') {
@@ -244,9 +269,22 @@ class PaymentController extends Controller
                         AND p.reference_type = "Purchase Invoice" 
                         AND p.reference_id = purchase_invoices.id 
                         AND p.deleted_at IS NULL
-                    )')
-                    ->select('purchase_invoices.id', 'purchase_invoices.invoice_no as text')
-                    ->get();
+                    )')->select('purchase_invoices.id', 'purchase_invoices.invoice_no as text')->get();
+            }
+            elseif ($docType == 'so-invoice') {
+                $references = SalesInvoice::join('sales_orders', 'sales_invoices.so_id', '=', 'sales_orders.id')
+                    ->whereNotNull('sales_orders.agent_id')
+                    ->where('sales_orders.commission_percent', '>', 0)
+                    ->whereNull('sales_invoices.deleted_at')
+                    ->whereNull('sales_orders.deleted_at')
+                    ->whereRaw('(sales_invoices.sub_total * sales_orders.commission_percent / 100) > (
+                        SELECT COALESCE(SUM(p.amount), 0) 
+                        FROM payments p 
+                        WHERE p.payment_type = "Agent Commission" 
+                        AND p.reference_type = "Sales Invoice" 
+                        AND p.reference_id = sales_invoices.id 
+                        AND p.deleted_at IS NULL
+                    )')->select('sales_invoices.id', 'sales_invoices.inv_no as text')->get();
             }
         }
 
@@ -266,7 +304,7 @@ class PaymentController extends Controller
                 if ($paymentType == 'Agent Commission') {
                     $commPercent = $invoice->purchaseOrder->commission ?? 0;
                     $details['total'] = ($invoice->sub_total * $commPercent) / 100;
-                    $details['paid'] = Payment::where('payment_type', 'Agent Commission')->where('reference_type', 'Purchase Invoice')->where('reference_id', $id)->sum('amount');
+                    $details['paid'] = Payment::where('payment_type', 'Agent Commission')->where('reference_type', 'Purchase Invoice')->where('reference_id', $id)->whereNull('deleted_at')->sum('amount');
                     $details['outstanding'] = $details['total'] - $details['paid'];
                     $details['agent_name'] = $invoice->purchaseOrder->purchaseCommissionAgent->name ?? 'N/A';
                     $details['commission_percent'] = $commPercent;
@@ -274,7 +312,26 @@ class PaymentController extends Controller
                 }
                 else {
                     $details['total'] = $invoice->grand_total;
-                    $details['paid'] = Payment::where('payment_type', 'Supplier Payment')->where('reference_type', 'Purchase Invoice')->where('reference_id', $id)->sum('amount');
+                    $details['paid'] = Payment::where('payment_type', 'Supplier Payment')->where('reference_type', 'Purchase Invoice')->where('reference_id', $id)->whereNull('deleted_at')->sum('amount');
+                    $details['outstanding'] = $invoice->grand_total - $details['paid'];
+                }
+            }
+        }
+        elseif ($docType == 'so-invoice') {
+            $invoice = SalesInvoice::with('salesOrder.salesAgent')->find($id);
+            if ($invoice) {
+                if ($paymentType == 'Agent Commission') {
+                    $commPercent = $invoice->salesOrder->commission_percent ?? 0;
+                    $details['total'] = ($invoice->sub_total * $commPercent) / 100;
+                    $details['paid'] = Payment::where('payment_type', 'Agent Commission')->where('reference_type', 'Sales Invoice')->where('reference_id', $id)->whereNull('deleted_at')->sum('amount');
+                    $details['outstanding'] = $details['total'] - $details['paid'];
+                    $details['agent_name'] = $invoice->salesOrder->salesAgent->name ?? 'N/A';
+                    $details['commission_percent'] = $commPercent;
+                    $details['commission_amount'] = $details['total'];
+                }
+                else {
+                    $details['total'] = $invoice->grand_total;
+                    $details['paid'] = Payment::where('payment_type', 'Customer Collection')->where('reference_type', 'Sales Invoice')->where('reference_id', $id)->whereNull('deleted_at')->sum('amount');
                     $details['outstanding'] = $invoice->grand_total - $details['paid'];
                 }
             }
@@ -283,12 +340,17 @@ class PaymentController extends Controller
             $note = DebitNote::find($id);
             if ($note) {
                 $details['total'] = $note->grand_total;
-                $details['paid'] = Payment::where('reference_type', 'Debit Note')->where('reference_id', $id)->sum('amount');
+                $details['paid'] = Payment::where('reference_type', 'Debit Note')->where('reference_id', $id)->whereNull('deleted_at')->sum('amount');
                 $details['outstanding'] = $note->grand_total - $details['paid'];
             }
         }
-        else {
-            $details = ['total' => 5000, 'paid' => 1000, 'outstanding' => 4000];
+        elseif ($docType == 'credit-note') {
+            $note = CreditNote::find($id);
+            if ($note) {
+                $details['total'] = $note->grand_total;
+                $details['paid'] = Payment::where('payment_type', 'Customer Collection')->where('reference_type', 'Credit Note')->where('reference_id', $id)->whereNull('deleted_at')->sum('amount');
+                $details['outstanding'] = $note->grand_total - $details['paid'];
+            }
         }
 
         return response()->json($details);
@@ -307,6 +369,21 @@ class PaymentController extends Controller
             if ($payment->reference_id) {
                 if ($payment->reference_type == 'Purchase Invoice' && $payment->payment_type == 'Supplier Payment') {
                     $invoice = PurchaseInvoice::find($payment->reference_id);
+                    if ($invoice) {
+                        $invoice->received_amount -= $payment->amount;
+                        $invoice->due_amount = $invoice->grand_total - $invoice->received_amount;
+
+                        if ($invoice->received_amount <= 0) {
+                            $invoice->invoice_status = 'Unpaid/Credit';
+                        }
+                        elseif ($invoice->due_amount > 0) {
+                            $invoice->invoice_status = 'Partially Paid';
+                        }
+                        $invoice->save();
+                    }
+                }
+                elseif ($payment->reference_type == 'Sales Invoice' && $payment->payment_type == 'Customer Collection') {
+                    $invoice = SalesInvoice::find($payment->reference_id);
                     if ($invoice) {
                         $invoice->received_amount -= $payment->amount;
                         $invoice->due_amount = $invoice->grand_total - $invoice->received_amount;
@@ -344,9 +421,9 @@ class PaymentController extends Controller
         $payment = Payment::findOrFail($id);
         $setting = Setting::first();
         $totalInWords = numberToWords($payment->amount);
+        $is_print = true;
 
-        $pdf = Pdf::loadView('payments.payment_pdf', compact('payment', 'setting', 'totalInWords'));
-        return $pdf->stream('payment_' . $payment->payment_no . '.pdf');
+        return view('payments.payment_pdf', compact('payment', 'setting', 'totalInWords', 'is_print'));
     }
 
     public function download($id)
@@ -359,7 +436,7 @@ class PaymentController extends Controller
         $totalInWords = numberToWords($payment->amount);
 
         $pdf = Pdf::loadView('payments.payment_pdf', compact('payment', 'setting', 'totalInWords'));
-        return $pdf->download('payment_' . $payment->payment_no . '.pdf');
+        return $pdf->stream('payment_' . $payment->payment_no . '.pdf');
     }
 
     private function mapDocType($type)

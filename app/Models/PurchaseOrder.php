@@ -57,6 +57,7 @@ class PurchaseOrder extends Model
         'tax_amount' => 'decimal:2',
         'round_off' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'additional_attachments' => 'array',
     ];
 
     public function purchaseCommissionAgent()

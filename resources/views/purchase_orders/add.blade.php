@@ -261,8 +261,9 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                                    <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="*">
                                                     <input type="hidden" name="items[{{ $index }}][existing_file]" value="{{ $item['existing_file'] ?? '' }}">
+                                                    <div class="mt-2 preview-container"></div>
                                                     @error('items.'.$index.'.attached_file')
                                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -381,13 +382,27 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                                    <input type="file" class="form-control file-input @error('items.'.$index.'.attached_file') is-invalid @enderror" name="items[{{ $index }}][attached_file]" accept="*">
                                                     <input type="hidden" name="items[{{ $index }}][existing_file]" value="{{ $item->attached_file }}">
-                                                    @if($item->attached_file)
-                                                        <a href="{{ url('uploads/purchase_orders/' . $item->attached_file) }}" class="mt-1 d-block" target="_blank">
-                                                            <i class="ri ri-image-line"></i> View
-                                                        </a>
-                                                    @endif
+                                                    <div class="mt-2 preview-container">
+                                                        @if($item->attached_file)
+                                                            @php
+                                                                $extension = pathinfo($item->attached_file, PATHINFO_EXTENSION);
+                                                                $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                                $fileUrl = url('uploads/purchase_orders/' . $item->attached_file);
+                                                            @endphp
+                                                            <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $item->attached_file }}">
+                                                                @if($isImage)
+                                                                    <img src="{{ $fileUrl }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" alt="Attachment">
+                                                                @else
+                                                                    <a href="{{ $fileUrl }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                                        <i class="ri ri-file-text-line fs-2"></i>
+                                                                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                    </a>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                     @error('items.'.$index.'.attached_file')
                                                     <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -473,8 +488,9 @@
                                                 <textarea class="form-control remarks" name="items[0][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
                                             </td>
                                             <td>
-                                                <input type="file" class="form-control file-input" name="items[0][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                                <input type="file" class="form-control file-input" name="items[0][attached_file]" accept="*">
                                                 <input type="hidden" name="items[0][existing_file]" value="">
+                                                <div class="mt-2 preview-container"></div>
                                             </td>
                                             <td>
                                                 <button type="button" class="btn btn-primary add_item">
@@ -530,33 +546,46 @@
                                         @enderror
                                     </div>
 
-                                    <div class="col-12 file-container">
+                                    <div class="col-12">
                                         <div class="form-floating form-floating-outline text-black">
-                                            <input type="file" class="form-control file-input @error('additional_attachments') is-invalid @enderror" id="additional_attachments" name="additional_attachments">
-                                            <label for="additional_attachments">Additional Attachments</label>
-                                            @if($purchaseOrder && $purchaseOrder->additional_attachments)
-                                            <div class="mt-2">
-                                                @php
-                                                    $attachment = $purchaseOrder->additional_attachments;
-                                                    $extension = pathinfo($attachment, PATHINFO_EXTENSION);
-                                                    $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                                    $url = url('uploads/purchase_orders/' . $attachment);
-                                                @endphp
-
-                                                <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
-                                                    @if($isImage)
-                                                        <i class="ri ri-image-line"></i> View
-                                                    @else
-                                                        <i class="ri ri-file-text-line"></i> View
-                                                    @endif
-                                                </a>
+                                            <input type="file" class="form-control @error('additional_attachments.*') is-invalid @enderror" id="additional_attachments" name="additional_attachments[]" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
+                                            <label for="additional_attachments">Additional Attachments (Max 5)</label>
+                                            @error('additional_attachments')
+                                                <div class="text-danger mt-1 small">{{ $message }}</div>
+                                            @enderror
+                                            @error('additional_attachments.*')
+                                                <div class="text-danger mt-1 small">{{ $message }}</div>
+                                            @enderror
+                                            <div id="attachment-list" class="mt-3 d-flex flex-wrap gap-3">
+                                                @if($purchaseOrder && $purchaseOrder->additional_attachments)
+                                                    @php
+                                                        $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
+                                                    @endphp
+                                                    @foreach($attachments as $attachment)
+                                                        @php
+                                                            $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
+                                                            $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp']);
+                                                            $fileUrl = url('uploads/purchase_orders/' . $attachment);
+                                                        @endphp
+                                                        <div class="attachment-item position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                            @if($isImage)
+                                                                <img src="{{ $fileUrl }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" alt="Attachment">
+                                                            @else
+                                                                <a href="{{ $fileUrl }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                                    <i class="ri ri-file-text-line fs-2"></i>
+                                                                    <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                </a>
+                                                            @endif
+                                                            <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center remove-existing-attachment" style="width: 20px; height: 20px; border: 2px solid white; line-height: 1;">
+                                                                <i class="ri ri-close-line fs-6"></i>
+                                                            </button>
+                                                            <input type="hidden" name="existing_additional_attachments[]" value="{{ $attachment }}">
+                                                        </div>
+                                                    @endforeach
+                                                @endif
                                             </div>
-                                            @endif
+                                            <small class="text-muted d-block mt-2">Max file size: 2MB per file. Supported: JPG, PNG, WEBP, PDF, DOC, DOCX</small>
                                         </div>
-                                        <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                        @error('additional_attachments')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                        @enderror
                                     </div>
                                 </div>
                             </div>
@@ -691,6 +720,7 @@
     </div>
 </div>
 
+
 @endsection
 
 @section('scripts')
@@ -770,8 +800,9 @@
                     <textarea class="form-control remarks" name="items[${itemIndex}][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
                 </td>
                 <td>
-                    <input type="file" class="form-control file-input" name="items[${itemIndex}][attached_file]" accept="image/jpeg,image/jpg,image/png,image/webp">
+                    <input type="file" class="form-control file-input" name="items[${itemIndex}][attached_file]" accept="*">
                     <input type="hidden" name="items[${itemIndex}][existing_file]" value="">
+                    <div class="mt-2 preview-container"></div>
                 </td>
                 <td>
                     <button type="button" class="btn btn-danger delete_item">
@@ -993,6 +1024,98 @@
                 calculateTotals();
             }
         });
+
+        $(document).on('click', '.remove-existing-attachment', function() {
+            $(this).closest('.attachment-item').remove();
+        });
+
+        // Item Details File Input Change Handler
+        $(document).on('change', '.file-input', function () {
+            let file = this.files[0];
+            let $container = $(this).siblings('.preview-container');
+            
+            $container.empty();
+
+            if (file) {
+                const reader = new FileReader();
+                const isImage = file.type.startsWith('image/');
+                const extension = file.name.split('.').pop().toUpperCase();
+                const fileUrl = URL.createObjectURL(file);
+                
+                const previewHtml = `<div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="${file.name}">
+                    <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded overflow-hidden js-loading">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    </div>
+                </div>`;
+                
+                $container.html(previewHtml);
+
+                if (isImage) {
+                    reader.onload = function(e) {
+                        $container.find('.attachment-thumb').html(`
+                            <img src="${e.target.result}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="${e.target.result}" alt="Preview">
+                        `);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    $container.find('.attachment-thumb').html(`
+                        <a href="${fileUrl}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                            <i class="ri ri-file-text-line fs-2"></i>
+                            <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">${extension}</span>
+                        </a>
+                    `);
+                }
+            }
+        });
+
+        $('#additional_attachments').on('change', function() {
+            let existingCount = $('.attachment-item').length;
+            let fileCount = this.files.length;
+            let total = existingCount + fileCount;
+
+            if (total > 5) {
+                alert('You can only upload a maximum of 5 attachments in total.');
+                this.value = '';
+                return;
+            }
+
+            // Remove only newly added previews (not existing ones)
+            $('.new-attachment-preview').remove();
+
+            Array.from(this.files).forEach((file, index) => {
+                const reader = new FileReader();
+                const isImage = file.type.startsWith('image/');
+                const extension = file.name.split('.').pop().toUpperCase();
+                const fileUrl = URL.createObjectURL(file);
+                
+                const previewId = `preview-${index}`;
+                const previewHtml = `<div id="${previewId}" class="attachment-item new-attachment-preview position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="${file.name}">
+                    <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded overflow-hidden">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    </div>
+                </div>`;
+                
+                $('#attachment-list').append(previewHtml);
+
+                if (isImage) {
+                    reader.onload = function(e) {
+                                $(`#${previewId}`).html(`
+                                    <img src="${e.target.result}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="${e.target.result}" alt="Attachment">
+                                `);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    $(`#${previewId}`).html(`
+                        <a href="${fileUrl}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                            <i class="ri ri-file-text-line fs-2"></i>
+                            <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">${extension}</span>
+                        </a>
+                    `);
+                }
+            });
+        });
+
+
 
     calculateTotals();
 });

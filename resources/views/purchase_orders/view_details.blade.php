@@ -162,30 +162,27 @@
                             <h5 class="mb-0 fw-bold text-dark text-uppercase small">Attachments</h5>
                         </div>
                         <div class="card-body p-4">
-                            @php
-                                $attachment = $purchaseOrder->additional_attachments;
-                                $extension = pathinfo($attachment, PATHINFO_EXTENSION);
-                                $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                $url = url('uploads/purchase_orders/' . $attachment);
-                            @endphp
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-light p-3 rounded-3">
-                                    <i class="ri ri-file-{{ $isImage ? 'image' : 'text' }}-line fs-3 text-primary"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark small text-break">{{ $attachment }}</div>
-                                    <div class="mt-2 text-break">
+                            <div class="d-flex flex-wrap gap-3">
+                                @php
+                                    $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
+                                @endphp
+                                @foreach($attachments as $attachment)
+                                    @php
+                                        $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
+                                        $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                        $url = url('uploads/purchase_orders/' . $attachment);
+                                    @endphp
+                                    <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
                                         @if($isImage)
-                                            <a href="javascript:void(0)" class="view-image btn btn-soft-primary btn-sm px-3" data-image="{{ $url }}">
-                                                <i class="ri ri-eye-line me-1"></i> View
-                                            </a>
+                                            <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Attachment">
                                         @else
-                                            <a href="{{ $url }}" target="_blank" class="btn btn-soft-secondary btn-sm px-3">
-                                                <i class="ri ri-download-line me-1"></i> Download
+                                            <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
+                                                <i class="ri ri-file-text-line fs-2 text-primary"></i>
+                                                <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
                                             </a>
                                         @endif
                                     </div>
-                                </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -264,31 +261,4 @@
     .btn-soft-secondary:hover { background-color: #6c757d; color: white; }
     .text-break { word-wrap: break-word !important; word-break: break-word !important; }
 </style>
-
-<!-- Image Preview Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h6 class="modal-title fw-bold">Attachment Preview</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center p-4">
-                <img id="modalImage" src="" class="img-fluid rounded shadow-sm" alt="Preview">
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
-
-@section('scripts')
-<script>
-$(document).ready(function () {
-    $(document).on('click', '.view-image', function () {
-        let imageSrc = $(this).data('image');
-        $('#modalImage').attr('src', imageSrc);
-        $('#imageModal').modal('show');
-    });
-});
-</script>
 @endsection

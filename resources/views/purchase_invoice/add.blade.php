@@ -466,8 +466,12 @@
                                             <div class="form-floating form-floating-outline text-black">
                                                 <input type="file" class="form-control @error('auth_sign') is-invalid @enderror" id="auth_sign" name="auth_sign" accept="*">
                                                 <label for="auth_sign">Authorized Signature / Stamp Upload</label>
+                                                @error('auth_sign')
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                @enderror
+                                                <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                                 @if(!empty($invoice->auth_signature))
-                                                <div class="mt-2">
+                                                <div class="mt-2 preview-container">
                                                     @php
                                                         $attachment = $invoice->auth_signature;
                                                         $extension = pathinfo($attachment, PATHINFO_EXTENSION);
@@ -475,22 +479,21 @@
                                                         $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
                                                     @endphp
 
-                                                    @if($isImage)
-                                                        <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ $url }}">
-                                                            <i class="ri ri-image-line"></i> View
-                                                        </a>
-                                                    @else
-                                                        <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
-                                                            <i class="ri ri-file-text-line"></i> View
-                                                        </a>
-                                                    @endif
+                                                    <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                        @if($isImage)
+                                                            <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Signature">
+                                                        @else
+                                                            <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
+                                                                <i class="ri ri-file-text-line fs-2 text-primary"></i>
+                                                                <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                            </a>
+                                                        @endif
+                                                    </div>
                                                 </div>
+                                                @else
+                                                <div class="mt-2 preview-container"></div>
                                                 @endif
                                             </div>
-                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                            @error('auth_sign')
-                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                            @enderror
                                         </div>
 
                                         <div class="mb-3 mt-5">
@@ -498,7 +501,7 @@
                                                 <input type="file" class="form-control @error('attachments') is-invalid @enderror" id="attachments" name="attachments">
                                                 <label for="attachments">Attachments</label>
                                                 @if(!empty($invoice->attachments))
-                                                <div class="mt-2">
+                                                <div class="mt-2 preview-container">
                                                     @php
                                                         $attachment = $invoice->attachments;
                                                         $extension = pathinfo($attachment, PATHINFO_EXTENSION);
@@ -506,22 +509,25 @@
                                                         $url = url('uploads/purchase_invoices/' . $invoice->attachments);
                                                     @endphp
 
-                                                    @if($isImage)
-                                                        <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="{{ $url }}">
-                                                            <i class="ri ri-image-line"></i> View
-                                                        </a>
-                                                    @else
-                                                        <a href="{{ $url }}" class="mt-1 d-block" target="_blank">
-                                                            <i class="ri ri-file-text-line"></i> View
-                                                        </a>
-                                                    @endif
+                                                    @error('attachments')
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                    <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                                    <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                        @if($isImage)
+                                                            <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Attachment">
+                                                        @else
+                                                            <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
+                                                                <i class="ri ri-file-text-line fs-2 text-primary"></i>
+                                                                <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                            </a>
+                                                        @endif
+                                                    </div>
                                                 </div>
+                                                @else
+                                                <div class="mt-2 preview-container"></div>
                                                 @endif
                                             </div>
-                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                            @error('attachments')
-                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                            @enderror
                                         </div>
                                     </div>
                                 </div>
@@ -759,31 +765,13 @@
 </div>
 @endif
 
-<!-- Image Preview Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Image Preview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalImage" src="" class="img-fluid" alt="Preview">
-            </div>
-        </div>
-    </div>
-</div>
+
 
 
 @endsection
 @section('scripts')
 <script>
     $(document).ready(function() {
-        $(document).on('click', '.view-image', function() {
-            let imageUrl = $(this).data('image');
-            $('#modalImage').attr('src', imageUrl);
-            $('#imageModal').modal('show');
-        });
         $('.select2').select2({
             width: '100%',
             dropdownParent: $('body')
@@ -1678,12 +1666,10 @@
         });
         @endif
 
-        // Recalculate when round off type changes (Delegated Event for robustness)
         $(document).on('change', 'input[name="round_off_type"]', function() {
             calculateSummaryOnly();
         });
 
-        // Form submission validation
         $('form.common-form').on('submit', function(e) {
             let hasSelectedItems = $('.item-checkbox:checked').length > 0;
             if (!hasSelectedItems && $('#purchase_order').val()) {
@@ -1700,59 +1686,5 @@
 
     });
 </script>
-<script>
-    $(document).ready(function() {
-        // ... (existing scripts) ... 
-        
-        // Image Preview Modal Logic
-        $(document).on('click', '.view-image', function () {
-            let imagePath = $(this).data('image');
-            let imageSrc = imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('blob:')
-                ? imagePath
-                : "{{ url('/') }}/" + imagePath;
 
-            $('#modalImage').attr('src', imageSrc);
-            $('#imageModal').modal('show');
-        });
-
-        // File Input Change Handler (New Uploads)
-        // $('#auth_sign, #attachments').on('change', function () {
-        //     let file = this.files[0];
-        //     let $container = $(this).parent(); // Adjust based on HTML structure if needed
-            
-        //     // Remove ONLY dynamic previews (added by JS), keeping any server-rendered "View" link
-        //     $container.find('.js-preview').remove();
-
-        //     if (file) {
-        //         let fileUrl = URL.createObjectURL(file);
-        //         let fileType = file.type;
-
-        //         if (fileType.startsWith('image/')) {
-        //              $container.append(`
-        //                 <div class="mt-2 js-preview">
-        //                     <a href="javascript:void(0)" class="view-image mt-1 d-block" data-image="${fileUrl}">
-        //                         <i class="ri ri-image-line"></i> View Selected Image
-        //                     </a>
-        //                 </div>
-        //             `);
-        //         } else if (fileType === 'application/pdf') {
-        //              $container.append(`
-        //                 <div class="mt-2 js-preview">
-        //                     <a href="${fileUrl}" class="mt-1 d-block" target="_blank">
-        //                         <i class="ri ri-file-pdf-line"></i> View Selected PDF
-        //                     </a>
-        //                 </div>
-        //             `);
-        //         } else {
-        //              $container.append(`
-        //                 <div class="mt-2 js-preview">
-        //                     <span class="text-muted small mt-1 d-block text-truncate">Selected: ${file.name}</span>
-        //                 </div>
-        //             `);
-        //         }
-        //     }
-        // });
-        
-    });
-</script>
 @endsection

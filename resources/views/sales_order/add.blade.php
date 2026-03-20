@@ -50,7 +50,7 @@
                                     <select id="season_id" name="season_id" class="select2 form-select" data-placeholder="Select Season">
                                         <option value="">Select Season</option>
                                         @foreach($seasons as $season)
-                                        <option value="{{ $season->id }}" {{ old('season_id', $salesOrder->season_id ?? '') == $season->id ? 'selected' : '' }}>{{ $season->name }}</option>
+                                        <option value="{{ $season->id }}" {{ old('season_id', $salesOrder->season_id ?? '') == $season->id ? 'selected' : '' }}>{{ $season->name }}({{ $season->season_code }})</option>
                                         @endforeach
                                     </select>
                                     <label for="season_id">Season</label>
@@ -106,10 +106,10 @@
                                     </div>
                                     <div class="col-6">
                                         <div class="form-floating form-floating-outline">
-                                            <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Agent">
+                                            <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Agent/Executive">
                                                 <option value="">Select Sales Agent/Executive</option>
                                                 @foreach($sales_agent as $agent)
-                                                <option value="{{ $agent->id }}" {{ old('agent_id', $salesOrder->agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }}</option>
+                                                <option value="{{ $agent->id }}" {{ old('agent_id', $salesOrder->agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }}({{ $agent->code }})</option>
                                                 @endforeach
                                             </select>
                                             <label for="agent_id">Sales Agent/Executive</label>
@@ -599,11 +599,27 @@
                                         </div>
                                         <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                         @if($salesOrder && $salesOrder->attachment)
-                                        <div class="mt-2 d-flex flex-wrap gap-2">
+                                        <div class="mt-2 d-flex flex-wrap gap-3">
                                             @foreach(explode(',', $salesOrder->attachment) as $file)
-                                            <a href="{{ url('uploads/so/' . $salesOrder->id . '/' . $file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                <i class="ri ri-file-line me-1"></i> View
-                                            </a>
+                                                @php
+                                                    $ext = pathinfo($file, PATHINFO_EXTENSION);
+                                                    $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                    $fileUrl = url('uploads/so/' . $salesOrder->id . '/' . $file);
+                                                @endphp
+                                                <div class="p-1 border rounded bg-light shadow-sm d-flex align-items-center">
+                                                    @if($isImage)
+                                                        <img src="{{ $fileUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" width="45" height="45" style="object-fit: cover;" alt="Attachment">
+                                                    @else
+                                                        <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
+                                                            @if(strtolower($ext) == 'pdf')
+                                                                <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                            @else
+                                                                <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                            @endif
+                                                            <span class="ms-1 small text-dark fw-bold text-uppercase" style="font-size: 10px;">{{ $ext }}</span>
+                                                        </a>
+                                                    @endif
+                                                </div>
                                             @endforeach
                                         </div>
                                         @endif

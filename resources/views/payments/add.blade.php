@@ -164,6 +164,32 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="file" name="attachment" id="attachment" class="form-control">
                                     <label for="attachment">Attachment</label>
+                                    <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                    @error('attachment') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                    
+                                    @if(isset($payment) && !empty($payment->attachment))
+                                    <div class="mt-2 preview-container">
+                                        @php
+                                            $attachment = $payment->attachment;
+                                            $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                            $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                            $url = asset($attachment);
+                                        @endphp
+
+                                        <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ basename($attachment) }}">
+                                            @if($isImage)
+                                                <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Attachment">
+                                            @else
+                                                <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                    <i class="ri ri-file-text-line fs-2"></i>
+                                                    <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                </a>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @else
+                                    <div class="mt-2 preview-container"></div>
+                                    @endif
                                 </div>
                             </div>
 
@@ -195,11 +221,11 @@
             
             docSelect.html('<option value="">Select Reference Document</option>');
             if (paymentType === 'Customer Collection') {
-                docSelect.append('<option value="so-invoice" ' + (oldDoc == "so-invoice" ? "selected" : "") + '>SO Invoice</option>');
+                docSelect.append('<option value="so-invoice" ' + (oldDoc == "so-invoice" ? "selected" : "") + '>SO Invoice</option><option value="credit-note" ' + (oldDoc == "credit-note" ? "selected" : "") + '>Credit Note</option>');
             } else if (paymentType === 'Supplier Payment') {
                 docSelect.append('<option value="po-invoice" ' + (oldDoc == "po-invoice" ? "selected" : "") + '>PO Invoice</option><option value="debit-note" ' + (oldDoc == "debit-note" ? "selected" : "") + '>Debit Note</option>');
             } else if (paymentType === 'Agent Commission') {
-                docSelect.append('<option value="po-invoice" ' + (oldDoc == "po-invoice" ? "selected" : "") + '>PO Invoice</option>');
+                docSelect.append('<option value="po-invoice" ' + (oldDoc == "po-invoice" ? "selected" : "") + '>PO Invoice</option><option value="so-invoice" ' + (oldDoc == "so-invoice" ? "selected" : "") + '>SO Invoice</option>');
             }
             
             if (paymentType === 'Agent Commission') {

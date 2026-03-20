@@ -79,7 +79,7 @@
                     status: status
                 },
                 success: function(response) {
-                    $msg.html('<span class="text-success small">Updated!</span>').fadeIn().delay(1000).fadeOut();
+                    $msg.html('<span class="text-success small">Updated Successfully!</span>').fadeIn().delay(1000).fadeOut();
                 }
             });
         });

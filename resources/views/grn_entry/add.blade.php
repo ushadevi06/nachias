@@ -149,9 +149,7 @@
                                                                  <input type="file" name="items[{{$idx}}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/webp" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
                                                                 @if(isset($itemObj->image) && $itemObj->image)
                                                                     <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
-                                                                    <a href="{{ url('uploads/grn_items/' . $itemObj->image) }}" target="_blank">
-                                                                        <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded">
-                                                                    </a>
+                                                                    <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded cursor-pointer view-image" data-image="{{ url('uploads/grn_items/' . $itemObj->image) }}" alt="Item">
                                                                 @endif
                                                                 @error("items.$idx.item_image") <div class="text-danger small">{{ $message }}</div> @enderror
                                                             </td>

@@ -175,7 +175,9 @@ class PurchaseOrderController extends Controller
                 'items.*.brand_id' => 'nullable|exists:brands,id',
                 'items.*.fabric_width_id' => 'nullable|exists:size_ratios,id',
                 'discount_percent' => 'nullable',
-                'additional_attachments' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
+                'additional_attachments' => 'nullable|array|max:5',
+                'additional_attachments.*' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
+                'existing_additional_attachments' => 'nullable|array',
                 'round_off_type' => 'nullable|in:Add,Less',
                 'round_off' => 'nullable|numeric|min:0',
             ];
@@ -195,6 +197,9 @@ class PurchaseOrderController extends Controller
                 'items.*.attached_file.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
                 'items.*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
                 'regex' => 'This field is an invalid format',
+                'additional_attachments.max' => 'You can upload a maximum of 5 files.',
+                'additional_attachments.*.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
+                'additional_attachments.*.max' => 'Uploaded file cannot exceed 2MB.',
             ];
 
             $validated = $request->validate($rules, $messages);
@@ -261,23 +266,37 @@ class PurchaseOrderController extends Controller
                     $message = 'Purchase Order created successfully';
                 }
 
-                if ($request->hasFile('additional_attachments')) {
-                    if ($id && !empty($purchaseOrder->additional_attachments)) {
-                        $oldFilePath = public_path('uploads/purchase_orders/' . $purchaseOrder->additional_attachments);
-                        if (file_exists($oldFilePath)) {
-                            @unlink($oldFilePath);
-                        }
-                    }
+                $attachments = $request->existing_additional_attachments ?? [];
 
-                    $file = $request->file('additional_attachments');
-                    $fileName = 'additional_' . time() . '.' . $file->getClientOriginalExtension();
+                if ($request->hasFile('additional_attachments')) {
                     $uploadPath = public_path('uploads/purchase_orders');
                     if (!file_exists($uploadPath)) {
                         mkdir($uploadPath, 0755, true);
                     }
-                    $file->move($uploadPath, $fileName);
-                    $purchaseOrder->update(['additional_attachments' => $fileName]);
+
+                    foreach ($request->file('additional_attachments') as $file) {
+                        if (count($attachments) >= 5)
+                            break;
+
+                        $fileName = 'additional_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                        $file->move($uploadPath, $fileName);
+                        $attachments[] = $fileName;
+                    }
                 }
+
+                if ($id) {
+                    $oldAttachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : ($purchaseOrder->additional_attachments ? [$purchaseOrder->additional_attachments] : []);
+                    foreach ($oldAttachments as $oldFile) {
+                        if (!in_array($oldFile, $attachments)) {
+                            $filePath = public_path('uploads/purchase_orders/' . $oldFile);
+                            if (file_exists($filePath)) {
+                                @unlink($filePath);
+                            }
+                        }
+                    }
+                }
+
+                $purchaseOrder->update(['additional_attachments' => $attachments]);
 
                 foreach ($request->items as $index => $item) {
                     $itemData = [
@@ -428,9 +447,12 @@ class PurchaseOrderController extends Controller
         }
 
         if ($purchaseOrder->additional_attachments) {
-            $filePath = public_path('uploads/purchase_orders/' . $purchaseOrder->additional_attachments);
-            if (file_exists($filePath)) {
-                unlink($filePath);
+            $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
+            foreach ($attachments as $attachment) {
+                $filePath = public_path('uploads/purchase_orders/' . $attachment);
+                if (file_exists($filePath)) {
+                    @unlink($filePath);
+                }
             }
         }
 

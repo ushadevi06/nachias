@@ -63,6 +63,18 @@
                                     <label for="reason">Reason *</label>
                                 </div>
                             </div>
+                            <div class="col-lg-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select class="select2 form-select" name="status" id="status" data-placeholder="Select Status">
+                                        <option value="">Select Status</option>
+                                        <option value="Draft" {{ old('status', $creditNote->status ?? 'Draft') == 'Draft' ? 'selected' : '' }}>Draft</option>
+                                        <option value="Approved" {{ old('status', $creditNote->status ?? '') == 'Approved' ? 'selected' : '' }}>Approved</option>
+                                        <option value="Cancelled" {{ old('status', $creditNote->status ?? '') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                    </select>
+                                    <label for="status">Status *</label>
+                                    @error('status') <small class="text-danger">{{ $message }}</small> @enderror
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -202,23 +214,40 @@
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-12">
-                                        <div class="form-group mb-3">
+                                        <div class="form-floating form-floating-outline">
                                             <textarea class="form-control" id="remarks" name="remarks" placeholder="Remarks">{{ old('remarks', $creditNote->remarks ?? '') }}</textarea>
+                                            <label for="remarks">Remarks</label>
                                             @error('remarks') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
                                     <div class="col-12">
-                                        <div class="form-group">
-                                            <label for="reference_document" class="form-label fw-bold small text-muted">Reference Document (Attachment)</label>
+                                        <div class="form-floating form-floating-outline">
                                             <input class="form-control" type="file" id="reference_document" name="reference_document">
+                                            <label for="reference_document">Reference Document (Attachment)</label>
                                             <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                             @error('reference_document') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                                            @if(isset($creditNote) && $creditNote->reference_doc)
-                                                <div class="mb-2">
-                                                    <a href="{{ asset('uploads/credit_notes/' . $creditNote->reference_doc) }}" target="_blank" class="mt-1 d-block">
-                                                        <i class="ri ri-image-line"></i> View
-                                                    </a>
+                                            @if(isset($creditNote) && !empty($creditNote->reference_doc))
+                                            <div class="mt-2 preview-container">
+                                                @php
+                                                    $attachment = $creditNote->reference_doc;
+                                                    $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                                    $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                    $url = url('uploads/credit_notes/' . $attachment);
+                                                @endphp
+
+                                                <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                    @if($isImage)
+                                                        <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Reference">
+                                                    @else
+                                                        <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                            <i class="ri ri-file-text-line fs-2"></i>
+                                                            <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                        </a>
+                                                    @endif
                                                 </div>
+                                            </div>
+                                            @else
+                                            <div class="mt-2 preview-container"></div>
                                             @endif
                                         </div>
                                     </div>

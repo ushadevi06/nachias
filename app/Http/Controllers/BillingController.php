@@ -39,13 +39,13 @@ class BillingController extends Controller
                 </div>';
 
                 $data[] = [
-                    'DT_RowIndex'  => $i++,
-                    'bill_no'      => $row->bill_no,
+                    'DT_RowIndex' => $i++,
+                    'bill_no' => $row->bill_no,
                     'billing_type' => $row->billing_type,
-                    'bill_date'    => $row->bill_date ? $row->bill_date->format('d-m-Y') : '',
-                    'amount'       => '₹' . number_format($row->amount, 2),
-                    'status'       => $status,
-                    'action'       => $action,
+                    'bill_date' => $row->bill_date ? $row->bill_date->format('d-m-Y') : '',
+                    'amount' => '₹' . number_format($row->amount, 2),
+                    'status' => $status,
+                    'action' => $action,
                 ];
             }
 
@@ -57,17 +57,17 @@ class BillingController extends Controller
 
     public function add(Request $request, $id = null)
     {
-        $billing = $id ? Billing::findOrFail($id) : null;
+        $billing = $id ?Billing::findOrFail($id) : null;
 
         if ($request->isMethod('POST')) {
             $request->validate([
-                'bill_no'      => 'required|string|max:100',
+                'bill_no' => 'required|string|max:100',
                 'billing_type' => 'required|string',
-                'bill_date'    => 'required|date',
-                'amount'       => 'nullable|numeric|min:0',
-                'reason'       => 'nullable|string',
-                'status'       => 'required|string',
-            ],[
+                'bill_date' => 'required|date',
+                'amount' => 'nullable|numeric|min:0',
+                'reason' => 'nullable|string',
+                'status' => 'required|string',
+            ], [
                 'required' => 'This field is required.',
             ]);
 
@@ -78,7 +78,8 @@ class BillingController extends Controller
                 $billing->update($data);
                 addLog('update', 'Billing', 'billings', $billing->id, $oldData, $billing->fresh()->toArray());
                 $msg = 'Billing updated successfully.';
-            } else {
+            }
+            else {
                 $newBilling = Billing::create($data);
                 addLog('create', 'Billing', 'billings', $newBilling->id, null, $newBilling->toArray());
                 $msg = 'Billing added successfully.';
@@ -138,6 +139,6 @@ class BillingController extends Controller
         $pdf->setPaper('A4', 'portrait');
 
         $safeBillNo = str_replace(['/', '\\'], '_', $billing->bill_no);
-        return $pdf->download('Billing_' . $safeBillNo . '.pdf');
+        return $pdf->stream('Billing_' . $safeBillNo . '.pdf');
     }
 }

@@ -190,16 +190,17 @@
                                             $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
                                             $url = url('uploads/purchase_invoices/' . $attachment);
                                         @endphp
-                                        <div class="mt-2">
-                                            @if($isImage)
-                                                <button class="btn btn-sm btn-outline-primary view-image px-3 py-2" data-image="{{ $url }}" style="border-color: #834fde; color: #834fde; font-weight: bold; border-radius: 8px;">
-                                                    <i class="ri ri-file-list-3-line me-1"></i> VIEW FILE
-                                                </button>
-                                            @else
-                                                <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-primary px-3 py-2" style="border-color: #834fde; color: #834fde; font-weight: bold; border-radius: 8px;">
-                                                    <i class="ri ri-file-list-3-line me-1"></i> VIEW FILE
-                                                </a>
-                                            @endif
+                                        <div class="mt-2 text-start">
+                                            <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                @if($isImage)
+                                                    <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Attachment">
+                                                @else
+                                                    <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                        <i class="ri ri-file-text-line fs-2"></i>
+                                                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                    </a>
+                                                @endif
+                                            </div>
                                         </div>
                                     @else
                                         <span class="text-muted small fst-italic">No attachment</span>
@@ -214,16 +215,17 @@
                                             $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
                                             $url = url('uploads/purchase_invoices/' . $attachment);
                                         @endphp
-                                        <div class="mt-2">
-                                            @if($isImage)
-                                                <button class="btn btn-sm btn-outline-primary view-image px-3 py-2" data-image="{{ $url }}" style="border-color: #834fde; color: #834fde; font-weight: bold; border-radius: 8px;">
-                                                    <i class="ri ri-quill-pen-line me-1"></i> VIEW SIGNATURE
-                                                </button>
-                                            @else
-                                                <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-primary px-3 py-2" style="border-color: #834fde; color: #834fde; font-weight: bold; border-radius: 8px;">
-                                                    <i class="ri ri-quill-pen-line me-1"></i> VIEW FILE
-                                                </a>
-                                            @endif
+                                        <div class="mt-2 text-start">
+                                            <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                @if($isImage)
+                                                    <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Signature">
+                                                @else
+                                                    <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                        <i class="ri ri-file-text-line fs-2"></i>
+                                                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                    </a>
+                                                @endif
+                                            </div>
                                         </div>
                                     @else
                                         <div class="text-muted small fst-italic">No signature</div>
@@ -309,30 +311,4 @@
     </div>
 </div>
 
-<!-- Image Preview Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold">Document Preview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center p-4">
-                <img id="modalImage" src="" class="img-fluid rounded shadow-sm" alt="Preview">
-            </div>
-        </div>
-    </div>
-</div>
-@endsection
-
-@section('scripts')
-<script>
-    $(document).ready(function() {
-        $(document).on('click', '.view-image', function() {
-            let imageUrl = $(this).data('image');
-            $('#modalImage').attr('src', imageUrl);
-            $('#imageModal').modal('show');
-        });
-    });
-</script>
 @endsection

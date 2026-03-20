@@ -6,8 +6,8 @@
         <div class="col-lg-12">
             <div class="table-header-box d-flex justify-content-between align-items-center mb-4">
                 <h4 class="mb-0">Stock Consumable Details</h4>
-                <a href="{{ url('stock_consumables_returns') }}" class="btn btn-primary shadow-sm">
-                    <i class="ri ri-arrow-left-line me-1"></i> Back to List
+                <a href="{{ url('stock_consumables_returns') }}" class="btn btn-outline-secondary">
+                    <i class="ri ri-arrow-left-line me-1"></i> Back
                 </a>
             </div>
 
@@ -99,14 +99,6 @@
                             <h5 class="mb-0 fw-bold text-secondary"><i class="ri ri-links-line me-2"></i>Source Reference</h5>
                         </div>
                         <div class="card-body py-4">
-                            <div class="mb-4">
-                                <label class="text-muted small fw-medium text-uppercase mb-1 d-block">Production No</label>
-                                <div class="d-flex align-items-center">
-                                    <span class="badge bg-label-primary px-3 py-2 fs-6">
-                                        {{ $consumable->production ? 'PROD-' . str_pad($consumable->production_id, 4, '0', STR_PAD_LEFT) : '-' }}
-                                    </span>
-                                </div>
-                            </div>
                             <div class="mb-4">
                                 <label class="text-muted small fw-medium text-uppercase mb-1 d-block">Job Card No</label>
                                 <h6 class="mb-0 fw-bold text-dark">{{ $consumable->jobCard ? $consumable->jobCard->job_card_no : '-' }}</h6>

@@ -92,7 +92,26 @@
                                 <div class="form-floating form-floating-outline text-black">
                                     <input type="file" class="form-control" id="formFile" name="reference_document" accept="*">
                                     @if($stockEntry && $stockEntry->reference_document)
-                                    <a href="{{ url('uploads/stock_entries/' . $stockEntry->reference_document) }}" target="_blank" class="small">View current document</a>
+                                        @php
+                                            $ext = pathinfo($stockEntry->reference_document, PATHINFO_EXTENSION);
+                                            $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                            $fileUrl = url('uploads/stock_entries/' . $stockEntry->reference_document);
+                                        @endphp
+                                        <div class="mt-2 p-2 border rounded d-inline-flex align-items-center">
+                                            @if($isImage)
+                                                <img src="{{ $fileUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" width="40" height="40" style="object-fit: cover;" alt="Reference">
+                                            @else
+                                                <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center">
+                                                    @if(strtolower($ext) == 'pdf')
+                                                        <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                    @else
+                                                        <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                    @endif
+                                                    <span class="ms-1 small text-dark fw-bold text-uppercase">{{ $ext }}</span>
+                                                </a>
+                                            @endif
+                                            <span class="ms-2 small text-muted">Current File</span>
+                                        </div>
                                     @endif
                                     <label for="formFile" class="form-label">Reference Document</label>
                                     <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>

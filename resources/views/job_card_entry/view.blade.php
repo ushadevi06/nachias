@@ -10,12 +10,9 @@
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
             </div>
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+             <div class="col-lg-12">
+                @include('flash_messages')
             </div>
-            @endif
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable table-responsive">

@@ -88,7 +88,6 @@
             ],
             language: {
                 search: "_INPUT_",
-                searchPlaceholder: "Search payments..."
             }
         });
 

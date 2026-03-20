@@ -7,6 +7,7 @@ use App\Models\GrnEntryItem;
 use App\Models\GrnEntryItemVariant;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
+use App\Models\PurchaseOrder;
 use App\Models\User;
 use App\Models\FabricType;
 use App\Models\StoreLocation;
@@ -320,11 +321,11 @@ class GrnEntryController extends Controller
 
                 if (isset($invoice->purchase_order_id)) {
                     $poId = $invoice->purchase_order_id;
-                    $po = \App\Models\PurchaseOrder::with('items')->find($poId);
+                    $po = PurchaseOrder::with('items')->find($poId);
                     if ($po) {
                         $isFullyReceived = true;
                         foreach ($po->items as $poItem) {
-                            $totalReceived = \App\Models\GrnEntryItem::whereHas('purchaseInvoiceItem', function ($q) use ($poItem) {
+                            $totalReceived = GrnEntryItem::whereHas('purchaseInvoiceItem', function ($q) use ($poItem) {
                                 $q->where('purchase_order_item_id', $poItem->id);
                             })->sum('qty_received');
 
@@ -360,7 +361,7 @@ class GrnEntryController extends Controller
         $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'items.purchaseOrderItem'])->findOrFail($id);
 
         $items = $invoice->items->map(function ($item) {
-            $already_received = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_received');
+            $already_received = GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_received');
             return [
             'id' => $item->id,
             'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',

@@ -203,23 +203,32 @@
                                 </div>
                                 @if($salesOrder->attachment)
                                 <div class="col-12 mt-3">
-                                    <div class="text-muted text-uppercase small fw-bold mb-1">Attachments</div>
-                                    <div class="d-flex flex-wrap gap-3 mt-2">
+                                    <div class="text-muted text-uppercase small fw-bold mb-2">Attachments</div>
+                                    <div class="d-flex flex-wrap gap-3 mt-1">
                                         @foreach(explode(',', $salesOrder->attachment) as $file)
                                             @php
                                                 $ext = pathinfo($file, PATHINFO_EXTENSION);
                                                 $isImg = in_array(strtolower($ext), ['jpg','jpeg','png','webp','gif']);
                                                 $url = url('uploads/so/' . $salesOrder->id . '/' . $file);
                                             @endphp
-                                            <div class="text-center">
+                                            <div class="p-2 border rounded bg-white shadow-sm d-flex align-items-center mb-2" style="min-width: 120px;">
                                                 @if($isImg)
-                                                    <a href="{{ $url }}" target="_blank">
-                                                        <img src="{{ $url }}" class="rounded shadow-sm mb-1 border" style="width: 80px; height: 80px; object-fit: cover;">
-                                                    </a>
+                                                    <img src="{{ $url }}" class="rounded cursor-pointer view-image border" data-image="{{ $url }}" width="60" height="60" style="object-fit: cover;" alt="Attachment">
+                                                    <div class="ms-3">
+                                                        <div class="fw-bold text-dark small text-uppercase">Image</div>
+                                                        <div class="text-muted small" style="font-size: 10px;">Click to zoom</div>
+                                                    </div>
                                                 @else
-                                                    <a href="{{ $url }}" target="_blank" class="btn btn-outline-primary d-flex flex-column align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                                                        <i class="ri ri-file-text-line ri-2xl"></i>
-                                                        <span class="small mt-1 text-uppercase">{{ $ext }}</span>
+                                                    <a href="{{ $url }}" target="_blank" class="text-decoration-none d-flex align-items-center">
+                                                        @if(strtolower($ext) == 'pdf')
+                                                            <i class="ri-file-pdf-fill text-danger ri-3x"></i>
+                                                        @else
+                                                            <i class="ri-file-text-fill text-primary ri-3x"></i>
+                                                        @endif
+                                                        <div class="ms-2">
+                                                            <div class="fw-bold text-dark small text-uppercase">{{ $ext }} Document</div>
+                                                            <div class="text-muted small" style="font-size: 10px;">Click to view</div>
+                                                        </div>
                                                     </a>
                                                 @endif
                                             </div>

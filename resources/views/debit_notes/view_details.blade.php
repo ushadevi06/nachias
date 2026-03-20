@@ -20,11 +20,6 @@
                     <a href="{{ url('debit_notes') }}" class="btn btn-outline-secondary d-flex align-items-center">
                         <i class="ri ri-arrow-left-line me-1"></i> Back
                     </a>
-                    @if($debitNote->reference_document)
-                        <a href="{{ url('uploads/debit_notes/' . $debitNote->reference_document) }}" target="_blank" class="btn btn-primary d-flex align-items-center">
-                            <i class="ri ri-file-download-line me-1"></i> Document
-                        </a>
-                    @endif
                 </div>
             </div>
 
@@ -115,12 +110,35 @@
 
             <!-- Summary Section -->
             <div class="row g-4 justify-content-between">
-                <div class="col-lg-6">
-                    @if($debitNote->remarks)
+                <div class="col-lg-6" style="max-height: 200px;">
+                    @if($debitNote->remarks || $debitNote->reference_document)
                     <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; background-color: #fcfcfc;">
                         <div class="card-body p-4">
-                            <h6 class="text-uppercase small fw-bold text-muted mb-3 border-bottom pb-2">Internal Remarks</h6>
-                            <p class="mb-0 text-dark small" style="white-space: pre-line; line-height: 1.6;">{{ $debitNote->remarks }}</p>
+                            @if($debitNote->remarks)
+                                <h6 class="text-uppercase small fw-bold text-muted mb-3 border-bottom pb-2">Internal Remarks</h6>
+                                <p class="mb-3 text-dark small" style="white-space: pre-line; line-height: 1.6;">{{ $debitNote->remarks }}</p>
+                            @endif
+
+                            @if($debitNote->reference_document)
+                                <h6 class="text-uppercase small fw-bold text-muted mb-3 {{ $debitNote->remarks ? 'mt-4 border-top pt-3' : '' }} border-bottom pb-2">Reference Document</h6>
+                                @php
+                                    $attachment = $debitNote->reference_document;
+                                    $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                    $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                    $url = url('uploads/debit_notes/' . $attachment);
+                                @endphp
+
+                                <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                    @if($isImage)
+                                        <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Reference">
+                                    @else
+                                        <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                            <i class="ri ri-file-text-line fs-2"></i>
+                                            <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                        </a>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                     @endif

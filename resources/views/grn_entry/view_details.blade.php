@@ -136,9 +136,7 @@
                                         </td>
                                         <td class="text-center">
                                             @if($item->image)
-                                                <a href="{{ url('uploads/grn_items/' . $item->image) }}" target="_blank">
-                                                    <img src="{{ url('uploads/grn_items/' . $item->image) }}" width="45" height="45" class="rounded shadow-sm object-fit-cover border">
-                                                </a>
+                                                <img src="{{ url('uploads/grn_items/' . $item->image) }}" width="45" height="45" class="rounded shadow-sm object-fit-cover border cursor-pointer view-image" data-image="{{ url('uploads/grn_items/' . $item->image) }}" alt="Item">
                                             @else
                                                 <span class="text-muted small">-</span>
                                             @endif

@@ -169,6 +169,7 @@ class SalesOrderController extends Controller
                 'apply_box_discount' => 'nullable|boolean',
                 'attachment' => 'nullable|array',
                 'attachment.*' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
+                'existing_attachments' => 'nullable|array',
                 'billing_address' => 'nullable|string|regex:/^[^<>]*$/',
                 'shipping_address' => 'nullable|string|regex:/^[^<>]*$/',
                 'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
@@ -281,22 +282,34 @@ class SalesOrderController extends Controller
                     $message = 'Sale Order created successfully';
                 }
 
+                $attachments = $request->existing_attachments ?? [];
+
                 if ($request->hasFile('attachment')) {
-                    $uploadedFiles = [];
-                    if ($id && !empty($salesOrder->attachment)) {
-                        $uploadedFiles = explode(',', $salesOrder->attachment);
-                    }
                     $uploadPath = public_path('uploads/so/' . $salesOrder->id);
-                    if (!file_exists($uploadPath))
+                    if (!file_exists($uploadPath)) {
                         mkdir($uploadPath, 0755, true);
+                    }
 
                     foreach ($request->file('attachment') as $file) {
                         $fileName = 'attach_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                         $file->move($uploadPath, $fileName);
-                        $uploadedFiles[] = $fileName;
+                        $attachments[] = $fileName;
                     }
-                    $salesOrder->update(['attachment' => implode(',', $uploadedFiles)]);
                 }
+
+                if ($id) {
+                    $oldAttachments = !empty($salesOrder->attachment) ? explode(',', $salesOrder->attachment) : [];
+                    foreach ($oldAttachments as $oldFile) {
+                        if (!in_array($oldFile, $attachments)) {
+                            $filePath = public_path('uploads/so/' . $salesOrder->id . '/' . $oldFile);
+                            if (file_exists($filePath)) {
+                                @unlink($filePath);
+                            }
+                        }
+                    }
+                }
+
+                $salesOrder->update(['attachment' => !empty($attachments) ? implode(',', $attachments) : null]);
 
                 foreach ($request->items as $idx => $item) {
                     $itemModel = Item::find($item['item_id']);

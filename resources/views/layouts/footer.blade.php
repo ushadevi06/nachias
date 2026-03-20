@@ -88,7 +88,28 @@
             }
         });
     }
+    $(document).ready(function() {
+        $(document).on('click', '.view-image', function() {
+            let imageUrl = $(this).data('image');
+            if (imageUrl) {
+                $('#modalImage').attr('src', imageUrl);
+                $('#imageModal').modal('show');
+            }
+        });
+    });
 </script>
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold">Image Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <img id="modalImage" src="" class="img-fluid rounded shadow-sm" alt="Preview">
+            </div>
+        </div>
+    </div>
+</div>
 </body>
-
 </html>
