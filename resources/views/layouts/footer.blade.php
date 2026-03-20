@@ -5,9 +5,9 @@
 </div>
 
 <script src="{{ url('assets/js/select2.js') }}"></script>
-<script src="{{ asset('assets/datatables/js/jquery.dataTables.min.js') }}"></script>
-<script src="{{ asset('assets/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
-<script src="{{ asset('assets/datatables/js/dataTables.responsive.min.js') }}"></script>
+<script src="{{ url('assets/datatables/js/jquery.dataTables.min.js') }}"></script>
+<script src="{{ url('assets/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
+<script src="{{ url('assets/datatables/js/dataTables.responsive.min.js') }}"></script>
 <script src="{{ url('assets/js/bs-stepper.js') }}"></script>
 <script src="{{ url('assets/js/form-wizard-numbered.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

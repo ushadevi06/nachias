@@ -120,7 +120,19 @@
   <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #000; border-collapse:collapse;">
     <tr>
       <td width="25%" style="padding: 10px; vertical-align: middle;">
-        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 140px;">
+        @php
+            $logoPath = public_path('assets/images/jc_logo.png');
+            $logoBase64 = '';
+            if (file_exists($logoPath)) {
+                $logoData = file_get_contents($logoPath);
+                $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+            }
+        @endphp
+        @if($logoBase64)
+            <img src="{{ $logoBase64 }}" style="width: 140px;">
+        @else
+            <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 140px;">
+        @endif
       </td>
       <td width="50%" align="center" style="vertical-align: middle;">
         <div style="font-size: 20px; font-weight: bold;">CREDIT NOTE</div>

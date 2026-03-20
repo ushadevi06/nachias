@@ -194,7 +194,19 @@
                         <table style="border: none;">
                             <tr>
                                 <td style="border: none; vertical-align: top; width:30%;">
-                                    <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 180px;">
+                                    @php
+                                        $logoPath = public_path('assets/images/jc_logo.png');
+                                        $logoBase64 = '';
+                                        if (file_exists($logoPath)) {
+                                            $logoData = file_get_contents($logoPath);
+                                            $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+                                        }
+                                    @endphp
+                                    @if($logoBase64)
+                                        <img src="{{ $logoBase64 }}" style="width: 140px;">
+                                    @else
+                                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 140px;">
+                                    @endif
                                 </td>
                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;">
                                     <div style="font-size: 11px; line-height: 1.3;">
