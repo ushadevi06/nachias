@@ -150,7 +150,7 @@ ALTER TABLE task_assign_employees AUTO_INCREMENT = 1;
 DELETE FROM task_logs;
 ALTER TABLE task_logs AUTO_INCREMENT = 1;	
 DELETE FROM sales_orders;
-ALTER TABLE sales_orders AUTO_INCREMENT = 
+ALTER TABLE sales_orders AUTO_INCREMENT = 1;
 DELETE FROM sales_order_items;
 ALTER TABLE sales_order_items AUTO_INCREMENT = 1;
 DELETE FROM sales_invoices;

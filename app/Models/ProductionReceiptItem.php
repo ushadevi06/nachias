@@ -17,6 +17,7 @@ class ProductionReceiptItem extends Model
         'item_name',
         'art_no',
         'size',
+        'color_id',
         'description',
         'size_variant',
         'unit_price',
@@ -45,5 +46,10 @@ class ProductionReceiptItem extends Model
     public function uom()
     {
         return $this->belongsTo(Uom::class, 'uom_id');
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(Color::class, 'color_id');
     }
 }

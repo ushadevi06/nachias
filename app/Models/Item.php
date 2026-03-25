@@ -32,6 +32,7 @@ class Item extends Model
         'export_price',
         'mrp',
         'status',
+        'variations',
         'created_by',
     ];
 
@@ -40,6 +41,7 @@ class Item extends Model
         'related_materials' => 'array',
         'operation_stages'  => 'array',
         'service_providers' => 'array',
+        'variations' => 'array',
     ];
 
     public function setColorIdAttribute($value)
@@ -107,6 +109,22 @@ class Item extends Model
         }
 
         return $barcode;
+    }
+
+    public static function generateVariationBarcode($item, $index)
+    {
+        $baseBarcode = $item->product_barcode;
+        if (!$baseBarcode) {
+            $baseBarcode = self::generateCode();
+        }
+        
+        // Use the base barcode and append a 3-digit suffix for the variation
+        // or just generate a completely new unique barcode from the same sequence
+        // To ensure uniqueness and scan-ability, generating a new one is safer if it's 12 digits
+        // But if they want a 15-char like "QWERY1234567890", we can customize it.
+        
+        // For now, let's use the sequence to generate another unique numeric barcode
+        return self::generateCode();
     }
     public function scopeActive($query)
     {

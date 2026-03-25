@@ -72,7 +72,7 @@ class StockEntryController extends Controller
                         }
 
                         $action = '<div class="button-box">';
-                        $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=finished_goods') . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
+                        $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=finished_goods?item_id=' . $item->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
                         $action .= '</div>';
 
                         $jobCardNo = '-';
@@ -85,9 +85,12 @@ class StockEntryController extends Controller
                             'stock_entry_no' => $entry->stock_entry_no,
                             'stock_date' => $entry->stock_date->format('d-m-Y'),
                             'material_category' => '<span class="badge bg-label-info">Finished Goods</span>',
-                            'art_no' => '-',
+                            'art_no' => $item->art_no ?? '-',
                             'material' => $materialDisplay,
                             'grn_no' => $jobCardNo,
+                            'sleeve_type' => $item->sleeve_type ?? '-',
+                            'size' => $item->size ?? '-',
+                            'sku' => $item->sku ?? '-',
                             'total_qty' => '+' . number_format($item->qty_in, 2),
                             'action' => $action,
                         ];
@@ -133,6 +136,9 @@ class StockEntryController extends Controller
                         'art_no' => $artNo,
                         'material' => $materialDisplay,
                         'grn_no' => $entry->grnEntry->grn_number ?? '-',
+                        'sleeve_type' => '-',
+                        'size' => '-',
+                        'sku' => '-',
                         'total_qty' => $totalQtyIn > 0 ? '+' . number_format($totalQtyIn, 2) : '-' . number_format($totalQtyOut, 2),
                         'action' => $action,
                     ];
@@ -141,10 +147,7 @@ class StockEntryController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        $storeCategories = StoreCategory::where('status', 'Active')->orderBy('category_name')->get();
-        $rawMaterials = RawMaterial::where('status', 'Active')->orderBy('name')->get();
-
-        return view('stock_entry.view', compact('storeCategories', 'rawMaterials'));
+        return view('stock_entry.view');
     }
     public function add(Request $request, $id = null)
     {
@@ -285,6 +288,7 @@ class StockEntryController extends Controller
                                 'qty_in' => $item['qty_in'] ?? 0,
                                 'qty_out' => 0,
                                 'price' => $item['price'] ?? 0,
+                                'fabric_type_id' => $item['fabric_type_id'] ?? null,
                             ]);
                         }
                     }
@@ -390,6 +394,7 @@ class StockEntryController extends Controller
             'uom_name' => $uomName,
             'qty_accepted' => $item->qty_accepted - $item->stockEntryItems->where('stock_entry_id', '!=', $stockEntryId)->sum('qty_in'),
             'rate' => $rate,
+            'fabric_type_id' => $item->fabric_type_id,
             ];
         });
 
@@ -400,39 +405,62 @@ class StockEntryController extends Controller
         ]);
     }
 
+    public function getEntryItems($id)
+    {
+        $stockEntry = StockEntry::with(['stockEntryItems.rawMaterial.storeCategory', 'stockEntryItems.storeCategory'])->findOrFail($id);
+        
+        $items = $stockEntry->stockEntryItems->map(function($item) {
+            $category = $item->storeCategory ? ($item->storeCategory->category_name . ' (' . $item->storeCategory->code . ')') : '-';
+            $material = $item->rawMaterial ? ($item->rawMaterial->name . ' (' . $item->rawMaterial->code . ')') : ($item->finished_item_code ?: '-');
+            
+            return [
+                'id' => $item->id,
+                'category' => $category,
+                'material' => $material,
+                'art_no' => $item->art_no ?: '-',
+                'current_qty' => $item->qty_in,
+            ];
+        });
+
+        return response()->json(['success' => true, 'items' => $items]);
+    }
+
     public function quickAdjustment(Request $request)
     {
         $request->validate([
-            'item_id' => 'required|exists:stock_entry_items,id',
-            'qty_to_add' => 'required|numeric',
-            'reason' => 'required',
-            'approved_by' => 'required'
+            'adjustments' => 'required|array',
+            'adjustments.*.item_id' => 'required|exists:stock_entry_items,id',
+            'adjustments.*.qty_to_add' => 'required|numeric',
+            'adjustments.*.reason' => 'required',
+            'adjustments.*.approved_by' => 'required'
         ]);
 
         DB::beginTransaction();
         try {
-            $item = StockEntryItem::findOrFail($request->item_id);
+            foreach ($request->adjustments as $adj) {
+                $item = StockEntryItem::findOrFail($adj['item_id']);
 
-            $previousQtyIn = $item->qty_in;
-            $newQtyIn = $previousQtyIn + $request->qty_to_add;
-            $item->qty_in = $newQtyIn;
-            $item->save();
+                $previousQtyIn = $item->qty_in;
+                $newQtyIn = $previousQtyIn + $adj['qty_to_add'];
+                $item->qty_in = $newQtyIn;
+                $item->save();
 
-            $count = StockEntryAdjustment::count();
-            $adjNo = 'ADJ-SE-' . date('Ymd') . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+                $count = StockEntryAdjustment::count();
+                $adjNo = 'ADJ-SE-' . date('Ymd') . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
 
-            StockEntryAdjustment::create([
-                'adjustment_no' => $adjNo,
-                'stock_entry_item_id' => $item->id,
-                'raw_material_id' => $item->raw_material_id,
-                'qty' => $request->qty_to_add,
-                'previous_stock' => $previousQtyIn,
-                'new_stock' => $newQtyIn,
-                'approved_by' => $request->approved_by,
-                'reason' => $request->reason,
-                'status' => 'Posted',
-                'created_by' => auth()->id()
-            ]);
+                StockEntryAdjustment::create([
+                    'adjustment_no' => $adjNo,
+                    'stock_entry_item_id' => $item->id,
+                    'raw_material_id' => $item->raw_material_id,
+                    'qty' => $adj['qty_to_add'],
+                    'previous_stock' => $previousQtyIn,
+                    'new_stock' => $newQtyIn,
+                    'approved_by' => $adj['approved_by'],
+                    'reason' => $adj['reason'],
+                    'status' => 'Posted',
+                    'created_by' => auth()->id()
+                ]);
+            }
 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Stock adjusted successfully']);

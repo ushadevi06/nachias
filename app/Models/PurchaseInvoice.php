@@ -43,11 +43,20 @@ class PurchaseInvoice extends Model
         'notes',
         'auth_signature',
         'attachments',
+        'transport',
+        'destination',
+        'lr_no',
+        'lr_date',
+        'eway_billno',
+        'indent_no',
+        'indent_date',
     ];
 
     protected $casts = [
         'invoice_date' => 'date',
         'due_date' => 'date',
+        'lr_date' => 'date',
+        'indent_date' => 'date',
         'other_state' => 'boolean',
     ];
 

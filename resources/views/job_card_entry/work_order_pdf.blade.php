@@ -142,12 +142,12 @@
                 $halfSleeveRows = [];
 
                 foreach($jobCard->fabricDetails as $detail) {
-                    $allPOItems = $jobCard->purchaseOrder->items;
-                    $matchingPOItem = $allPOItems->where('art_no', $detail->art_no)->whereNotNull('style_id')->first() ?: $allPOItems->where('art_no', $detail->art_no)->first();
+                    $allPOItems = $jobCard->purchaseOrder?->items;
+                    $matchingPOItem = $allPOItems ? ($allPOItems->where('art_no', $detail->art_no)->whereNotNull('style_id')->first() ?: $allPOItems->where('art_no', $detail->art_no)->first()) : null;
                     
                     $uom = ($matchingPOItem && $matchingPOItem->uom) ? $matchingPOItem->uom->uom_code : (($matchingPOItem && $matchingPOItem->rawMaterial && $matchingPOItem->rawMaterial->uom) ? $matchingPOItem->rawMaterial->uom->uom_code : ($artUomMap[$detail->art_no] ?? '-'));
                     
-                    $style = $matchingPOItem->style->style_name ?? $allPOItems->whereNotNull('style_id')->first()?->style?->style_name ?? '';
+                    $style = $matchingPOItem?->style?->style_name ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->style_name ?? '';
                     // Use item name if available, otherwise fallback to brand name
                     if ($jobCard->item && $jobCard->item->name) {
                         $description = trim($jobCard->item->name . ' ' . $style);

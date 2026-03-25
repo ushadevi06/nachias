@@ -1,6 +1,8 @@
 @extends('layouts.common')
 @section('title', ($jobCard ? 'Edit Job Card' : 'Add Job Card') . ' - ' . env('WEBSITE_NAME'))
+@use('App\Models\StockEntry')
 @section('content')
+
 @php
     $matrixRows = old('article_matrix', $jobCard ? $jobCard->fabricDetails->toArray() : []);
     $matrixItems = old('matrix_items', $jobCard ? $jobCard->cuttingSizeRatios->toArray() : []);
@@ -57,6 +59,9 @@
         <div class="col-lg-12">
             <form action="{{ url('job_card_entries/add/'. ($jobCard ?  $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                 @csrf
+                <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -65,31 +70,154 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="brand" name="brand_id" class="form-select select2" data-placeholder="Select Brand">
+                                        <option value="">Select Brand</option>
+                                        @foreach($brands as $brand)
+                                            <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="brand">Brand * </label>
+                                </div>
+                                @error('brand_id') <span class="text-danger">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="job_card_no" placeholder="Enter Job Card Number" name="job_card_no" value="{{ old('job_card_no', $jobCard ? $jobCard->job_card_no : '') }}">
                                     <label for="job_card_no">Job Card Number * </label>
                                 </div>
                                 @error('job_card_no') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="purchase_order" name="purchase_order_id" class="form-select select2" data-placeholder="Select Purchase Order">
-                                        <option value="">Select Purchase Order</option>
-                                        @foreach($purchaseOrders as $po)
-                                            <option value="{{ $po->id }}" {{ (old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') == $po->id) ? 'selected' : '' }}>{{ $po->po_number }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <label for="purchase_order">Purchase Order *</label>
+                                <div class="input-group">
+                                    <div class="form-floating form-floating-outline" style="position: relative;">
+                                        <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off">
+                                        <label for="stock_entry_search">Type Stock Entry No or Material Name</label>
+                                    </div>
+                                    <button class="btn btn-primary" type="button" id="generate-matrix-btn" disabled>
+                                        <i class="ri ri-play-circle-line me-1"></i> GO
+                                    </button>
                                 </div>
-                                @error('purchase_order_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                <div id="stock-entry-tags" class="mt-2 d-flex flex-wrap gap-1"></div>
+                                <div id="fabric-validation-error" class="text-danger small fw-bold mt-2" style="display: none;"></div>
+                                <div id="stock-entry-hidden-inputs">
+                                    @php
+                                        $rawOldStockEntryIds = old('stock_entry_ids', $jobCard ? $jobCard->stock_entry_ids : []);
+                                        $oldStockEntryIds = is_string($rawOldStockEntryIds) ? json_decode($rawOldStockEntryIds, true) : $rawOldStockEntryIds;
+                                        if(!is_array($oldStockEntryIds)) $oldStockEntryIds = [];
+                                    @endphp
+                                    @if(!empty($oldStockEntryIds))
+                                        @foreach($oldStockEntryIds as $seId)
+                                            <input type="hidden" name="stock_entry_ids[]" value="{{ $seId }}">
+                                        @endforeach
+                                    @endif
+                                </div>
+                                @error('stock_entry_ids') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
+                            @if(!empty($oldStockEntryIds))
+                            @php
+                                $issuedQtys = [];
+                                if ($jobCard) {
+                                    $issuedQtys = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->with('fabricDetail')->get()
+                                        ->groupBy(function($item) {
+                                            return $item->fabricDetail->art_no ?? '';
+                                        })->map(function($items) {
+                                            return $items->sum('qty_issue');
+                                        });
+                                }
+
+                                $rawIds = $oldStockEntryIds;
+                                $seIds = [];
+                                $filters = [];
+                                foreach ($rawIds as $combinedId) {
+                                    if (strpos($combinedId, '::') !== false) {
+                                        list($seId, $target) = explode('::', $combinedId, 2);
+                                        $seIds[] = $seId;
+                                        if (strpos($target, '|') !== false) {
+                                            list($type, $val) = explode('|', $target, 2);
+                                            $filters[$seId][] = ['type' => $type, 'val' => $val, 'combined' => $combinedId];
+                                        }
+                                    } else {
+                                        $seIds[] = $combinedId;
+                                    }
+                                }
+                                
+                                $initialEntries = [];
+                                if (!empty($seIds)) {
+                                    $stockEntries = StockEntry::with('stockEntryItems.rawMaterial','stockEntryItems.uom')->whereIn('id', array_unique($seIds))->get();
+                                        
+                                    foreach ($stockEntries as $se) {
+                                        if (!isset($filters[$se->id])) {
+                                            $names = [];
+                                            $qtys = [];
+                                            $artNos = [];
+                                            foreach ($se->stockEntryItems as $item) {
+                                                if ($item->art_no && !in_array($item->art_no, $artNos)) { $artNos[] = $item->art_no; }
+                                                $name = 'Unknown';
+                                                if ($item->raw_material_id && $item->rawMaterial) { $name = $item->rawMaterial->name; }
+                                                elseif ($item->item_id && $item->item) { $name = $item->item->name; }
+                                                elseif ($item->art_no) { $name = $item->art_no; }
+                                                
+                                                if (!in_array($name, $names)) { $names[] = $name; }
+                                                $uom = $item->uom->uom_code ?? '';
+                                                $alreadyIssued = (float)($issuedQtys[$item->art_no ?? ''] ?? 0);
+                                                $netQty = ($item->qty_in - ($item->qty_out ?? 0)) + $alreadyIssued;
+                                                
+                                                if (!isset($qtys[$uom])) { $qtys[$uom] = 0; }
+                                                $qtys[$uom] += $netQty;
+                                            }
+                                            $nameStr = implode(', ', $names);
+                                            $artNoStr = implode(', ', $artNos);
+                                            $qtyStrs = [];
+                                            foreach ($qtys as $uom => $qty) { $qtyStrs[] = round($qty, 3) . ' ' . $uom; }
+                                            $initialEntries[] = [
+                                                'id'   => $se->id,
+                                                'text' => $se->stock_entry_no . ($artNoStr ? ' | ' . $artNoStr : '') . ' | ' . $nameStr . ' | Qty: ' . implode(', ', $qtyStrs),
+                                            ];
+                                        } else {
+                                            $addedCombos = [];
+                                            foreach ($filters[$se->id] as $f) {
+                                                if (in_array($f['combined'], $addedCombos)) continue;
+                                                
+                                                $name = 'Unknown';
+                                                $artNo = '';
+                                                $uom = '';
+                                                $netQty = 0;
+                                                foreach ($se->stockEntryItems as $item) {
+                                                    $match = false;
+                                                    if ($f['type'] === 'rm' && $item->raw_material_id == $f['val']) { $name = $item->rawMaterial->name ?? 'Unknown'; $artNo = $item->art_no; $match = true; }
+                                                    if ($f['type'] === 'item' && $item->item_id == $f['val']) { $name = $item->item->name ?? 'Unknown'; $artNo = $item->art_no; $match = true; }
+                                                    if ($f['type'] === 'art' && $item->art_no == $f['val']) { $name = $item->rawMaterial->name ?? ($item->item->name ?? $item->art_no); $artNo = $item->art_no; $match = true; }
+                                                    
+                                                    if ($match) {
+                                                        $uom = $item->uom->uom_code ?? '';
+                                                        $alreadyIssued = (float)($issuedQtys[$item->art_no ?? ''] ?? 0);
+                                                        $netQty += ($item->qty_in - ($item->qty_out ?? 0)) + $alreadyIssued;
+                                                    }
+                                                }
+                                                $initialEntries[] = [
+                                                    'id' => $f['combined'],
+                                                    'text' => $se->stock_entry_no . ($artNo ? ' | ' . $artNo : '') . ' | ' . $name . ' | Qty: ' . round($netQty, 3) . ' ' . $uom
+                                                ];
+                                                $addedCombos[] = $f['combined'];
+                                            }
+                                        }
+                                    }
+                                }
+                            @endphp
+                            <script>
+                            window._initialStockEntries = @json($initialEntries);
+                            </script>
+                            @endif
+                            {{-- hidden purchase_order_id kept for backward compatibility --}}
+                            <input type="hidden" name="purchase_order_id" value="{{ old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') }}">
+                            <input type="hidden" name="fabric_type_id" id="fabric_type_id" value="{{ old('fabric_type_id', $jobCard ? $jobCard->fabric_type_id : '') }}">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="plant" name="service_provider_id" class="form-select select2" data-placeholder="Select Plant">
                                         <option value="">Select Plant</option>
                                         @foreach($plants as $plant)
                                             <option value="{{ $plant->id }}" {{ (old('service_provider_id', $jobCard ? $jobCard->service_provider_id : '') == $plant->id) ? 'selected' : '' }}>
-                                                {{ $plant->name }}
+                                                {{ $plant->name }} ({{ $plant->code }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -160,18 +288,6 @@
                                     <label for="season">Season Code</label>
                                 </div>
                                 @error('season_id') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="brand" name="brand_id" class="form-select select2" data-placeholder="Select Brand">
-                                        <option value="">Select Brand</option>
-                                        @foreach($brands as $brand)
-                                            <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="brand">Brand * </label>
-                                </div>
-                                @error('brand_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -827,18 +943,32 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
 <script>
     $(document).ready(function() {
-        const oldFabrics = @json(old('fabrics', []));
-        const oldMatrix = @json(old('article_matrix', []));
+        const rawOldMatrix = @json(old('article_matrix', []));
+        const oldMatrix = Array.isArray(rawOldMatrix) ? rawOldMatrix : Object.values(rawOldMatrix);
+        const rawExistingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails : []);
+        const existingMatrix = Array.isArray(rawExistingMatrix) ? rawExistingMatrix : Object.values(rawExistingMatrix);
+        
+        const rawOldFabrics = @json(old('fabrics', []));
+        const oldFabrics = Array.isArray(rawOldFabrics) ? rawOldFabrics : Object.values(rawOldFabrics);
+
         const hasTasks = @json($hasTasks);
         const existingImages = @json($jobCard && $jobCard->images ? $jobCard->images : []);
-        const existingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails : []);
         const matrixItems = @json(old('matrix_items', $jobCard && $jobCard->cuttingSizeRatios ? $jobCard->cuttingSizeRatios : []));
         const isEditMode = {{ $jobCard ? 'true' : 'false' }};
         let globalActiveSizes = { fs: [], hs: [] };
         let isSyncing = false;
-        let currentArtNumbers = @json(array_values(array_unique(array_column($fabrics, 'art_no'))));
+        let currentArtNumbers = [];
+        const phpFabrics = @json($fabrics);
+        if (oldFabrics && Object.keys(oldFabrics).length > 0) {
+            const uniqueArts = [...new Set(Object.values(oldFabrics).map(f => f.art_no))];
+            currentArtNumbers = uniqueArts.filter(Boolean);
+        } else if (phpFabrics && phpFabrics.length > 0) {
+            currentArtNumbers = [...new Set(phpFabrics.map(f => f.art_no))];
+        }
         const articleUoms = @json(collect($fabrics)->pluck('uom_code', 'art_no')) || {};
         let currentArtData = []; 
         let currentSizes = @json($sizes);
@@ -1001,7 +1131,7 @@
             }
 
             if (!isValid || errors.length > 0) {
-                console.log("Validation Failed");
+                console.log("Validation Failed", errors);
                 const $tbody = $('#stockErrorTable tbody').empty();
                 errors.forEach(err => {
                     const artInfo = currentArtData.find(item => String(item.art_no).trim() === String(err.art).trim());
@@ -1021,6 +1151,10 @@
             }
 
             if (discrepancies.length > 0) {
+                console.group("Stock Discrepancies Detected");
+                console.table(discrepancies);
+                console.groupEnd();
+
                 const $tbody = $('#stockErrorTable tbody').empty();
                 
                 discrepancies.forEach(err => {
@@ -1094,16 +1228,34 @@
             }
         }
 
-        function fetchFreshStockData(poId) {
+        function fetchFreshStockData() {
             return new Promise((resolve, reject) => {
-                if (!poId) {
-                    reject('No Purchase Order ID found');
+                const poId = $('#purchase_order').val() || $('#purchase_order_id').val();
+                const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
+                
+                let selectedEntries = [];
+                $('#stock-entry-hidden-inputs input[name="stock_entry_ids[]"]').each(function() {
+                    selectedEntries.push($(this).val());
+                });
+
+                let url = '';
+                let ajaxData = {};
+
+                if (selectedEntries.length > 0) {
+                    url = '{{ url("job_card_entries/get-stock-entry-details") }}';
+                    ajaxData = { ids: selectedEntries, job_card_id: jobCardId };
+                } else if (poId) {
+                    url = `{{ url('job_card_entries/check-stock') }}/${poId}`;
+                    ajaxData = { job_card_id: jobCardId };
+                } else {
+                    resolve({ art_data: currentArtData || [] });
                     return;
                 }
-                const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
+
                 $.ajax({
-                    url: `{{ url('job_card_entries/check-stock') }}/${poId}?job_card_id=${jobCardId}`,
+                    url: url,
                     type: 'GET',
+                    data: ajaxData,
                     cache: false, 
                     success: function(data) {
                         if (!data || !data.art_data) {
@@ -1122,66 +1274,42 @@
         $('form.common-form').on('submit', function(e) {
             if ($(this).attr('data-skip-validation') === 'true') return;
 
-            e.preventDefault(); 
-
-            $('.text-danger.small.fw-bold, .backend-error').hide();
-
             const grandTotal1 = $('#article-qty-matrix-1-grand-total').text().trim();
             const grandTotal2 = $('#article-qty-matrix-2-grand-total').text().trim();
             const total1 = parseFloat(grandTotal1) || 0;
             const total2 = parseFloat(grandTotal2) || 0;
 
-            const $matrixError = $('#article-matrix-error');
-            if (total1 <= 0 && total2 <= 0) {
-                $matrixError.text('Please enter at least one quantity in the Article Quantity Matrix.').show();
-                $('html, body').animate({
-                    scrollTop: $("#article-matrix-card").offset().top - 100
-                }, 500);
-                return;
-            } else {
-                $matrixError.hide();
-            }
-
             let missingFabricArtNos = [];
             $('.art-no-input').each(function() {
-                const $row = $(this).closest('tr'); 
                 const artNo = $(this).val();
-                
                 let rowQty = 0;
                 $(`.sleeve-qty-input[data-art="${artNo}"]`).each(function() {
                     rowQty += parseFloat($(this).val()) || 0;
                 });
-
                 if (rowQty <= 0) {
                     missingFabricArtNos.push(artNo);
                 }
             });
-
-            const $fabricError = $('#fabric-details-error');
-            if (missingFabricArtNos.length > 0) {
-                $fabricError.text('Please enter Sleeve Wise Qty for Art No: ' + missingFabricArtNos.join(', ')).show();
-                $('html, body').animate({
-                    scrollTop: $("#fabric-details-card").offset().top - 100
-                }, 500);
-                return;
-            } else {
-                $fabricError.hide();
+            if (total1 <= 0 && total2 <= 0) {
+                return; 
             }
+
+            if (missingFabricArtNos.length > 0) {
+                return; 
+            }
+
+            e.preventDefault(); 
+            $('.text-danger.small.fw-bold, .backend-error').hide();
 
             const $form = $(this);
             const $btn = $form.find('[type="submit"]');
             const originalHtml = $btn.html();
             
             const poId = $('#purchase_order').val() || $('#purchase_order_id').val();
-            
-            if (!poId) {
-                alert('Please select a Purchase Order first.');
-                return;
-            }
 
             $btn.prop('disabled', true).html('<i class="ri ri-loader-4-line ri-spin"></i> Checking Stock...');
 
-            fetchFreshStockData(poId)
+            fetchFreshStockData()
                 .then(data => {
                     currentArtData = data.art_data;
                     
@@ -1204,8 +1332,7 @@
             const $btn = $(this);
             const originalHtml = $btn.html();
             $btn.prop('disabled', true).html('<i class="ri ri-loader-4-line ri-spin fs-5"></i> SYNCING...');
-            const poId = $('#purchase_order').val() || $('#purchase_order_id').val();
-            fetchFreshStockData(poId)
+            fetchFreshStockData()
                 .then(data => {
                     currentArtData = data.art_data;
                     const allClear = performStockCheck(true);
@@ -1219,27 +1346,222 @@
                 });
         });
 
-        $('#purchase_order').on('change', function() {
-            const poId = $(this).val();
-            if (!poId) return;
+        (function () {
+            const $input       = $('#stock_entry_search');
+            const $suggestions = $('#stock-entry-suggestions');
+            const $tags        = $('#stock-entry-tags');
+            const $hiddenWrap  = $('#stock-entry-hidden-inputs');
+            const searchUrl    = '{{ url("job_card_entries/search-stock-entries") }}';
+            const detailsUrl   = '{{ url("job_card_entries/get-stock-entry-details") }}';
 
-            $.get(`{{ url('job_card_entries/get-po-details') }}/${poId}`, function(data) {
-                currentArtNumbers = data.art_numbers;
-                currentArtData = data.art_data; 
-                if (data.art_data) {
-                    data.art_data.forEach(d => {
-                        articleUoms[d.art_no] = d.uom_code;
+            let selectedIds = [];
+            let searchTimer = null;
+
+            function syncSelectedIdsFromDom() {
+                selectedIds = [];
+                $hiddenWrap.find('input[name="stock_entry_ids[]"]').each(function () {
+                    const v = String($(this).val());
+                    if (v && !selectedIds.includes(v)) selectedIds.push(v);
+                });
+            }
+
+            function addTag(id, text) {
+                id = String(id);
+                if (selectedIds.includes(id)) return;
+                selectedIds.push(id);
+                $hiddenWrap.append(`<input type="hidden" name="stock_entry_ids[]" value="${id}">`);
+
+                const $tag = $(`
+                    <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6"
+                          data-id="${id}" style="cursor:default; max-width:300px; white-space:normal; text-align:left;">
+                        <span style="font-size:11px; line-height:1.3;">${text}</span>
+                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${id}" title="Remove"></button>
+                    </span>`);
+                $tags.append($tag);
+                
+                $('#generate-matrix-btn').prop('disabled', false);
+            }
+
+            function removeTag(id) {
+                id = String(id);
+                selectedIds = selectedIds.filter(x => x !== id);
+                $hiddenWrap.find(`input[value="${id}"]`).remove();
+                $tags.find(`[data-id="${id}"]`).remove();
+                
+                if (selectedIds.length === 0) {
+                    $('#generate-matrix-btn').prop('disabled', true);
+                }
+            }
+
+            $('#generate-matrix-btn').on('click', function() {
+                refreshMatrixFromIds();
+            });
+
+            function refreshMatrixFromIds() {
+                if (selectedIds.length === 0) {
+                    $('#fabric-validation-error').hide();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selection Required',
+                        text: 'Please add at least one material to generate the matrix.',
+                        confirmButtonColor: '#6200ee'
+                    });
+                    $('#fabric-details-card').addClass('d-none');
+                    $('#article-matrix-card').addClass('d-none');
+                    return;
+                }
+                
+                const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
+                $.get(detailsUrl, { ids: selectedIds, job_card_id: jobCardId }, function (data) {
+                    currentArtNumbers = data.art_numbers;
+                    currentArtData    = data.art_data;
+                    
+                    let hasFabric = false;
+                    if (data.art_data) {
+                        data.art_data.forEach(d => { 
+                            articleUoms[d.art_no] = d.uom_code; 
+                            if (d.store_category_id == 1) {
+                                hasFabric = true;
+                                if (d.fabric_type_id) {
+                                    $('#fabric_type_id').val(d.fabric_type_id);
+                                }
+                            }
+                        });
+                    }
+
+                    if (!hasFabric) {
+                        $('#fabric-validation-error').hide();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Validation Error',
+                            text: 'Please select at least one Fabric (Store Category: Fabric) to proceed.',
+                            confirmButtonColor: '#6200ee'
+                        });
+                        $('#fabric-details-card').addClass('d-none');
+                        $('#article-matrix-card').addClass('d-none');
+                        return;
+                    }
+                    
+                    $('#fabric-validation-error').hide();
+
+                    $('#fabric-details-card').removeClass('d-none');
+                    $('#article-matrix-card').removeClass('d-none');
+                    renderFabricDetails();
+                    
+                    if (typeof globalActiveSizes !== 'undefined') {
+                        renderArticleQtyMatrix(data.art_numbers, globalActiveSizes.fs || [], globalActiveSizes.hs || []);
+                    } else {
+                        renderArticleQtyMatrix(data.art_numbers);
+                    }
+                    
+                    renderCuttingSizeTable(currentSizes, currentRatios);
+                    if (typeof syncMatrixWithMasterTable === 'function') {
+                        syncMatrixWithMasterTable(false);
+                    }
+                    updateQuantityRowVisibility();
+                    
+                    setTimeout(function() {
+                        $('html, body').animate({
+                            scrollTop: $("#article-matrix-card").offset().top - 80
+                        }, 500);
+                    }, 100);
+                });
+            }
+
+            var $ac = $input.autocomplete({
+                source: function (request, response) {
+                    $.get(searchUrl, { q: request.term }, function (data) {
+                        const mappedResults = data.results.map(function(item) {
+                            return {
+                                label: item.text,
+                                value: item.text, 
+                                id: item.id,      
+                                se_no: item.se_no,
+                                art_no: item.art_no,
+                                name: item.name,
+                                qty: item.qty
+                            };
+                        });
+                        response(mappedResults);
+                    });
+                },
+                minLength: 1, 
+                select: function (event, ui) {
+                    event.preventDefault(); 
+                    addTag(ui.item.id, ui.item.label);
+                    $input.val(''); 
+                    return false;
+                },
+                focus: function(event, ui) {
+                    event.preventDefault(); 
+                    return false;
+                }
+            });
+            
+            var acInstance = $ac.data("ui-autocomplete") || $ac.data("autocomplete");
+            if (acInstance) {
+                acInstance._renderItem = function(ul, item) {
+                    return $("<li>")
+                        .append(`
+                            <div class="d-flex justify-content-between align-items-center p-2 border autocomplete-custom-item mb-2 mx-2 rounded" style="cursor: pointer; transition: background-color 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); background: #fff;">
+                                <div>
+                                    <div class="fw-bold text-primary mb-1" style="font-size: 13px;">${item.name} <span class="text-secondary ml-1">[${item.art_no}]</span></div>
+                                    <div class="small text-muted" style="font-size: 11px;"><i class="ri-hashtag"></i> ${item.se_no}</div>
+                                </div>
+                                <div class="badge bg-success-subtle text-success px-2 py-1" style="font-size: 11px;">
+                                    ${item.qty}
+                                </div>
+                            </div>
+                        `)
+                        .appendTo(ul);
+                };
+            }
+
+            $tags.on('click', '[data-remove]', function () {
+                removeTag($(this).data('remove'));
+            });
+
+            syncSelectedIdsFromDom();
+            if (selectedIds.length > 0) {
+                $('#generate-matrix-btn').prop('disabled', false);
+            }
+            if (window._initialStockEntries && window._initialStockEntries.length > 0) {
+                window._initialStockEntries.forEach(function (entry) {
+                    if (!selectedIds.includes(entry.id)) {
+                        selectedIds.push(entry.id);
+                    }
+                    if ($tags.find(`[data-id="${entry.id}"]`).length === 0) {
+                        const $tag = $(`
+                            <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6"
+                                  data-id="${entry.id}" style="cursor:default; max-width:300px; white-space:normal;">
+                                <span style="font-size:11px; line-height:1.3;">${entry.text}</span>
+                                <button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${entry.id}" title="Remove"></button>
+                            </span>`);
+                        $tags.append($tag);
+                    }
+                });
+                if (selectedIds.length > 0) {
+                    const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
+                    $.get(detailsUrl, { ids: selectedIds, job_card_id: jobCardId }, function (data) {
+                        currentArtNumbers = data.art_numbers;
+                        currentArtData    = data.art_data;
+                        if (!isEditMode && $('#fabric-details-body tr').length === 0) {
+                            $('#fabric-details-card').removeClass('d-none');
+                            renderFabricDetails();
+                            renderCuttingSizeTable(currentSizes, currentRatios);
+                            updateQuantityRowVisibility();
+                        } else {
+                            renderFabricDetails();
+                            renderCuttingSizeTable(currentSizes, currentRatios);
+                            syncMatrixWithMasterTable(false);
+                            renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
+                            updateQuantityRowVisibility();
+                        }
                     });
                 }
+            }
+        })();
 
-                $('#fabric-details-card').removeClass('d-none');
-                
-                renderFabricDetails();
-                renderArticleQtyMatrix(data.art_numbers);
-                renderCuttingSizeTable(currentSizes, currentRatios);
-                updateQuantityRowVisibility();
-            });
-        });
 
         function resetItemSelect(selectedId = null) {
             const $item = $('#item_id');
@@ -1558,13 +1880,31 @@
             const selectedValue = $this.val();
             
             if (selectedValue) {
-                const poId = $('#purchase_order').val();
-                if (!poId) {
-                    showFieldError('#purchase_order', 'Please select Purchase Order first');
+                // Check if Materials (Stock Entries) are selected
+                const materialCount = $('input[name="stock_entry_ids[]"]').length;
+                if (materialCount === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Selection Required',
+                        text: 'Please select at least one material/stock entry first.',
+                        confirmButtonColor: '#6200ee'
+                    });
                     $this.val('').trigger('change.select2');
                     return;
                 }
-                
+
+                // Check if GO button was clicked (matrix card is visible)
+                if ($('#article-matrix-card').hasClass('d-none')) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Generate Matrix',
+                        text: 'Please click the "GO" button to generate the Article Quantity Matrix before selecting a size ratio.',
+                        confirmButtonColor: '#6200ee'
+                    });
+                    $this.val('').trigger('change.select2');
+                    return;
+                }
+
                 const processGroupId = $('#process_group_id').val();
                 if (!processGroupId) {
                     showFieldError('#process_group_display', 'Please select Process Group first');
@@ -1764,7 +2104,12 @@
         }
 
         if (currentArtNumbers.length > 0) {
+            $('#fabric-details-card').removeClass('d-none');
             renderFabricDetails();
+        }
+
+        if (oldMatrix && Object.keys(oldMatrix).length > 0) {
+            syncMatrixWithMasterTable(false);
         }
 
         function renderCuttingSizeTable(sizes, ratios) {
@@ -1884,15 +2229,16 @@
         $(document).on('input change', 'input, select, textarea', function() {
             const $el = $(this);
             $el.removeClass('is-invalid');
-            $el.closest('.col-md-6, .col-xl-4, .col-lg-4, .input-group, .form-group').find('.text-danger.small').fadeOut(function() {
+            $el.closest('.col-md-6, .col-xl-4, .col-lg-4, .form-group').find('.text-danger.small').fadeOut(function() {
                 $(this).remove();
             });
         });
 
         function showFieldError(selector, message) {
             const $el = $(selector);
+            if (!$el.length) return;
             $el.addClass('is-invalid');
-            const $container = $el.closest('.col-md-6, .col-xl-4, .col-lg-4, .input-group, .form-group');
+            const $container = $el.closest('.col-md-6, .col-xl-4, .col-lg-4, .form-group');
             $container.find('.text-danger.small').remove();
             $container.append(`<div class="text-danger small mt-1">${message}</div>`);
             $('html, body').animate({
@@ -1920,6 +2266,32 @@
                     const val = parseFloat($(this).val()) || 0;
                     const size = String($(this).data('size'));
                     if (!activeHsSizes.includes(size)) activeHsSizes.push(size);
+                });
+
+                [oldMatrix, existingMatrix].forEach(matrix => {
+                    if (matrix && matrix.length > 0) {
+                        matrix.forEach(row => {
+                            for (const key in row) {
+                                let val = parseFloat(row[key]) || 0;
+                                if (val > 0) {
+                                    if (key.startsWith('fs_') && key !== 'fs_qty') {
+                                        const sz = key.replace('fs_', ''); 
+                                        if (!activeFsSizes.includes(sz)) activeFsSizes.push(sz);
+                                    } else if (key.startsWith('hs_') && key !== 'hs_qty') {
+                                        const sz = key.replace('hs_', '');
+                                        if (!activeHsSizes.includes(sz)) activeHsSizes.push(sz);
+                                    }
+                                }
+                            }
+                            if (row.quantities && row.quantities.length > 0) {
+                                row.quantities.forEach(q => {
+                                    const sz = String(q.size);
+                                    if ((parseFloat(q.qty_fs) || 0) > 0 && !activeFsSizes.includes(sz)) activeFsSizes.push(sz);
+                                    if ((parseFloat(q.qty_hs) || 0) > 0 && !activeHsSizes.includes(sz)) activeHsSizes.push(sz);
+                                });
+                            }
+                        });
+                    }
                 });
 
                 $('.qty-input').each(function() {
@@ -1965,7 +2337,7 @@
                             const val = parseFloat($(this).val()); 
                             const pieces = isNaN(val) ? 0 : val;
 
-                            $('#article-qty-matrix tbody tr.cat1-row .qty-input').filter(function() {
+                            $('table[id^="article-qty-matrix-"] tbody tr.cat1-row .qty-input').filter(function() {
                                 return $(this).data('col') === `${type}-${size}`;
                             }).each(function() {
                                 const uom = ($(this).closest('tr').attr('data-uom') || '').toUpperCase();
@@ -2026,10 +2398,6 @@
 
 
         $('#trigger-sync').on('click', function() {
-            if (!$('#purchase_order').val()) {
-                alert('Please select a Purchase Order first.');
-                return;
-            }
             const result = syncMatrixWithMasterTable(false);
             
             if (result.fs.length === 0 && result.hs.length === 0) {
@@ -2281,6 +2649,44 @@
     }
     input[type=number] {
         -moz-appearance: textfield;
+    }
+
+    .ui-autocomplete {
+        max-height: 250px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 1050;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 6px !important;
+        background: white !important;
+        padding: 8px 0 !important;
+    }
+    
+    .ui-menu-item {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .ui-menu-item .ui-menu-item-wrapper {
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    .ui-menu-item .ui-menu-item-wrapper.ui-state-active {
+        background: transparent !important;
+        color: inherit !important;
+        border: none !important;
+    }
+
+    .autocomplete-custom-item {
+        background: #ffffff !important;
+        border: 1px solid #e0e0e0 !important;
+    }
+    
+    .ui-state-active .autocomplete-custom-item, .autocomplete-custom-item:hover {
+        background-color: #f0f2f5 !important;
+        border-color: #c0c0c0 !important;
     }
 </style>
 @endsection

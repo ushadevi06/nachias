@@ -10,7 +10,6 @@
             </tr>
         </thead>
         <tbody>
-            @if(count($incentiveReport) > 0)
             @foreach($incentiveReport as $data) 
             <tr>
                 <td><span class="fw-bold text-primary">{{ $data['zone'] }}</span></td>
@@ -22,16 +21,12 @@
                 <td class="text-end text-success fw-bold">₹{{ number_format($data['incentive_amt'], 2) }}</td>
             </tr>
             @endforeach
-            @else
-            <tr>
-                <td colspan="5" class="text-center py-4 text-muted">No incentive data found for the selected criteria.</td>
-            </tr>
-            @endif
         </tbody>
         @if(count($incentiveReport) > 0)
         <tfoot class="bg-light fw-bold">
             <tr>
-                <td colspan="2" class="text-end">Grand Total:</td>
+                <td></td>
+                <td class="text-end">Grand Total:</td>
                 <td class="text-end text-primary">₹{{ number_format(array_sum(array_column($incentiveReport, 'total_sales')), 2) }}</td>
                 <td></td>
                 <td class="text-end text-success">₹{{ number_format(array_sum(array_column($incentiveReport, 'incentive_amt')), 2) }}</td>

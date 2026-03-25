@@ -259,6 +259,12 @@
                     <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                         <tbody>
                             <tr class="text-center">
+                                <td class="fw-bold">FABRIC TYPE</td>
+                                <td colspan="{{ count($jobCard->fabricDetails) }}" class="text-center fw-bold text-primary">
+                                    {{ $jobCard->fabricType->fabric_type ?? 'N/A' }}
+                                </td>
+                            </tr>
+                            <tr class="text-center">
                                 <td class="fw-bold" style="width: 15%;">ART NO</td>
                                 @foreach($jobCard->fabricDetails as $detail)
                                     @php

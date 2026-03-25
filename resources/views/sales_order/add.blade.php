@@ -253,7 +253,7 @@
                                         <th style="min-width: 100px;">UOM *</th>
                                         <th style="min-width: 120px;">Size *</th>
                                         <th style="min-width: 120px;">Quantity *</th>
-                                        <th style="min-width: 120px;">Rate *</th>
+                                        {{-- <th style="min-width: 120px;">Rate *</th> --}}
                                         <th style="min-width: 120px;">MRP *</th>
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 140px;">Sleeve Type</th>
@@ -334,12 +334,12 @@
                                             </div>
                                             @error("items.$index.qty")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                         </td>
-                                        <td>
+                                        {{-- <td>
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
                                             </div>
                                             @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
+                                        </td> --}}
                                         <td>
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
@@ -432,11 +432,11 @@
                                                 </div>
                                             </div>
                                         </td>
-                                        <td>
+                                        {{-- <td>
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
                                             </div>
-                                        </td>
+                                        </td> --}}
                                         <td>
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
@@ -523,11 +523,11 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
+                                    {{-- <td>
                                         <div class="form-floating form-floating-outline">
                                             <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
                                         </div>
-                                    </td>
+                                    </td> --}}
                                     <td>
                                         <div class="form-floating form-floating-outline">
                                             <input type="number" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">

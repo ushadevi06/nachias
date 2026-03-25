@@ -77,7 +77,6 @@ class ProductionReceiptController extends Controller
         }
 
         $receipt = $id ?ProductionReceipt::with(['items'])->findOrFail($id) : null;
-
         if ($id) {
             $currentReceipt = ProductionReceipt::find($id);
             $usedJobCardIds = ProductionReceipt::where('id', '!=', $id)->whereNotNull('job_card_id')->pluck('job_card_id')->toArray();
@@ -88,8 +87,7 @@ class ProductionReceiptController extends Controller
                 if ($currentReceipt && $currentReceipt->job_card_id) {
                     $query->orWhere('id', $currentReceipt->job_card_id);
                 }
-            })
-                ->orderBy('id', 'desc')->get();
+            })->orderBy('id', 'desc')->get();
         }
         else {
             $usedJobCardIds = ProductionReceipt::whereNotNull('job_card_id')->pluck('job_card_id')->toArray();
@@ -120,8 +118,6 @@ class ProductionReceiptController extends Controller
             ];
 
             $request->validate($rules, $messages);
-
-
 
             DB::beginTransaction();
             try {
@@ -175,6 +171,7 @@ class ProductionReceiptController extends Controller
                                 'item_name' => $itemData['item_name'] ?? '',
                                 'art_no' => $itemData['art_no'] ?? null,
                                 'size' => $itemData['size'] ?? null,
+                                'color_id' => $itemData['color_id'] ?? null,
                                 'description' => $itemData['description'] ?? '',
                                 'size_variant' => $itemData['size_variant'] ?? '',
                                 'unit_price' => $unitPrice,
@@ -248,19 +245,87 @@ class ProductionReceiptController extends Controller
             'remarks' => $receipt->remarks,
             'reference_document' => $receipt->receipt_no,
             'status' => 'Posted',
+            'color' => $receipt->color,
             'created_by' => Auth::id(),
             'price' => $receipt->items->sum('total_value'),
         ]);
 
+        // Resolve fabric type from Job Card
+        $jobCardFabricTypeId = $receipt->jobCard ? $receipt->jobCard->fabric_type_id : null;
+        
+        // Fallback: search issued materials if not set on Job Card
+        if (!$jobCardFabricTypeId && $receipt->jobCard) {
+            $stockEntryIds = $receipt->jobCard->stock_entry_ids;
+            if (is_string($stockEntryIds)) {
+                $stockEntryIds = json_decode($stockEntryIds, true);
+            }
+            
+            if (!empty($stockEntryIds) && is_array($stockEntryIds)) {
+                $issuedFabric = StockEntryItem::whereIn('stock_entry_id', $stockEntryIds)
+                    ->where('stock_type', 'raw_material')
+                    ->where('qty_out', '>', 0)
+                    ->whereNotNull('fabric_type_id')
+                    ->first();
+                if ($issuedFabric) {
+                    $jobCardFabricTypeId = $issuedFabric->fabric_type_id;
+                }
+            }
+        }
+
         foreach ($receipt->items as $item) {
             if ($item->qty_to_receive > 0) {
                 $itemCode = $item->item_code;
+                $sleeve = 'Full'; // Default
                 if (str_contains($item->size_variant, ' - ')) {
-                    $sleevePart = trim(explode(' - ', $item->size_variant)[1]);
+                    $parts = explode(' - ', $item->size_variant);
+                    $sleevePart = trim($parts[1]);
+                    $sleeve = ($sleevePart == 'F/S') ? 'Full' : (($sleevePart == 'H/S') ? 'Half' : $sleevePart);
                     if (!str_contains($itemCode, $sleevePart)) {
-                        $itemCode = trim(explode(' - ', $itemCode)[0]) . ' - ' . $sleevePart;
+                        $itemCode = trim($parts[0]) . ' - ' . $sleevePart;
                     }
                 }
+
+                // Generate SKU: BC + YY + Sequential
+                $year = date('y');
+                $prefix = 'BC' . $year;
+                $lastSku = StockEntryItem::where('sku', 'like', $prefix . '%')->orderBy('sku', 'desc')->first();
+                $nextNum = 1;
+                if ($lastSku) {
+                    $nextNum = (int)substr($lastSku->sku, 4) + 1;
+                }
+                $sku = $prefix . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+
+                // Fetch extra info for QR code from Item model
+                $itemModel = Item::with('fabricType')->find($item->item_id);
+                
+                // Resolve fabric type priority: Job Card Issue > Item Default
+                $fabricTypeId = $jobCardFabricTypeId ?: ($itemModel ? $itemModel->fabric_type_id : null);
+                $fabric = 'Polyester';
+                if ($fabricTypeId) {
+                    $ft = \App\Models\FabricType::find($fabricTypeId);
+                    $fabric = $ft ? $ft->fabric_type : 'Polyester';
+                }
+
+                $design = $itemModel ? $itemModel->design_art_no : $item->art_no;
+                $mrp = $itemModel ? $itemModel->mrp : $item->unit_price;
+
+                // Resolve color name for QR code
+                $colorName = '-';
+                if ($item->color_id) {
+                    $c = \App\Models\Color::find($item->color_id);
+                    $colorName = $c ? $c->color_name : '-';
+                }
+
+                $qrData = [
+                    'sku' => $sku,
+                    'name' => $item->item_name,
+                    'design' => $design,
+                    'fabric' => $fabric,
+                    'size' => $item->size,
+                    'color' => $colorName,
+                    'sleeve' => $sleeve,
+                    'price' => number_format($mrp, 2)
+                ];
 
                 StockEntryItem::create([
                     'stock_entry_id' => $stockEntry->id,
@@ -268,11 +333,16 @@ class ProductionReceiptController extends Controller
                     'finished_item_code' => $itemCode,
                     'art_no' => $item->art_no,
                     'size' => $item->size,
+                    'color_id' => $item->color_id,
                     'store_location_id' => $storeLocationId,
                     'uom_id' => $item->uom_id,
                     'qty_in' => $item->qty_to_receive,
                     'qty_out' => 0,
                     'price' => $item->unit_price,
+                    'sku' => $sku,
+                    'qrcode' => json_encode($qrData),
+                    'fabric_type_id' => $fabricTypeId,
+                    'sleeve_type' => $sleeve,
                 ]);
             }
         }
@@ -359,7 +429,7 @@ class ProductionReceiptController extends Controller
         $existingReceiptsItems = ProductionReceiptItem::whereIn('production_receipt_id', $existingReceiptIds)
             ->get()
             ->groupBy(function ($item) {
-            return ($item->item_id ?? '0') . '|' . ($item->size_variant ?? '');
+            return ($item->item_id ?? '0') . '|' . ($item->size_variant ?? '') . '|' . ($item->color ?? '');
         })->map(function ($group) {
             return $group->sum('qty_to_receive');
         });
@@ -474,11 +544,11 @@ class ProductionReceiptController extends Controller
             ];
         };
 
-        $processQty = function ($sleeve, $size, $qty) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice) {
+        $processQty = function ($sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice) {
             if ($qty > 0) {
                 $sizeVariant = $size . ' - ' . $sleeve;
                 $itemKey = $jobCard->item_id ?? '0';
-                $key = $itemKey . '|' . $sizeVariant;
+                $key = $itemKey . '|' . $sizeVariant . '|' . ($colorId ?? $color ?? '');
 
                 if (!isset($tempGrouped[$key])) {
                     $pricing = $calculateItemUnitPrice($size, $sleeve);
@@ -498,6 +568,8 @@ class ProductionReceiptController extends Controller
                         'uom_code' => 'PCS',
                         'ordered_qty' => 0,
                         'completed_qty' => 0,
+                        'color' => $color,
+                        'color_id' => $colorId,
                         'consumption_details' => $pricing['consumption_details'],
                     ];
                 }
@@ -508,10 +580,11 @@ class ProductionReceiptController extends Controller
 
         $fabDetail = $jobCard->fabricDetails->first();
         if ($fabDetail) {
-            $matrixQtys = \App\Models\JobCardMatrixQuantity::where('job_card_fabric_detail_id', $fabDetail->id)->get();
+            $matrixQtys = \App\Models\JobCardMatrixQuantity::with('colorRel')->where('job_card_fabric_detail_id', $fabDetail->id)->get();
             foreach ($matrixQtys as $mq) {
-                $processQty('F/S', $mq->size, $mq->qty_fs);
-                $processQty('H/S', $mq->size, $mq->qty_hs);
+                $colorToUse = $mq->color ?: ($mq->colorRel ? $mq->colorRel->color_name : null);
+                $processQty('F/S', $mq->size, $mq->qty_fs, $colorToUse, $mq->color_id);
+                $processQty('H/S', $mq->size, $mq->qty_hs, $colorToUse, $mq->color_id);
             }
         }
 
@@ -519,13 +592,14 @@ class ProductionReceiptController extends Controller
             $alreadyRec = $existingReceiptsItems->get($key) ?? 0;
             $balance = $itemData['completed_qty'] - $alreadyRec;
 
-            if ($balance > 0 || ($excludeReceiptId && ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)->where('item_id', $itemData['item_id'])->where('size_variant', $itemData['size_variant'])->exists())) {
+            if ($balance > 0 || ($excludeReceiptId && ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)->where('item_id', $itemData['item_id'])->where('size_variant', $itemData['size_variant'])->where('color_id', $itemData['color_id'])->exists())) {
 
                 $scanQty = 0;
                 if ($excludeReceiptId) {
                     $currentReceiptItem = ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)
                         ->where('item_id', $itemData['item_id'])
                         ->where('size_variant', $itemData['size_variant'])
+                        ->where('color_id', $itemData['color_id'])
                         ->first();
                     if ($currentReceiptItem) {
                         $scanQty = $currentReceiptItem->qty_to_receive;

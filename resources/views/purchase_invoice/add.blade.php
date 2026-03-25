@@ -15,9 +15,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('invoice_no') is-invalid @enderror"
-                                        id="invoice_no" placeholder="Enter Invoice No" name="invoice_no"
-                                        value="{{ old('invoice_no', $invoice->invoice_no ?? $nextInvoiceNumber ?? '') }}" {{ isset($invoice) ? 'readonly' : '' }}>
+                                    <input type="text" class="form-control @error('invoice_no') is-invalid @enderror" id="invoice_no" placeholder="Enter Invoice No" name="invoice_no" value="{{ old('invoice_no', $invoice->invoice_no ?? $nextInvoiceNumber ?? '') }}" {{ isset($invoice) ? 'readonly' : '' }}>
                                     <label for="invoice_no">Invoice No. <span class="text-danger">*</span></label>
                                 </div>
                                 @error('invoice_no')
@@ -26,10 +24,7 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control invoice_date @error('invoice_date') is-invalid @enderror"
-                                        placeholder="Enter Invoice Date" name="invoice_date"
-                                        autocomplete="off"
-                                        value="{{ old('invoice_date', $invoice ? $invoice->invoice_date->format('d-m-Y') : '') }}" {{ isset($invoice) ? 'readonly' : '' }} />
+                                    <input type="text" class="form-control invoice_date @error('invoice_date') is-invalid @enderror" placeholder="Enter Invoice Date" name="invoice_date" autocomplete="off" value="{{ old('invoice_date', $invoice ? $invoice->invoice_date->format('d-m-Y') : '') }}" {{ isset($invoice) ? 'readonly' : '' }} />
                                     <label for="invoice_date">Invoice Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('invoice_date')
@@ -53,33 +48,11 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            {{-- <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="purchase_order_no"
-                                        name="purchase_order_no" readonly
-                                        value="{{ old('purchase_order_no', $invoice->purchase_order_no ?? '') }}">
-                                    <label for="purchase_order_no">PO Number</label>
-                                </div>
-                            </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text"
-                                        class="form-control @error('supplier_name') is-invalid @enderror"
-                                        id="supplier_name"
-                                        readonly
-                                        value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
-
-                                    {{-- Hidden field to store supplier_name for old() --}}
-                                    <input type="hidden"
-                                        name="supplier_name"
-                                        id="supplier_name_hidden"
-                                        value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
-
-                                    <input type="hidden"
-                                        name="supplier_id"
-                                        id="supplier_id"
-                                        value="{{ old('supplier_id', $invoice->supplier_id ?? '') }}">
-
+                                    <input type="text" class="form-control @error('supplier_name') is-invalid @enderror" id="supplier_name" readonly value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
+                                    <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
+                                    <input type="hidden" name="supplier_id" id="supplier_id" value="{{ old('supplier_id', $invoice->supplier_id ?? '') }}">
                                     <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
                                 </div>
                                 @error('supplier_id')
@@ -88,12 +61,80 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference"
-                                        placeholder="Enter PO Reference" name="po_reference"
-                                        value="{{ old('po_reference', $invoice->po_reference ?? '') }}">
+                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter PO Reference" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}">
                                     <label for="po_reference">PO Reference</label>
                                 </div>
                                 @error('po_reference')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('transport') is-invalid @enderror" id="transport" placeholder="Enter Transport" name="transport" value="{{ old('transport', $invoice->transport ?? '') }}">
+                                    <label for="transport">Transport</label>
+                                </div>
+                                @error('transport')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('destination') is-invalid @enderror" id="destination" placeholder="Enter Destination" name="destination" value="{{ old('destination', $invoice->destination ?? '') }}">
+                                    <label for="destination">Destination</label>
+                                </div>
+                                @error('destination')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('lr_no') is-invalid @enderror" id="lr_no" placeholder="Enter LR No" name="lr_no" value="{{ old('lr_no', $invoice->lr_no ?? '') }}">
+                                    <label for="lr_no">LR No</label>
+                                </div>
+                                @error('lr_no')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control date-picker @error('lr_date') is-invalid @enderror" placeholder="Enter LR Date" name="lr_date" autocomplete="off" value="{{ old('lr_date', $invoice && $invoice->lr_date ? $invoice->lr_date->format('d-m-Y') : '') }}" />
+                                    <label for="lr_date">LR Date</label>
+                                </div>
+                                @error('lr_date')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('eway_billno') is-invalid @enderror" id="eway_billno" placeholder="Enter Eway Bill No" name="eway_billno" value="{{ old('eway_billno', $invoice->eway_billno ?? '') }}">
+                                    <label for="eway_billno">Eway Bill No</label>
+                                </div>
+                                @error('eway_billno')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('indent_no') is-invalid @enderror" id="indent_no" placeholder="Enter Indent No" name="indent_no" value="{{ old('indent_no', $invoice->indent_no ?? '') }}">
+                                    <label for="indent_no">Indent No</label>
+                                </div>
+                                @error('indent_no')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control date-picker @error('indent_date') is-invalid @enderror" placeholder="Enter Indent Date" name="indent_date" autocomplete="off" value="{{ old('indent_date', $invoice && $invoice->indent_date ? $invoice->indent_date->format('d-m-Y') : '') }}" />
+                                    <label for="indent_date">Indent Date</label>
+                                </div>
+                                @error('indent_date')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -253,10 +294,6 @@
                                         </td>
                                     </tr>
                                     @endforeach
-
-
-
-                                    {{-- 3️⃣ EMPTY --}}
                                     @else
                                     <tr>
                                         <td colspan="8" class="text-center text-muted">
@@ -764,9 +801,6 @@
     </div>
 </div>
 @endif
-
-
-
 
 @endsection
 @section('scripts')

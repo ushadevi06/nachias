@@ -213,6 +213,15 @@
     {{-- Fabric Details (Horizontal Format) --}}
     <table class="table table-bordered" style="margin-top: 5px;">
         <tr>
+            <td class="bg-light fw-bold" style="width: 15%;">FABRIC TYPE</td>
+            <td colspan="{{ count($jobCard->fabricDetails) }}" class="text-center fw-bold" style="color: #2f6fae; font-size: 8pt;">
+                {{ $jobCard->fabricType->fabric_type ?? 'N/A' }}
+            </td>
+            @for($i = $jobCard->fabricDetails->count(); $i < 3; $i++)
+                <td></td>
+            @endfor
+        </tr>
+        <tr>
             <td class="bg-light fw-bold" style="width: 15%;">ART NO</td>
             @foreach($jobCard->fabricDetails as $detail)
                 <td class="text-center fw-bold">

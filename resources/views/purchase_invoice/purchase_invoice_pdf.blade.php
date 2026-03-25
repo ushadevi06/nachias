@@ -180,16 +180,16 @@
             <td width="50%">
               Invoice No: <strong>{{ $invoice->invoice_no }}</strong><br>
               PO Ref: <strong>{{ $invoice->po_reference ?? '-' }}</strong><br>
-              Transport: <strong>{{ $invoice->supplier->transport_name ?? '-' }}</strong><br>
-              LR No: <strong>-</strong><br>
-              Indent No: <strong>-</strong><br>
+              Transport: <strong>{{ $invoice->transport ?? '-' }}</strong><br>
+              LR No: <strong>{{ $invoice->lr_no ?? '-' }}</strong><br>
+              Indent No: <strong>{{ $invoice->indent_no ?? '-' }}</strong><br>
               Broker: <strong>-</strong>
             </td>
             <td width="50%" style="padding:6px; line-height:1.4;">
               Date: <strong>{{ $invoice->invoice_date->format('d/m/Y') }}</strong><br><br>
-              Destination: <strong>{{ $invoice->supplier->city->city_name ?? '-' }}</strong><br>
-              LR Dt: <strong>-</strong><br>
-              Indent Dt: -
+              Destination: <strong>{{ $invoice->destination ?? '-' }}</strong><br>
+              LR Dt: <strong>{{ $invoice->lr_date ? $invoice->lr_date->format('d/m/Y') : '-' }}</strong><br>
+              Indent Dt: <strong>{{ $invoice->indent_date ? $invoice->indent_date->format('d/m/Y') : '-' }}</strong>
             </td>
           </tr>
         </table>
@@ -210,8 +210,10 @@
           <tr>
             <td align="center" style="border-top:1px solid #000;">
               <strong>EWAY BILL NO</strong><br>
-              <strong style="font-size:14px;">271684527828</strong><br>
-              <span style="font-size:10px;">2023-12-02 20:10:00</span>
+              <strong style="font-size:14px;">{{ $invoice->eway_billno ?? '-' }}</strong><br>
+              @if($invoice->eway_billno)
+              <span style="font-size:10px;">{{ $invoice->invoice_date->format('Y-m-d H:i:s') }}</span>
+              @endif
             </td>
           </tr>
         </table>
@@ -316,7 +318,7 @@
 
         <!-- GROSS TOTAL ROW -->
         <tr style="border-top:1px solid #000; border-bottom:1px solid #000; font-weight:bold; background-color:#f2f2f2; vertical-align:middle;">
-          <td colspan="3" style="border-right:1px solid #000; padding:6px; text-align:right; vertical-align:middle;">Gross Total</td>
+          <td colspan="3" style="border-right:1px solid #000; border-left:1px solid #000;padding:6px; text-align:right; vertical-align:middle;">Gross Total</td>
           <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;"></td>
           <td colspan="2" style="border-right:1px solid #000; text-align:right; padding-right:15px; vertical-align:middle;">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
           <td style="border-right:1px solid #000; vertical-align:middle;"></td>

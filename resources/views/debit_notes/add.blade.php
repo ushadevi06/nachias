@@ -28,12 +28,15 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="purchase_invoice_id" name="purchase_invoice_id" class="form-select select2" data-placeholder="Select Invoice">
+                                    <select id="purchase_invoice_id" name="purchase_invoice_id" class="form-select select2" data-placeholder="Select Invoice" {{ isset($debitNote) ? 'disabled' : '' }}>
                                         <option value="">Select Invoice</option>
                                         @foreach($purchaseInvoices as $invoice)
                                             <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>{{ $invoice->invoice_no }}</option>
                                         @endforeach
                                     </select>
+                                    @if(isset($debitNote))
+                                        <input type="hidden" name="purchase_invoice_id" value="{{ $debitNote->purchase_invoice_id }}">
+                                    @endif
                                     <label for="purchase_invoice_id">Select Purchase Invoice <span class="text-danger">*</span></label>
                                 </div>
                                 @error('purchase_invoice_id') <div class="text-danger">{{ $message }}</div> @enderror

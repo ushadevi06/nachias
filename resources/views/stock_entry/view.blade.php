@@ -17,38 +17,6 @@
             </div>
             <div class="card">
                 <div class="card-body">
-                    <!-- Filter Section -->
-                    <div class="filter-box">
-                        <div class="row g-3">
-                            <div class="col-lg-12">
-                                <h5>Filter</h5>
-                            </div>
-                            <div class="col-md-4 col-lg-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select name="material_category" id="material_category" class="form-select select2" data-placeholder="Select Store Category">
-                                        <option value="">Select Store Category</option>
-                                        @foreach($storeCategories as $cat)
-                                            <option value="{{ $cat->id }}">{{ $cat->category_name }}({{ $cat->code }})</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-lg-3">
-                                <select name="material" id="material" class="form-select select2" data-placeholder="Select Material">
-                                    <option value="">Select Material</option>
-                                    @foreach($rawMaterials as $mat)
-                                        <option value="{{ $mat->id }}" data-category="{{ $mat->store_category_id }}">{{ $mat->name }}({{ $mat->code }})</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <button type="button" class="btn btn-primary" id="btn-filter">Filter</button>
-                                <button type="button" class="btn btn-secondary" id="btn-reset">Reset</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tabs Section -->
                     <!-- Tabs Section -->
                     <div class="d-flex justify-content-center mb-4">
                         <div class="nav nav-pills custom-segment-tabs p-1 rounded-pill bg-light" id="stockEntryTabs" role="tablist">
@@ -88,10 +56,10 @@
                                     <th>#</th>
                                     <th>Stock Entry No.</th>
                                     <th>Stock Date</th>
-                                    <th>Store Category</th>
-                                    <th>Art No</th>
-                                    <th>Material</th>
                                     <th>GRN No.</th>
+                                    <th>Sleeve Type</th>
+                                    <th>Size</th>
+                                    <th>SKU</th>
                                     <th>Total Qty</th>
                                     <th>Actions</th>
                                 </tr>
@@ -106,7 +74,7 @@
 
 <!-- Modal Stock Adjustment -->
 <div class="modal fade" id="modalAdjustment" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Quick Stock Adjustment</h5>
@@ -114,51 +82,27 @@
             </div>
             <form id="formAdjustment" autocomplete="off">
                 @csrf
-                <input type="hidden" name="item_id" id="adj_item_id">
                 <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <div class="form-floating form-floating-outline">
-                                <input type="text" class="form-control" id="adj_grn_no" readonly>
-                                <label>GRN No.</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-floating form-floating-outline shadow-sm">
-                                <input type="text" class="form-control fw-bold text-primary" id="adj_art_no" readonly style="background-color: rgba(78, 103, 235, 0.05);">
-                                <label class="fw-bold">Art No.</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-floating form-floating-outline">
-                                <input type="text" class="form-control" id="adj_material" readonly>
-                                <label>Material Name</label>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-floating form-floating-outline">
-                                <input type="text" class="form-control" id="adj_current_qty" readonly>
-                                <label>Current Qty (In)</label>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="form-floating form-floating-outline">
-                                <input type="number" step="0.01" class="form-control" name="qty_to_add" id="adj_qty_to_add" placeholder="0.00" required>
-                                <label>Add Quantity *</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-floating form-floating-outline">
-                                <input type="text" class="form-control" name="approved_by" id="adj_approved_by" placeholder="Supervisor/Manager Name" required>
-                                <label>Approved By *</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-floating form-floating-outline">
-                                <textarea class="form-control" name="reason" id="adj_reason" rows="3" placeholder="Reason for adjustment" required style="height: 80px;"></textarea>
-                                <label>Reason for Adjustment *</label>
-                            </div>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="check-all"></th>
+                                    <th>Category</th>
+                                    <th>Material</th>
+                                    <th>Art No</th>
+                                    <th>Current Qty</th>
+                                    <th style="width: 120px;">Add Qty *</th>
+                                    <th>Approved By *</th>
+                                    <th>Reason *</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adjustment-items-body">
+                                <tr>
+                                    <td colspan="8" class="text-center">Loading items...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -190,8 +134,6 @@
             ajax: {
                 url: "{{ url('stock_entries') }}",
                 data: function(d) {
-                    d.material_category = $('#material_category').val();
-                    d.material = $('#material').val();
                     d.art_no = new URLSearchParams(window.location.search).get('art_no');
                     d.grn_no = new URLSearchParams(window.location.search).get('grn_no');
                     d.entry_type = $('#stockEntryTabs .nav-link.active').data('entry-type');
@@ -201,13 +143,10 @@
                 {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
                 {data: 'stock_entry_no', name: 'stock_entry_no'},
                 {data: 'stock_date', name: 'stock_date'},
-                {data: 'material_category', name: 'material_category'},
-                {data: 'art_no', name: 'art_no', render: function(data) {
-                    return `<span class="badge bg-label-primary fs-6 fw-bold border border-primary-subtle shadow-sm px-3">${data}</span>`;
-                }},
-                {data: 'material', name: 'material'},
                 {data: 'grn_no', name: 'grn_no'},
-
+                {data: 'sleeve_type', name: 'sleeve_type', visible: false},
+                {data: 'size', name: 'size', visible: false},
+                {data: 'sku', name: 'sku', visible: false},
                 {data: 'total_qty', name: 'total_qty'},
                 {data: 'action', name: 'action', orderable: false, searchable: false}
             ]
@@ -222,72 +161,35 @@
             if($(this).data('entry-type') === 'Finished Goods') {
                 $('.filter-box').hide();
                 table.column(1).visible(false); // Hide Stock Entry No
-                table.column(3).visible(false); // Hide Store Category
-                table.column(4).visible(false); // Hide Art No
-                $(table.column(5).header()).text('Finished Goods');
-                $(table.column(6).header()).text('Job Card No.');
+                $(table.column(3).header()).text('Job Card No.');
+                table.column(4).visible(true); // Sleeve Type
+                table.column(5).visible(true); // Size
+                table.column(6).visible(true); // SKU
             } else {
                 $('.filter-box').show();
                 table.column(1).visible(true); // Show Stock Entry No
-                table.column(3).visible(true); // Show Store Category
-                table.column(4).visible(true); // Show Art No
-                $(table.column(5).header()).text('Material');
-                $(table.column(6).header()).text('GRN No.');
+                $(table.column(3).header()).text('GRN No.');
+                table.column(4).visible(false); // Sleeve Type
+                table.column(5).visible(false); // Size
+                table.column(6).visible(false); // SKU
             }
             
             table.ajax.reload();
         });
 
-        // Dependent Dropdown for Store Category -> Material
-        let $materialSelect = $('#material');
-        let allMaterials = $materialSelect.find('option').clone();
-
-        $('#material_category').on('change', function() {
-            let categoryId = $(this).val();
-            let currentMaterial = $materialSelect.val();
-
-            $materialSelect.empty();
-            $materialSelect.append('<option value="">Select Material</option>');
-
-            allMaterials.each(function() {
-                let optionCat = $(this).data('category');
-                if ($(this).val() !== '') {
-                    if (!categoryId || optionCat == categoryId) {
-                        $materialSelect.append($(this));
-                    }
-                }
-            });
-
-            // Restore selection if valid
-            $materialSelect.val(currentMaterial).trigger('change');
-        });
 
         $('#btn-filter').click(function() {
             table.ajax.reload();
         });
 
         $('#btn-reset').click(function() {
-            $('#material_category').val('').trigger('change');
-            $('#material').val('').trigger('change');
             window.history.replaceState({}, document.title, window.location.pathname); // Clear URL params
             table.ajax.reload();
         });
 
         // Auto-Filter from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const catParam = urlParams.get('material_category');
-        const matParam = urlParams.get('material');
         const searchParam = urlParams.get('search');
-
-        if (catParam) {
-            $('#material_category').val(catParam).trigger('change');
-        }
-        if (matParam) {
-            setTimeout(() => {
-                $('#material').val(matParam).trigger('change');
-                table.ajax.reload();
-            }, 300);
-        }
         if (searchParam) {
             table.search(searchParam).draw();
         }
@@ -296,20 +198,62 @@
     // Handle Adjustment Button Click
     $(document).on('click', '.btn-adjust', function() {
         let btn = $(this);
-        $('#adj_item_id').val(btn.data('item-id'));
-        $('#adj_grn_no').val(btn.data('grn-no'));
-        $('#adj_art_no').val(btn.data('art-no'));
-        $('#adj_material').val(btn.data('material'));
-        $('#adj_current_qty').val(btn.data('current-qty'));
-        $('#adj_qty_to_add').val('');
-        $('#adj_reason').val('');
-        $('#adj_approved_by').val('');
-        
+        let entryId = btn.data('entry-id');
+        let $body = $('#adjustment-items-body');
+        $body.html('<tr><td colspan="8" class="text-center"><span class="spinner-border spinner-border-sm" role="status"></span> Loading items...</td></tr>');
+        $('#check-all').prop('checked', false);
         $('#modalAdjustment').modal('show');
+
+        $.get("{{ url('stock_entries/get-items') }}/" + entryId, function(res) {
+            if(res.success) {
+                let html = '';
+                res.items.forEach((item, index) => {
+                    html += `
+                        <tr>
+                            <td><input type="checkbox" class="form-check-input item-check" data-index="${index}"></td>
+                            <td>${item.category}</td>
+                            <td>${item.material}</td>
+                            <td><span class="badge bg-label-primary px-2">${item.art_no}</span></td>
+                            <td>${item.current_qty}</td>
+                            <td>
+                                <input type="hidden" name="adjustments[${index}][item_id]" value="${item.id}" disabled>
+                                <input type="number" step="0.01" class="form-control form-control-sm" name="adjustments[${index}][qty_to_add]" placeholder="0.00" disabled required>
+                            </td>
+                            <td><input type="text" class="form-control form-control-sm" name="adjustments[${index}][approved_by]" placeholder="Approved By" disabled required></td>
+                            <td><input type="text" class="form-control form-control-sm" name="adjustments[${index}][reason]" placeholder="Reason" disabled required></td>
+                        </tr>
+                    `;
+                });
+                $body.html(html);
+            } else {
+                $body.html('<tr><td colspan="8" class="text-center text-danger">Error loading items</td></tr>');
+            }
+        });
+    });
+
+    $(document).on('change', '#check-all', function() {
+        $('.item-check').prop('checked', $(this).prop('checked')).trigger('change');
+    });
+
+    $(document).on('change', '.item-check', function() {
+        let row = $(this).closest('tr');
+        let checked = $(this).prop('checked');
+        row.find('input:not(.item-check)').prop('disabled', !checked);
     });
 
     $('#formAdjustment').on('submit', function(e) {
         e.preventDefault();
+        
+        if ($('.item-check:checked').length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Items Selected',
+                text: 'Please select at least one item to adjust.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
         let btn = $('#btn-save-adjustment');
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adjusting...');
 

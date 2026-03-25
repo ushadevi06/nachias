@@ -180,6 +180,7 @@
                                         <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
                                         <input type="hidden" name="items[${index}][store_category_id]" value="${item.store_category_id}">
                                         <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
+                                        <input type="hidden" name="items[${index}][fabric_type_id]" value="${item.fabric_type_id || ''}">
                                         ${item.store_category_name}
                                     </td>
                                     <td>${item.raw_material_name}</td>

@@ -6,6 +6,9 @@
         <div class="col-lg-12">
             <form action="{{ url('production_receipts/add' . ($receipt ? '/' . $receipt->id : '')) }}" method="POST" class="common-form">
                 @csrf
+                <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -135,7 +138,7 @@
                                     <tr>
                                         <th>Item</th>
                                         <th>Description</th>
-                                        {{-- <th>Color</th> --}}
+                                        <th>Color</th>
                                         <th>Size</th>
                                         <th>Unit Price</th>
                                         <th>Qty Ordered</th>
@@ -224,7 +227,7 @@
                         '<button type="button" class="btn btn-sm btn-link p-0 ms-1 btn-show-consumption" data-index="' + index + '" title="View Consumption Details">' +
                         '<i class="icon-base ri ri-information-line fs-5"></i></button>' +
                     '</td>' +
-                    // '<td>' + (item.color || '-') + '</td>' +
+                    '<td>' + (item.color || '-') + '<input type="hidden" name="items[' + index + '][color_id]" value="' + (item.color_id || '') + '"></td>' +
                     '<td>' + (item.size || '') + '<input type="hidden" name="items[' + index + '][size]" value="' + (item.size || '') + '"></td>' +
                     '<td class="text-end">' + parseFloat(item.unit_price || 0).toFixed(2) + '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '"></td>' +
                     '<td class="text-end">' + orderedQty.toFixed(2) + '<input type="hidden" class="ordered-qty" name="items[' + index + '][ordered_qty]" value="' + orderedQty.toFixed(2) + '"></td>' +
@@ -365,7 +368,7 @@
                             if (oldItems && Object.keys(oldItems).length > 0) {
                                 responseItems.forEach(function(item) {
                                     var match = Object.values(oldItems).find(function(oi) {
-                                        return oi.item_id == item.item_id && oi.size_variant == item.size_variant;
+                                        return oi.item_id == item.item_id && oi.size_variant == item.size_variant && (oi.color_id == item.color_id || oi.color == item.color);
                                     });
                                     if (match) {
                                         item.scan_qty = match.scan_qty;

@@ -21,9 +21,14 @@ class StockEntryItem extends Model
         'store_location_id',
         'uom_id',
         'size',
+        'color_id',
         'qty_in',
         'qty_out',
         'price',
+        'sku',
+        'qrcode',
+        'fabric_type_id',
+        'sleeve_type',
     ];
 
     public function stockEntry()
@@ -54,6 +59,16 @@ class StockEntryItem extends Model
     public function uom()
     {
         return $this->belongsTo(Uom::class);
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(Color::class, 'color_id');
+    }
+
+    public function fabricType()
+    {
+        return $this->belongsTo(FabricType::class, 'fabric_type_id');
     }
 
     /**

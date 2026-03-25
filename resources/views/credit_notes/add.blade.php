@@ -29,12 +29,15 @@
                             </div>
                             <div class="col-lg-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select class="select2 form-select" name="sales_invoice_id" id="sales_invoice_id" data-placeholder="Select Invoice No">
+                                    <select class="select2 form-select" name="sales_invoice_id" id="sales_invoice_id" data-placeholder="Select Invoice No" {{ isset($creditNote) ? 'disabled' : '' }}>
                                         <option value="">Select Invoice No</option>
                                         @foreach($salesInvoices as $invoice)
                                             <option value="{{ $invoice->id }}" {{ (old('sales_invoice_id', $creditNote->sales_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>{{ $invoice->inv_no }}</option>
                                         @endforeach
                                     </select>
+                                    @if(isset($creditNote))
+                                        <input type="hidden" name="sales_invoice_id" value="{{ $creditNote->sales_invoice_id }}">
+                                    @endif
                                     <label for="sales_invoice_id">Invoice No *</label>
                                     @error('sales_invoice_id') <small class="text-danger">{{ $message }}</small> @enderror
                                 </div>

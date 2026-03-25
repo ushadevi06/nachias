@@ -63,6 +63,38 @@
                                 <span class="badge {{ $statusClass }} px-3 py-2">{{ $invoice->invoice_status }}</span>
                             </div>
                         </div>
+
+                        <!-- Transport Fields -->
+                        <div class="col-md-3 mt-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Transport Name</div>
+                            <div class="fw-bold text-dark">{{ $invoice->transport ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3 mt-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Destination</div>
+                            <div class="fw-bold text-dark">{{ $invoice->destination ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3 mt-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">LR No. & Date</div>
+                            <div class="fw-bold text-dark">
+                                {{ $invoice->lr_no ?? '-' }}
+                                @if($invoice->lr_date)
+                                    <span class="text-primary small">({{ $invoice->lr_date->format('d/m/Y') }})</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-3 mt-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Indent No. & Date</div>
+                            <div class="fw-bold text-dark">
+                                {{ $invoice->indent_no ?? '-' }}
+                                @if($invoice->indent_date)
+                                    <span class="text-primary small">({{ $invoice->indent_date->format('d/m/Y') }})</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-3 mt-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Eway Bill No.</div>
+                            <div class="fw-bold text-dark">{{ $invoice->eway_billno ?? '-' }}</div>
+                        </div>
                     </div>
                 </div>
             </div>

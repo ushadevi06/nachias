@@ -99,7 +99,7 @@
                                             @php
                                                 $materialName = $artMaterialMap[$item->art_no] ?? $item->art_no;
                                                 $locationName = $artLocationMap[$item->art_no] ?? '-';
-                                                $poItem = $jobCard->purchaseOrder->items->where('art_no', $item->art_no)->first();
+                                                $poItem = $jobCard->purchaseOrder?->items?->where('art_no', $item->art_no)->first();
                                                 $uomName = ($poItem && $poItem->uom) ? $poItem->uom->uom_code : (($poItem && $poItem->rawMaterial && $poItem->rawMaterial->uom) ? $poItem->rawMaterial->uom->uom_code : ($artUomMap[$item->art_no] ?? '-'));
                                                 
                                                 $total_qty = $item->quantities->sum('total_qty'); 
@@ -136,7 +136,7 @@
                                                 <td class="col-item">{{ $itemDisplayName }}</td>
                                                 <td class="col-description">{{ $itemDescription }}</td>
                                                 <td class="fw-bold col-art">{{ $item->art_no }}</td>
-                                                <td>{{ $jobCard->purchaseOrder->supplier->name ?? '-' }}</td>
+                                                <td>{{ $jobCard->purchaseOrder?->supplier?->name ?? '-' }}</td>
                                                 <td>1</td><td>{{ $uomName }}</td>
                                                 <td>
                                                     <p class="mb-0 col-qty-issue text-end">{{ $savedItem->qty_issue ?? $item->mtr }}</p>

@@ -12,7 +12,15 @@
                 <div class="card-body">
                     <div class="row g-4">
                         @php
-                            $firstItem = $stockEntry->stockEntryItems->first();
+                            $itemId = request('item_id');
+                            $firstItem = null;
+                            if ($itemId) {
+                                $firstItem = $stockEntry->stockEntryItems->where('id', $itemId)->first();
+                            }
+                            if (!$firstItem) {
+                                $firstItem = $stockEntry->stockEntryItems->first();
+                            }
+                            
                             $totalQtyIn = $stockEntry->stockEntryItems->sum('qty_in');
                             $totalQtyOut = $stockEntry->stockEntryItems->sum('qty_out');
                             $isRawMaterial = ($stockEntry->entry_type === 'Raw Material');
@@ -95,19 +103,62 @@
                         </div>
                         @else
                         @if($firstItem)
-                        <div class="col-md-4">
-                            <label class="detail-title">Item:</label>
-                            <div class="text-muted">
-                                {{ $firstItem->finished_item_code ?? '-' }}
+                        <div class="col-md-12 mt-4">
+                            <div class="card shadow-none border bg-light bg-opacity-25 rounded-3">
+                                <div class="card-body p-4">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3 text-center border-end pe-md-5">
+                                            @if($firstItem->sku)
+                                                <div class="p-3 border rounded bg-white shadow-sm d-inline-block mb-2">
+                                                    {!! \QrCode::size(120)->generate($firstItem->sku) !!}
+                                                </div>
+                                                <div class="fw-bold text-primary fs-5">{{ $firstItem->sku }}</div>
+                                                <div class="text-muted small">Sequential SKU</div>
+                                            @else
+                                                <div class="text-muted italic">No SKU Assigned</div>
+                                            @endif
+                                        </div>
+                                        <div class="col-md-6 ps-md-5 py-3">
+                                            <h4 class="text-primary fw-bold mb-3">{{ $firstItem->finished_item_code ?? '-' }}</h4>
+                                            <div class="row g-3">
+                                                <div class="col-sm-6">
+                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Art No</label>
+                                                    <span class="text-dark fw-medium fs-6">{{ $firstItem->art_no ?? '-' }}</span>
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Fabric / Sleeve</label>
+                                                    <span class="text-dark fw-medium fs-6">
+                                                        {{ $firstItem->fabricType ? $firstItem->fabricType->fabric_type : '-' }} / 
+                                                        {{ $firstItem->sleeve_type ?? '-' }}
+                                                    </span>
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Quantity</label>
+                                                    <span class="text-success fw-bold fs-5">+{{ floatval($firstItem->qty_in) }} <small class="text-muted fs-6 fw-normal">{{ $firstItem->uom->uom_code ?? 'PCS' }}</small></span>
+                                                </div>
+                                                <div class="col-sm-6">
+                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Variations</label>
+                                                    <span class="text-dark fw-medium">
+                                                        {{ $stockEntry->stockEntryItems->unique('size')->count() }} Sizes / 
+                                                        {{ $stockEntry->stockEntryItems->unique('color_id')->count() }} Colors
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 text-md-end pt-3 pt-md-0">
+                                            @if($firstItem->sku)
+                                                <a href="{{ url('labels/print/' . $firstItem->id) }}" target="_blank" class="btn btn-primary px-4 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                                    <i class="ri-printer-line fs-5"></i> Print Label
+                                                </a>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">UOM:</label>
-                            <div class="text-muted">{{ $firstItem->uom->uom_code ?? '-' }}</div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="detail-title">Quantity In:</label>
-                            <div class="text-muted text-success fw-bold">+{{ $totalQtyIn + 0 }}</div>
+                        @else
+                        <div class="col-md-12 text-center py-5">
+                            <div class="text-muted">No finished goods items found in this entry.</div>
                         </div>
                         @endif
                         @endif

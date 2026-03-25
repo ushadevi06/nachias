@@ -24,13 +24,17 @@ class JobCardEntry extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_no', 'reference_no', 'purchase_order_id', 'service_provider_id', 'issue_store_id', 'receipt_store_id',
+        'job_card_no', 'reference_no', 'purchase_order_id', 'stock_entry_ids', 'service_provider_id', 'issue_store_id', 'receipt_store_id',
         'brand_id', 'season_id', 'process_group_id', 'job_card_date', 'delivery_date', 'washing', 'width', 'mrp',
         'fs_qty', 'hs_qty', 'receipt_store', 'fit_id', 'patti_type_id', 'collar_type_id',
         'cuff_type_id', 'pocket_type_id', 'bottom_cut_id', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',
         'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'average', 'remarks', 'status',
-        'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label', 'brand_category_id', 'item_id'
+        'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label', 'brand_category_id', 'item_id', 'fabric_type_id'
+    ];
+
+    protected $casts = [
+        'stock_entry_ids' => 'array',
     ];
 
     public function cuttingMaster()
@@ -151,5 +155,10 @@ class JobCardEntry extends Model
     public function tasks()
     {
         return $this->hasMany(Task::class , 'job_card_entry_id');
+    }
+
+    public function fabricType()
+    {
+        return $this->belongsTo(FabricType::class, 'fabric_type_id');
     }
 }

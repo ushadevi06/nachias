@@ -374,11 +374,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Stock Entry */
     Route::get('stock_entries/get-grn-items/{id}', [StockEntryController::class , 'getGrnEntryItems']);
+    Route::get('stock_entries/get-items/{id}', [StockEntryController::class , 'getEntryItems']);
     Route::get('stock_entries', [StockEntryController::class , 'index']);
     Route::match (['get', 'post'], 'stock_entries/add/{id?}', [StockEntryController::class , 'add']);
     Route::post('stock_entries/quick-adjustment', [StockEntryController::class , 'quickAdjustment'])->name('stock_entries.quick_adjustment');
     Route::get('stock_entries/adjustment-logs/{id?}', [StockEntryController::class , 'adjustmentLogs'])->name('stock_entries.adjustment_logs');
     Route::get('stock_entries/view/{id}/{entry_type?}', [StockEntryController::class , 'view']);
+    Route::get('labels/print/{id}', [\App\Http\Controllers\LabelController::class, 'print']);
 
     /* Store */
     Route::get('stock_consumables_returns', [StockConsumableReturnController::class , 'index']);
@@ -433,6 +435,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/get-size-ratio/{id}', [JobCardEntryController::class , 'getSizeRatioDetails']);
     Route::get('job_card_entries/get-po-details/{id}', [JobCardEntryController::class , 'getPoDetails']);
     Route::get('job_card_entries/check-stock/{id}', [JobCardEntryController::class , 'checkStock']);
+    Route::get('job_card_entries/search-stock-entries', [JobCardEntryController::class , 'searchStockEntries']);
+    Route::get('job_card_entries/get-stock-entry-details', [JobCardEntryController::class , 'getStockEntryDetails']);
     Route::get('job_card_entries/get_items_by_store_category', [JobCardEntryController::class , 'getItemsByStoreCategory']);
     Route::get('job_card_entries/get_items_by_brand_category', [JobCardEntryController::class , 'getItemsByBrandCategory']);
     Route::delete('job_card_entries/delete-image/{id}', [JobCardEntryController::class , 'deleteImage']);
