@@ -209,6 +209,13 @@
                                             $logoData = file_get_contents($logoPath);
                                             $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
                                         }
+                                        
+                                        $qrPath = public_path('assets/images/qr_code.png');
+                                        $qrBase64 = '';
+                                        if (file_exists($qrPath)) {
+                                            $qrData = file_get_contents($qrPath);
+                                            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
+                                        }
                                     @endphp
                                     @if($logoBase64)
                                         <img src="{{ $logoBase64 }}" style="width: 140px;">
@@ -243,7 +250,11 @@
                     </td>
                     <td width="40%" class="text-right" style="vertical-align: top;">
                         <div style="margin-right: 10px;">ORIGINAL</div>
+                        @if($qrBase64)
+                            <img src="{{ $qrBase64 }}" class="qr-code">
+                        @else
                         <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" class="qr-code">
+                        @endif
                     </td>
                 </tr>
             </table>
@@ -342,7 +353,7 @@
                         <tr>
                             <td>Sales Group</td>
                             <td>:</td>
-                            <td>{{ $invoice->customer->zone ?? 'N/A' }}</td>
+                            <td>{{ is_object($invoice->customer->zone) || is_array($invoice->customer->zone) ? ($invoice->customer->zone->zone_name ?? $invoice->customer->zone['zone_name'] ?? 'N/A') : (is_string($invoice->customer->zone) ? json_decode($invoice->customer->zone)->zone_name ?? $invoice->customer->zone : 'N/A') }}</td>
                         </tr>
                         <tr>
                             <td>Sales Person</td>
@@ -441,7 +452,11 @@
                             </td>
                             <td style="width: 25%; padding: 4px; vertical-align: top; text-align: center; border-bottom: none; border-right: none;">
                                 <span style="font-weight: bold;">For UPI Payment</span><br>
+                                @if($qrBase64)
+                                    <img src="{{ $qrBase64 }}" style="max-width: 85px; margin-top: 0px;">
+                                @else
                                 <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="max-width: 85px; margin-top: 0px;">
+                                @endif
                             </td>
                         </tr>
                     </table>
