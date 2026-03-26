@@ -357,7 +357,6 @@
                     <th width="6%">UOM</th>
                     <th width="8%">Quantity</th>
                     <th width="8%">MRP</th>
-                    <th width="8%">Price</th>
                     <th width="14%">Amount</th>
                 </tr>
             </thead>
@@ -377,14 +376,12 @@
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
                         <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
-                        <td class="text-right">{{ number_format($item->rate, 2) }}</td>
                         <td class="text-right">{{ number_format($item->amount, 2) }}</td>
                     </tr>
                 @endforeach
                 @for($i = count($invoice->items); $i < 10; $i++)
                     <tr>
                         <td style="height: 15px;">&nbsp;</td>
-                        <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
@@ -400,7 +397,7 @@
                 <tr>
                     <td colspan="6" class="text-right bold"></td>
                     <td class="text-center bold">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
-                    <td colspan="2" class="text-right">Gross</td>
+                    <td class="text-right">Gross</td>
                     <td class="text-right bold">{{ number_format($invoice->sub_total, 2) }}</td>
                 </tr>
             </tfoot>

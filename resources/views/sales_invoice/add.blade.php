@@ -6,16 +6,6 @@
         <div class="col-lg-12">
             <form action="{{ isset($invoice) ? url('sales_invoices/add/'.$invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
-                {{-- @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif --}}
-
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -105,7 +95,7 @@
 
                                         <th style="width: 8%;">UOM</th>
                                         <th style="width: 8%;">Qty *</th>
-                                        <th style="width: 10%;">Rate *</th>
+
                                         <th style="width: 10%;">MRP</th>
                                         <th style="width: 12%;">Amount *</th>
                                     </tr>
@@ -175,12 +165,7 @@
                                                     <label>Qty *</label>
                                                 </div>
                                             </td>
-                                            <td>
-                                                <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Rate">
-                                                    <label>Rate *</label>
-                                                </div>
-                                            </td>
+
                                             <td>
                                                 <div class="form-floating form-floating-outline">
                                                     <input type="number" step="any" class="form-control mrp" name="items[{{ $index }}][mrp]" value="{{ $row->mrp ?? '' }}" placeholder="MRP">
@@ -365,12 +350,7 @@
                                                     <label class="form-check-label" for="show_grandtotal">Show Grand Total</label>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6 col-lg-4 mt-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="show_due" name="show_fields[]" value="due" {{ in_array('due', $selected_fields) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="show_due">Show Due Amount</label>
-                                                </div>
-                                            </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -489,21 +469,7 @@
                                         <span class="fw-bold mb-0 text-primary" id="grand_total_val">{{ old('grand_total', isset($invoice) ? number_format($invoice->grand_total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="grand_total" id="grand_total" value="{{ old('grand_total', isset($invoice) ? number_format($invoice->grand_total, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="text-secondary small fw-medium">Paid So Far:</span>
-                                        <span class="fw-bold text-dark" id="paid_so_far_val">₹{{ number_format(isset($invoice) ? $invoice->received_amount : 0, 2) }} <i class="mdi mdi-history text-info ms-1 cursor-pointer" title="View Payment History"></i></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
-                                        <span class="small fw-bold">Add New Payment:</span>
-                                        <div class="d-flex flex-column align-items-end">
-                                            <input type="number" step="any" name="received_amount" id="received_amount" class="form-control form-control-sm text-end" value="{{ old('received_amount', '0.00') }}">
-                                        </div>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center pt-2 text-danger">
-                                        <span class="fw-bold mb-0">Due Amount:</span>
-                                        <span class="fw-bold mb-0" id="due_amount_val">{{ old('due_amount', isset($invoice) ? number_format($invoice->due_amount, 2, '.', '') : '0.00') }}</span>
-                                        <input type="hidden" name="due_amount" id="due_amount" value="{{ old('due_amount', isset($invoice) ? number_format($invoice->due_amount, 2, '.', '') : '0.00') }}">
-                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -598,12 +564,7 @@
                                             <label>Qty *</label>
                                         </div>
                                     </td>
-                                    <td>
-                                         <div class="form-floating form-floating-outline">
-                                            <input type="number" step="any" class="form-control rate" name="items[${index}][rate]" value="${item.rate}">
-                                            <label>Rate *</label>
-                                        </div>
-                                    </td>
+
                                     <td>
                                         <div class="form-floating form-floating-outline">
                                             <input type="number" step="any" class="form-control mrp" name="items[${index}][mrp]" value="${item.mrp || 0}">
@@ -612,7 +573,7 @@
                                     </td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control amount" name="items[${index}][amount]" value="${item.amount}" readonly>
+                                            <input type="text" class="form-control amount" name="items[${index}][amount]" value="${(item.qty * (item.mrp || 0)).toFixed(2)}" readonly>
                                             <label>Amount *</label>
                                         </div>
                                     </td>
@@ -716,13 +677,7 @@
             $('#grand_total_val').text(grandTotal.toFixed(2));
             $('#grand_total').val(grandTotal.toFixed(2));
 
-            var paidSoFarText = $('#paid_so_far_val').text().replace(/[^\d.]/g, '');
-            var paidSoFar = parseFloat(paidSoFarText) || 0;
-            var receivedNow = parseFloat($('#received_amount').val()) || 0;
-            
-            var due = grandTotal - (paidSoFar + receivedNow);
-            $('#due_amount_val').text(due.toFixed(2));
-            $('#due_amount').val(due.toFixed(2));
+
         }
 
         $(document).on('input', '#discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #round_off, #received_amount', function() {
@@ -770,15 +725,13 @@
             calculateTotals();
         });
 
-        $('#received_amount').on('input', function() {
-            calculateTotals();
-        });
 
-        $('#item-rows').on('input', '.qty, .rate', function() {
+
+        $('#item-rows').on('input', '.qty, .mrp', function() {
             var row = $(this).closest('.item-row');
             var qty = parseFloat(row.find('.qty').val()) || 0;
-            var rate = parseFloat(row.find('.rate').val()) || 0;
-            row.find('.amount').val((qty * rate).toFixed(2));
+            var mrp = parseFloat(row.find('.mrp').val()) || 0;
+            row.find('.amount').val((qty * mrp).toFixed(2));
             calculateTotals();
         });
 

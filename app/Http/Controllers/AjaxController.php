@@ -39,7 +39,7 @@ class AjaxController extends Controller
         if ($zone_id && $zone_id != 0) {
             $query->where('zone_id', $zone_id);
         }
-        $agents = $query->select('id', 'name')->get();
+        $agents = $query->select('id', 'name','code')->get();
         return response()->json($agents);
     }
 
@@ -166,7 +166,7 @@ class AjaxController extends Controller
             return response()->json(['success' => false, 'message' => 'Item not found']);
         }
 
-        $stockDetails = StockEntryItem::where('finished_item_code', 'like', $item->code . '%')->whereNull('deleted_at')->select('id', 'size', 'finished_item_code', 'price', DB::raw('(qty_in - qty_out) as balance'))->get();
+        $stockDetails = StockEntryItem::with('color:id,color_name')->where('finished_item_code', 'like', $item->code . '%')->whereNull('deleted_at')->select('id', 'size', 'color_id', 'finished_item_code', 'price', DB::raw('(qty_in - qty_out) as balance'))->get();
 
         $stockData = $stockDetails->map(function($s) {
             $sleeve = null;
@@ -182,6 +182,8 @@ class AjaxController extends Controller
                 'stock_entry_item_id' => $s->id,
                 'size' => $s->size,
                 'sleeve' => $sleeve,
+                'color_id' => $s->color_id,
+                'color_name' => $s->color ? $s->color->color_name : null,
                 'rate' => (float)$s->price,
                 'balance' => (float)$s->balance
             ];

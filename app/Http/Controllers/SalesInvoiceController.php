@@ -120,8 +120,8 @@ class SalesInvoiceController extends Controller
                 'items' => 'required|array|min:1',
                 'items.*.item_id' => 'required',
                 'items.*.quantity' => 'required|numeric|min:0.01',
-                'items.*.rate' => 'required|numeric|min:0',
-                'items.*.mrp' => 'nullable|numeric|min:0',
+                'items.*.rate' => 'nullable|numeric|min:0',
+                'items.*.mrp' => 'required|numeric|min:0',
                 'signature_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'attachment_file' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
             ], [
@@ -135,7 +135,7 @@ class SalesInvoiceController extends Controller
                 '*.max'           => 'This field must be at most :max characters.',
                 'items.*.item_id.required' => 'This field is required.',
                 'items.*.quantity.required' => 'This field is required.',
-                'items.*.rate.required' => 'This field is required.',
+                'items.*.rate.nullable' => 'This field is optional.',
                 'extra_input' => 'nullable|min:3|max:100',
             ]);
 

@@ -1,3 +1,50 @@
-ALTER TABLE credit_notes
-ADD COLUMN round_off DECIMAL(15,2) DEFAULT 0 AFTER tax_amount,
-ADD COLUMN round_off_type VARCHAR(255) DEFAULT 'Add' AFTER round_off;
+ALTER TABLE purchase_invoices
+ADD COLUMN transport VARCHAR(255) NULL AFTER attachments,
+ADD COLUMN destination VARCHAR(255) NULL AFTER transport,
+ADD COLUMN lr_no VARCHAR(255) NULL AFTER destination,
+ADD COLUMN lr_date DATE NULL AFTER lr_no,
+ADD COLUMN indent_no VARCHAR(255) NULL AFTER lr_date,
+ADD COLUMN indent_date DATE NULL AFTER indent_no,
+ADD COLUMN eway_billno VARCHAR(255) NULL AFTER lr_date;
+
+ALTER TABLE job_card_entries
+ADD COLUMN stock_entry_ids TEXT NULL AFTER purchase_order_id,
+ADD COLUMN fabric_type_id BIGINT UNSIGNED NULL AFTER brand_category_id;
+
+ALTER TABLE job_card_matrix_quantities
+ADD COLUMN color_id BIGINT UNSIGNED NULL AFTER total_qty;
+
+ALTER TABLE job_card_matrix_quantities
+ADD CONSTRAINT fk_jcmq_color
+FOREIGN KEY (color_id) REFERENCES colors(id)
+ON DELETE SET NULL;
+
+ALTER TABLE stock_entry_items
+ADD COLUMN sku VARCHAR(255) NULL AFTER finished_item_code,
+ADD COLUMN qrcode TEXT NULL AFTER sku,
+ADD COLUMN sleeve_type VARCHAR(255) NULL AFTER qrcode;
+
+-- Drop old columns (run only if they exist)
+ALTER TABLE stock_entry_items DROP COLUMN color;
+ALTER TABLE stock_entry_items DROP COLUMN fabric_type;
+
+-- Add new columns
+ALTER TABLE stock_entry_items
+ADD COLUMN color_id BIGINT UNSIGNED NULL AFTER size,
+ADD COLUMN fabric_type_id BIGINT UNSIGNED NULL AFTER qrcode;
+
+-- Add item_id and foreign key
+ALTER TABLE stock_entry_items
+ADD COLUMN item_id BIGINT UNSIGNED NULL AFTER raw_material_id;
+
+ALTER TABLE stock_entry_items
+ADD CONSTRAINT fk_stock_item
+FOREIGN KEY (item_id) REFERENCES items(id)
+ON DELETE CASCADE;
+
+-- Drop old column (run only if it exists)
+ALTER TABLE production_receipt_items DROP COLUMN color;
+
+-- Add new column
+ALTER TABLE production_receipt_items
+ADD COLUMN color_id BIGINT UNSIGNED NULL AFTER size;

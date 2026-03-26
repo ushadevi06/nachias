@@ -171,8 +171,8 @@ class CreditNoteController extends Controller
                             'sleeve_type' => $item['sleeve_type'] ?? null,
                             'mrp' => $item['mrp'] ?? 0,
                             'uom_id' => $item['uom_id'],
-                            'rate' => $item['rate'],
-                            'amount' => $item['amount'],
+                            'rate' => $item['rate'] ?? 0,
+                            'amount' => $item['amount'] ?? 0,
                         ]);
                     }
                 }
@@ -302,6 +302,6 @@ class CreditNoteController extends Controller
         $pdf = Pdf::loadView('credit_notes.credit_note_pdf', $data);
         $pdf->setPaper('A4', 'portrait');
 
-        return $pdf->download('CreditNote_' . $creditNote->note_no . '.pdf');
+        return $pdf->stream('CreditNote_' . $creditNote->note_no . '.pdf');
     }
 }

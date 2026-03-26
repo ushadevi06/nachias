@@ -99,7 +99,6 @@
                                         <th style="width: 100px;">SIZE</th>
                                         <th style="width: 100px;">UOM</th>
                                         <th style="width: 120px;">QUANTITY</th>
-                                        <th style="width: 120px;">RATE</th>
                                         <th style="width: 150px;">MRP</th>
                                         <th style="width: 180px;">AMOUNT</th>
                                     </tr>
@@ -184,7 +183,6 @@
                                                     <input type="text" class="form-control" value="{{ $item->uom_code }}" readonly>
                                                 </td>
                                                 <td><input type="number" class="form-control qty" name="items[{{$index}}][quantity]" value="{{ $item->quantity }}" step="0.01"></td>
-                                                <td><input type="number" class="form-control rate" name="items[{{$index}}][rate]" value="{{ $item->rate }}" step="0.01"></td>
                                                 <td>
                                                     <input type="number" class="form-control mrp" name="items[{{$index}}][mrp]" value="{{ $item->mrp }}" step="0.01" readonly>
                                                 </td>
@@ -420,9 +418,8 @@ $(document).ready(function() {
                                 <input type="text" class="form-control" value="${item.uom_code}" readonly>
                             </td>
                             <td><input type="number" class="form-control qty" name="items[${index}][quantity]" value="${item.quantity}" step="0.01"></td>
-                            <td><input type="number" class="form-control rate" name="items[${index}][rate]" value="${item.rate}" step="0.01"></td>
                             <td>
-                                <input type="number" class="form-control" name="items[${index}][mrp]" value="${item.mrp || 0}" step="0.01" readonly>
+                                <input type="number" class="form-control mrp" name="items[${index}][mrp]" value="${item.mrp || 0}" step="0.01" readonly>
                             </td>
                             <td>
                                 <div class="input-group input-group-merge">
@@ -465,10 +462,10 @@ $(document).ready(function() {
         }
     });
 
-    $(document).on('input', '.qty, .rate', function() {
+    $(document).on('input', '.qty, .mrp', function() {
         let row = $(this).closest('.item-row');
         let qty = parseFloat(row.find('.qty').val()) || 0;
-        let rate = parseFloat(row.find('.rate').val()) || 0;
+        let rate = parseFloat(row.find('.mrp').val()) || 0;
         let lineTotal = qty * rate;
         row.find('.line_total').val(lineTotal.toFixed(2));
         calculateTotal();

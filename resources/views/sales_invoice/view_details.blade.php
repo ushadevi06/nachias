@@ -77,7 +77,6 @@
                                             <th>Sleeve</th>
                                             <th>UOM</th>
                                             <th class="text-end">Quantity</th>
-                                            <th class="text-end">Rate</th>
                                             <th class="text-end">MRP</th>
                                             <th class="text-end">Amount</th>
                                         </tr>
@@ -94,7 +93,6 @@
                                             <td>{{ $item->sleeve_type ?? '-' }}</td>
                                             <td>{{ $item->uom ? $item->uom->uom_code : ($item->item && $item->item->uom ? $item->item->uom->uom_code : '-') }}</td>
                                             <td class="text-end">{{ number_format($item->quantity, 2) }}</td>
-                                            <td class="text-end">₹{{ number_format($item->rate, 2) }}</td>
                                             <td class="text-end">₹{{ number_format($item->mrp ?? 0, 2) }}</td>
                                             <td class="text-end">₹{{ number_format($item->amount, 2) }}</td>
                                         </tr>
@@ -142,12 +140,7 @@
                                                 <label class="form-check-label" for="showTax">Show Tax (GST/IGST)</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-4 col-lg-3">
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="checkbox" id="showDue" {{ is_array($invoice->show_fields) && in_array('due', $invoice->show_fields) ? 'checked' : '' }} disabled>
-                                                <label class="form-check-label" for="showDue">Show Due Amount</label>
-                                            </div>
-                                        </div>
+
                                     </div>
                                 </div>
                             </div>

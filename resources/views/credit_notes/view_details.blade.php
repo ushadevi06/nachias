@@ -11,7 +11,7 @@
                     <h3 class="fw-bold text-primary mb-1">Credit Note Details</h3>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{{ url('credit_notes/download/' . $creditNote->id) }}" class="btn btn-primary d-flex align-items-center">
+                    <a href="{{ url('credit_notes/download/' . $creditNote->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center">
                         <i class="ri ri-download-line me-1"></i> Download
                     </a>
                     <a href="{{ url('credit_notes/print/' . $creditNote->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center">
@@ -71,7 +71,6 @@
                                     <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="80">S.No</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold">Item Description</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Quantity</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Total Amount</th>
                                 </tr>
                             </thead>
@@ -107,7 +106,6 @@
                                                 {{ number_format($item->quantity, 2) }} {{ $item->uom ? $item->uom->uom_code : '' }}
                                             </span>
                                         </td>
-                                        <td class="text-end">₹{{ number_format($item->rate, 2) }}</td>
                                         <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
                                     </tr>
                                     @endforeach

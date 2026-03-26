@@ -17,9 +17,8 @@
     <link rel="stylesheet" href="{{ url('assets/css/flatpickr.css') }}">
     <link rel="stylesheet" href="{{ url('assets/datatables/css/dataTables.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/datatables/css/responsive.bootstrap5.min.css') }}">
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="{{ url('assets/css/jquery-ui.css') }}">
 
-    
     <!-- Core JS -->
     <script src="{{ url('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ url('assets/js/moment.min.js') }}"></script>

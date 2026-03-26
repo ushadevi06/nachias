@@ -140,7 +140,7 @@
                                     <th class="py-3 text-muted text-uppercase small fw-bold">Item Description</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Color/Size</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Qty/UOM</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">MRP</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Amount</th>
                                 </tr>
                             </thead>
@@ -166,10 +166,7 @@
                                             </span>
                                         </td>
                                         <td class="text-end">
-                                            <div>₹{{ number_format($item->rate, 2) }}</div>
-                                            @if($item->mrp > 0)
-                                                <small class="text-muted">MRP: ₹{{ number_format($item->mrp, 2) }}</small>
-                                            @endif
+                                            <div>₹{{ number_format($item->mrp, 2) }}</div>
                                         </td>
                                         <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
                                     </tr>

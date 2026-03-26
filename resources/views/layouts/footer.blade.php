@@ -10,10 +10,10 @@
 <script src="{{ url('assets/datatables/js/dataTables.responsive.min.js') }}"></script>
 <script src="{{ url('assets/js/bs-stepper.js') }}"></script>
 <script src="{{ url('assets/js/form-wizard-numbered.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url('assets/js/sweetalert2.all.min.js') }}"></script>
 <script src="{{ url('assets/js/flatpickr.js') }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+<script src="{{ url('assets/js/monthSelect/index.js') }}"></script>
+<link rel="stylesheet" href="{{ url('assets/css/monthSelect/style.css') }}">
 <script src="{{ url('assets/js/menu.js') }}"></script>
 <script src="{{ url('assets/js/main.js') }}"></script>
 <script src="{{ url('assets/js/common.js') }}"></script>

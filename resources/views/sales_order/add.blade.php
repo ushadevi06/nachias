@@ -348,7 +348,7 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format(($item['qty'] ?? 0) * ($item['rate'] ?? 0), 2, '.', '') }}" readonly>
+                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format(($item['qty'] ?? 0) * ($item['mrp'] ?? 0), 2, '.', '') }}" readonly>
                                             </div>
                                         </td>
                                         <td>
@@ -444,7 +444,7 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->amount, 2, '.', '') }}" readonly>
+                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->qty * $item->mrp, 2, '.', '') }}" readonly>
                                             </div>
                                         </td>
                                         <td>
@@ -871,11 +871,11 @@ $(document).ready(function () {
                         </div>
                     </div>
                 </td>
-                <td>
+                {{-- <td>
                     <div class="form-floating form-floating-outline">
                         <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
                     </div>
-                </td>
+                </td> --}}
                 <td>
                     <div class="form-floating form-floating-outline">
                         <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
@@ -1025,9 +1025,28 @@ $(document).ready(function () {
                         }
                         
                         let $colorSelect = $row.find('select[name*="[color_id]"]');
-                        if (!$colorSelect.val()) {
-                            $colorSelect.val(res.color_id).trigger('change');
+                        let selectedColor = $colorSelect.data('selected') || $colorSelect.val() || res.color_id;
+                        let uniqueColors = [];
+                        let colorMap = new Map();
+                        
+                        res.stock_breakdown.forEach(s => {
+                            if (s.color_id && !colorMap.has(s.color_id)) {
+                                colorMap.set(s.color_id, true);
+                                uniqueColors.push({id: s.color_id, name: s.color_name});
+                            }
+                        });
+                        
+                        let colorOpts = '<option value="">Select Color</option>';
+                        uniqueColors.forEach(c => {
+                            colorOpts += `<option value="${c.id}" ${c.id == selectedColor ? 'selected' : ''}>${c.name}</option>`;
+                        });
+                        
+                        if (uniqueColors.length === 0) {
+                             colorOpts = '<option value="">No colors in stock</option>';
                         }
+                        
+                        $colorSelect.html(colorOpts).trigger('change');
+                        $colorSelect.data('selected', '');
 
                         if (!$row.find('input[name*="[mrp]"]').val()) {
                              $row.find('input[name*="[mrp]"]').val(res.mrp);
@@ -1053,6 +1072,7 @@ $(document).ready(function () {
             $row.find('.rate-input').val('0.00');
             $row.find('.qty-input').val('1');
             $row.find('.amount-input').val('0.00');
+            $row.find('select[name*="[color_id]"]').html('<option value="">Select Color</option>').trigger('change');
             $row.find('.size-select').html('<option value="">Select Size</option>').trigger('change');
             calculateTotals();
         }
@@ -1061,27 +1081,33 @@ $(document).ready(function () {
     function updateStockAndRate($row) {
         let size = $row.find('.size-select').val();
         let sleeve = $row.find('input[type="radio"][name*="[sleeve]"]:checked').val();
+        let colorId = $row.find('select[name*="[color_id]"]').val();
         let breakdown = $row.data('stock-breakdown') || [];
         
         let available = 0;
         let rate = 0;
         let stockEntryItemId = '';
         
+        let matches = breakdown;
+        if (colorId) {
+            matches = matches.filter(s => s.color_id == colorId);
+        }
+        
         if (size && sleeve) {
-            let match = breakdown.find(s => s.size == size && s.sleeve == sleeve);
+            let match = matches.find(s => s.size == size && s.sleeve == sleeve);
             if (match) {
                 available = match.balance || 0;
                 rate = match.rate || 0;
                 stockEntryItemId = match.stock_entry_item_id || '';
             } else {
-                let sizeMatch = breakdown.find(s => s.size == size);
+                let sizeMatch = matches.find(s => s.size == size);
                 if (sizeMatch) {
                     rate = sizeMatch.rate || 0;
                     stockEntryItemId = sizeMatch.stock_entry_item_id || '';
                 }
             }
         } else if (size) {
-            let sizeMatch = breakdown.find(s => s.size == size);
+            let sizeMatch = matches.find(s => s.size == size);
             if (sizeMatch) {
                 rate = sizeMatch.rate || 0;
                 stockEntryItemId = sizeMatch.stock_entry_item_id || '';
@@ -1099,7 +1125,7 @@ $(document).ready(function () {
         }
     }
 
-    $(document).on('change', '.size-select', function() {
+    $(document).on('change', '.size-select, select[name*="[color_id]"]', function() {
         updateStockAndRate($(this).closest('.item-row'));
     });
 
@@ -1117,11 +1143,11 @@ $(document).ready(function () {
         }
     });
 
-    $(document).on('input', '.qty-input, .rate-input', function() {
+    $(document).on('input', '.qty-input, .mrp-input', function() {
         let $row = $(this).closest('.item-row');
         let qtyInput = $row.find('.qty-input');
         let qty = parseFloat(qtyInput.val()) || 0;
-        let rate = parseFloat($row.find('.rate-input').val()) || 0;
+        let mrp = parseFloat($row.find('.mrp-input').val()) || 0;
         let available = parseFloat($row.find('.available-stock-display').text()) || 0;
 
         if (qty > available && available > 0) {
@@ -1132,7 +1158,7 @@ $(document).ready(function () {
             $row.find('.stock-error-msg').hide();
         }
 
-        $row.find('.amount-input').val((qty * rate).toFixed(2));
+        $row.find('.amount-input').val((qty * mrp).toFixed(2));
         calculateTotals();
         validateSubmit();
     });
@@ -1251,7 +1277,7 @@ $(document).ready(function () {
                 success: function(data) {
                     let opts = '<option value="">Select Sales Agent/Executive</option>';
                     data.forEach(agent => {
-                        opts += `<option value="${agent.id}">${agent.name}</option>`;
+                        opts += `<option value="${agent.id}">${agent.name}(${agent.code})</option>`;
                     });
                     agentSelect.html(opts).trigger('change');
                 }

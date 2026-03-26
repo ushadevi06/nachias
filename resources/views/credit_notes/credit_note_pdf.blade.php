@@ -200,16 +200,15 @@
   </table>
 
   <!-- ITEMS TABLE SECTION -->
-  <div class="table-wrapper" style="border-top:1px solid #000;">
+  <div class="table-wrapper">
     <table width="100%" cellpadding="0" cellspacing="0" class="content-table" style="border-collapse:collapse; table-layout:fixed; width:100%;">
       <tr style="height:0; visibility:hidden; line-height:0;">
         <td style="width:5%;"></td>
-        <td style="width:40%;"></td>
+        <td style="width:45%;"></td>
         <td style="width:15%;"></td>
         <td style="width:10%;"></td>
         <td style="width:10%;"></td>
-        <td style="width:10%;"></td>
-        <td style="width:10%;"></td>
+        <td style="width:15%;"></td>
       </tr>
       <tbody>
         <tr style="background-color:#f2f2f2;">
@@ -218,7 +217,6 @@
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">BRAND</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">SIZE</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">QTY</th>
-          <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">RATE</th>
           <th style="border-bottom:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">AMOUNT</th>
         </tr>
 
@@ -234,7 +232,6 @@
           <td style="padding:5px; font-size:11px; border-right:1px solid #000; text-align:center;">{{ $item->brandCategory->name ?? '-' }}</td>
           <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $item->size ?? '-' }}</td>
           <td style="padding:5px; text-align:right; font-size:11px; border-right:1px solid #000;">{{ number_format($item->quantity, 2) }}</td>
-          <td style="padding:5px; text-align:right; font-size:11px; border-right:1px solid #000;">{{ number_format($item->rate, 2) }}</td>
           <td style="padding:5px; text-align:right; font-size:11px;">{{ number_format($item->amount, 2) }}</td>
         </tr>
         @endforeach
@@ -246,7 +243,6 @@
           <td style="border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
-          <td style="border-right:1px solid #000;"></td>
           <td></td>
         </tr>
         @endfor
@@ -254,46 +250,46 @@
         <!-- SUMMARY SECTION -->
         <tr style="border-top:1px solid #000; font-weight:bold;">
           <td colspan="5" style="border-right:1px solid #000; padding:6px; text-align:right;">Sub Total</td>
-          <td colspan="2" style="text-align:right; padding:6px; border-top:1px solid #000;">{{ number_format($creditNote->sub_total, 2) }}</td>
+          <td style="text-align:right; padding:6px; border-top:1px solid #000;">{{ number_format($creditNote->sub_total, 2) }}</td>
         </tr>
 
         @if($creditNote->other_state)
         <tr>
           <td colspan="5" style="border-right:1px solid #000; padding:4px; text-align:right;">IGST ({{ $creditNote->igst_percent }}%)</td>
-          <td colspan="2" style="text-align:right; padding:4px;">{{ number_format($creditNote->igst, 2) }}</td>
+          <td style="text-align:right; padding:4px;">{{ number_format($creditNote->igst, 2) }}</td>
         </tr>
         @else
         <tr>
           <td colspan="5" style="border-right:1px solid #000; padding:4px; text-align:right;">CGST ({{ $creditNote->cgst_percent }}%)</td>
-          <td colspan="2" style="text-align:right; padding:4px;">{{ number_format($creditNote->cgst, 2) }}</td>
+          <td style="text-align:right; padding:4px;">{{ number_format($creditNote->cgst, 2) }}</td>
         </tr>
         <tr>
           <td colspan="5" style="border-right:1px solid #000; padding:4px; text-align:right;">SGST ({{ $creditNote->sgst_percent }}%)</td>
-          <td colspan="2" style="text-align:right; padding:4px;">{{ number_format($creditNote->sgst, 2) }}</td>
+          <td style="text-align:right; padding:4px;">{{ number_format($creditNote->sgst, 2) }}</td>
         </tr>
         @endif
 
         @if($creditNote->round_off > 0)
         <tr>
           <td colspan="5" style="border-right:1px solid #000; padding:4px; text-align:right;">Round Off ({{ $creditNote->round_off_type }})</td>
-          <td colspan="2" style="text-align:right; padding:4px;">{{ $creditNote->round_off_type == 'Less' ? '-' : '+' }}{{ number_format($creditNote->round_off, 2) }}</td>
+          <td style="text-align:right; padding:4px;">{{ $creditNote->round_off_type == 'Less' ? '-' : '+' }}{{ number_format($creditNote->round_off, 2) }}</td>
         </tr>
         @endif
 
         <tr style="background-color:#f2f2f2; font-weight:bold; border-top:1px solid #000; border-bottom:1px solid #000;">
           <td colspan="5" style="border-right:1px solid #000; padding:8px; text-align:right; font-size:12px;">Grand Total (Rs.)</td>
-          <td colspan="2" style="text-align:right; padding:8px; font-size:12px;">{{ number_format($creditNote->grand_total, 2) }}</td>
+          <td style="text-align:right; padding:8px; font-size:12px;">{{ number_format($creditNote->grand_total, 2) }}</td>
         </tr>
 
         <tr>
-          <td colspan="7" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
+          <td colspan="6" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
             <strong>Amount in Words:</strong> {{ strtoupper($totalInWords) }}
           </td>
         </tr>
 
         @if($creditNote->remarks)
         <tr>
-          <td colspan="7" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
+          <td colspan="6" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
             <strong>Remarks:</strong> {{ $creditNote->remarks }}
           </td>
         </tr>
@@ -304,7 +300,7 @@
           <td colspan="4" style="border-right:1px solid #000; border-bottom:1px solid #000; padding:30px 10px 10px; vertical-align:bottom;">
             <div style="border-top:1px solid #000; width:150px; text-align:center; font-weight:bold; font-size:10px;">Receiver's Signature</div>
           </td>
-          <td colspan="3" style="padding:10px; text-align:center; vertical-align:top; border-bottom:1px solid #000;">
+          <td colspan="2" style="padding:10px; text-align:center; vertical-align:top; border-bottom:1px solid #000;">
             <div style="font-weight:bold; font-size:11px;">For {{ $setting->company_name }}</div>
             <br><br><br><br>
             <div style="font-weight:bold; font-size:10px;">Authorised Signature</div>

@@ -216,7 +216,7 @@
                     <th width="10%">Art No.</th>
                     <th width="8%">UOM</th>
                     <th width="9%">Quantity</th>
-                    <th width="9%">Rate</th>
+                    <th width="9%">MRP</th>
                     <th width="9%">Amount</th>
                 </tr>
             </thead>
@@ -233,7 +233,7 @@
                         <td class="text-center">{{ $item->art_no }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ number_format($item->qty, 2) }}</td>
-                        <td class="text-right">{{ number_format($item->rate, 2) }}</td>
+                        <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
                         <td class="text-right">{{ number_format($item->amount, 2) }}</td>
                     </tr>
                 @endforeach
