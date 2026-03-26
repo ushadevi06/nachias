@@ -57,7 +57,6 @@
                                     <th>Stock Entry No.</th>
                                     <th>Stock Date</th>
                                     <th>GRN No.</th>
-                                    <th>Item Name</th>
                                     <th>Fabric Type</th>
                                     <th>Sleeve Type</th>
                                     <th>Size</th>
@@ -146,7 +145,6 @@
                 {data: 'stock_entry_no', name: 'stock_entry_no'},
                 {data: 'stock_date', name: 'stock_date'},
                 {data: 'grn_no', name: 'grn_no'},
-                {data: 'item_name', name: 'item_name'},
                 {data: 'fabric_type', name: 'fabric_type', visible: false},
                 {data: 'sleeve_type', name: 'sleeve_type', visible: false},
                 {data: 'size', name: 'size', visible: false},
@@ -164,18 +162,18 @@
                 $('.filter-box').hide();
                 table.column(1).visible(false);
                 $(table.column(3).header()).text('Job Card No.');
-                table.column(5).visible(true); // Fabric Type
-                table.column(6).visible(true); // Sleeve Type
-                table.column(7).visible(true); // Size
-                table.column(8).visible(true); // SKU
+                table.column(4).visible(true); // Fabric Type
+                table.column(5).visible(true); // Sleeve Type
+                table.column(6).visible(true); // Size
+                table.column(7).visible(true); // SKU
             } else {
                 $('.filter-box').show();
                 table.column(1).visible(true);
                 $(table.column(3).header()).text('GRN No.');
+                table.column(4).visible(false);
                 table.column(5).visible(false);
                 table.column(6).visible(false);
                 table.column(7).visible(false);
-                table.column(8).visible(false);
             }
             
             table.ajax.reload();

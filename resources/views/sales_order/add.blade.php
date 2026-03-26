@@ -810,7 +810,6 @@ $(document).ready(function () {
 
     $('.so_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
     $('.request_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
-    $('.delivery_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
     function createRow() {
         let brandOpts = `<option value="">Select</option>`;
@@ -1042,7 +1041,7 @@ $(document).ready(function () {
                         });
                         
                         if (uniqueColors.length === 0) {
-                             colorOpts = '<option value="">No colors in stock</option>';
+                            colorOpts = '<option value="">No colors in stock</option>';
                         }
                         
                         $colorSelect.html(colorOpts).trigger('change');

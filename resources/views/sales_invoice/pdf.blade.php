@@ -186,6 +186,14 @@
     </style>
 </head>
 <body>
+@php
+    $showFields = is_array($invoice->show_fields) ? $invoice->show_fields : [];
+    $showAmount    = in_array('amount',     $showFields);
+    $showSubTotal  = in_array('subtotal',   $showFields);
+    $showDiscount  = in_array('discount',   $showFields);
+    $showTax       = in_array('tax',        $showFields);
+    $showGrandTotal= in_array('grandtotal', $showFields);
+@endphp
     <div class="container">
         <div style="position: relative;">
             <table class="header-table">
@@ -249,20 +257,20 @@
                             <td width="10%">Bill To</td>
                             <td width="5%">:</td>
                             <td>
-                                <span>ANANTHAM RETAIL PVT.LTD KUMBAKONAM</span><br>
-                                8/329, AYEKULAM ROAD,<br>
-                                KUMBAKONAM-612001
+                                <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
+                                {{ $invoice->customer->address ?? '' }}<br>
+                                {{ $invoice->customer->city->city_name ?? '' }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}
                             </td>
                         </tr>
                         <tr>
                             <td width="20%">State</td>
                             <td width="5%">:</td>
-                            <td width="75%">Tamil Nadu(33)</td>
+                            <td width="75%">{{ $invoice->customer->state->state_name ?? 'N/A' }}({{ $invoice->customer->state->state_code ?? '' }})</td>
                         </tr>
                         <tr>
-                            <td width="20%">33AAQCA6068B1ZR</td>
-                            <td width="5%"></td>
-                            <td width="75%"></td>
+                            <td width="20%">GSTIN/UIN</td>
+                            <td width="5%">:</td>
+                            <td width="75%">{{ $invoice->customer->gst_no ?? 'N/A' }}</td>
                         </tr>
                     </table>
                 </td>
@@ -298,20 +306,24 @@
                             <td width="20%">Ship To</td>
                             <td width="5%">:</td>
                             <td>
-                                <span>ANANTHAM RETAIL PVT.LTD KUMBAKONAM</span><br>
-                                8/329, AYEKULAM ROAD,<br>
-                                KUMBAKONAM-612001
+                                <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
+                                @if($invoice->delivery_address)
+                                    {!! nl2br(e($invoice->delivery_address)) !!}
+                                @else
+                                    {{ $invoice->customer->address ?? '' }}<br>
+                                    {{ $invoice->customer->city->city_name ?? '' }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}
+                                @endif
                             </td>
                         </tr>
                         <tr>
                             <td width="20%">State</td>
                             <td width="5%">:</td>
-                            <td width="75%">Tamil Nadu(33)</td>
+                            <td width="75%">{{ $invoice->customer->state->state_name ?? 'N/A' }}({{ $invoice->customer->state->state_code ?? '' }})</td>
                         </tr>
                         <tr>
-                            <td width="20%">33AAQCA6068B1ZR</td>
-                            <td width="5%"></td>
-                            <td width="75%"></td>
+                            <td width="20%">GSTIN/UIN</td>
+                            <td width="5%">:</td>
+                            <td width="75%">{{ $invoice->customer->gst_no ?? 'N/A' }}</td>
                         </tr>
                     </table>
                 </td>
@@ -330,7 +342,7 @@
                         <tr>
                             <td>Sales Group</td>
                             <td>:</td>
-                            <td>ZONE-2</td>
+                            <td>{{ $invoice->customer->zone ?? 'N/A' }}</td>
                         </tr>
                         <tr>
                             <td>Sales Person</td>
@@ -350,14 +362,16 @@
             <thead style="border-bottom: 1px solid #000;">
                 <tr>
                     <th width="5%">S.No</th>
-                    <th width="35%">Description</th>
+                    <th width="{{ $showAmount ? '35%' : '43%' }}">Description</th>
                     <th width="8%">Size</th>
                     <th width="10%">Art</th>
                     <th width="8%">Tax (%)</th>
                     <th width="6%">UOM</th>
-                    <th width="8%">Quantity</th>
+                    <th width="{{ $showAmount ? '8%' : '10%' }}">Quantity</th>
                     <th width="8%">MRP</th>
+                    @if($showAmount)
                     <th width="14%">Amount</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -376,7 +390,9 @@
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
                         <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
+                        @if($showAmount)
                         <td class="text-right">{{ number_format($item->amount, 2) }}</td>
+                        @endif
                     </tr>
                 @endforeach
                 @for($i = count($invoice->items); $i < 10; $i++)
@@ -389,7 +405,9 @@
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
+                        @if($showAmount)
                         <td>&nbsp;</td>
+                        @endif
                     </tr>
                 @endfor
             </tbody>
@@ -397,8 +415,12 @@
                 <tr>
                     <td colspan="6" class="text-right bold"></td>
                     <td class="text-center bold">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
+                    @if($showSubTotal)
                     <td class="text-right">Gross</td>
                     <td class="text-right bold">{{ number_format($invoice->sub_total, 2) }}</td>
+                    @else
+                    <td class="text-right" colspan="{{ $showAmount ? 2 : 1 }}"></td>
+                    @endif
                 </tr>
             </tfoot>
         </table>
@@ -406,16 +428,16 @@
             <tr>
                 <td style="width: 70%; padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: none; border-top:none;">
                     <div style="padding: 4px;">
-                        IRN: 72223e1c6b46388af6b4fe64ff31c510238217d57fc92b60e9332d7979706dd1<br>
-                        Ack No.: 152523983271642 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Eway Bill No. : 
+                        IRN: {{ $invoice->irn ?? '' }}<br>
+                        Ack No.: {{ $invoice->ack_no ?? '' }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Eway Bill No. : {{ $invoice->eway_bill_no ?? '' }}
                     </div>
                     <table style="width: 100%; border-collapse: collapse; border-top: 1px solid #000;">
                         <tr>
                             <td style="width: 75%; padding: 4px; border-right: 1px solid #000; vertical-align: top; border-bottom: none; border-left: none;">
                                 Company's Bank Details :<br>
-                                Bank Name : HDFC BANK<br>
-                                A/C No. : XXXXXXXX<br>
-                                Branch & IFS Code : HDFC0000002
+                                Bank Name : {{ $setting->bank_name ?? '' }}<br>
+                                A/C No. : {{ $setting->account_no ?? '' }}<br>
+                                Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}
                             </td>
                             <td style="width: 25%; padding: 4px; vertical-align: top; text-align: center; border-bottom: none; border-right: none;">
                                 <span style="font-weight: bold;">For UPI Payment</span><br>
@@ -426,35 +448,44 @@
                 </td>
                 <td style="width: 18%; padding: 0; vertical-align: top; border-bottom: none; border-top:none; border-right: 1px solid #000;">
                     <table style="width: 100%; border-collapse: collapse;">
-                        @if(isset($invoice->discount) && $invoice->discount > 0)
+                        @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">Discount({{ $invoice->discount_percent }}%)</td></tr>
                         @endif
+                        @if($showSubTotal)
                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">Taxable Value</td></tr>
-                        @if(!$invoice->other_state)
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT CGST</td></tr>
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT SGST</td></tr>
-                        @else
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT IGST</td></tr>
+                        @endif
+                        @if($showTax)
+                            @if(!$invoice->other_state)
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT CGST</td></tr>
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT SGST</td></tr>
+                            @else
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT IGST</td></tr>
+                            @endif
                         @endif
                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">Round Off</td></tr>
                     </table>
                 </td>
                 <td style="width: 12%; padding: 0; vertical-align: top; border-bottom: none; border-top:none;">
                     <table style="width: 100%; border-collapse: collapse;">
-                        @if(isset($invoice->discount) && $invoice->discount > 0)
+                        @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
                         @endif
+                        @if($showSubTotal)
                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td></tr>
-                        @if(!$invoice->other_state)
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->cgst, 2) }}</td></tr>
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sgst, 2) }}</td></tr>
-                        @else
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst, 2) }}</td></tr>
+                        @endif
+                        @if($showTax)
+                            @if(!$invoice->other_state)
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->cgst, 2) }}</td></tr>
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sgst, 2) }}</td></tr>
+                            @else
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst, 2) }}</td></tr>
+                            @endif
                         @endif
                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ (in_array(strtolower($invoice->round_off_type ?? ''), ['less', 'minus']) ? ' - ' : '') . number_format($invoice->round_off ?? 0, 2) }}</td></tr>
                     </table>
                 </td>
             </tr>
+            @if($showGrandTotal)
             <tr>
                 <td style="width: 70%; padding: 8px; border-right: none;">
                     Rupees &nbsp;&nbsp;&nbsp;: {{ strtoupper($totalInWords) }}
@@ -466,8 +497,10 @@
                     {{ number_format($invoice->total, 2) }}
                 </td>
             </tr>
+            @endif
         </table>
         <div class="bold" style="margin-top: 5px; display: none;">Amount of Tax(in words) : {{ $totalTaxInWords }}</div>
+        @if($showTax)
         <table class="item-table" style="margin-top: 5px; border-bottom: none; border-top: 1px solid #000;">
             <thead>
                 <tr>
@@ -539,8 +572,9 @@
                 </tr>
             </tfoot>
         </table>
+        @endif
         <div style="margin-top: 4px; padding-left: 4px;">
-            <span style="font-size: 11px;">Additional Notes &nbsp;&nbsp;: {{ $invoice->notes ?? 'order axe no 100004896' }}</span>
+            <span style="font-size: 11px;">Additional Notes &nbsp;&nbsp;: {{ $invoice->notes ?? '' }}</span>
         </div>
         <table class="no-border" style="margin-top: 15px; width: 100%;">
             <tr>

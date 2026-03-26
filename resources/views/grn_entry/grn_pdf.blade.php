@@ -143,17 +143,16 @@
 </head>
 <body>
     <div class="header-section">
-        <div class="company-name">Nachias Fashion Private Limited</div>
+        <div class="company-name">{{ $setting->company_name ?? 'Nachias Fashion Private Limited' }}</div>
         <div class="company-address">
-            272/2, Somu Nagar, Siringeri Nagar<br>
-            (Sarathambal Kovil Backside),<br>   
-            Byepass Road, Madurai - 625016
+            {{ $setting->address ?? '272/2, Somu Nagar, Siringeri Nagar, (Sarathambal Kovil Backside), Byepass Road, Madurai - 625016' }}<br>
+            @if(isset($setting))
+                {{ $setting->city->city_name ?? $setting->city ?? '' }} - {{ $setting->zip_code ?? '' }}<br>
+                GSTIN: <strong>{{ $setting->gst_no ?? '' }}</strong> &nbsp;&nbsp; MOB: {{ $setting->toll_free_no ?? '' }}
+            @endif
         </div>
     </div>
-
-    <div style="float: right; font-size: 8pt;">Page: &nbsp;&nbsp; 1 / 1</div>
     <div class="title">Goods Receipt</div>
-
     <div class="meta-container">
         <table class="meta-table">
             <tr>

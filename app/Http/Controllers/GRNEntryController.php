@@ -435,7 +435,8 @@ class GrnEntryController extends Controller
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
         ])->findOrFail($id);
 
-        $pdf = Pdf::loadView('grn_entry.grn_pdf', compact('grn'));
+        $setting = \App\Models\Setting::with(['state', 'city'])->first();
+        $pdf = Pdf::loadView('grn_entry.grn_pdf', compact('grn', 'setting'));
         $pdf->setPaper('A4', 'portrait');
         $safeGrnNumber = str_replace(['/', '\\'], '_', $grn->grn_number);
         return $pdf->stream('GRN_' . $safeGrnNumber . '.pdf');
@@ -456,7 +457,8 @@ class GrnEntryController extends Controller
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
         ])->findOrFail($id);
 
+        $setting = \App\Models\Setting::with(['state', 'city'])->first();
         $is_print = true;
-        return view('grn_entry.grn_pdf', compact('grn', 'is_print'));
+        return view('grn_entry.grn_pdf', compact('grn', 'is_print', 'setting'));
     }
 }

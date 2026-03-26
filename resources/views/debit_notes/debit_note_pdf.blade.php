@@ -131,7 +131,7 @@
         @if($logoBase64)
             <img src="{{ $logoBase64 }}" style="width: 140px;">
         @else
-            <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 140px;">
+            <img src="{{ isset($is_print) && $is_print ? url('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 140px;">
         @endif
       </td>
       <td width="50%" align="center" style="vertical-align: middle;">
