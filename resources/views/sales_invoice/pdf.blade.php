@@ -370,7 +370,7 @@
             </tr>
         </table>
         <table class="item-table" style="margin-top: 0;">
-            <thead style="border-bottom: 1px solid #000;">
+            <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
                     <th width="5%">S.No</th>
                     <th width="{{ $showAmount ? '35%' : '43%' }}">Description</th>
