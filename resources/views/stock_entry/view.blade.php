@@ -57,6 +57,8 @@
                                     <th>Stock Entry No.</th>
                                     <th>Stock Date</th>
                                     <th>GRN No.</th>
+                                    <th>Item Name</th>
+                                    <th>Fabric Type</th>
                                     <th>Sleeve Type</th>
                                     <th>Size</th>
                                     <th>SKU</th>
@@ -117,7 +119,7 @@
 
 @section('scripts')
 <script>
-    let table; // Declare table variable in global scope
+    let table;
     
     $(function() {
         table = $('.stock-entry-table').DataTable({
@@ -144,6 +146,8 @@
                 {data: 'stock_entry_no', name: 'stock_entry_no'},
                 {data: 'stock_date', name: 'stock_date'},
                 {data: 'grn_no', name: 'grn_no'},
+                {data: 'item_name', name: 'item_name'},
+                {data: 'fabric_type', name: 'fabric_type', visible: false},
                 {data: 'sleeve_type', name: 'sleeve_type', visible: false},
                 {data: 'size', name: 'size', visible: false},
                 {data: 'sku', name: 'sku', visible: false},
@@ -152,26 +156,26 @@
             ]
         });
         
-        // Tab Click Handler
         $('#stockEntryTabs .nav-link').on('click', function() {
             $('#stockEntryTabs .nav-link').removeClass('active');
             $(this).addClass('active');
             
-            // Show/Hide filters and columns based on tab
             if($(this).data('entry-type') === 'Finished Goods') {
                 $('.filter-box').hide();
-                table.column(1).visible(false); // Hide Stock Entry No
+                table.column(1).visible(false);
                 $(table.column(3).header()).text('Job Card No.');
-                table.column(4).visible(true); // Sleeve Type
-                table.column(5).visible(true); // Size
-                table.column(6).visible(true); // SKU
+                table.column(5).visible(true); // Fabric Type
+                table.column(6).visible(true); // Sleeve Type
+                table.column(7).visible(true); // Size
+                table.column(8).visible(true); // SKU
             } else {
                 $('.filter-box').show();
-                table.column(1).visible(true); // Show Stock Entry No
+                table.column(1).visible(true);
                 $(table.column(3).header()).text('GRN No.');
-                table.column(4).visible(false); // Sleeve Type
-                table.column(5).visible(false); // Size
-                table.column(6).visible(false); // SKU
+                table.column(5).visible(false);
+                table.column(6).visible(false);
+                table.column(7).visible(false);
+                table.column(8).visible(false);
             }
             
             table.ajax.reload();
@@ -183,11 +187,10 @@
         });
 
         $('#btn-reset').click(function() {
-            window.history.replaceState({}, document.title, window.location.pathname); // Clear URL params
+            window.history.replaceState({}, document.title, window.location.pathname);
             table.ajax.reload();
         });
 
-        // Auto-Filter from URL
         const urlParams = new URLSearchParams(window.location.search);
         const searchParam = urlParams.get('search');
         if (searchParam) {
@@ -195,7 +198,6 @@
         }
     });
 
-    // Handle Adjustment Button Click
     $(document).on('click', '.btn-adjust', function() {
         let btn = $(this);
         let entryId = btn.data('entry-id');

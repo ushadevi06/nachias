@@ -90,7 +90,7 @@
                                 <table class="table table-hover table-bordered table-sm align-middle text-nowrap issue-items-table" id="issue-items-table-fs">
                                     <thead class="bg-primary">
                                         <tr>
-                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Supplier</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Unit Price</th>{{-- <th>Total Cost</th><th style="min-width: 100px;">Cost/Pc</th> --}}<th>Status</th><th>Modified By</th><th>Modified On</th>
+                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Unit Price</th>{{-- <th>Total Cost</th><th style="min-width: 100px;">Cost/Pc</th> --}}<th>Status</th><th>Modified By</th><th>Modified On</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -136,7 +136,6 @@
                                                 <td class="col-item">{{ $itemDisplayName }}</td>
                                                 <td class="col-description">{{ $itemDescription }}</td>
                                                 <td class="fw-bold col-art">{{ $item->art_no }}</td>
-                                                <td>{{ $jobCard->purchaseOrder?->supplier?->name ?? '-' }}</td>
                                                 <td>1</td><td>{{ $uomName }}</td>
                                                 <td>
                                                     <p class="mb-0 col-qty-issue text-end">{{ $savedItem->qty_issue ?? $item->mtr }}</p>

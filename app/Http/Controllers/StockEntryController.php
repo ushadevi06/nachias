@@ -28,7 +28,7 @@ class StockEntryController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem']);
+            $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType']);
             if ($request->material_category) {
                 $query->whereHas('stockEntryItems', function ($q) use ($request) {
                     $q->where('store_category_id', $request->material_category);
@@ -56,7 +56,7 @@ class StockEntryController extends Controller
                     $q->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
                 });
             }
-            $stockEntries = $query->with('productionReceipt.jobCard.purchaseOrder')->orderBy('id', 'desc')->get();
+            $stockEntries = $query->with('productionReceipt.jobCard.fabricType', 'productionReceipt.jobCard.purchaseOrder')->orderBy('id', 'desc')->get();
             $data = [];
             $count = 1;
 
@@ -80,6 +80,12 @@ class StockEntryController extends Controller
                             $jobCardNo = $entry->productionReceipt->jobCard->job_card_no;
                         }
 
+                        $fabricType = $item->fabricType->fabric_type ?? null;
+                        if (!$fabricType && $entry->productionReceipt && $entry->productionReceipt->jobCard) {
+                            $fabricType = $entry->productionReceipt->jobCard->fabricType->fabric_type ?? '-';
+                        }
+                        $fabricType = $fabricType ?: '-';
+
                         $data[] = [
                             'DT_RowIndex' => $count++,
                             'stock_entry_no' => $entry->stock_entry_no,
@@ -88,6 +94,8 @@ class StockEntryController extends Controller
                             'art_no' => $item->art_no ?? '-',
                             'material' => $materialDisplay,
                             'grn_no' => $jobCardNo,
+                            'item_name' => ($item->item->name ?? '-') . ' <span class="mini-title">(' . ($item->finished_item_code ?: '-') . ')</span>',
+                            'fabric_type' => $fabricType,
                             'sleeve_type' => $item->sleeve_type ?? '-',
                             'size' => $item->size ?? '-',
                             'sku' => $item->sku ?? '-',
@@ -136,6 +144,8 @@ class StockEntryController extends Controller
                         'art_no' => $artNo,
                         'material' => $materialDisplay,
                         'grn_no' => $entry->grnEntry->grn_number ?? '-',
+                        'item_name' => $firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-',
+                        'fabric_type' => '-',
                         'sleeve_type' => '-',
                         'size' => '-',
                         'sku' => '-',
@@ -339,6 +349,10 @@ class StockEntryController extends Controller
             'stockEntryItems.storeLocation',
             'stockEntryItems.uom',
             'stockEntryItems.grnEntryItem',
+            'stockEntryItems.fabricType',
+            'stockEntryItems.item',
+            'stockEntryItems.color',
+            'productionReceipt.jobCard.fabricType',
             'createdBy',
             'updatedBy'
         ])->findOrFail($id);
@@ -408,17 +422,17 @@ class StockEntryController extends Controller
     public function getEntryItems($id)
     {
         $stockEntry = StockEntry::with(['stockEntryItems.rawMaterial.storeCategory', 'stockEntryItems.storeCategory'])->findOrFail($id);
-        
-        $items = $stockEntry->stockEntryItems->map(function($item) {
+
+        $items = $stockEntry->stockEntryItems->map(function ($item) {
             $category = $item->storeCategory ? ($item->storeCategory->category_name . ' (' . $item->storeCategory->code . ')') : '-';
             $material = $item->rawMaterial ? ($item->rawMaterial->name . ' (' . $item->rawMaterial->code . ')') : ($item->finished_item_code ?: '-');
-            
+
             return [
-                'id' => $item->id,
-                'category' => $category,
-                'material' => $material,
-                'art_no' => $item->art_no ?: '-',
-                'current_qty' => $item->qty_in,
+            'id' => $item->id,
+            'category' => $category,
+            'material' => $material,
+            'art_no' => $item->art_no ?: '-',
+            'current_qty' => $item->qty_in,
             ];
         });
 

@@ -250,27 +250,7 @@ class ProductionReceiptController extends Controller
             'price' => $receipt->items->sum('total_value'),
         ]);
 
-        // Resolve fabric type from Job Card
-        $jobCardFabricTypeId = $receipt->jobCard ? $receipt->jobCard->fabric_type_id : null;
-        
-        // Fallback: search issued materials if not set on Job Card
-        if (!$jobCardFabricTypeId && $receipt->jobCard) {
-            $stockEntryIds = $receipt->jobCard->stock_entry_ids;
-            if (is_string($stockEntryIds)) {
-                $stockEntryIds = json_decode($stockEntryIds, true);
-            }
-            
-            if (!empty($stockEntryIds) && is_array($stockEntryIds)) {
-                $issuedFabric = StockEntryItem::whereIn('stock_entry_id', $stockEntryIds)
-                    ->where('stock_type', 'raw_material')
-                    ->where('qty_out', '>', 0)
-                    ->whereNotNull('fabric_type_id')
-                    ->first();
-                if ($issuedFabric) {
-                    $jobCardFabricTypeId = $issuedFabric->fabric_type_id;
-                }
-            }
-        }
+        // Resolve color if needed (Already handled by receipt items)
 
         foreach ($receipt->items as $item) {
             if ($item->qty_to_receive > 0) {
@@ -295,21 +275,16 @@ class ProductionReceiptController extends Controller
                 }
                 $sku = $prefix . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
 
-                // Fetch extra info for QR code from Item model
                 $itemModel = Item::with('fabricType')->find($item->item_id);
-                
-                // Resolve fabric type priority: Job Card Issue > Item Default
-                $fabricTypeId = $jobCardFabricTypeId ?: ($itemModel ? $itemModel->fabric_type_id : null);
+
                 $fabric = 'Polyester';
-                if ($fabricTypeId) {
-                    $ft = \App\Models\FabricType::find($fabricTypeId);
-                    $fabric = $ft ? $ft->fabric_type : 'Polyester';
+                if ($itemModel && $itemModel->fabricType) {
+                    $fabric = $itemModel->fabricType->fabric_type;
                 }
 
                 $design = $itemModel ? $itemModel->design_art_no : $item->art_no;
                 $mrp = $itemModel ? $itemModel->mrp : $item->unit_price;
 
-                // Resolve color name for QR code
                 $colorName = '-';
                 if ($item->color_id) {
                     $c = \App\Models\Color::find($item->color_id);
@@ -324,13 +299,15 @@ class ProductionReceiptController extends Controller
                     'size' => $item->size,
                     'color' => $colorName,
                     'sleeve' => $sleeve,
-                    'price' => number_format($mrp, 2)
+                    'price' => number_format($mrp, 2),
+                    'quantity' => number_format($item->qty_to_receive, 2)
                 ];
 
                 StockEntryItem::create([
                     'stock_entry_id' => $stockEntry->id,
                     'stock_type' => 'finished_goods',
                     'finished_item_code' => $itemCode,
+                    'item_id' => $item->item_id,
                     'art_no' => $item->art_no,
                     'size' => $item->size,
                     'color_id' => $item->color_id,
@@ -341,7 +318,6 @@ class ProductionReceiptController extends Controller
                     'price' => $item->unit_price,
                     'sku' => $sku,
                     'qrcode' => json_encode($qrData),
-                    'fabric_type_id' => $fabricTypeId,
                     'sleeve_type' => $sleeve,
                 ]);
             }
@@ -383,12 +359,7 @@ class ProductionReceiptController extends Controller
             if ($stockItems->count() == 0) {
                 $rawMaterial = \App\Models\RawMaterial::where('name', $artNo)->orWhere('code', $artNo)->first();
                 if ($rawMaterial) {
-                    $stockItems = \DB::table('stock_entry_items')
-                        ->where('raw_material_id', $rawMaterial->id)
-                        ->whereNull('deleted_at')
-                        ->whereRaw('(qty_in - qty_out) > 0')
-                        ->select('price', \DB::raw('(qty_in - qty_out) as available_qty'))
-                        ->get();
+                    $stockItems = \DB::table('stock_entry_items')->where('raw_material_id', $rawMaterial->id)->whereNull('deleted_at')->whereRaw('(qty_in - qty_out) > 0')->select('price', \DB::raw('(qty_in - qty_out) as available_qty'))->get();
                 }
             }
 

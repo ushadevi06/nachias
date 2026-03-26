@@ -249,7 +249,6 @@ class JobCardEntryController extends Controller
                     'ex_2_label' => $request->ex_2_label,
                     'fabric_type_id' => $request->fabric_type_id,
                 ];
-
                 if ($request->season) {
                     $season = Season::where('name', $request->season)->first();
                     $data['season_id'] = $season ? $season->id : null;
@@ -593,10 +592,40 @@ class JobCardEntryController extends Controller
             $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
         })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'fabricType', 'storeLocation'])->get();
 
+        $seIds = [];
+        if ($jobCard->stock_entry_ids) {
+            $ids = json_decode($jobCard->stock_entry_ids, true);
+            if ($ids) {
+                foreach ($ids as $idStr) {
+                    $seIds[] = strpos($idStr, '::') !== false ? explode('::', $idStr)[0] : $idStr;
+                }
+            }
+        }
+
         $artMaterialMap = [];
         $artLocationMap = [];
         $artUomMap = [];
         $artPriceMap = [];
+
+        if (!empty($seIds)) {
+            $stockItems = StockEntryItem::whereIn('stock_entry_id', $seIds)->with(['rawMaterial', 'item', 'storeLocation', 'uom'])->get();
+            
+            foreach ($stockItems as $si) {
+                if (!isset($artMaterialMap[$si->art_no])) {
+                    $artMaterialMap[$si->art_no] = $si->rawMaterial->name ?? ($si->item->name ?? $si->art_no);
+                }
+                if ($si->storeLocation && !isset($artLocationMap[$si->art_no])) {
+                    $artLocationMap[$si->art_no] = $si->storeLocation->store_location;
+                }
+                if ($si->uom && !isset($artUomMap[$si->art_no])) {
+                    $artUomMap[$si->art_no] = $si->uom->uom_code;
+                }
+                if ($si->price > 0 && !isset($artPriceMap[$si->art_no])) {
+                    $artPriceMap[$si->art_no] = $si->price;
+                }
+            }
+        }
+
         foreach ($grnItems as $item) {
             $name = $item->purchaseInvoiceItem->rawMaterial->name ?? ($item->fabricType->name ?? null);
             if ($name && !isset($artMaterialMap[$item->art_no])) {
@@ -1006,7 +1035,7 @@ class JobCardEntryController extends Controller
 
         $stockEntryIds = array_unique($stockEntryIds);
 
-        $stockItems = StockEntryItem::whereIn('stock_entry_id', $stockEntryIds)->with(['rawMaterial.uom', 'storeCategory', 'uom'])->get();
+        $stockItems = StockEntryItem::whereIn('stock_entry_id', $stockEntryIds)->with(['rawMaterial.uom', 'storeCategory', 'uom', 'grnEntryItem'])->get();
 
         $filteredItems = $stockItems->filter(function ($item) use ($filters) {
             $seId = $item->stock_entry_id;
@@ -1050,7 +1079,7 @@ class JobCardEntryController extends Controller
                 'uom_code'         => $uomCode,
                 'store_category_id'=> $rawMaterial ? $rawMaterial->store_category_id : 1,
                 'raw_material_id'  => $rawMaterial ? $rawMaterial->id : null,
-                'fabric_type_id'   => $firstItem->fabric_type_id,
+                'fabric_type_id'   => $firstItem->fabric_type_id ?? ($firstItem->grnEntryItem->fabric_type_id ?? null),
             ];
         })->values();
 

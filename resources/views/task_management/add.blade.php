@@ -273,11 +273,12 @@
 
                                                             <div class="form-group mb-3">
                                                                 <label>Status</label>
-                                                                <select class="form-select select2 status-select-row" name="assignments[{{ $index }}][status]">
+                                                                <select class="form-select select2 status-select-row" name="assignments[{{ $index }}][status_display]" disabled>
                                                                     <option value="Open" {{ $status == 'Open' ? 'selected' : '' }}>Open</option>
                                                                     <option value="In Progress" {{ $status == 'In Progress' ? 'selected' : '' }}>In Progress</option>
                                                                     <option value="Completed" {{ $status == 'Completed' ? 'selected' : '' }}>Completed</option>
                                                                 </select>
+                                                                <input type="hidden" name="assignments[{{ $index }}][status]" value="{{ $status }}">
                                                             </div>
 
                                                             <div class="form-group">
@@ -839,11 +840,12 @@
 
                     <div class="form-group mb-3">
                         <label>Status</label>
-                        <select class="form-select select2 status-select-row" name="assignments[${assignmentIndex}][status]">
+                        <select class="form-select select2 status-select-row" name="assignments[${assignmentIndex}][status_display]" disabled>
                             <option value="Open" ${data.status === 'Open' || !data.status ? 'selected' : ''}>Open</option>
                             <option value="In Progress" ${data.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
                             <option value="Completed" ${data.status === 'Completed' ? 'selected' : ''}>Completed</option>
                         </select>
+                        <input type="hidden" name="assignments[${assignmentIndex}][status]" value="${data.status || 'Open'}">
                     </div>
 
                     <div class="form-group">
@@ -930,9 +932,10 @@
                 if ($(this).data('select2')) $(this).select2('destroy');
             }).select2({ 
                 placeholder: "Status", 
-                allowClear: true, 
-                width: '100%', 
-                dropdownParent: $row.find('.status-select-row').parent() 
+                allowClear: false, 
+                width: '100%',
+                minimumResultsForSearch: Infinity
+                // dropdownParent: $row.find('.status-select-row').parent() 
             });
             
             $row.find('.employee-select').each(function() {
@@ -1303,7 +1306,7 @@
         transition: all 0.3s ease;
         padding: 1.25rem;
         position: relative;
-        overflow: hidden;
+        /* overflow: hidden; */
     }
     .assignment-card:hover {
         transform: translateY(-5px);

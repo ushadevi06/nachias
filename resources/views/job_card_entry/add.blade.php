@@ -90,10 +90,10 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="input-group">
                                     <div class="form-floating form-floating-outline" style="position: relative;">
-                                        <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off">
+                                        <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off" {{ $hasTasks ? 'readonly' : '' }}>
                                         <label for="stock_entry_search">Type Stock Entry No or Material Name</label>
                                     </div>
-                                    <button class="btn btn-primary" type="button" id="generate-matrix-btn" disabled>
+                                    <button class="btn btn-primary" type="button" id="generate-matrix-btn" {{ $hasTasks ? 'disabled' : '' }}>
                                         <i class="ri ri-play-circle-line me-1"></i> GO
                                     </button>
                                 </div>
@@ -927,6 +927,9 @@
         border-color: #dee2e6;
         color: #6c757d;
     }
+    #stock_entry_search[readonly], #generate-matrix-btn:disabled {
+        background-color: #ccc !important;
+    }
     #fabric-details-table td:not(.fw-bold) {
         min-width: 200px;
     }
@@ -1371,11 +1374,12 @@
                 selectedIds.push(id);
                 $hiddenWrap.append(`<input type="hidden" name="stock_entry_ids[]" value="${id}">`);
 
+                const removeButton = hasTasks ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${id}" title="Remove"></button>`;
                 const $tag = $(`
                     <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6"
                           data-id="${id}" style="cursor:default; max-width:300px; white-space:normal; text-align:left;">
                         <span style="font-size:11px; line-height:1.3;">${text}</span>
-                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${id}" title="Remove"></button>
+                        ${removeButton}
                     </span>`);
                 $tags.append($tag);
                 
@@ -1422,7 +1426,7 @@
                             articleUoms[d.art_no] = d.uom_code; 
                             if (d.store_category_id == 1) {
                                 hasFabric = true;
-                                if (d.fabric_type_id) {
+                                if (d.fabric_type_id && !$('#fabric_type_id').val()) {
                                     $('#fabric_type_id').val(d.fabric_type_id);
                                 }
                             }
@@ -1469,6 +1473,7 @@
             }
 
             var $ac = $input.autocomplete({
+                disabled: hasTasks,
                 source: function (request, response) {
                     $.get(searchUrl, { q: request.term }, function (data) {
                         const mappedResults = data.results.map(function(item) {
@@ -1531,11 +1536,12 @@
                         selectedIds.push(entry.id);
                     }
                     if ($tags.find(`[data-id="${entry.id}"]`).length === 0) {
+                        const removeButton = hasTasks ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${entry.id}" title="Remove"></button>`;
                         const $tag = $(`
                             <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6"
                                   data-id="${entry.id}" style="cursor:default; max-width:300px; white-space:normal;">
                                 <span style="font-size:11px; line-height:1.3;">${entry.text}</span>
-                                <button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${entry.id}" title="Remove"></button>
+                                ${removeButton}
                             </span>`);
                         $tags.append($tag);
                     }

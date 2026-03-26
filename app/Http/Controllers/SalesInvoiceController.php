@@ -188,28 +188,33 @@ class SalesInvoiceController extends Controller
                     }
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
                     $invoice->update($invoiceData);
-                    $invoice->items()->forceDelete();
+                    
+                    $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
+                    $invoice->items()->whereNotIn('id', $itemIds)->forceDelete();
                 } else {
                     $invoiceData['received_amount'] = (float)$request->received_amount;
                     $invoice = SalesInvoice::create($invoiceData);
                 }
 
                 foreach ($request->items as $item) {
-                    SalesInvoiceItem::create([
-                        'sales_invoice_id' => $invoice->id,
-                        'brand_id' => $item['brand_id'] ?? null,
-                        'item_id' => $item['item_id'],
-                        'uom_id' => $item['uom_id'] ?? null,
-                        'quantity' => $item['quantity'] ?? 0,
-                        'rate' => $item['rate'] ?? 0,
-                        'mrp' => $item['mrp'] ?? 0,
-                        'amount' => $item['amount'] ?? 0,
-                        'hsn_sac' => $item['hsn_sac'] ?? null,
-                        'art_no' => $item['art_no'] ?? null,
-                        'size' => $item['size'] ?? null,
-                        'sleeve_type' => $item['sleeve_type'] ?? null,
-                        'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
-                    ]);
+                    SalesInvoiceItem::updateOrCreate(
+                        ['id' => $item['id'] ?? null],
+                        [
+                            'sales_invoice_id' => $invoice->id,
+                            'brand_id' => $item['brand_id'] ?? null,
+                            'item_id' => $item['item_id'],
+                            'uom_id' => $item['uom_id'] ?? null,
+                            'quantity' => $item['quantity'] ?? 0,
+                            'rate' => $item['rate'] ?? 0,
+                            'mrp' => $item['mrp'] ?? 0,
+                            'amount' => $item['amount'] ?? 0,
+                            'hsn_sac' => $item['hsn_sac'] ?? null,
+                            'art_no' => $item['art_no'] ?? null,
+                            'size' => $item['size'] ?? null,
+                            'sleeve_type' => $item['sleeve_type'] ?? null,
+                            'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
+                        ]
+                    );
                 }
 
                 $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];

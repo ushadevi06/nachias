@@ -269,58 +269,70 @@
   <div class="table-wrapper" style="border-top:1px solid #000;">
     <table width="100%" cellpadding="0" cellspacing="0" class="content-table" style="border-collapse:collapse; table-layout:fixed; width:100%;">
       <tr style="height:0; visibility:hidden; line-height:0;">
-        <td style="width:5%;"></td>
-        <td style="width:22%;"></td>
-        <td style="width:23%;"></td>
+        <td style="width:4%;"></td>
+        <td style="width:25%;"></td>
+        <td style="width:9%;"></td>
+        <td style="width:9%;"></td>
+        <td style="width:9%;"></td>
         <td style="width:10%;"></td>
         <td style="width:6%;"></td>
-        <td style="width:6%;"></td>
-        <td style="width:7%;"></td>
         <td style="width:10%;"></td>
-        <td style="width:11%;"></td>
+        <td style="width:18%;"></td>
       </tr>
       <tbody>
         <tr style="background-color:#f2f2f2;">
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">S.No</th>
-          <th colspan="2" style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">DESCRIPTION OF GOODS</th>
+          <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">DESCRIPTION OF GOODS</th>
+          <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">ORDERED QTY</th>
+          <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">RECEIVED QTY</th>
+          <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">BALANCED QTY</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">BALE No.</th>
-          <th colspan="2" style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">QUANTITY</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">UOM</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">RATE</th>
           <th style="border-bottom:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">AMOUNT(Rs.)</th>
         </tr>
 
         @foreach($invoice->items as $index => $item)
+        @php
+            $orderedQty = $item->qty_ordered ?? 0;
+            $receivedQty = $item->quantity ?? 0;
+            $totalInvoicedSoFar = \App\Models\PurchaseInvoiceItem::where('purchase_order_item_id', $item->purchase_order_item_id)->where('id', '<=', $item->id)->sum('quantity');
+            $balancedQty = max(0, $orderedQty - $receivedQty); // Simple fallback if cumulative not desired
+            $balancedQtyAfterThis = max(0, $orderedQty - $totalInvoicedSoFar);
+        @endphp
         <tr>
           <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $index + 1 }}</td>
-          <td colspan="2" style="padding:5px; font-size:11px; border-right:1px solid #000;">{{ $item->rawMaterial->name ?? '' }} [HSN: {{ $item->hsn_code ?? '-' }}]</td>
+          <td style="padding:5px; font-size:11px; border-right:1px solid #000;">{{ $item->rawMaterial->name ?? '' }} [HSN: {{ $item->hsn_code ?? '-' }}]</td>
+          <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ number_format($orderedQty, 2) }}</td>
+          <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ number_format($receivedQty, 2) }}</td>
+          <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ number_format($balancedQtyAfterThis, 2) }}</td>
           <td class="no-wrap" style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $item->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
-          <td colspan="2" class="no-wrap" style="padding:5px; text-align:right; padding-right:15px; font-size:11px; border-right:1px solid #000;">
-            {{ trim(strtoupper($item->uom->uom_code ?? '')) == 'PCS' ? number_format($item->quantity, 0) : number_format($item->quantity, 2) }}
-          </td>
           <td class="no-wrap" style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $item->uom->uom_code ?? '-' }}</td>
           <td class="no-wrap" style="padding:5px; text-align:right; font-size:11px; border-right:1px solid #000;">{{ number_format($item->rate, 2) }}</td>
           <td class="no-wrap" style="padding:5px; text-align:right; font-size:11px;">{{ number_format($item->amount, 2) }}</td>
         </tr>
         @endforeach
 
-        @for($i = count($invoice->items); $i < 12; $i++)
+        @for($i = count($invoice->items); $i < 10; $i++)
         <tr>
           <td style="height:30px; border-right:1px solid #000;"></td>
-          <td colspan="2" style="border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
-          <td colspan="2" style="border-right:1px solid #000;"></td>
+          <td style="border-right:1px solid #000;"></td>
+          <td style="border-right:1px solid #000;"></td>
+          <td style="border-right:1px solid #000;"></td>
+          <td style="border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
           <td></td>
         </tr>
         @endfor
 
-        <!-- GROSS TOTAL ROW -->
         <tr style="border-top:1px solid #000; border-bottom:1px solid #000; font-weight:bold; background-color:#f2f2f2; vertical-align:middle;">
-          <td colspan="3" style="border-right:1px solid #000; border-left:1px solid #000;padding:6px; text-align:right; vertical-align:middle;">Gross Total</td>
+          <td colspan="2" style="border-right:1px solid #000; border-left:1px solid #000;padding:6px; text-align:right; vertical-align:middle;">Gross Total</td>
+          <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;">{{ number_format($invoice->items->sum('qty_ordered'), 2) }}</td>
+          <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
           <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;"></td>
-          <td colspan="2" style="border-right:1px solid #000; text-align:right; padding-right:15px; vertical-align:middle;">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
+          <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;"></td>
           <td style="border-right:1px solid #000; vertical-align:middle;"></td>
           <td style="border-right:1px solid #000; vertical-align:middle;"></td>
           <td style="text-align:right; padding-right:5px; vertical-align:middle; border-right: none;">{{ number_format($invoice->sub_total, 2) }}</td>
@@ -328,40 +340,51 @@
 
         <!-- FOOTER TABLE STRUCTURE -->
         <tr style="background-color:#f2f2f2; font-weight:bold; text-align:center; border-bottom:1px solid #000; vertical-align:middle;">
-          <td colspan="2" rowspan="4" style="border-right:1px solid #000; vertical-align:top; text-align:left; padding:8px; font-weight:normal; background-color:#fff;">
+          <td colspan="2" rowspan="{{ 4 + count($invoice->charges) }}" style="border-right:1px solid #000; vertical-align:top; text-align:left; padding:8px; font-weight:normal; background-color:#fff;">
             Payment Due Date: <strong style="background-color:#cccccc; color:#000; padding:4px 6px;">{{ $invoice->due_date ? $invoice->due_date->format('d/m/Y') : '-' }}</strong><br>
             Remark: {{ $invoice->notes }}
           </td>
-          <td colspan="1" style="border-right:1px solid #000; padding:4px; font-size:10px; vertical-align:middle;">Discount / Tax</td>
+          <td colspan="2" style="border-right:1px solid #000; padding:4px; font-size:10px; vertical-align:middle;">Discount / Tax</td>
           <td colspan="1" style="border-right:1px solid #000; padding:4px; font-size:10px; vertical-align:middle;">Add / Less</td>
-          <td colspan="2" style="border-right:1px solid #000; padding:4px; font-size:10px; vertical-align:middle;">On Amount</td>
+          <td colspan="1" style="border-right:1px solid #000; padding:4px; font-size:10px; vertical-align:middle;">On Amount</td>
           <td colspan="2" style="border-right:1px solid #000; padding:4px; font-size:10px; vertical-align:middle;">Rate</td>
           <td colspan="1" style="padding:4px; font-size:10px; vertical-align:middle;">Amount (Rs.)</td>
         </tr>
 
         <!-- Discount Row -->
         <tr style="vertical-align:middle;">
-          <td colspan="1" style="border-right:1px solid #000; padding:6px 6px 0; font-size:11px; vertical-align:middle;">Discount</td>
+          <td colspan="2" style="border-right:1px solid #000; padding:6px 6px 0; font-size:11px; vertical-align:middle; text-align: left;">Discount</td>
           <td colspan="1" style="border-right:1px solid #000; text-align:center; padding:6px 6px 0; font-size:11px; vertical-align:middle;">LESS</td>
-          <td colspan="2" style="text-align:right; padding:6px 6px 0; font-size:11px; vertical-align:middle; border-right:1px solid #000;">{{ number_format($invoice->sub_total, 2) }}</td>
+          <td colspan="1" style="text-align:right; padding:6px 6px 0; font-size:11px; vertical-align:middle; border-right:1px solid #000;">{{ number_format($invoice->sub_total, 2) }}</td>
           <td colspan="2" style="border-right:1px solid #000; text-align:center; padding:6px 6px 0; font-size:11px; vertical-align:middle;">{{ number_format($invoice->discount_percent, 2) }} %</td>
           <td colspan="1" style="text-align:right; padding:6px 6px 0; font-size:11px; font-weight:bold; vertical-align:middle;">-{{ number_format($invoice->discount_amount, 2) }}</td>
         </tr>
 
         <!-- Tax Row -->
         <tr>
-          <td colspan="1" style="border-right:1px solid #000; padding:2px 6px; font-size:11px;">{{ $invoice->other_state ? 'IGST' : 'CGST+SGST' }}</td>
+          <td colspan="2" style="border-right:1px solid #000; padding:2px 6px; font-size:11px; text-align: left;">{{ $invoice->other_state ? 'IGST' : 'CGST+SGST' }}</td>
           <td colspan="1" style="border-right:1px solid #000; text-align:center; padding:2px 6px; font-size:11px;">ADD</td>
-          <td colspan="2" style="border-right:1px solid #000; text-align:right; padding:2px 6px; font-size:11px;">{{ number_format($invoice->taxable_amount, 2) }}</td>
+          <td colspan="1" style="border-right:1px solid #000; text-align:right; padding:2px 6px; font-size:11px;">{{ number_format($invoice->taxable_amount, 2) }}</td>
           <td colspan="2" style="border-right:1px solid #000; text-align:center; padding:2px 6px; font-size:11px;">{{ $invoice->igst_percent ?? ($invoice->cgst_percent + $invoice->sgst_percent) }} %</td>
           <td colspan="1" style="text-align:right; padding:2px 6px; font-size:11px; font-weight:bold;">{{ number_format($invoice->tax_amount, 2) }}</td>
         </tr>
 
+        <!-- Additional Charges -->
+        @foreach($invoice->charges as $charge)
+        <tr>
+          <td colspan="2" style="border-right:1px solid #000; padding:2px 6px; font-size:11px; text-align: left;">{{ $charge->charge_name }}</td>
+          <td colspan="1" style="border-right:1px solid #000; text-align:center; padding:2px 6px; font-size:11px;">ADD</td>
+          <td colspan="1" style="border-right:1px solid #000; text-align:right; padding:2px 6px; font-size:11px;">0.00</td>
+          <td colspan="2" style="border-right:1px solid #000; text-align:center; padding:2px 6px; font-size:11px;">-</td>
+          <td colspan="1" style="text-align:right; padding:2px 6px; font-size:11px; font-weight:bold;">{{ number_format($charge->charge_amount, 2) }}</td>
+        </tr>
+        @endforeach
+
         <!-- Round Off Row -->
         <tr style="border-bottom:1px solid #000;">
-          <td colspan="1" style="border-right:1px solid #000; padding:2px 6px; font-size:11px;">Round Off</td>
+          <td colspan="2" style="border-right:1px solid #000; padding:2px 6px; font-size:11px; text-align: left;">Round Off</td>
           <td colspan="1" style="border-right:1px solid #000; text-align:center; padding:2px 6px; font-size:11px;">{{ strtoupper($invoice->round_off_type ?? 'ADD') }}</td>
-          <td colspan="2" style="border-right:1px solid #000; text-align:right; padding:2px 6px; font-size:11px;">0.00</td>
+          <td colspan="1" style="border-right:1px solid #000; text-align:right; padding:2px 6px; font-size:11px;">0.00</td>
           <td colspan="2" style="border-right:1px solid #000; text-align:center; padding:2px 6px; font-size:11px;">-</td>
           <td colspan="1" style="text-align:right; padding:2px 6px; font-size:11px; font-weight:bold;">
             {{ $invoice->round_off_type == 'Less' ? '-' : '' }}{{ number_format($invoice->round_off, 2) }}

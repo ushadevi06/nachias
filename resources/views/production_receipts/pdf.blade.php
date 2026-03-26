@@ -114,6 +114,8 @@
                 <th>Size / Variant</th>
                 <th class="text-center">Qty</th>
                 <th class="text-center">UOM</th>
+                <th class="text-end">Unit Price</th>
+                <th class="text-end">Amount</th>
             </tr>
         </thead>
         <tbody>
@@ -127,6 +129,8 @@
                     <td>{{ $item->size_variant }}</td>
                     <td class="text-center">{{ number_format($item->qty_to_receive, 2) }}</td>
                     <td class="text-center">{{ $item->uom_code }}</td>
+                    <td class="text-end">{{ number_format($item->unit_price, 2) }}</td>
+                    <td class="text-end">{{ number_format($item->total_value, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -135,6 +139,8 @@
                 <td colspan="3" class="text-end">Total Received Quantity:</td>
                 <td class="text-center">{{ number_format($receipt->items->sum('qty_to_receive'), 2) }}</td>
                 <td></td>
+                <td class="text-end">Grand Total:</td>
+                <td class="text-end">{{ number_format($receipt->items->sum('total_value'), 2) }}</td>
             </tr>
         </tfoot>
     </table>

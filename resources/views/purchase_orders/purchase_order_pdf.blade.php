@@ -210,29 +210,28 @@
         <table class="item-table" style="margin-top: 0;">
             <thead style="border-bottom: 1px solid #000; border-top:1px solid #000;">
                 <tr>
-                    <th width="4%">S.No</th>
-                    <th width="23%">Description</th>
-                    <th width="12%">Brand</th>
-                    <th width="8%">Color</th>
+                    <th width="3%">S.No</th>
+                    <th width="12%">Store Category</th>
+                    <th width="10%">Brand</th>
+                    <th width="18%">Raw Material</th>
                     <th width="8%">Style</th>
-                    <th width="8%">Width</th>
-                    <th width="7%">UOM</th>
-                    <th width="10%">Quantity</th>
-                    <th width="10%">Rate</th>
-                    <th width="10%">Amount</th>
+                    <th width="8%">Color</th>
+                    <th width="7%">Width</th>
+                    <th width="6%">UOM</th>
+                    <th width="8%">Quantity</th>
+                    <th width="9%">Rate</th>
+                    <th width="11%">Amount</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($purchaseOrder->items as $index => $item)
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
-                        <td>
-                            <strong>{{ $item->rawMaterial->name ?? '' }}</strong><br>
-                            <small>{{ $item->storeCategory->category_name ?? '' }}</small>
-                        </td>
+                        <td class="text-center">{{ $item->storeCategory->category_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->brand->brand_name ?? '-' }}</td>
-                        <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
+                        <td><strong>{{ $item->rawMaterial->name ?? '' }}</strong></td>
                         <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
+                        <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->fabricWidth->size ?? '-' }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
@@ -252,12 +251,13 @@
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
+                        <td>&nbsp;</td>
                     </tr>
                 @endfor
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="7" class="text-right bold">Total</td>
+                    <td colspan="8" class="text-right bold">Total</td>
                     <td class="text-center bold">{{ number_format($purchaseOrder->total_qty, 2) }}</td>
                     <td></td>
                     <td class="text-right bold">{{ number_format($purchaseOrder->taxable_amount, 2) }}</td>

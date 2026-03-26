@@ -54,15 +54,7 @@ ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
 DELETE FROM tasks;
 ALTER TABLE tasks AUTO_INCREMENT = 1;
 
-DELETE FROM production_receipt_items;
-ALTER TABLE production_receipt_items AUTO_INCREMENT = 1;
 
-DELETE FROM production_receipts;
-ALTER TABLE production_receipts AUTO_INCREMENT = 1;
-
-
-DELETE FROM process_schedules;
-ALTER TABLE process_schedules AUTO_INCREMENT = 1;
 
 -- =========================
 -- JOB CARD

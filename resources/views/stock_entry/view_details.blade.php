@@ -5,7 +5,7 @@
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>View Stock Entry</h4>
+                <h4>View Stock Entry - {{ $stockEntry->stock_entry_no }}</h4>
                 <a href="{{ url('stock_entries') }}" class="btn btn-outline-secondary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
             </div>
             <div class="card detail-card">
@@ -48,9 +48,7 @@
                         <div class="col-md-4">
                             <label class="detail-title">Job Card Number:</label>
                             <div class="text-muted">
-                                {{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard) 
-                                    ? $stockEntry->productionReceipt->jobCard->job_card_no 
-                                    : '-' }}
+                                {{ ($stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard) ? $stockEntry->productionReceipt->jobCard->job_card_no : '-' }}
                             </div>
                         </div>
                         @endif
@@ -103,6 +101,21 @@
                         </div>
                         @else
                         @if($firstItem)
+                        @php
+                            $fabricType = $firstItem->fabricType ? $firstItem->fabricType->fabric_type : null;
+                            if (!$fabricType && $stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard) {
+                                $fabricType = $stockEntry->productionReceipt->jobCard->fabricType->fabric_type ?? null;
+                            }
+                            $fabricType = $fabricType ?? '-';
+                            $colorName = $firstItem->color ? $firstItem->color->color_name : '-';
+                            $qrString = ($firstItem->sku ?? '-') . " | " . 
+                                        ($firstItem->item->name ?? '-') . " | " . 
+                                        $fabricType . " | " . 
+                                        ($firstItem->size ?? '-') . " | " . 
+                                        $colorName . " | " . 
+                                        ($firstItem->sleeve_type ?? '-') . " | Qty: " . 
+                                        floatval($firstItem->qty_in);
+                        @endphp
                         <div class="col-md-12 mt-4">
                             <div class="card shadow-none border bg-light bg-opacity-25 rounded-3">
                                 <div class="card-body p-4">
@@ -110,25 +123,35 @@
                                         <div class="col-md-3 text-center border-end pe-md-5">
                                             @if($firstItem->sku)
                                                 <div class="p-3 border rounded bg-white shadow-sm d-inline-block mb-2">
-                                                    {!! \QrCode::size(120)->generate($firstItem->sku) !!}
+                                                    {!! \QrCode::size(120)->generate($qrString) !!}
                                                 </div>
                                                 <div class="fw-bold text-primary fs-5">{{ $firstItem->sku }}</div>
-                                                <div class="text-muted small">Sequential SKU</div>
+                                                <div class="text-muted small mb-3">Sequential SKU</div>
+                                                {{-- @if($firstItem->sku)
+                                                    <a href="{{ url('labels/print/' . $firstItem->id) }}" target="_blank" class="btn btn-primary btn-sm px-3 py-1 shadow-sm d-inline-flex align-items-center gap-1">
+                                                        <i class="ri ri-printer-line"></i> Print Label
+                                                    </a>
+                                                @endif --}}
                                             @else
                                                 <div class="text-muted italic">No SKU Assigned</div>
                                             @endif
                                         </div>
                                         <div class="col-md-6 ps-md-5 py-3">
-                                            <h4 class="text-primary fw-bold mb-3">{{ $firstItem->finished_item_code ?? '-' }}</h4>
+                                            <h4 class="text-primary fw-bold mb-1">{{ $firstItem->item->name ?? '-' }}</h4>
+                                            <div class="text-muted small mb-3">{{ $firstItem->item->code ?? ($firstItem->finished_item_code ?? '-') }}</div>
                                             <div class="row g-3">
                                                 <div class="col-sm-6">
+                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Product SKU / Code</label>
+                                                    <span class="text-dark fw-medium fs-6">{{ $firstItem->sku ?? '-' }} / {{ $firstItem->item->code ?? '-' }}</span>
+                                                </div>
+                                                {{-- <div class="col-sm-6">
                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Art No</label>
                                                     <span class="text-dark fw-medium fs-6">{{ $firstItem->art_no ?? '-' }}</span>
-                                                </div>
+                                                </div> --}}
                                                 <div class="col-sm-6">
                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Fabric / Sleeve</label>
                                                     <span class="text-dark fw-medium fs-6">
-                                                        {{ $firstItem->fabricType ? $firstItem->fabricType->fabric_type : '-' }} / 
+                                                        {{ $fabricType }} / 
                                                         {{ $firstItem->sleeve_type ?? '-' }}
                                                     </span>
                                                 </div>
@@ -137,21 +160,19 @@
                                                     <span class="text-success fw-bold fs-5">+{{ floatval($firstItem->qty_in) }} <small class="text-muted fs-6 fw-normal">{{ $firstItem->uom->uom_code ?? 'PCS' }}</small></span>
                                                 </div>
                                                 <div class="col-sm-6">
-                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Variations</label>
-                                                    <span class="text-dark fw-medium">
-                                                        {{ $stockEntry->stockEntryItems->unique('size')->count() }} Sizes / 
-                                                        {{ $stockEntry->stockEntryItems->unique('color_id')->count() }} Colors
-                                                    </span>
+                                                    <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Size / Color</label>
+                                                    <span class="text-dark fw-bold fs-5">{{ $firstItem->size ?? '-' }}</span>
+                                                    <span class="text-muted ms-1">({{ $firstItem->color->color_name ?? '-' }})</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 text-md-end pt-3 pt-md-0">
+                                       {{-- <div class="col-md-3 text-md-end pt-3 pt-md-0">
                                             @if($firstItem->sku)
                                                 <a href="{{ url('labels/print/' . $firstItem->id) }}" target="_blank" class="btn btn-primary px-4 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
                                                     <i class="ri-printer-line fs-5"></i> Print Label
                                                 </a>
                                             @endif
-                                        </div>
+                                        </div> --}}
                                     </div>
                                 </div>
                             </div>

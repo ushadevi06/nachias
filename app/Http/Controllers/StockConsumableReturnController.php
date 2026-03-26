@@ -32,9 +32,9 @@ class StockConsumableReturnController extends Controller
                     'art_no' => $row->art_no,
                     'material_name' => $row->rawMaterial ? $row->rawMaterial->name : '-',
                     'uom' => $row->uom ? $row->uom->uom_code : '-',
-                    'fs_qty' => number_format($row->fs_qty, 3),
-                    'hs_qty' => number_format($row->hs_qty, 3),
-                    'total_issue_qty' => number_format($row->actual_qty, 3),
+                    'fs_qty' => number_format($row->fs_qty, 2),
+                    'hs_qty' => number_format($row->hs_qty, 2),
+                    'total_issue_qty' => number_format($row->actual_qty, 2),
                     'issued_date' => $row->created_at->format('d-m-Y'),
                     'action' => '<a href="' . url('stock_consumables_returns/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>',
                 ];

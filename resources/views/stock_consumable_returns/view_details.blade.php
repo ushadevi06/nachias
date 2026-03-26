@@ -72,19 +72,19 @@
                                 <div class="col-md-4">
                                     <div class="bg-light p-3 rounded text-center">
                                         <label class="text-muted small fw-medium text-uppercase mb-1 d-block">F/S Qty</label>
-                                        <h5 class="mb-0 fw-bold">{{ number_format($consumable->fs_qty, 3) }}</h5>
+                                        <h5 class="mb-0 fw-bold">{{ number_format($consumable->fs_qty, 2) }}</h5>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="bg-light p-3 rounded text-center">
                                         <label class="text-muted small fw-medium text-uppercase mb-1 d-block">H/S Qty</label>
-                                        <h5 class="mb-0 fw-bold">{{ number_format($consumable->hs_qty, 3) }}</h5>
+                                        <h5 class="mb-0 fw-bold">{{ number_format($consumable->hs_qty, 2) }}</h5>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="bg-primary bg-opacity-10 p-3 rounded text-center border border-primary border-opacity-25">
                                         <label class="text-primary small fw-medium text-uppercase mb-1 d-block">Total Issue Qty</label>
-                                        <h5 class="mb-0 fw-bold text-primary">{{ number_format($consumable->actual_qty, 3) }}</h5>
+                                        <h5 class="mb-0 fw-bold text-primary">{{ number_format($consumable->actual_qty, 2) }}</h5>
                                     </div>
                                 </div>
                             </div>

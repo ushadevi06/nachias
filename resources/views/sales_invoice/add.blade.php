@@ -132,6 +132,7 @@
                                                     'mrp' => $item->mrp,
                                                     'amount' => $item->amount,
                                                     'stock_entry_item_id' => $item->stock_entry_item_id,
+                                                    'id' => $item->id,
                                                 ];
                                             })->toArray();
                                         }
@@ -142,6 +143,7 @@
                                         <tr class="item-row">
                                             <td>
                                                 <span class="brand-text">{{ $row->brand_name ?? '' }}</span>
+                                                <input type="hidden" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">

@@ -16,6 +16,7 @@ class StockEntryItem extends Model
         'grn_entry_item_id',
         'art_no',
         'raw_material_id',
+        'item_id',
         'finished_item_code', 
         'store_category_id',
         'store_location_id',
@@ -44,6 +45,11 @@ class StockEntryItem extends Model
     public function rawMaterial()
     {
         return $this->belongsTo(RawMaterial::class);
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(Item::class);
     }
 
     public function storeCategory()
