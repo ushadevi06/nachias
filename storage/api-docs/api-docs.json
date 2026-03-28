@@ -1,0 +1,1159 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Nachias API",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://192.168.1.14:8000",
+            "description": "Dynamic API Server"
+        }
+    ],
+    "paths": {
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User Login",
+                "description": "Authenticate user with email and password. Generates JWT token.",
+                "operationId": "1257f11ade1e6ee3a26cfe338badfb8e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "executive@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Login successful"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "eyJ0eXAiOiJKV1QiLCJhb..."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid credentials."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Access denied. Only Purchase Executive allowed."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation error."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User Logout",
+                "description": "Invalidate the current JWT token and end the session.",
+                "operationId": "d0090497298d35d96a9fcde3666ff010",
+                "responses": {
+                    "200": {
+                        "description": "Logout successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Successfully logged out"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/get-profile": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get User Profile Detail",
+                "description": "Get the authenticated user's profile data including image URL.",
+                "operationId": "b95d4bc75eb4ab94b84e43686d7c0d18",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "John Doe"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "executive@example.com"
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "1234567890"
+                                                },
+                                                "profile_image_url": {
+                                                    "type": "string",
+                                                    "example": "http://localhost/uploads/employee/1/image.jpg"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/update-profile": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update User Profile",
+                "description": "Update authenticated user's profile details and optional profile image.",
+                "operationId": "04b6a6e2fac2c4f710cddaa926b723f1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "Full Name",
+                                        "type": "string",
+                                        "example": ""
+                                    },
+                                    "email": {
+                                        "description": "Email Address",
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": ""
+                                    },
+                                    "phone": {
+                                        "description": "Phone Number",
+                                        "type": "string",
+                                        "example": ""
+                                    },
+                                    "password": {
+                                        "description": "New password if you want to change it",
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": ""
+                                    },
+                                    "password_old": {
+                                        "description": "Current password hash to maintain if new password is not provided",
+                                        "type": "string",
+                                        "example": ""
+                                    },
+                                    "profile_image": {
+                                        "description": "Profile Image File",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Profile updated successfully."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Get Purchase Executive Dashboard Stats",
+                "description": "Returns summary statistics and recent orders for the authenticated purchase executive.",
+                "operationId": "5f21f542b2113686b0eaf5475bd2982d",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user_name": {
+                                                    "type": "string",
+                                                    "example": "John Doe"
+                                                },
+                                                "stats": {
+                                                    "properties": {
+                                                        "total_orders": {
+                                                            "type": "integer",
+                                                            "example": 10
+                                                        },
+                                                        "pending_orders": {
+                                                            "type": "integer",
+                                                            "example": 7
+                                                        },
+                                                        "completed_orders": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "revenue": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 50000
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "recent_orders": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "po_number": {
+                                                                "type": "string",
+                                                                "example": "PO-001"
+                                                            },
+                                                            "po_date": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2024-03-27"
+                                                            },
+                                                            "status": {
+                                                                "type": "string",
+                                                                "example": "Approved"
+                                                            },
+                                                            "total_amount": {
+                                                                "type": "number",
+                                                                "format": "float",
+                                                                "example": 5000
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders": {
+            "get": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "List Purchase Executive's Orders",
+                "description": "Returns a paginated list of Purchase Orders belonging to the authenticated user. Supports filtering by status and date range.",
+                "operationId": "e4d95fa6e8199c7cc471f7010f23aeaf",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Universal search (po_number, date, amount, supplier, agent)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by order status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Draft",
+                                "Approved",
+                                "Dispatched",
+                                "Received"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "po_date_range",
+                        "in": "query",
+                        "description": "Filter by date range (format: d-m-Y to d-m-Y)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "01-03-2024 to 31-03-2024"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 50
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders/{id}": {
+            "get": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "Get Detailed Purchase Order",
+                "description": "Returns full information for a specific Purchase Order including line items and attachment URLs.",
+                "operationId": "3a49f86164c3e6bf2da51161a7606157",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the Purchase Order",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Purchase Order not found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders/{id}/update-status": {
+            "post": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "Change Purchase Order Status",
+                "description": "Updates the status of a specific Purchase Order. Status updates cannot go backwards (e.g., from Dispatched back to Approved).",
+                "operationId": "88ca0de34090a2ba7d74dee4d11715e9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the Purchase Order",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "description": "New Status",
+                                        "type": "string",
+                                        "enum": [
+                                            "Draft",
+                                            "Approved",
+                                            "Dispatched",
+                                            "Received"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Status updated successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status transition"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Purchase Order not found"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders/create_po": {
+            "get": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "Get Initial Data for Creating PO",
+                "description": "Generates the next PO number and fetches lists of active agents, suppliers, and store types.",
+                "operationId": "bdb1ed6ee807dd3532b34bfea44bdc1c",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "next_po_number": {
+                                                    "type": "string",
+                                                    "example": "PO0001"
+                                                },
+                                                "po_date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "27-03-2024"
+                                                },
+                                                "purchase_commission_agents": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "suppliers": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "store_types": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders/item_details": {
+            "get": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "Get Item Details Metadata for PO",
+                "description": "Fetches metadata needed for adding an item to a Purchase Order. Filters raw materials if store_category_id is provided.",
+                "operationId": "46e1217b57409584f720acaefc1076a7",
+                "parameters": [
+                    {
+                        "name": "store_category_id",
+                        "in": "query",
+                        "description": "Optional ID to filter raw materials by category",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "store_categories": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "brands": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "styles": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "fabric_widths": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "colors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "raw_materials": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "validation": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders/additional_info": {
+            "get": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "Get Additional Information Metadata for PO",
+                "description": "Fetches current status options, default payment terms, and attachment constraints.",
+                "operationId": "6f4500c78d61cef14835273a1059b82c",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "order_statuses": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Draft"
+                                                    }
+                                                },
+                                                "payment_terms_info": {
+                                                    "type": "string",
+                                                    "example": "No special characters allowed (<, >)"
+                                                },
+                                                "attachment_rules": {
+                                                    "properties": {
+                                                        "max_files": {
+                                                            "type": "integer",
+                                                            "example": 5
+                                                        },
+                                                        "max_size_per_file": {
+                                                            "type": "string",
+                                                            "example": "2MB"
+                                                        },
+                                                        "allowed_mimes": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string",
+                                                                "example": "pdf"
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders/tax_summary": {
+            "get": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "Get Tax Summary Metadata for PO",
+                "description": "Fetches default tax percentages (CGST, SGST, IGST) from system settings.",
+                "operationId": "130449db0a1d0bd60c70464d4393c12b",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "cgst": {
+                                                    "type": "number",
+                                                    "example": 9
+                                                },
+                                                "sgst": {
+                                                    "type": "number",
+                                                    "example": 9
+                                                },
+                                                "igst": {
+                                                    "type": "number",
+                                                    "example": 18
+                                                },
+                                                "round_off_types": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Add",
+                                                        "Less"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/purchase-orders/store": {
+            "post": {
+                "tags": [
+                    "Purchase Order"
+                ],
+                "summary": "Submit a New Purchase Order",
+                "description": "Creates a new Purchase Order with multiple items and optional attachments. Automatically sets purchase_executive_id.",
+                "operationId": "ab1282b9a7454a7671775e7717bd6d62",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "po_number": {
+                                        "type": "string",
+                                        "example": "PO0001"
+                                    },
+                                    "po_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "27-03-2024"
+                                    },
+                                    "supplier_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "reference_no": {
+                                        "type": "string",
+                                        "example": "REF123"
+                                    },
+                                    "reference_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "27-03-2024"
+                                    },
+                                    "due_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "10-04-2024"
+                                    },
+                                    "store_type_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "purchase_commission_agent_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "commission": {
+                                        "type": "number",
+                                        "example": 5
+                                    },
+                                    "payment_terms": {
+                                        "type": "string",
+                                        "example": "Net 30"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "Draft"
+                                    },
+                                    "discount_percent": {
+                                        "type": "number",
+                                        "example": 0
+                                    },
+                                    "other_state": {
+                                        "type": "string",
+                                        "example": "no"
+                                    },
+                                    "igst_percent": {
+                                        "type": "number",
+                                        "example": 0
+                                    },
+                                    "cgst_percent": {
+                                        "type": "number",
+                                        "example": 9
+                                    },
+                                    "sgst_percent": {
+                                        "type": "number",
+                                        "example": 9
+                                    },
+                                    "round_off_type": {
+                                        "type": "string",
+                                        "example": "Add"
+                                    },
+                                    "round_off": {
+                                        "type": "number",
+                                        "example": 0
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "additional_attachments[]": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Purchase Order created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Purchase Order created successfully"
+                                        },
+                                        "po_id": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Profile",
+            "description": "Profile"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Dashboard"
+        },
+        {
+            "name": "Purchase Order",
+            "description": "Purchase Order"
+        }
+    ]
+}

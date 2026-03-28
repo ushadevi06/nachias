@@ -11,6 +11,7 @@ class PurchaseOrder extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'purchase_executive_id',
         'po_number',
         'po_date',
         'purchase_commission_agent_id',
@@ -38,6 +39,7 @@ class PurchaseOrder extends Model
         'total_amount',
         'additional_attachments',
     ];
+
 
     protected $casts = [
         'po_date' => 'date',

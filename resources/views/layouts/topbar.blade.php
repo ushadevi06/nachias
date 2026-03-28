@@ -1,6 +1,6 @@
 @php
-$user = auth()->user();
-$isSuper = $user->id == 1;
+    $user = auth()->user();
+    $isSuper = $user->id == 1;
 @endphp
 <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
     <div class="layout-container">
@@ -30,7 +30,7 @@ $isSuper = $user->id == 1;
                                 <div class="avatar avatar-online">
                                     @php
                                         $user = auth()->user();
-                                        $profileImagePath = $user->profile_image 
+                                        $profileImagePath = $user->profile_image
                                             ? public_path('uploads/employee/' . $user->id . '/' . $user->profile_image)
                                             : null;
                                         $profileImageUrl = ($user->profile_image && file_exists($profileImagePath))
@@ -46,12 +46,14 @@ $isSuper = $user->id == 1;
                                         <div class="d-flex align-items-center">
                                             <div class="flex-shrink-0 me-2">
                                                 <div class="avatar avatar-online">
-                                                    <img src="{{ $profileImageUrl }}" alt="alt" class="w-px-40 h-auto rounded-circle">
+                                                    <img src="{{ $profileImageUrl }}" alt="alt"
+                                                        class="w-px-40 h-auto rounded-circle">
                                                 </div>
                                             </div>
                                             <div class="flex-grow-1">
                                                 <h6 class="mb-0 small">{{ auth()->user()->name }}</h6>
-                                                <small class="text-body-secondary">{{ auth()->user()->getRoleNames()->first() ?? 'Administrator' }}</small>
+                                                <small
+                                                    class="text-body-secondary">{{ auth()->user()->getRoleNames()->first() ?? 'Administrator' }}</small>
                                             </div>
                                         </div>
                                     </a>
@@ -100,635 +102,669 @@ $isSuper = $user->id == 1;
                                 </li>
                                 <!-- Employees -->
                                 @if($user && ($isSuper || $user->can('view roles') || $user->can('view employee')))
-                                <li class="menu-item {{ request()->is('employees*') || request()->is('roles*') ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-user-add-line"></i>
-                                        <div class="itm">Employees</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view roles'))
-                                        <li class="menu-item {{ request()->is('roles*') ? 'active' : '' }}">
-                                            <a href="{{ url('roles') }}" class="menu-link">
-                                                <div>Roles</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                    <li
+                                        class="menu-item {{ request()->is('employees*') || request()->is('roles*') ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-user-add-line"></i>
+                                            <div class="itm">Employees</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view roles'))
+                                                <li class="menu-item {{ request()->is('roles*') ? 'active' : '' }}">
+                                                    <a href="{{ url('roles') }}" class="menu-link">
+                                                        <div>Roles</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view employee'))
-                                        <li class="menu-item {{ request()->is('employees*') ? 'active' : '' }}">
-                                            <a href="{{ url('employees') }}" class="menu-link">
-                                                <div>Employees</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                            @if($isSuper || $user->can('view employee'))
+                                                <li class="menu-item {{ request()->is('employees*') ? 'active' : '' }}">
+                                                    <a href="{{ url('employees') }}" class="menu-link">
+                                                        <div>Employees</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
 
                                 <!-- Master -->
                                 @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view colors') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view styles') || $user->can('view stores') || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view shifts') || $user->can('view production-services') || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent') || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items') || $user->can('view process-groups') || $user->can('view seasons')))
-                                <li class="menu-item master-dropdown {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('colors*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('stores*') || request()->is('styles*') || request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('shifts*') || request()->is('production_services*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*') || request()->is('process_groups*') || request()->is('seasons*') || request()->is('shipping_methods*') || request()->is('transport_modes*')) ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-layout-2-line"></i>
-                                        <div>Master</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view states'))
-                                        <li class="menu-item {{ request()->is('states*') ? 'active' : '' }}">
-                                            <a href="{{ url('states') }}" class="menu-link">
-                                                <div>States</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view cities'))
-                                        <li class="menu-item {{ request()->is('cities*') ? 'active' : '' }}">
-                                            <a href="{{ url('cities') }}" class="menu-link">
-                                                <div>Cities</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view service-points'))
-                                        <li class="menu-item {{ request()->is('places*') ? 'active' : '' }}">
-                                            <a href="{{ url('places') }}" class="menu-link">
-                                                <div>Places (Service Points)</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view uoms'))
-                                        <li class="menu-item {{ request()->is('uoms*') ? 'active' : '' }}">
-                                            <a href="{{ url('uoms') }}" class="menu-link">
-                                                <div>UOM</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view colors'))
-                                        <li class="menu-item {{ request()->is('colors*') ? 'active' : '' }}">
-                                            <a href="{{ url('colors') }}" class="menu-link">
-                                                <div>Colors</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view operation-stages'))
-                                        <li class="menu-item {{ request()->is('operation_stages*') ? 'active' : '' }}">
-                                            <a href="{{ url('operation_stages') }}" class="menu-link">
-                                                <div>Operation Stages</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view zones'))
-                                        <li class="menu-item {{ request()->is('zones*') ? 'active' : '' }}">
-                                            <a href="{{ url('zones') }}" class="menu-link">
-                                                <div>Zones</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view size-ratio'))
-                                        <li class="menu-item {{ request()->is('size_ratio*') ? 'active' : '' }}">
-                                            <a href="{{ url('size_ratio') }}" class="menu-link">
-                                                <div>Size & Ratio</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view fabric-type'))
-                                        <li class="menu-item {{ request()->is('fabric_type*') ? 'active' : '' }}">
-                                            <a href="{{ url('fabric_type') }}" class="menu-link">
-                                                <div>Fabric Type</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view charges'))
-                                        <li class="menu-item {{ request()->is('charges*') ? 'active' : '' }}">
-                                            <a href="{{ url('charges') }}" class="menu-link">
-                                                <div>Charges</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view store-location'))
-                                        <li class="menu-item {{ request()->is('store_location*') ? 'active' : '' }}">
-                                            <a href="{{ url('store_location') }}" class="menu-link">
-                                                <div>Store Location</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view departments'))
-                                        <li class="menu-item {{ request()->is('departments*') ? 'active' : '' }}">
-                                            <a href="{{ url('departments') }}" class="menu-link">
-                                                <div>Departments</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view taxes'))
-                                        <li class="menu-item {{ request()->is('taxes*') ? 'active' : '' }}">
-                                            <a href="{{ url('taxes') }}" class="menu-link">
-                                                <div>Taxes</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view styles'))
-                                        <li class="menu-item {{ request()->is('styles*') ? 'active' : '' }}">
-                                            <a href="{{ url('styles') }}" class="menu-link">
-                                                <div>Styles</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                        
-                                        @if($isSuper || $user->can('view stores'))
-                                        <li class="menu-item {{ request()->is('stores*') ? 'active' : '' }}">
-                                            <a href="{{ url('stores') }}" class="menu-link">
-                                                <div>Stores</div>
-                                            </a>
-                                        </li>
-                                        @endif
-
-                                        @if($isSuper || $user->can('view shipping-methods') || $user->can('view transport-modes'))
-                                        <li class="menu-item {{ (request()->is('shipping_methods*') || request()->is('transport_modes*')) ? 'active' : '' }}">
-                                            <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                                <div>Logistics Master</div>
-                                            </a>
-                                            <ul class="menu-sub">
-                                                @if($isSuper || $user->can('view shipping-methods'))
-                                                <li class="menu-item {{ request()->is('shipping_methods*') ? 'active' : '' }}">
-                                                    <a href="{{ url('shipping_methods') }}" class="menu-link">
-                                                        <div>Shipping Methods</div>
+                                    <li
+                                        class="menu-item master-dropdown {{ (request()->is('states*') || request()->is('cities*') || request()->is('places*') || request()->is('uoms*') || request()->is('colors*') || request()->is('operation_stages*') || request()->is('zones*') || request()->is('size_ratio*') || request()->is('fabric_type*') || request()->is('charges*') || request()->is('store_location*') || request()->is('departments*') || request()->is('taxes*') || request()->is('stores*') || request()->is('styles*') || request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('shifts*') || request()->is('production_services*') || request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*') || request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*') || request()->is('process_groups*') || request()->is('seasons*') || request()->is('shipping_methods*') || request()->is('transport_modes*')) ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-layout-2-line"></i>
+                                            <div>Master</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view states'))
+                                                <li class="menu-item {{ request()->is('states*') ? 'active' : '' }}">
+                                                    <a href="{{ url('states') }}" class="menu-link">
+                                                        <div>States</div>
                                                     </a>
                                                 </li>
-                                                @endif
-                                                @if($isSuper || $user->can('view transport-modes'))
-                                                <li class="menu-item {{ request()->is('transport_modes*') ? 'active' : '' }}">
-                                                    <a href="{{ url('transport_modes') }}" class="menu-link">
-                                                        <div>Transport Mode</div>
-                                                    </a>
-                                                </li>
-                                                @endif
-                                            </ul>
-                                        </li>
-                                        @endif
+                                            @endif
 
-                                        <!-- Tailoring Specification -->
-                                        @if($isSuper || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view process-groups') || $user->can('view seasons'))
-                                        <li class="menu-item {{ (request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('process_groups*') || request()->is('seasons*')) ? 'active' : '' }}">
-                                            <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                                <div>Tailoring Specification</div>
-                                            </a>
-                                            <ul class="menu-sub">
-                                                @if($isSuper || $user->can('view fits'))
-                                                <li class="menu-item {{ request()->is('fits*') ? 'active' : '' }}">
-                                                    <a href="{{ url('fits') }}" class="menu-link">
-                                                        <div>Fits</div>
+                                            @if($isSuper || $user->can('view cities'))
+                                                <li class="menu-item {{ request()->is('cities*') ? 'active' : '' }}">
+                                                    <a href="{{ url('cities') }}" class="menu-link">
+                                                        <div>Cities</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view patti-types'))
-                                                <li class="menu-item {{ request()->is('patti_types*') ? 'active' : '' }}">
-                                                    <a href="{{ url('patti_types') }}" class="menu-link">
-                                                        <div>Patti Types</div>
+                                            @if($isSuper || $user->can('view service-points'))
+                                                <li class="menu-item {{ request()->is('places*') ? 'active' : '' }}">
+                                                    <a href="{{ url('places') }}" class="menu-link">
+                                                        <div>Places (Service Points)</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view collar-types'))
-                                                <li class="menu-item {{ request()->is('collar_types*') ? 'active' : '' }}">
-                                                    <a href="{{ url('collar_types') }}" class="menu-link">
-                                                        <div>Collar Types</div>
+                                            @if($isSuper || $user->can('view uoms'))
+                                                <li class="menu-item {{ request()->is('uoms*') ? 'active' : '' }}">
+                                                    <a href="{{ url('uoms') }}" class="menu-link">
+                                                        <div>UOM</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view cuff-types'))
-                                                <li class="menu-item {{ request()->is('cuff_types*') ? 'active' : '' }}">
-                                                    <a href="{{ url('cuff_types') }}" class="menu-link">
-                                                        <div>Cuff Types</div>
+                                            @if($isSuper || $user->can('view colors'))
+                                                <li class="menu-item {{ request()->is('colors*') ? 'active' : '' }}">
+                                                    <a href="{{ url('colors') }}" class="menu-link">
+                                                        <div>Colors</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view pocket-types'))
-                                                <li class="menu-item {{ request()->is('pocket_types*') ? 'active' : '' }}">
-                                                    <a href="{{ url('pocket_types') }}" class="menu-link">
-                                                        <div>Pocket Types</div>
+                                            @if($isSuper || $user->can('view operation-stages'))
+                                                <li class="menu-item {{ request()->is('operation_stages*') ? 'active' : '' }}">
+                                                    <a href="{{ url('operation_stages') }}" class="menu-link">
+                                                        <div>Operation Stages</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view bottom-cuts'))
-                                                <li class="menu-item {{ request()->is('bottom_cuts*') ? 'active' : '' }}">
-                                                    <a href="{{ url('bottom_cuts') }}" class="menu-link">
-                                                        <div>Bottom Cuts</div>
+                                            @if($isSuper || $user->can('view zones'))
+                                                <li class="menu-item {{ request()->is('zones*') ? 'active' : '' }}">
+                                                    <a href="{{ url('zones') }}" class="menu-link">
+                                                        <div>Zones</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view process-groups'))
-                                                <li class="menu-item {{ request()->is('process_groups*') ? 'active' : '' }}">
-                                                    <a href="{{ url('process_groups') }}" class="menu-link">
-                                                        <div>Process Group</div>
+                                            @if($isSuper || $user->can('view size-ratio'))
+                                                <li class="menu-item {{ request()->is('size_ratio*') ? 'active' : '' }}">
+                                                    <a href="{{ url('size_ratio') }}" class="menu-link">
+                                                        <div>Size & Ratio</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view seasons'))
-                                                <li class="menu-item {{ request()->is('seasons*') ? 'active' : '' }}">
-                                                    <a href="{{ url('seasons') }}" class="menu-link">
-                                                        <div>Seasons</div>
+                                            @if($isSuper || $user->can('view fabric-type'))
+                                                <li class="menu-item {{ request()->is('fabric_type*') ? 'active' : '' }}">
+                                                    <a href="{{ url('fabric_type') }}" class="menu-link">
+                                                        <div>Fabric Type</div>
                                                     </a>
                                                 </li>
-                                                @endif
-                                            </ul>
-                                        </li>
-                                        @endif
-                                        @if($isSuper || $user->can('view shifts') || $user->can('view production-services'))
-                                        <li class="menu-item {{ (request()->is('shifts*') || request()->is('production_services*')) ? 'active' : '' }}">
-                                            <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                                <div>Production Master</div>
-                                            </a>
-                                            <ul class="menu-sub">
-                                                @if($isSuper || $user->can('view shifts'))
-                                                <li class="menu-item {{ request()->is('shifts*') ? 'active' : '' }}">
-                                                    <a href="{{ url('shifts') }}" class="menu-link">
-                                                        <div>Shifts</div>
-                                                    </a>
-                                                </li>
-                                                @endif
-                                                @if($isSuper || $user->can('view production-services'))
-                                                <li class="menu-item {{ request()->is('production_services*') ? 'active' : '' }}">
-                                                    <a href="{{ url('production_services') }}" class="menu-link">
-                                                        <div>Services</div>
-                                                    </a>
-                                                </li>
-                                                @endif
-                                            </ul>
-                                        </li>
-                                        @endif
+                                            @endif
 
-                                        <!-- Parties -->
-                                        @if($isSuper || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent'))
+                                            @if($isSuper || $user->can('view charges'))
+                                                <li class="menu-item {{ request()->is('charges*') ? 'active' : '' }}">
+                                                    <a href="{{ url('charges') }}" class="menu-link">
+                                                        <div>Charges</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        <li class="menu-item {{ (request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*')) ? 'active' : '' }}">
-                                            <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                                <div>Parties</div>
-                                            </a>
-                                            <ul class="menu-sub">
-                                                @if($isSuper || $user->can('view customers'))
-                                                <li class="menu-item {{ request()->is('customers*') ? 'active' : '' }}">
-                                                    <a href="{{ url('customers') }}" class="menu-link">
-                                                        <div>Customers</div>
+                                            @if($isSuper || $user->can('view store-location'))
+                                                <li class="menu-item {{ request()->is('store_location*') ? 'active' : '' }}">
+                                                    <a href="{{ url('store_location') }}" class="menu-link">
+                                                        <div>Store Location</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view suppliers'))
-                                                <li class="menu-item {{ request()->is('suppliers*') ? 'active' : '' }}">
-                                                    <a href="{{ url('suppliers') }}" class="menu-link">
-                                                        <div>Suppliers</div>
+                                            @if($isSuper || $user->can('view departments'))
+                                                <li class="menu-item {{ request()->is('departments*') ? 'active' : '' }}">
+                                                    <a href="{{ url('departments') }}" class="menu-link">
+                                                        <div>Departments</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view service-providers'))
-                                                <li class="menu-item {{ request()->is('service_providers*') ? 'active' : '' }}">
-                                                    <a href="{{ url('service_providers') }}" class="menu-link">
-                                                        <div>Service Providers</div>
+                                            @if($isSuper || $user->can('view taxes'))
+                                                <li class="menu-item {{ request()->is('taxes*') ? 'active' : '' }}">
+                                                    <a href="{{ url('taxes') }}" class="menu-link">
+                                                        <div>Taxes</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view sales-agents'))
-                                                <li class="menu-item {{ request()->is('sales_agents*') ? 'active' : '' }}">
-                                                    <a href="{{ url('sales_agents') }}" class="menu-link">
-                                                        <div>Sales Agents</div>
+                                            @if($isSuper || $user->can('view styles'))
+                                                <li class="menu-item {{ request()->is('styles*') ? 'active' : '' }}">
+                                                    <a href="{{ url('styles') }}" class="menu-link">
+                                                        <div>Styles</div>
                                                     </a>
                                                 </li>
-                                                @endif
+                                            @endif
 
-                                                @if($isSuper || $user->can('view purchase-commission-agent'))
-                                                <li class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
-                                                    <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
-                                                        <div>Purchase Commission Agent</div>
+                                            @if($isSuper || $user->can('view stores'))
+                                                <li class="menu-item {{ request()->is('stores*') ? 'active' : '' }}">
+                                                    <a href="{{ url('stores') }}" class="menu-link">
+                                                        <div>Stores</div>
                                                     </a>
                                                 </li>
-                                                @endif
-                                            </ul>
-                                        </li>
-                                        @endif
+                                            @endif
 
-                                        <!-- Item Setup -->
-                                        @if($isSuper || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items'))
+                                            @if($isSuper || $user->can('view shipping-methods') || $user->can('view transport-modes'))
+                                                <li
+                                                    class="menu-item {{ (request()->is('shipping_methods*') || request()->is('transport_modes*')) ? 'active' : '' }}">
+                                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                                        <div>Logistics Master</div>
+                                                    </a>
+                                                    <ul class="menu-sub">
+                                                        @if($isSuper || $user->can('view shipping-methods'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('shipping_methods*') ? 'active' : '' }}">
+                                                                <a href="{{ url('shipping_methods') }}" class="menu-link">
+                                                                    <div>Shipping Methods</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                        @if($isSuper || $user->can('view transport-modes'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('transport_modes*') ? 'active' : '' }}">
+                                                                <a href="{{ url('transport_modes') }}" class="menu-link">
+                                                                    <div>Transport Mode</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                    </ul>
+                                                </li>
+                                            @endif
 
-                                        <li class="menu-item {{ (request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*')) ? 'active' : '' }}">
-                                            <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                                <div>Item Setup</div>
-                                            </a>
-                                            <ul class="menu-sub menu-restricted-scroll">
-                                                @if($isSuper || $user->can('view store-categories'))
-                                                <li class="menu-item {{ request()->is('store_categories*') ? 'active' : '' }}">
-                                                    <a href="{{ url('store_categories') }}" class="menu-link">
-                                                        <div>Store Category</div>
+                                            <!-- Tailoring Specification -->
+                                            @if($isSuper || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view process-groups') || $user->can('view seasons'))
+                                                <li
+                                                    class="menu-item {{ (request()->is('fits*') || request()->is('patti_types*') || request()->is('collar_types*') || request()->is('cuff_types*') || request()->is('pocket_types*') || request()->is('bottom_cuts*') || request()->is('process_groups*') || request()->is('seasons*')) ? 'active' : '' }}">
+                                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                                        <div>Tailoring Specification</div>
                                                     </a>
+                                                    <ul class="menu-sub">
+                                                        @if($isSuper || $user->can('view fits'))
+                                                            <li class="menu-item {{ request()->is('fits*') ? 'active' : '' }}">
+                                                                <a href="{{ url('fits') }}" class="menu-link">
+                                                                    <div>Fits</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view patti-types'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('patti_types*') ? 'active' : '' }}">
+                                                                <a href="{{ url('patti_types') }}" class="menu-link">
+                                                                    <div>Patti Types</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view collar-types'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('collar_types*') ? 'active' : '' }}">
+                                                                <a href="{{ url('collar_types') }}" class="menu-link">
+                                                                    <div>Collar Types</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view cuff-types'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('cuff_types*') ? 'active' : '' }}">
+                                                                <a href="{{ url('cuff_types') }}" class="menu-link">
+                                                                    <div>Cuff Types</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view pocket-types'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('pocket_types*') ? 'active' : '' }}">
+                                                                <a href="{{ url('pocket_types') }}" class="menu-link">
+                                                                    <div>Pocket Types</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view bottom-cuts'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('bottom_cuts*') ? 'active' : '' }}">
+                                                                <a href="{{ url('bottom_cuts') }}" class="menu-link">
+                                                                    <div>Bottom Cuts</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view process-groups'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('process_groups*') ? 'active' : '' }}">
+                                                                <a href="{{ url('process_groups') }}" class="menu-link">
+                                                                    <div>Process Group</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view seasons'))
+                                                            <li class="menu-item {{ request()->is('seasons*') ? 'active' : '' }}">
+                                                                <a href="{{ url('seasons') }}" class="menu-link">
+                                                                    <div>Seasons</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                    </ul>
                                                 </li>
-                                                @endif
-                                                @if($isSuper || $user->can('view raw-materials'))
-                                                <li class="menu-item {{ request()->is('raw_materials*') ? 'active' : '' }}">
-                                                    <a href="{{ url('raw_materials') }}" class="menu-link">
-                                                        <div>Raw Materials</div>
+                                            @endif
+                                            @if($isSuper || $user->can('view shifts') || $user->can('view production-services'))
+                                                <li
+                                                    class="menu-item {{ (request()->is('shifts*') || request()->is('production_services*')) ? 'active' : '' }}">
+                                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                                        <div>Production Master</div>
                                                     </a>
+                                                    <ul class="menu-sub">
+                                                        @if($isSuper || $user->can('view shifts'))
+                                                            <li class="menu-item {{ request()->is('shifts*') ? 'active' : '' }}">
+                                                                <a href="{{ url('shifts') }}" class="menu-link">
+                                                                    <div>Shifts</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                        @if($isSuper || $user->can('view production-services'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('production_services*') ? 'active' : '' }}">
+                                                                <a href="{{ url('production_services') }}" class="menu-link">
+                                                                    <div>Services</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                    </ul>
                                                 </li>
-                                                @endif
-                                                @if($isSuper || $user->can('view brand-categories'))
-                                                <li class="menu-item {{ request()->is('brand_categories*') ? 'active' : '' }}">
-                                                    <a href="{{ url('brand_categories') }}" class="menu-link">
-                                                        <div>Brand Category</div>
+                                            @endif
+
+                                            <!-- Parties -->
+                                            @if($isSuper || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent'))
+
+                                                <li
+                                                    class="menu-item {{ (request()->is('customers*') || request()->is('suppliers*') || request()->is('service_providers*') || request()->is('sales_agents*') || request()->is('purchase_commission_agent*')) ? 'active' : '' }}">
+                                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                                        <div>Parties</div>
                                                     </a>
+                                                    <ul class="menu-sub">
+                                                        @if($isSuper || $user->can('view customers'))
+                                                            <li class="menu-item {{ request()->is('customers*') ? 'active' : '' }}">
+                                                                <a href="{{ url('customers') }}" class="menu-link">
+                                                                    <div>Customers</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view suppliers'))
+                                                            <li class="menu-item {{ request()->is('suppliers*') ? 'active' : '' }}">
+                                                                <a href="{{ url('suppliers') }}" class="menu-link">
+                                                                    <div>Suppliers</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view service-providers'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('service_providers*') ? 'active' : '' }}">
+                                                                <a href="{{ url('service_providers') }}" class="menu-link">
+                                                                    <div>Service Providers</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view sales-agents'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('sales_agents*') ? 'active' : '' }}">
+                                                                <a href="{{ url('sales_agents') }}" class="menu-link">
+                                                                    <div>Sales Agents</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+
+                                                        @if($isSuper || $user->can('view purchase-commission-agent'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
+                                                                <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
+                                                                    <div>Purchase Commission Agent</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                    </ul>
                                                 </li>
-                                                @endif
-                                                @if($isSuper || $user->can('view brands'))
-                                                <li class="menu-item {{ request()->is('brands*') ? 'active' : '' }}">
-                                                    <a href="{{ url('brands') }}" class="menu-link">
-                                                        <div>Brands</div>
+                                            @endif
+
+                                            <!-- Item Setup -->
+                                            @if($isSuper || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items'))
+
+                                                <li
+                                                    class="menu-item {{ (request()->is('store_categories*') || request()->is('raw_materials*') || request()->is('brand_categories*') || request()->is('brands*') || request()->is('items*')) ? 'active' : '' }}">
+                                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                                        <div>Item Setup</div>
                                                     </a>
+                                                    <ul class="menu-sub menu-restricted-scroll">
+                                                        @if($isSuper || $user->can('view store-categories'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('store_categories*') ? 'active' : '' }}">
+                                                                <a href="{{ url('store_categories') }}" class="menu-link">
+                                                                    <div>Store Category</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                        @if($isSuper || $user->can('view raw-materials'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('raw_materials*') ? 'active' : '' }}">
+                                                                <a href="{{ url('raw_materials') }}" class="menu-link">
+                                                                    <div>Raw Materials</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                        @if($isSuper || $user->can('view brand-categories'))
+                                                            <li
+                                                                class="menu-item {{ request()->is('brand_categories*') ? 'active' : '' }}">
+                                                                <a href="{{ url('brand_categories') }}" class="menu-link">
+                                                                    <div>Brand Category</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                        @if($isSuper || $user->can('view brands'))
+                                                            <li class="menu-item {{ request()->is('brands*') ? 'active' : '' }}">
+                                                                <a href="{{ url('brands') }}" class="menu-link">
+                                                                    <div>Brands</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                        @if($isSuper || $user->can('view items'))
+                                                            <li class="menu-item {{ request()->is('items*') ? 'active' : '' }}">
+                                                                <a href="{{ url('items') }}" class="menu-link">
+                                                                    <div>Items</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
+                                                    </ul>
                                                 </li>
-                                                @endif
-                                                @if($isSuper || $user->can('view items'))
-                                                <li class="menu-item {{ request()->is('items*') ? 'active' : '' }}">
-                                                    <a href="{{ url('items') }}" class="menu-link">
-                                                        <div>Items</div>
-                                                    </a>
-                                                </li>
-                                                @endif
-                                            </ul>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
 
                                 <!-- Purchase -->
                                 @if($user && ($isSuper || $user->can('view purchase-order') || $user->can('view purchase-invoice') || $user->can('view debit-notes')))
-                                <li class="menu-item {{ (request()->is('purchase_orders*') || request()->is('purchase_invoices*') || request()->is('debit_notes*')) ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-file-list-3-line"></i>
-                                        <div>Purchase</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view purchase-order'))
-                                        <li class="menu-item {{ request()->is('purchase_orders*') ? 'active' : '' }}">
-                                            <a href="{{ url('purchase_orders') }}" class="menu-link">
-                                                <div>Purchase Orders</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                    <li
+                                        class="menu-item {{ (request()->is('purchase_orders*') || request()->is('purchase_invoices*') || request()->is('debit_notes*')) ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-file-list-3-line"></i>
+                                            <div>Purchase</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view purchase-order'))
+                                                <li class="menu-item {{ request()->is('purchase_orders*') ? 'active' : '' }}">
+                                                    <a href="{{ url('purchase_orders') }}" class="menu-link">
+                                                        <div>Purchase Orders</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view purchase-invoice'))
-                                        <li class="menu-item {{ request()->is('purchase_invoices*') ? 'active' : '' }}">
-                                            <a href="{{ url('purchase_invoices') }}" class="menu-link">
-                                                <div>Purchase Invoices</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view purchase-invoice'))
+                                                <li class="menu-item {{ request()->is('purchase_invoices*') ? 'active' : '' }}">
+                                                    <a href="{{ url('purchase_invoices') }}" class="menu-link">
+                                                        <div>Purchase Invoices</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view debit-notes'))
-                                        <li class="menu-item {{ request()->is('debit_notes*') ? 'active' : '' }}">
-                                            <a href="{{ url('debit_notes') }}" class="menu-link">
-                                                <div>Debit Notes</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                            @if($isSuper || $user->can('view debit-notes'))
+                                                <li class="menu-item {{ request()->is('debit_notes*') ? 'active' : '' }}">
+                                                    <a href="{{ url('debit_notes') }}" class="menu-link">
+                                                        <div>Debit Notes</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
 
                                 <!-- Store -->
                                 @if($user && ($isSuper || $user->can('view grn-entry') || $user->can('view stock-entry') || $user->can('view stock-consumable-return')))
-                                <li class="menu-item {{ (request()->is('grn_entries*') || request()->is('stock_entries*') || request()->is('stock_consumables_returns*')) ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-shopping-bag-line"></i>
-                                        <div>Store</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view grn-entry'))
-                                        <li class="menu-item {{ request()->is('grn_entries*') ? 'active' : '' }}">
-                                            <a href="{{ url('grn_entries') }}" class="menu-link">
-                                                <div>GRN Entry</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                    <li
+                                        class="menu-item {{ (request()->is('grn_entries*') || request()->is('stock_entries*') || request()->is('stock_consumables_returns*')) ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-shopping-bag-line"></i>
+                                            <div>Store</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view grn-entry'))
+                                                <li class="menu-item {{ request()->is('grn_entries*') ? 'active' : '' }}">
+                                                    <a href="{{ url('grn_entries') }}" class="menu-link">
+                                                        <div>GRN Entry</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view stock-entry'))
-                                        <li class="menu-item {{ request()->is('stock_entries*') ? 'active' : '' }}">
-                                            <a href="{{ url('stock_entries') }}" class="menu-link">
-                                                <div>Stock Entry</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view stock-entry'))
+                                                <li class="menu-item {{ request()->is('stock_entries*') ? 'active' : '' }}">
+                                                    <a href="{{ url('stock_entries') }}" class="menu-link">
+                                                        <div>Stock Entry</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view stock-consumable-return'))
-                                        <li class="menu-item {{ request()->is('stock_consumables_returns*') ? 'active' : '' }}">
-                                            <a href="{{ url('stock_consumables_returns') }}" class="menu-link">
-                                                <div>Stock Consumables & Returns Management</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                            @if($isSuper || $user->can('view stock-consumable-return'))
+                                                <li
+                                                    class="menu-item {{ request()->is('stock_consumables_returns*') ? 'active' : '' }}">
+                                                    <a href="{{ url('stock_consumables_returns') }}" class="menu-link">
+                                                        <div>Stock Consumables & Returns Management</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
 
                                 {{-- Production --}}
                                 @if($user && ($isSuper || $user->can('view production') || $user->can('view job-card') || $user->can('view task-management') || $user->can('view production-receipts')))
-                                <li class="menu-item {{ (request()->is('job_card_entries*') || request()->is('production_receipts*') || request()->is('task_management*')) ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-inbox-line"></i>
-                                        <div>Production</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view job-card'))
-                                        <li class="menu-item {{ request()->is('job_card_entries*') ? 'active' : '' }}">
-                                            <a href="{{ url('job_card_entries') }}" class="menu-link">
-                                                <div>Job Card Entry</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isSuper || $user->can('view task-management'))
-                                        <li class="menu-item {{ request()->is('task_management*') ? 'active' : '' }}">
-                                            <a href="{{ url('task_management') }}" class="menu-link">
-                                                <div>Task Management</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isSuper || $user->can('view production-receipts'))
-                                        <li class="menu-item {{ request()->is('production_receipts*') ? 'active' : '' }}">
-                                            <a href="{{ url('production_receipts') }}" class="menu-link">
-                                                <div>Production Receipts</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                    <li
+                                        class="menu-item {{ (request()->is('job_card_entries*') || request()->is('production_receipts*') || request()->is('task_management*')) ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-inbox-line"></i>
+                                            <div>Production</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view job-card'))
+                                                <li class="menu-item {{ request()->is('job_card_entries*') ? 'active' : '' }}">
+                                                    <a href="{{ url('job_card_entries') }}" class="menu-link">
+                                                        <div>Job Card Entry</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                            @if($isSuper || $user->can('view task-management'))
+                                                <li class="menu-item {{ request()->is('task_management*') ? 'active' : '' }}">
+                                                    <a href="{{ url('task_management') }}" class="menu-link">
+                                                        <div>Task Management</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                            @if($isSuper || $user->can('view production-receipts'))
+                                                <li
+                                                    class="menu-item {{ request()->is('production_receipts*') ? 'active' : '' }}">
+                                                    <a href="{{ url('production_receipts') }}" class="menu-link">
+                                                        <div>Production Receipts</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
                                 @if($isSuper || $user->can('view sales-order') || $user->can('view sales-invoice') || $user->can('view credit-notes'))
-                                <li class="menu-item {{ (request()->is('sales_orders*') || request()->is('sales_invoices*') || request()->is('credit_notes*')) ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-order-play-line"></i>
-                                        <div>Sales</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view sales-order'))
-                                        <li class="menu-item {{ request()->is('sales_orders*') ? 'active' : '' }}">
-                                            <a href="{{ url('sales_orders') }}" class="menu-link">
-                                                <div>Sales Orders</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                    <li
+                                        class="menu-item {{ (request()->is('sales_orders*') || request()->is('sales_invoices*') || request()->is('credit_notes*')) ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-order-play-line"></i>
+                                            <div>Sales</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view sales-order'))
+                                                <li class="menu-item {{ request()->is('sales_orders*') ? 'active' : '' }}">
+                                                    <a href="{{ url('sales_orders') }}" class="menu-link">
+                                                        <div>Sales Orders</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view sales-invoice'))
-                                        <li class="menu-item {{ request()->is('sales_invoices*') ? 'active' : '' }}">
-                                            <a href="{{ url('sales_invoices') }}" class="menu-link">
-                                                <div>Sales Invoices</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view sales-invoice'))
+                                                <li class="menu-item {{ request()->is('sales_invoices*') ? 'active' : '' }}">
+                                                    <a href="{{ url('sales_invoices') }}" class="menu-link">
+                                                        <div>Sales Invoices</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view credit-notes'))
-                                        <li class="menu-item {{ request()->is('credit_notes*') ? 'active' : '' }}">
-                                            <a href="{{ url('credit_notes') }}" class="menu-link">
-                                                <div>Credit Notes</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                            @if($isSuper || $user->can('view credit-notes'))
+                                                <li class="menu-item {{ request()->is('credit_notes*') ? 'active' : '' }}">
+                                                    <a href="{{ url('credit_notes') }}" class="menu-link">
+                                                        <div>Credit Notes</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
                                 @if($isSuper || $user->can('view billing'))
-                                <li class="menu-item {{ request()->is('billing*') ? 'active' : '' }}">
-                                    <a href="{{ url('billing') }}" class="menu-link">
-                                        <i class="menu-icon icon-base ri ri-file-list-3-line"></i>
-                                        <div>Billing</div>
-                                    </a>
-                                </li>
+                                    <li class="menu-item {{ request()->is('billing*') ? 'active' : '' }}">
+                                        <a href="{{ url('billing') }}" class="menu-link">
+                                            <i class="menu-icon icon-base ri ri-file-list-3-line"></i>
+                                            <div>Billing</div>
+                                        </a>
+                                    </li>
                                 @endif
                                 @if($isSuper || $user->can('view manage-payments'))
-                                <li class="menu-item {{ request()->is('payments*') ? 'active' : '' }}">
-                                    <a href="{{ url('payments') }}" class="menu-link">
-                                        <i class="menu-icon icon-base ri ri-bank-card-line"></i>
-                                        <div>Manage Payments</div>
-                                    </a>
-                                </li>
+                                    <li class="menu-item {{ request()->is('payments*') ? 'active' : '' }}">
+                                        <a href="{{ url('payments') }}" class="menu-link">
+                                            <i class="menu-icon icon-base ri ri-bank-card-line"></i>
+                                            <div>Manage Payments</div>
+                                        </a>
+                                    </li>
                                 @endif
 
                                 @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime-bonus') || $user->can('view salary-calculation') || $user->can('view payslip-generation') || $user->can('view payroll-reports')))
-                                <li class="menu-item {{ (request()->is('attendances*') || request()->is('leave*') || request()->is('overtime*') || request()->is('salary_calculation*') || request()->is('payslip*') || request()->is('payroll_reports*')) ? 'active' : '' }}">
+                                    <li
+                                        class="menu-item {{ (request()->is('attendances*') || request()->is('leave*') || request()->is('overtime*') || request()->is('salary_calculation*') || request()->is('payslip*') || request()->is('payroll_reports*')) ? 'active' : '' }}">
 
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-money-rupee-circle-line"></i>
-                                        <div>Emp. Payroll & Attendance</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view attendance'))
-                                        <li class="menu-item {{ request()->is('attendances*') ? 'active' : '' }}">
-                                            <a href="{{ url('attendances') }}" class="menu-link">
-                                                <div>Attendances</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-money-rupee-circle-line"></i>
+                                            <div>Emp. Payroll & Attendance</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view attendance'))
+                                                <li class="menu-item {{ request()->is('attendances*') ? 'active' : '' }}">
+                                                    <a href="{{ url('attendances') }}" class="menu-link">
+                                                        <div>Attendances</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view manage-leaves'))
-                                        <li class="menu-item {{ request()->is('leave*') ? 'active' : '' }}">
-                                            <a href="{{ url('leave') }}" class="menu-link">
-                                                <div>Manage Leaves</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view manage-leaves'))
+                                                <li class="menu-item {{ request()->is('leave*') ? 'active' : '' }}">
+                                                    <a href="{{ url('leave') }}" class="menu-link">
+                                                        <div>Manage Leaves</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view overtime-bonus'))
-                                        <li class="menu-item {{ request()->is('overtime*') ? 'active' : '' }}">
-                                            <a href="{{ url('overtime') }}" class="menu-link">
-                                                <div>Overtime / Bonus</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view overtime-bonus'))
+                                                <li class="menu-item {{ request()->is('overtime*') ? 'active' : '' }}">
+                                                    <a href="{{ url('overtime') }}" class="menu-link">
+                                                        <div>Overtime / Bonus</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view salary-calculation'))
-                                        <li class="menu-item {{ request()->is('salary_calculation*') ? 'active' : '' }}">
-                                            <a href="{{ url('salary_calculation') }}" class="menu-link">
-                                                <div>Salary Calculation</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view salary-calculation'))
+                                                <li
+                                                    class="menu-item {{ request()->is('salary_calculation*') ? 'active' : '' }}">
+                                                    <a href="{{ url('salary_calculation') }}" class="menu-link">
+                                                        <div>Salary Calculation</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view payslip-generation'))
-                                        <li class="menu-item {{ request()->is('payslip*') ? 'active' : '' }}">
-                                            <a href="{{ url('payslip') }}" class="menu-link">
-                                                <div>Payslip Generation</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view payslip-generation'))
+                                                <li class="menu-item {{ request()->is('payslip*') ? 'active' : '' }}">
+                                                    <a href="{{ url('payslip') }}" class="menu-link">
+                                                        <div>Payslip Generation</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view payroll-reports'))
-                                        <li class="menu-item {{ request()->is('payroll_reports*') ? 'active' : '' }}">
-                                            <a href="{{ url('payroll_reports') }}" class="menu-link">
-                                                <div>Payroll Reports</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                            @if($isSuper || $user->can('view payroll-reports'))
+                                                <li class="menu-item {{ request()->is('payroll_reports*') ? 'active' : '' }}">
+                                                    <a href="{{ url('payroll_reports') }}" class="menu-link">
+                                                        <div>Payroll Reports</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
 
                                 <!-- System Utility -->
                                 @if($user && ($isSuper || $user->can('view document-repository') || $user->can('view log') || $user->can('view backup-restore')))
-                                <li class="menu-item {{ request()->is('document_repository*') || request()->is('logs') || request()->is('backup_restore') ? 'active' : '' }}">
-                                    <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                        <i class="menu-icon icon-base ri ri-database-2-line"></i>
-                                        <div>System Utility</div>
-                                    </a>
-                                    <ul class="menu-sub">
-                                        @if($isSuper || $user->can('view document-repository'))
-                                        <li class="menu-item {{ request()->is('document_repository*') ? 'active' : '' }}">
-                                            <a href="{{ url('document_repository') }}" class="menu-link">
-                                                <div>Document Repository</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                    <li
+                                        class="menu-item {{ request()->is('document_repository*') || request()->is('logs') || request()->is('backup_restore') ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-database-2-line"></i>
+                                            <div>System Utility</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view document-repository'))
+                                                <li
+                                                    class="menu-item {{ request()->is('document_repository*') ? 'active' : '' }}">
+                                                    <a href="{{ url('document_repository') }}" class="menu-link">
+                                                        <div>Document Repository</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view log'))
-                                        <li class="menu-item {{ request()->is('logs') ? 'active' : '' }}">
-                                            <a href="{{ url('logs') }}" class="menu-link">
-                                                <div>Logs & Audit Log</div>
-                                            </a>
-                                        </li>
-                                        @endif
+                                            @if($isSuper || $user->can('view log'))
+                                                <li class="menu-item {{ request()->is('logs') ? 'active' : '' }}">
+                                                    <a href="{{ url('logs') }}" class="menu-link">
+                                                        <div>Logs & Audit Log</div>
+                                                    </a>
+                                                </li>
+                                            @endif
 
-                                        @if($isSuper || $user->can('view backup-restore'))
-                                        <li class="menu-item {{ request()->is('backup_restore') ? 'active' : '' }}">
-                                            <a href="{{ url('backup_restore') }}" class="menu-link">
-                                                <div>Backup & Restore</div>
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
-                                </li>
+                                            @if($isSuper || $user->can('view backup-restore'))
+                                                <li class="menu-item {{ request()->is('backup_restore') ? 'active' : '' }}">
+                                                    <a href="{{ url('backup_restore') }}" class="menu-link">
+                                                        <div>Backup & Restore</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
                                 @endif
                                 <!-- Reports -->
-                                <li class="menu-item {{  request()->is('customer_reports*') || request()->is('sale_reports*') || request()->is('stock_reports*') ||  request()->is('daily_production_reports*') || request()->is('order_reports*') || request()->is('employee_reports*') ? 'active' : '' }}">
+                                <li
+                                    class="menu-item {{  request()->is('sales_marketing_reports*') || request()->is('warehouse_reports*') || request()->is('production_reports*') ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-file-chart-line"></i>
                                         <div>Reports</div>
                                     </a>
 
                                     <ul class="menu-sub">
-                                        <li class="menu-item {{ request()->is('sales_marketing_reports*') ? 'active' : '' }}">
+                                        <li
+                                            class="menu-item {{ request()->is('sales_marketing_reports*') ? 'active' : '' }}">
                                             <a href="{{ url('sales_marketing_reports') }}" class="menu-link">
                                                 <div>Sales & Marketing Reports</div>
                                             </a>
@@ -738,7 +774,8 @@ $isSuper = $user->id == 1;
                                                 <div>Warehouse Reports</div>
                                             </a>
                                         </li>
-                                        <li class="menu-item {{ request()->is('production_reports*') ? 'active' : '' }}">
+                                        <li
+                                            class="menu-item {{ request()->is('production_reports*') ? 'active' : '' }}">
                                             <a href="{{ url('production_reports') }}" class="menu-link">
                                                 <div>Production Reports</div>
                                             </a>
@@ -746,22 +783,22 @@ $isSuper = $user->id == 1;
                                     </ul>
                                 </li>
                                 @if($user && ($isSuper || $user->can('view ticket-management')))
-                                <!-- Ticket Management -->
-                                <li class="menu-item {{ request()->is('ticket_management*') ? 'active' : '' }}">
-                                    <a href="{{ url('ticket_management') }}" class="menu-link">
-                                        <i class="menu-icon icon-base ri ri-customer-service-2-line"></i>
-                                        <div>Ticket Management</div>
-                                    </a>
-                                </li>
+                                    <!-- Ticket Management -->
+                                    <li class="menu-item {{ request()->is('ticket_management*') ? 'active' : '' }}">
+                                        <a href="{{ url('ticket_management') }}" class="menu-link">
+                                            <i class="menu-icon icon-base ri ri-customer-service-2-line"></i>
+                                            <div>Ticket Management</div>
+                                        </a>
+                                    </li>
                                 @endif
                                 <!-- Settings -->
                                 @if($user && ($isSuper || $user->can('view settings')))
-                                <li class="menu-item {{ request()->is('settings') ? 'active' : '' }}">
-                                    <a href="{{ url('settings') }}" class="menu-link">
-                                        <i class="menu-icon icon-base ri ri-settings-5-line"></i>
-                                        <div>Settings</div>
-                                    </a>
-                                </li>
+                                    <li class="menu-item {{ request()->is('settings') ? 'active' : '' }}">
+                                        <a href="{{ url('settings') }}" class="menu-link">
+                                            <i class="menu-icon icon-base ri ri-settings-5-line"></i>
+                                            <div>Settings</div>
+                                        </a>
+                                    </li>
                                 @endif
                                 <li class="menu-item {{ request()->is('update_page') ? 'active' : '' }}">
                                     <a href="{{ url('update_page') }}" class="menu-link">
@@ -774,5 +811,3 @@ $isSuper = $user->id == 1;
                         <a href="#" class="menu-horizontal-next"></a>
                     </div>
                 </aside>
-
-

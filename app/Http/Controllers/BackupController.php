@@ -20,7 +20,7 @@ class BackupController extends Controller
             $data = [];
             $i = 1;
             foreach ($backups as $row) {
-                $statusBadge = match($row->status) {
+                $statusBadge = match ($row->status) {
                     'Success' => '<span class="badge bg-success">Success</span>',
                     'Failed' => '<span class="badge bg-danger">Failed</span>',
                     'Running' => '<span class="badge bg-info"><i class="ri-loader-4-line animation-spin"></i> Running</span>',
@@ -30,9 +30,9 @@ class BackupController extends Controller
                 $action = '<div class="button-box">';
                 if ($row->status == 'Success' && file_exists(public_path('uploads/backup/' . $row->filename))) {
                     $action .= '<a href="' . url('backup_restore/download/' . $row->id) . '" class="btn btn-view" title="Download"><i class="icon-base ri ri-download-line"></i></a>';
-                    $action .= '<a href="javascript:void(0)" onclick="confirmRestore(' . $row->id . ')" class="btn btn-view" title="Restore"><i class="icon-base ri ri-refresh-line"></i></a>';
+                    // $action .= '<a href="javascript:void(0)" onclick="confirmRestore(' . $row->id . ')" class="btn btn-view" title="Restore"><i class="icon-base ri ri-refresh-line"></i></a>';
                 }
-                $action .= '<a href="javascript:void(0)" onclick="delete_data(\''.url('backup_restore/delete/'.$row->id).'\')" class="btn btn-delete" title="Delete"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                $action .= '<a href="javascript:void(0)" onclick="delete_data(\'' . url('backup_restore/delete/' . $row->id) . '\')" class="btn btn-delete" title="Delete"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 $action .= '</div>';
 
                 $data[] = [
@@ -86,7 +86,7 @@ class BackupController extends Controller
 
             $dumpPath = env('MYSQLDUMP_PATH');
             $command = "\"{$dumpPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
-            
+
             exec($command, $output, $returnVar);
 
             if ($returnVar === 0) {
@@ -99,7 +99,7 @@ class BackupController extends Controller
             } else {
                 $errorMessage = implode("\n", $output);
                 Log::error("Backup failed. Return var: $returnVar. Output: " . $errorMessage);
-                
+
                 $backup->update([
                     'status' => 'Failed',
                     'error_message' => 'mysqldump failed. Code: ' . $returnVar . '. Error: ' . $errorMessage,
@@ -142,7 +142,7 @@ class BackupController extends Controller
             $dbUser = env('DB_USERNAME');
             $dbPass = env('DB_PASSWORD');
             $dbHost = env('DB_HOST');
-            
+
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
             $mysqlPath = env('MYSQL_PATH', 'C:\xampp\mysql\bin\mysql.exe');
@@ -168,7 +168,7 @@ class BackupController extends Controller
         }
         $backup = Backup::findOrFail($id);
         $path = public_path('uploads/backup/' . $backup->filename);
-        
+
         if (file_exists($path)) {
             return response()->download($path);
         }
