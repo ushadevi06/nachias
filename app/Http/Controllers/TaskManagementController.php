@@ -33,7 +33,7 @@ class TaskManagementController extends Controller
             return unauthorizedRedirect();
         }
         $allStatuses = TaskStatus::all();
-        return view('task_management/view', compact('allStatuses')); 
+        return view('task_management/view', compact('allStatuses'));
     }
 
     public function fetch(Request $request)
@@ -52,10 +52,10 @@ class TaskManagementController extends Controller
 
         foreach ($tasks as $t) {
             $statusName = $t->status ?: 'Planned';
-            
+
             $stage = $t->stage;
             if (!$stage && $t->job_card_entry_id) {
-                $osId = $t->operation_stage_id ?? $t->stage_id; 
+                $osId = $t->operation_stage_id ?? $t->stage_id;
                 $stage = ProcessSchedule::where('job_card_entry_id', $t->job_card_entry_id)->where('operation_stage_id', $osId)->first();
             }
 
@@ -69,17 +69,17 @@ class TaskManagementController extends Controller
                 $stageName = $t->operationStage->operation_stage_name ?: 'No Stage';
             }
 
-            $targetQty = (float)($t->jobCard->grand_total_qty ?? 0);
+            $targetQty = (float) ($t->jobCard->grand_total_qty ?? 0);
             if ($targetQty == 0 && $stage) {
-                $targetQty = (float)($stage->planned_qty ?? 0);
+                $targetQty = (float) ($stage->planned_qty ?? 0);
             }
             if ($targetQty == 0) {
-                $targetQty = (float)($t->issue_qty ?? 0);
+                $targetQty = (float) ($t->issue_qty ?? 0);
             }
-            
+
             $totalReceived = 0;
             foreach ($t->assignments as $assign) {
-                $totalReceived += (float)$assign->completed_qty + (float)$assign->wastage_qty;
+                $totalReceived += (float) $assign->completed_qty + (float) $assign->wastage_qty;
             }
 
             if (isset($boards[$statusName])) {
@@ -87,22 +87,22 @@ class TaskManagementController extends Controller
                     'id' => $t->id,
                     'eid' => $t->id,
                     'task_no' => $t->task_no,
-                    'title' => ($t->job_card_no ?? 'No JC') . ' - ' . (int)$targetQty . ' PCS',
+                    'title' => ($t->job_card_no ?? 'No JC') . ' - ' . (int) $targetQty . ' PCS',
                     'stage_name' => $stageName,
                     'badge-text' => $statusName,
                     'start-date' => $t->issue_date ? Carbon::parse($t->issue_date)->format('d-m-Y') : 'N/A',
                     'due-date' => $t->due_date ? Carbon::parse($t->due_date)->format('d-m-Y') : 'N/A',
                     'jc-start' => $jcStart,
                     'jc-end' => $jcEnd,
-                    'working_level' => (float)max(0, $totalReceived) . ' / ' . (float)$targetQty . ' PCS',
-                    'total_received' => (float)max(0, $totalReceived),
-                    'target_qty' => (float)$targetQty
+                    'working_level' => (float) max(0, $totalReceived) . ' / ' . (float) $targetQty . ' PCS',
+                    'total_received' => (float) max(0, $totalReceived),
+                    'target_qty' => (float) $targetQty
                 ];
             }
         }
         return response()->json(array_values($boards));
     }
-    
+
     public function add($id = null)
     {
         if ($id) {
@@ -114,27 +114,27 @@ class TaskManagementController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        
+
         $task = null;
         $jobCard = null;
         $stages = collect([]);
 
         if ($id) {
             $task = Task::with([
-                'jobCard', 
+                'jobCard',
                 'stage.operationStage',
-                'assignee', 
-                'assignments.assignee', 
+                'assignee',
+                'assignments.assignee',
                 'assignments.service'
             ])->findOrFail($id);
-            
+
             if (!$jobCard && $task->job_card_entry_id) {
                 $jobCard = JobCardEntry::find($task->job_card_entry_id);
             }
 
             if ($jobCard) {
                 $stages = ProcessSchedule::with([
-                    'operationStage', 
+                    'operationStage',
                     'serviceProvider'
                 ])->where('job_card_entry_id', $jobCard->id)->get();
             }
@@ -171,14 +171,16 @@ class TaskManagementController extends Controller
 
             $assignments = $request->input('assignments');
             if (!$assignments) {
-                $assignments = [[
-                    'issued_to' => $request->issued_to,
-                    'service_ids' => $request->service_ids,
-                    'issue_date' => $request->issue_date,
-                    'due_date' => $request->due_date,
-                    'total_hrs' => $request->total_hrs,
-                    'issue_qty' => $request->issue_qty,
-                ]];
+                $assignments = [
+                    [
+                        'issued_to' => $request->issued_to,
+                        'service_ids' => $request->service_ids,
+                        'issue_date' => $request->issue_date,
+                        'due_date' => $request->due_date,
+                        'total_hrs' => $request->total_hrs,
+                        'issue_qty' => $request->issue_qty,
+                    ]
+                ];
             }
 
             $commonData = $request->only(['job_card_entry_id', 'job_card_no', 'stage_id', 'issue_store', 'remarks', 'status']);
@@ -187,13 +189,16 @@ class TaskManagementController extends Controller
             try {
                 $taskData = $commonData;
                 $taskData['updated_by'] = auth()->id();
-                
+
                 if ($id) {
                     $task = Task::findOrFail($id);
                     $updates = [];
-                    if ($task->remarks != $taskData['remarks']) $updates[] = "Remarks changed";
-                    if ($task->stage_id != $taskData['stage_id']) $updates[] = "Stage changed";
-                    if ($task->status != $taskData['status']) $updates[] = "Status changed to " . $taskData['status'];
+                    if ($task->remarks != $taskData['remarks'])
+                        $updates[] = "Remarks changed";
+                    if ($task->stage_id != $taskData['stage_id'])
+                        $updates[] = "Stage changed";
+                    if ($task->status != $taskData['status'])
+                        $updates[] = "Status changed to " . $taskData['status'];
                     $task->update($taskData);
                     if (!empty($updates)) {
                         $this->logActivity($task->id, 'Updated', 'Task updated: ' . implode(', ', $updates));
@@ -216,12 +221,12 @@ class TaskManagementController extends Controller
                 if ($id) {
                     $oldAssigneeIds = array_unique($task->assignments->pluck('issued_to')->toArray());
                     $newAssigneeIds = array_unique(array_filter(array_column($assignments, 'issued_to')));
-                    
+
                     $addedIds = array_diff($newAssigneeIds, $oldAssigneeIds);
                     $removedIds = array_diff($oldAssigneeIds, $newAssigneeIds);
 
                     $task->assignments()->delete();
-                    
+
                     if (!empty($addedIds)) {
                         $addedNames = User::whereIn('id', $addedIds)->pluck('name')->toArray();
                         if (!empty($addedNames)) {
@@ -233,14 +238,15 @@ class TaskManagementController extends Controller
                         if (!empty($removedNames)) {
                             $this->logActivity($task->id, 'Assignment', 'Employee(s) removed: ' . implode(', ', $removedNames));
                         }
-                    }   
+                    }
                 }
 
                 $allServiceIds = [];
                 $totalIssueQty = 0;
 
                 foreach ($assignments as $assign) {
-                    if (empty($assign['issued_to'])) continue;
+                    if (empty($assign['issued_to']))
+                        continue;
 
                     $assignData = [
                         'task_id' => $task->id,
@@ -252,7 +258,7 @@ class TaskManagementController extends Controller
                         'created_by' => auth()->id(),
                     ];
 
-                    $totalIssueQty += (float)($assign['issue_qty'] ?? 0);
+                    $totalIssueQty += (float) ($assign['issue_qty'] ?? 0);
 
                     $assignData['issue_date'] = $this->formatDate($assign['issue_date'] ?? null);
                     $assignData['due_date'] = $this->formatDate($assign['due_date'] ?? null);
@@ -289,7 +295,7 @@ class TaskManagementController extends Controller
                 $jobCard = JobCardEntry::find(request()->job_card_id);
                 if ($jobCard) {
                     $stages = ProcessSchedule::with([
-                        'operationStage', 
+                        'operationStage',
                         'serviceProvider'
                     ])->where('job_card_entry_id', $jobCard->id)->get();
                 }
@@ -305,10 +311,10 @@ class TaskManagementController extends Controller
                 }
             }
         }
-        $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT); 
+        $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT);
         $users = User::where('id', '!=', 1)->where('status', 'Active')->get();
         $stores = StoreType::where('status', 'Active')->get();
-        
+
         $allStatuses = TaskStatus::pluck('name')->toArray();
         if (empty($allStatuses)) {
             $allStatuses = ['Planned', 'In Progress', 'Completed', 'Hold'];
@@ -317,9 +323,9 @@ class TaskManagementController extends Controller
         $shifts = Shift::active()->get();
 
         $nextAdjNo = 'ADJ-' . date('Y') . '-' . str_pad(TaskAdjustment::count() + 1, 3, '0', STR_PAD_LEFT);
-        
+
         $relatedTasks = Task::where('job_card_entry_id', ($jobCard->id ?? 0))->get();
-    
+
         $taskAdjustment = null;
         $taskAdjustments = collect([]);
         if ($task) {
@@ -334,50 +340,50 @@ class TaskManagementController extends Controller
 
         $services = [];
         $finalStageId = request('stage_id') ?: ($task ? $task->stage_id : old('stage_id'));
-        
+
         $selectedSchedule = null;
         if ($task && $task->stage && $task->stage_id == $finalStageId) {
             $selectedSchedule = $task->stage;
         } elseif ($finalStageId) {
             $selectedSchedule = ProcessSchedule::with(['operationStage'])->find($finalStageId);
         }
-        
+
         if ($selectedSchedule) {
-            $services = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($selectedSchedule, $jobCard) {
-                    $qty = $selectedSchedule->planned_qty ?? 0;
-                    if ($jobCard) {
-                        if ($s->base_quantity_source == 'FS Qty') {
-                            $qty = $jobCard->total_qty_fs ?? $qty;
-                        } elseif ($s->base_quantity_source == 'HS Qty') {
-                            $qty = $jobCard->total_qty_hs ?? $qty;
-                        } else {
-                            $qty = $jobCard->grand_total_qty ?? $qty;
-                        }
+            $services = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active')->get()->map(function ($s) use ($selectedSchedule, $jobCard) {
+                $qty = $selectedSchedule->planned_qty ?? 0;
+                if ($jobCard) {
+                    if ($s->base_quantity_source == 'FS Qty') {
+                        $qty = $jobCard->total_qty_fs ?? $qty;
+                    } elseif ($s->base_quantity_source == 'HS Qty') {
+                        $qty = $jobCard->total_qty_hs ?? $qty;
+                    } else {
+                        $qty = $jobCard->grand_total_qty ?? $qty;
                     }
-                    return [
-                        'id' => $s->id,
-                        'name' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
-                        'qty' => $qty
-                    ];
-                })->values()->all();
+                }
+                return [
+                    'id' => $s->id,
+                    'name' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
+                    'qty' => $qty
+                ];
+            })->values()->all();
         }
 
 
         $jobCardGrnNo = '';
         if ($jobCard) {
-            $jobCardGrnNo = StockEntryItem::whereIn('id', function($q) use ($jobCard) {
+            $jobCardGrnNo = StockEntryItem::whereIn('id', function ($q) use ($jobCard) {
                 $q->select('stock_entry_item_id')
-                ->from('job_card_issue_items')
-                ->where('job_card_entry_id', $jobCard->id)
-                ->whereNotNull('stock_entry_item_id');
+                    ->from('job_card_issue_items')
+                    ->where('job_card_entry_id', $jobCard->id)
+                    ->whereNotNull('stock_entry_item_id');
             })->with('grnEntryItem.grnEntry')->get()
-              ->pluck('grnEntryItem.grnEntry.grn_number')
-              ->unique()
-              ->filter()
-              ->first() ?? '';
+                ->pluck('grnEntryItem.grnEntry.grn_number')
+                ->unique()
+                ->filter()
+                ->first() ?? '';
         }
 
-        return view('task_management/add', compact('task', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses',  'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts',  'taskAdjustments', 'services', 'jobCardGrnNo'));
+        return view('task_management/add', compact('task', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses', 'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts', 'taskAdjustments', 'services', 'jobCardGrnNo'));
     }
 
     public function view($id)
@@ -431,19 +437,19 @@ class TaskManagementController extends Controller
             $task = Task::findOrFail($request->task_id);
             $totalCompleted = 0;
             $totalAssigned = 0;
-            $allCompleted = true; 
+            $allCompleted = true;
             $anyStarted = false;
 
             foreach ($request->assignments as $assignData) {
                 $assignment = TaskAssignEmployee::findOrFail($assignData['id']);
-                
-                $completed = (float)($assignData['completed_qty'] ?? 0);
-                $wastage = (float)($assignData['wastage_qty'] ?? 0);
-                $assignedQty = (float)$assignment->issue_qty;
 
-                $qc_checked = (float)($assignData['qc_checked_qty'] ?? 0);
-                $qc_passed = (float)($assignData['qc_passed_qty'] ?? 0);
-                $qc_rejected = (float)($assignData['qc_rejected_qty'] ?? 0);
+                $completed = (float) ($assignData['completed_qty'] ?? 0);
+                $wastage = (float) ($assignData['wastage_qty'] ?? 0);
+                $assignedQty = (float) $assignment->issue_qty;
+
+                $qc_checked = (float) ($assignData['qc_checked_qty'] ?? 0);
+                $qc_passed = (float) ($assignData['qc_passed_qty'] ?? 0);
+                $qc_rejected = (float) ($assignData['qc_rejected_qty'] ?? 0);
 
                 if (($completed + $wastage) > $assignedQty) {
                     throw new \Exception("Completed ($completed) and Wastage ($wastage) quantity cannot exceed Assigned quantity ($assignedQty) for employee " . ($assignment->assignee->name ?? 'Unknown'));
@@ -501,9 +507,12 @@ class TaskManagementController extends Controller
                 }
 
                 $changes = [];
-                if ((float)$completed != (float)$originalCompleted) $changes[] = "Completed: " . (float)$originalCompleted . " -> " . (float)$completed;
-                if ((float)$wastage != (float)$originalWastage) $changes[] = "Wastage: " . (float)$originalWastage . " -> " . (float)$wastage;
-                if ((float)$qc_checked != (float)$originalQcChecked) $changes[] = "QC Checked: " . (float)$originalQcChecked . " -> " . (float)$qc_checked;
+                if ((float) $completed != (float) $originalCompleted)
+                    $changes[] = "Completed: " . (float) $originalCompleted . " -> " . (float) $completed;
+                if ((float) $wastage != (float) $originalWastage)
+                    $changes[] = "Wastage: " . (float) $originalWastage . " -> " . (float) $wastage;
+                if ((float) $qc_checked != (float) $originalQcChecked)
+                    $changes[] = "QC Checked: " . (float) $originalQcChecked . " -> " . (float) $qc_checked;
 
                 if (!empty($changes)) {
                     $empName = $assignment->assignee->name ?? 'Unknown Employee';
@@ -526,21 +535,23 @@ class TaskManagementController extends Controller
                     $schedule = ProcessSchedule::find($task->stage_id);
                     if ($schedule) {
                         $schedule->update(['status' => $newStatus]);
-                        
+
                         if ($newStatus == 'Completed') {
                             $nextSchedule = ProcessSchedule::where('production_id', $schedule->production_id)
                                 ->where('id', '>', $schedule->id)
                                 ->orderBy('id', 'asc')
                                 ->first();
-                                
+
                             if ($nextSchedule && $nextSchedule->status == 'Planned') {
-                                $nextSchedule->update(['status' => 'Pending']); 
+                                $nextSchedule->update(['status' => 'Pending']);
                             }
                         }
                     }
                 }
                 $this->logActivity($task->id, 'Status Change', "Task status automatically updated to $newStatus");
             }
+
+            $this->syncProductionMovements($task);
 
             DB::commit();
             return redirect('task_management')->with('success', 'Task progress updated successfully');
@@ -571,7 +582,7 @@ class TaskManagementController extends Controller
             if ($task->services && is_array($task->services)) {
                 $serviceData = \App\Models\ProductionService::whereIn('id', $task->services)
                     ->get(['id', 'service_name', 'service_code'])
-                    ->map(function($s) {
+                    ->map(function ($s) {
                         return [
                             'id' => $s->id,
                             'name' => $s->service_name . ' (' . $s->service_code . ')'
@@ -596,7 +607,7 @@ class TaskManagementController extends Controller
     public function getStageConsumables(Request $request, $id)
     {
         $schedule = \App\Models\ProcessSchedule::with(['operationStage', 'jobCard.fabricDetails', 'jobCard.item'])->find($id);
-        
+
         $jobCard = null;
         $stageName = '';
 
@@ -609,8 +620,9 @@ class TaskManagementController extends Controller
             $jobCard = JobCardEntry::with(['fabricDetails', 'item'])->find($request->job_card_id);
         }
 
-        if (!$jobCard) return response()->json(['success' => false, 'message' => 'Job Card not found']);
-        
+        if (!$jobCard)
+            return response()->json(['success' => false, 'message' => 'Job Card not found']);
+
         $consumableConfigs = [];
         if ($stageName) {
             $consumableConfigs = ProductionStageConsumable::where('stage', $stageName)->where('status', 'Active')->pluck('raw_material_id')->toArray();
@@ -621,13 +633,15 @@ class TaskManagementController extends Controller
         $rmIdsFromItemMaster = [];
 
         if ($jobCard) {
-            $artNumbers = $jobCard->fabricDetails->pluck('art_no')->filter()->map(function($val) { return trim($val); })->toArray();
-            
-            $rmIdsDirect = RawMaterial::where(function($q) use ($artNumbers) {
+            $artNumbers = $jobCard->fabricDetails->pluck('art_no')->filter()->map(function ($val) {
+                return trim($val);
+            })->toArray();
+
+            $rmIdsDirect = RawMaterial::where(function ($q) use ($artNumbers) {
                 $q->whereIn('code', $artNumbers)->orWhereIn('name', $artNumbers);
             })->pluck('id')->toArray();
-            
-            $rmIdsFromGrn = StockEntryItem::whereIn('grn_entry_item_id', function($query) use ($artNumbers) {
+
+            $rmIdsFromGrn = StockEntryItem::whereIn('grn_entry_item_id', function ($query) use ($artNumbers) {
                 $query->select('id')->from('grn_entry_items')->whereIn('art_no', $artNumbers);
             })->pluck('raw_material_id')->toArray();
 
@@ -648,24 +662,24 @@ class TaskManagementController extends Controller
 
         $grnIdsForJobCard = [];
         if ($jobCard && $jobCard->purchase_order_id) {
-            $grnIdsForJobCard = GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
+            $grnIdsForJobCard = GrnEntry::whereIn('purchase_invoice_id', function ($q) use ($jobCard) {
                 $q->select('id')->from('purchase_invoices')->where('purchase_order_id', $jobCard->purchase_order_id);
             })->pluck('id')->toArray();
         }
 
-        $formatted = $materials->map(function($m) use ($jobCard, $grnIdsForJobCard) {
+        $formatted = $materials->map(function ($m) use ($jobCard, $grnIdsForJobCard) {
             $grnItem = null;
-            
+
             $grnItem = StockEntryItem::where('raw_material_id', $m->id)
-                ->whereIn('id', function($q) use ($jobCard) {
+                ->whereIn('id', function ($q) use ($jobCard) {
                     $q->select('stock_entry_item_id')
-                    ->from('job_card_issue_items')
-                    ->where('job_card_entry_id', $jobCard->id);
+                        ->from('job_card_issue_items')
+                        ->where('job_card_entry_id', $jobCard->id);
                 })->with('grnEntryItem.grnEntry')->first();
 
             if (!$grnItem && !empty($grnIdsForJobCard)) {
                 $grnItem = StockEntryItem::where('raw_material_id', $m->id)
-                    ->whereHas('grnEntryItem', function($q) use ($grnIdsForJobCard) {
+                    ->whereHas('grnEntryItem', function ($q) use ($grnIdsForJobCard) {
                         $q->whereIn('grn_entry_id', $grnIdsForJobCard);
                     })->with('grnEntryItem.grnEntry')->first();
             }
@@ -681,15 +695,16 @@ class TaskManagementController extends Controller
             $artNo = $grnItem?->art_no ?? ($grnItem?->grnEntryItem?->art_no ?? '');
 
             if (empty($artNo) && $jobCard) {
-                $fabric = $jobCard->fabricDetails->first(function($f) use ($m) {
+                $fabric = $jobCard->fabricDetails->first(function ($f) use ($m) {
                     return trim($f->art_no) == trim($m->code) || trim($f->art_no) == trim($m->name);
                 });
-                if ($fabric) $artNo = $fabric->art_no;
+                if ($fabric)
+                    $artNo = $fabric->art_no;
             }
 
             return [
-                'id'     => $m->id,
-                'text'   => $m->name . ($m->code ? " ({$m->code})" : ""),
+                'id' => $m->id,
+                'text' => $m->name . ($m->code ? " ({$m->code})" : ""),
                 'art_no' => $artNo,
                 'grn_no' => $grnNo
             ];
@@ -755,8 +770,8 @@ class TaskManagementController extends Controller
             $adjustedItems = [];
             foreach ($request->items as $itemData) {
                 $currentStock = StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])->sum(DB::raw('qty_in - qty_out'));
-                
-                $diff = (float)$itemData['qty'];
+
+                $diff = (float) $itemData['qty'];
                 $newStock = in_array($itemData['adjustment_type'], $decreaseTypes) ? ($currentStock - $diff) : ($currentStock + $diff);
 
                 $artNo = $itemData['art_no'] ?? null;
@@ -764,12 +779,12 @@ class TaskManagementController extends Controller
 
                 if ((empty($artNo) || empty($grnNo))) {
                     $stockItemQuery = StockEntryItem::where('raw_material_id', $itemData['raw_material_id']);
-                    
+
                     if ($request->job_card_id) {
-                        $stockItemQuery->whereIn('id', function($q) use ($request) {
+                        $stockItemQuery->whereIn('id', function ($q) use ($request) {
                             $q->select('stock_entry_item_id')
-                            ->from('job_card_issue_items')
-                            ->where('job_card_entry_id', $request->job_card_id);
+                                ->from('job_card_issue_items')
+                                ->where('job_card_entry_id', $request->job_card_id);
                         });
                     }
 
@@ -778,13 +793,13 @@ class TaskManagementController extends Controller
                     if (!$stockItem && $request->job_card_id) {
                         $jobCard = JobCardEntry::find($request->job_card_id);
                         if ($jobCard && $jobCard->purchase_order_id) {
-                            $grnIds = GrnEntry::whereIn('purchase_invoice_id', function($q) use ($jobCard) {
+                            $grnIds = GrnEntry::whereIn('purchase_invoice_id', function ($q) use ($jobCard) {
                                 $q->select('id')->from('purchase_invoices')->where('purchase_order_id', $jobCard->purchase_order_id);
                             })->pluck('id')->toArray();
 
                             if (!empty($grnIds)) {
                                 $stockItem = StockEntryItem::where('raw_material_id', $itemData['raw_material_id'])
-                                    ->whereHas('grnEntryItem', function($q) use ($grnIds) {
+                                    ->whereHas('grnEntryItem', function ($q) use ($grnIds) {
                                         $q->whereIn('grn_entry_id', $grnIds);
                                     })->with('grnEntryItem.grnEntry')->first();
                             }
@@ -814,26 +829,26 @@ class TaskManagementController extends Controller
                 ]);
 
                 $materialName = RawMaterial::find($itemData['raw_material_id'])->name ?? 'Unknown Material';
-                $adjustedItems[] = "$materialName (" . $itemData['adjustment_type'] . ": " . (float)$diff . ")";
+                $adjustedItems[] = "$materialName (" . $itemData['adjustment_type'] . ": " . (float) $diff . ")";
             }
 
             $this->logActivity($task->id, 'Adjustment', "Adjustment **$nextAdjNo** posted for reason: " . $request->overall_reason . ". Items: " . implode(', ', $adjustedItems));
 
-            $issueQty = (float)($task->issue_qty ?? 0);
+            $issueQty = (float) ($task->issue_qty ?? 0);
             $serviceCount = is_array($task->services) ? count($task->services) : 1;
             $targetQty = $issueQty * $serviceCount;
 
             $totalReceived = 0;
-            
-            $allAdjustmentItems = \App\Models\TaskAdjustmentItem::whereHas('adjustment', function($q) use ($task) {
+
+            $allAdjustmentItems = \App\Models\TaskAdjustmentItem::whereHas('adjustment', function ($q) use ($task) {
                 $q->where('task_id', $task->id);
             })->get();
 
-            foreach($allAdjustmentItems as $adjItem) { 
+            foreach ($allAdjustmentItems as $adjItem) {
                 if ($adjItem->adjustment_type == 'Loss' || $adjItem->adjustment_type == 'Excess') {
-                    $totalReceived += (float)$adjItem->qty;
+                    $totalReceived += (float) $adjItem->qty;
                 } elseif ($adjItem->adjustment_type == 'Rework') {
-                    $totalReceived -= (float)$adjItem->qty;
+                    $totalReceived -= (float) $adjItem->qty;
                 }
             }
 
@@ -863,8 +878,10 @@ class TaskManagementController extends Controller
         }
     }
 
-    private function formatDate($dateStr) {
-        if (empty($dateStr)) return null;
+    private function formatDate($dateStr)
+    {
+        if (empty($dateStr))
+            return null;
         try {
             return Carbon::createFromFormat('d-m-Y', $dateStr)->format('Y-m-d');
         } catch (\Exception $e) {
@@ -881,11 +898,92 @@ class TaskManagementController extends Controller
         try {
             TaskLog::create([
                 'task_id' => $taskId,
-                'user_id' => auth()->id() ?? 1, 
+                'user_id' => auth()->id() ?? 1,
                 'action' => $action,
                 'description' => $description
             ]);
         } catch (\Exception $e) {
+        }
+    }
+    private function syncProductionMovements($task)
+    {
+        $jobCardId = $task->job_card_entry_id ?? ($task->jobCard->id ?? null);
+        if (!$jobCardId)
+            return;
+
+        $jc = JobCardEntry::with(['tasks.assignments'])->find($jobCardId);
+        if (!$jc)
+            return;
+
+        $stageId = $task->stage->operation_stage_id ?? null;
+        if (!$stageId)
+            return;
+
+        $processScheduleId = $task->stage_id;
+
+        $stageTasks = $jc->tasks->filter(function ($t) use ($stageId) {
+            if ($t->stage_id == $stageId && !$t->stage)
+                return true;
+            if ($t->stage && $t->stage->operation_stage_id == $stageId)
+                return true;
+            return false;
+        });
+
+        $assignments = $stageTasks->flatMap->assignments;
+
+        $requiredServices = ProductionService::where('operation_stage_id', $stageId)->active()->get();
+
+        $actualOutward = 0;
+        if ($requiredServices->isNotEmpty()) {
+            $serviceCompletions = $requiredServices->map(function ($service) use ($assignments) {
+                $serviceAssignments = $assignments->where('service_id', $service->id);
+                if ($serviceAssignments->isEmpty())
+                    return 0;
+
+                $isSequential = $serviceAssignments->count() > 1 && $serviceAssignments->max('issue_qty') >= $serviceAssignments->sum('issue_qty') * 0.9;
+
+                if ($isSequential) {
+                    return (float) $serviceAssignments->min('completed_qty');
+                } else {
+                    return (float) $serviceAssignments->sum('completed_qty');
+                }
+            });
+            $actualOutward = $serviceCompletions->min();
+        }
+
+        if ($actualOutward <= 0)
+            return;
+
+        $recordedOutward = \App\Models\ProductionMovement::where('job_card_id', $jobCardId)->where('process_schedule_id', $processScheduleId)->sum('outward_qty');
+
+        $delta = $actualOutward - $recordedOutward;
+
+        if ($delta > 0) {
+            \App\Models\ProductionMovement::create([
+                'job_card_id' => $jobCardId,
+                'process_schedule_id' => $processScheduleId,
+                'operation_stage_id' => $stageId,
+                'production_service_id' => null,
+                'task_id' => $task->id,
+                'outward_qty' => $delta,
+                'remarks' => 'Automated chain delta',
+                'created_by' => auth()->id()
+            ]);
+
+            $nextSchedule = ProcessSchedule::where('job_card_entry_id', $jobCardId)->where('id', '>', $processScheduleId)->orderBy('id', 'asc')->first();
+
+            if ($nextSchedule) {
+                \App\Models\ProductionMovement::create([
+                    'job_card_id' => $jobCardId,
+                    'process_schedule_id' => $nextSchedule->id,
+                    'operation_stage_id' => $nextSchedule->operation_stage_id,
+                    'production_service_id' => null,
+                    'task_id' => null,
+                    'inward_qty' => $delta,
+                    'remarks' => 'Automated chain inward from Previous Stage',
+                    'created_by' => auth()->id()
+                ]);
+            }
         }
     }
 }

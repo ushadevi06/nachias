@@ -1063,13 +1063,11 @@
             }
             return dateStr;
         }
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('stage_id')) {
-            $('#stage_select').val(urlParams.get('stage_id')).trigger('change', [true]);
-        }
-        
         setTimeout(function() {
-            $('#stage_select').trigger('change', [true]);
+            var val = $('#stage_select').val();
+            if(val) {
+                $('#stage_select').trigger('change', [true]);
+            }
        
             $('.assignment-row').each(function() {
                 var $row = $(this);
