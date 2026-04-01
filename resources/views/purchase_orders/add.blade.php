@@ -132,8 +132,8 @@
                                 <thead class="table-primary">
                                     <tr>
                                         <th style="min-width: 200px;">Store Category *</th>
-                                        <th style="min-width: 150px;">Brand</th>
-                                        <th style="min-width: 200px;">Raw Material *</th>
+                                        <th style="min-width: 200px;">Brand</th>
+                                        <th style="min-width: 240px;">Raw Material *</th>
                                         <th style="min-width: 150px;">Style</th>
                                         <th style="min-width: 150px;">Fabric Width</th>
                                         <th style="min-width: 100px;">UOM *</th>
@@ -812,11 +812,22 @@
             </tr>`;
 
             $('#item-rows tbody').append(rowHtml);
-            $(".select2").each(function() {
-	            $(this).select2({ dropdownParent: $(this).closest('.card-body').length ? $(this).closest('.card-body') : $('body') });
-            });
+            initSelect2Fields();
             itemIndex++;
         });
+
+        function initSelect2Fields(context = document) {
+            $(context).find('.select2').each(function() {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2('destroy');
+                }
+
+                $(this).select2({
+                    dropdownParent: $(this).closest('.card-body').length ? $(this).closest('.card-body') : $('body'),
+                    width: '100%'
+                });
+            });
+        }
 
         $(document).on('change', '.po_store_category', function () {
             let category_id = $(this).val();
@@ -842,9 +853,7 @@
                 url: APP_URL + '/get-materials-by-category/' + category_id,
                 type: 'GET',
                 success: function (response) {
-
                     let materialsHtml = '<option value="">Select Raw Material</option>';
-
                     if (response.materials?.length) {
                         response.materials.forEach(material => {
                             let materialName = material.name;
@@ -1029,7 +1038,6 @@
             $(this).closest('.attachment-item').remove();
         });
 
-        // Item Details File Input Change Handler
         $(document).on('change', '.file-input', function () {
             let file = this.files[0];
             let $container = $(this).siblings('.preview-container');
@@ -1079,7 +1087,6 @@
                 return;
             }
 
-            // Remove only newly added previews (not existing ones)
             $('.new-attachment-preview').remove();
 
             Array.from(this.files).forEach((file, index) => {
@@ -1117,6 +1124,7 @@
 
 
 
+    initSelect2Fields();
     calculateTotals();
 });
 </script>

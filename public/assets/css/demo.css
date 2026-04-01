@@ -32,6 +32,20 @@
     z-index: auto;
 }
 
+/* Keep wide tables scrollable inside their wrapper instead of stretching the full page */
+.content-wrapper {
+    overflow-x: clip;
+}
+
+.table-responsive {
+    max-width: 100%;
+}
+
+.table-responsive > .table {
+    width: max-content;
+    min-width: 100%;
+}
+
 /*
 * Content
 ******************************************************************************/

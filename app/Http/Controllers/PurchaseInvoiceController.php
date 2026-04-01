@@ -23,7 +23,7 @@ class PurchaseInvoiceController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = PurchaseInvoice::with(['supplier'])->orderBy('id', 'desc');
+            $query = PurchaseInvoice::with(['supplier'])->withCount('grnEntries')->orderBy('id', 'desc');
 
             if (!empty($request->supplier_id)) {
                 $query->where('supplier_id', $request->supplier_id);
@@ -49,14 +49,11 @@ class PurchaseInvoiceController extends Controller
                     $disabled = '';
                     if ($currentStatus === 'Draft') {
                         $disabled = '';
-                    }
-                    elseif ($currentStatus === 'Unpaid/Credit' && $status === 'Draft') {
+                    } elseif ($currentStatus === 'Unpaid/Credit' && $status === 'Draft') {
                         $disabled = 'disabled';
-                    }
-                    elseif ($currentStatus === 'Partially Paid' && $status !== 'Paid') {
+                    } elseif ($currentStatus === 'Partially Paid' && $status !== 'Paid') {
                         $disabled = 'disabled';
-                    }
-                    elseif ($currentStatus === 'Paid' && $status !== 'Paid') {
+                    } elseif ($currentStatus === 'Paid' && $status !== 'Paid') {
                         $disabled = 'disabled';
                     }
                     $statusOptions .= "<option value=\"{$status}\" {$selected} {$disabled}>{$status}</option>";
@@ -74,7 +71,7 @@ class PurchaseInvoiceController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view purchase-invoice')) {
                     $action .= '<a href="' . url('purchase_invoices/view/' . $invoice->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid') {
+                if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid' && $invoice->grn_entries_count == 0) {
                     $action .= '<a href="' . url('purchase_invoices/add/' . $invoice->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
@@ -111,8 +108,7 @@ class PurchaseInvoiceController extends Controller
             }
             $invoice = PurchaseInvoice::with(['items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
             $charges = $invoice->charges;
-        }
-        else {
+        } else {
             if (auth()->id() != 1 && !auth()->user()->can('create purchase-invoice')) {
                 return unauthorizedRedirect();
             }
@@ -270,7 +266,7 @@ class PurchaseInvoiceController extends Controller
                     'due_amount' => $request->due_amount ?? 0,
                     'invoice_status' => $request->invoice_status,
                     'payment_mode' => $request->payment_mode,
-                    'due_date' => $request->due_date ?Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d') : null,
+                    'due_date' => $request->due_date ? Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d') : null,
                     'notes' => $request->notes,
                     'transaction_id' => $request->transaction_id,
                 ];
@@ -341,8 +337,7 @@ class PurchaseInvoiceController extends Controller
                         'received_amount' => $totalReceived,
                         'due_amount' => ($request->grand_total ?? $invoice->grand_total) - $totalReceived
                     ]);
-                }
-                else {
+                } else {
                     $invoiceData['created_by'] = auth()->id();
                     $invoice = PurchaseInvoice::create($invoiceData);
 
@@ -380,8 +375,7 @@ class PurchaseInvoiceController extends Controller
                                         'qty_invoiced' => $item['quantity'],
                                     ]);
                                 }
-                            }
-                            else {
+                            } else {
                                 PurchaseInvoiceItem::create([
                                     'purchase_invoice_id' => $invoice->id,
                                     'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
@@ -419,8 +413,7 @@ class PurchaseInvoiceController extends Controller
 
                 DB::commit();
                 return redirect('purchase_invoices')->with('success', $message);
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => 'Failed to save invoice: ' . $e->getMessage()]);
             }
@@ -429,22 +422,24 @@ class PurchaseInvoiceController extends Controller
         $purchaseOrders = PurchaseOrder::with('supplier')
             ->where('purchase_orders.status', '!=', 'Draft')
             ->where(function ($query) use ($invoice) {
-            $query->whereIn('purchase_orders.id', function ($q) {
-                    $q->select('purchase_order_items.purchase_order_id')
-                        ->from('purchase_order_items')
-                        ->leftJoin(
-                        'purchase_invoice_items',
-                        'purchase_invoice_items.purchase_order_item_id',
-                        '=',
-                        'purchase_order_items.id'
-                    )
-                        ->groupBy(
-                        'purchase_order_items.id',
-                        'purchase_order_items.quantity',
-                        'purchase_order_items.purchase_order_id'
-                    )
-                        ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
-                }
+                $query->whereIn(
+                    'purchase_orders.id',
+                    function ($q) {
+                        $q->select('purchase_order_items.purchase_order_id')
+                            ->from('purchase_order_items')
+                            ->leftJoin(
+                                'purchase_invoice_items',
+                                'purchase_invoice_items.purchase_order_item_id',
+                                '=',
+                                'purchase_order_items.id'
+                            )
+                            ->groupBy(
+                                'purchase_order_items.id',
+                                'purchase_order_items.quantity',
+                                'purchase_order_items.purchase_order_id'
+                            )
+                            ->havingRaw('ROUND(SUM(COALESCE(purchase_invoice_items.qty_invoiced,0)), 3) < ROUND(purchase_order_items.quantity, 3)');
+                    }
                 );
 
                 if ($invoice) {
@@ -465,8 +460,7 @@ class PurchaseInvoiceController extends Controller
                     $lastNumberStr = substr($lastInvoice->invoice_no, strlen($prefix));
                     $lastNumber = intval($lastNumberStr);
                     $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
-                }
-                else {
+                } else {
                     $nextNumber = '0001';
                 }
                 $nextInvoiceNumber = $prefix . $nextNumber;
@@ -544,19 +538,19 @@ class PurchaseInvoiceController extends Controller
             }
 
             return [
-            'id' => $item->id,
-            'raw_material_id' => $item->raw_material_id,
-            'raw_material_name' => $item->rawMaterial->name,
-            'art_no' => $item->supplier_design_name,
-            'hsn_code' => $item->rawMaterial->hsn_code ?? '',
-            'quantity' => $balanceQty,
-            'qty_ordered' => $item->quantity,
-            'qty_invoiced' => $alreadyInvoicedQty,
-            'balance_qty' => $balanceQty,
-            'uom_id' => $item->uom_id,
-            'uom_code' => $item->uom->uom_code,
-            'rate' => $item->rate,
-            'amount' => $item->amount,
+                'id' => $item->id,
+                'raw_material_id' => $item->raw_material_id,
+                'raw_material_name' => $item->rawMaterial->name,
+                'art_no' => $item->supplier_design_name,
+                'hsn_code' => $item->rawMaterial->hsn_code ?? '',
+                'quantity' => $balanceQty,
+                'qty_ordered' => $item->quantity,
+                'qty_invoiced' => $alreadyInvoicedQty,
+                'balance_qty' => $balanceQty,
+                'uom_id' => $item->uom_id,
+                'uom_code' => $item->uom->uom_code,
+                'rate' => $item->rate,
+                'amount' => $item->amount,
             ];
         })
             ->filter()
@@ -601,8 +595,7 @@ class PurchaseInvoiceController extends Controller
                 'success' => true,
                 'message' => 'Charge deleted successfully'
             ]);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete charge: ' . $e->getMessage()

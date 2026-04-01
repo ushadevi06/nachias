@@ -89,4 +89,9 @@ class PurchaseInvoice extends Model
     {
         return $this->hasMany(PurchaseInvoicePayment::class);
     }
+
+    public function grnEntries()
+    {
+        return $this->hasMany(GrnEntry::class);
+    }
 }

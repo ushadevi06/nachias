@@ -1,140 +1,1351 @@
 @extends('layouts.common')
-@section('title', 'Attendances - ' . env('WEBSITE_NAME'))
+@section('title', 'Attendance Management - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
-        <div class="col-lg-12">
-            <div class="table-header-box">
-                <h4>Attendances</h4>
+        <div class="col-12 mb-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div>
+                    <h4 class="mb-1">Attendance Management</h4>
+                </div>
             </div>
-            <div class="card">
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
                 <div class="card-body">
-                    <div class="card-datatable">
-                        <table class="datatables-products table">
-                            <thead>
+                    <form id="syncForm" method="GET" action="{{ url('attendances') }}">
+                        <div class="row gy-3 gx-3 align-items-end">
+                            <div class="col-sm-6 col-md-3">
+                                <label class="form-label small fw-semibold">Attendance Date</label>
+                                <input type="date" name="date" class="form-control" id="attendanceDate" value="{{ old('date', $date ?? date('Y-m-d')) }}">
+                            </div>
+                            <div class="col-sm-6 col-md-3">
+                                <label class="form-label small fw-semibold">Device</label>
+                                <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
+                                    <option value="">Choose device</option>
+                                    <option value="192.168.203" {{ (isset($device) && $device === '192.168.203') ? 'selected' : '' }}>192.168.203</option>
+                                    <option value="192.168.204" {{ (isset($device) && $device === '192.168.204') ? 'selected' : '' }}>192.168.204</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6 col-md-3">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-primary flex-fill" id="syncButton">
+                                        <span id="syncButtonLabel">Sync Attendance</span>
+                                    </button>
+                                    <button type="button" class="btn btn-secondary flex-fill" id="resetButton">Reset</button>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-md-3">
+                                <div class="alert alert-info py-2 mb-0">
+                                    Select a device and click <strong>Sync Attendance</strong> to populate today's mock records.
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="row mt-4 g-3 align-items-center">
+                        <div class="col-md-8">
+                            <ul class="nav nav-tabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="viewAllButton" type="button" role="tab" aria-selected="true">All Attendance</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="viewAbsentButton" type="button" role="tab" aria-selected="false">Absent Report</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="viewLateButton" type="button" role="tab" aria-selected="false">Later Comer Report</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="viewMissingButton" type="button" role="tab" aria-selected="false">Missing Time Card</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="viewHolidaysButton" type="button" role="tab" aria-selected="false">Declared Holidays</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="viewStaffWiseButton" type="button" role="tab" aria-selected="false">Staff Wise Report</button>
+                                </li>
+                            </ul>
+                            <span class="ms-3 text-muted small d-inline-block" id="viewModeLabel">Showing all attendance records</span>
+                            <div id="holidaySummary" class="text-muted small mt-3"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted">Last Synced Time</div>
+                            <div id="lastSyncedText" class="fw-semibold">{{ $lastSynced ?? 'Not synced yet' }}</div>
+                        </div>
+                        <div class="col-md-4 offset-md-8 text-md-end">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="ri ri-search-line"></i></span>
+                                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Search employee or code...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div id="statusMessage" class="alert d-none mb-4" role="alert"></div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0" id="attendanceTable">
+                            <thead class="table-light">
                                 <tr>
-                                    <th>#</th>
-                                    <th>Employee</th>
-                                    <th>Date</th>
-                                    <th>In Time</th>
-                                    <th>Out Time</th>
-                                    <th>Hours</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Employee Name</th>
+                                    <th scope="col">Employee Code</th>
+                                    <th scope="col">Date</th>
+                                    <th scope="col">In Time</th>
+                                    <th scope="col">Out Time</th>
+                                    <th scope="col">Hours</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Ramesh Kumar <span class="mini-title">(EMP001)</span></td>
-                                    <td>27-09-2025</td>
-                                    <td>09:06 AM</td>
-                                    <td>06:30 PM</td>
-                                    <td>9</td>
-                                    <td><span class="badge bg-success">Present</span></td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_attendance') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#correctAttendanceModal"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Karthick <span class="mini-title">(EMP002)</span></td>
-                                    <td>27-09-2025</td>
-                                    <td>09:30 AM</td>
-                                    <td>06:00 PM</td>
-                                    <td>8.5</td>
-                                    <td><span class="badge bg-danger">Late</span></td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_attendance') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#correctAttendanceModal"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Akash Mehta <span class="mini-title">(EMP003)</span></td>
-                                    <td>27-09-2025</td>
-                                    <td>08:45 AM</td>
-                                    <td>07:00 PM</td>
-                                    <td>10.25</td>
-                                    <td><span class="badge bg-warning">Overtime</span></td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_attendance') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#correctAttendanceModal"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>4</td>
-                                    <td>Ramesh Kumar <span class="mini-title">(EMP001)</span></td>
-                                    <td>26-09-2025</td>
-                                    <td>09:00 AM</td>
-                                    <td>05:00 PM</td>
-                                    <td>8</td>
-                                    <td><span class="badge bg-success">Present</span></td>
-                                    <td>
-                                        <div class="button-box">
-                                            <a href="{{ url('view_attendance') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                            <a href="javascript:;" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#correctAttendanceModal"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody id="attendanceBody"></tbody>
                         </table>
                     </div>
+
+                    <div id="noDataMessage" class="text-center py-5 text-muted">
+                        <div class="mb-2"><strong>No Data</strong></div>
+                        <div>Click <strong>Sync Attendance</strong> to load mock biometric records.</div>
+                    </div>
+
+                    <div id="holidayPanel" class="d-none">
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                                <div>
+                                    <h6 class="mb-1">Declared Holidays</h6>
+                                    <div class="small text-muted">Month: <span id="holidayMonthLabel"></span></div>
+                                </div>
+                                <div class="text-end">
+                                    <button type="button" class="btn btn-sm btn-primary" id="refreshHolidaysButton">Refresh List</button>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <div class="holiday-calendar-toolbar mb-3">
+                                    <div class="holiday-calendar-nav">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="holidayPrevMonthButton">
+                                            <i class="ri ri-arrow-left-s-line"></i>
+                                        </button>
+                                        <div class="holiday-month-picker">
+                                            <button type="button" class="btn btn-sm" id="holidayMonthButton" aria-haspopup="dialog" aria-expanded="false"></button>
+                                            <div class="holiday-month-popup d-none" id="holidayMonthPopup">
+                                                <div class="holiday-month-grid" id="holidayMonthGrid"></div>
+                                            </div>
+                                        </div>
+                                        <div class="holiday-year-picker">
+                                            <button type="button" class="btn btn-sm" id="holidayYearButton" aria-haspopup="dialog" aria-expanded="false"></button>
+                                            <div class="holiday-year-popup d-none" id="holidayYearPopup">
+                                                <div class="holiday-year-popup-header">
+                                                    <span id="holidayYearRangeLabel"></span>
+                                                    <div class="d-flex gap-1">
+                                                        <button type="button" class="btn btn-sm btn-link p-0" id="holidayYearRangePrev" aria-label="Previous years"><i class="ri ri-arrow-up-s-line"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-link p-0" id="holidayYearRangeNext" aria-label="Next years"><i class="ri ri-arrow-down-s-line"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="holiday-year-grid" id="holidayYearGrid"></div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="holidayNextMonthButton">
+                                            <i class="ri ri-arrow-right-s-line"></i>
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-light" id="holidayTodayButton">Current Month</button>
+                                </div>
+                                <div class="small fw-semibold mb-2">Select holiday day from calendar</div>
+                                <div id="holidayCalendarInline" class="holiday-calendar"></div>
+                            </div>
+                        </div>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered mb-0" id="holidayTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Holiday Date</th>
+                                        <th scope="col">Holiday Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="holidayBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-sm-12 col-md-8">
+                                <div class="small fw-semibold mb-1">Select multiple dates from the calendar to declare holidays.</div>
+                                <div id="selectedHolidayCount" class="text-muted small">0 dates selected</div>
+                            </div>
+                            <div class="col-sm-12 col-md-4">
+                                <button type="button" class="btn btn-success w-100" id="saveSelectedHolidaysButton">Save Selected Holidays</button>
+                            </div>
+                        </div>
+
+                        <div id="holidayEditModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1050;">
+                            <div class="modal-dialog" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border-radius:8px; padding:24px; box-shadow:0 2px 16px rgba(0,0,0,0.15); max-width:400px; width:90%; pointer-events:auto; z-index:1051;">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">Edit Holiday Details</h6>
+                                    <button type="button" class="btn-close" id="closeHolidayEditModal"></button>
+                                </div>
+                                <form id="holidayEditForm" class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold">Holiday Date</label>
+                                        <input type="date" id="editHolidayDate" class="form-control" readonly />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold">Holiday Name</label>
+                                        <input type="text" id="editHolidayName" class="form-control" placeholder="Enter holiday name" autofocus />
+                                    </div>
+                                    <div class="col-12 d-flex gap-2">
+                                        <button type="button" class="btn btn-primary flex-fill" id="saveHolidayEditButton">Save</button>
+                                        <button type="button" class="btn btn-secondary flex-fill" id="cancelHolidayEditButton">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="staffReportPanel" class="d-none">
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-sm-6 col-lg-3">
+                                    <label class="form-label small fw-semibold">Select Month</label>
+                                    <input type="month" class="form-control" id="staffReportMonth">
+                                </div>
+                                <div class="col-sm-6 col-lg-3">
+                                    <label class="form-label small fw-semibold">Select Employee</label>
+                                    <select class="form-select" id="staffReportEmployee">
+                                        <option value="">Choose employee</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-6 col-lg-2">
+                                    <label class="form-label small fw-semibold">From Date</label>
+                                    <input type="text" class="form-control" id="staffReportFromDate" readonly>
+                                </div>
+                                <div class="col-sm-6 col-lg-2">
+                                    <label class="form-label small fw-semibold">To Date</label>
+                                    <input type="text" class="form-control" id="staffReportToDate" readonly>
+                                </div>
+                                <div class="col-sm-12 col-lg-2">
+                                    <button type="button" class="btn btn-primary w-100" id="staffReportGenerateButton">Show Report</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+                            <div>
+                                <div class="small text-muted">Filtered Period</div>
+                                <div class="fw-semibold" id="staffReportRangeLabel">Select a month and employee to view report.</div>
+                            </div>
+                            <div class="small text-muted" id="staffReportSummary">No employee selected.</div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle mb-0" id="staffReportTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Employee</th>
+                                        <th scope="col">Employee Code</th>
+                                        <th scope="col">Device</th>
+                                        <th scope="col">In Time</th>
+                                        <th scope="col">Out Time</th>
+                                        <th scope="col">Hours</th>
+                                        <th scope="col">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staffReportBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="staffReportNoData" class="text-center py-4 text-muted">
+                            Select a month and employee to load staff-wise attendance records.
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
-<div class="modal fade" id="correctAttendanceModal" tabindex="-1" aria-labelledby="correctAttendanceModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title text-white" id="correctAttendanceModalLabel">Correct Attendance</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <div class="form-floating form-floating-outline">
-                            <input type="text" class="form-control" id="employee" name="employee" value="Ramesh Kumar(EMP001)" readonly>
-                            <label for="employee">Employee * </label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="attendanceDate" class="form-label">Date</label>
-                        <input type="text" class="form-control" id="attendanceDate" value="27-09-2025" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label for="correctHours" class="form-label">Total Hours</label>
-                        <input type="number" class="form-control" id="correctHours" value="9">
-                    </div>
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Total Status</label>
-                        <div class="form-floating form-floating-outline">
-                            <select class="select2 form-select" data-placeholder="Select Status">
-                                <option value="">Select Status</option>
-                                <option value="Present" selected>Present</option>
-                                <option value="Late">Late</option>
-                                <option value="Absent">Absent</option>
-                                <option value="Overtime">Overtime</option>
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary">Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const attendanceBody = document.getElementById('attendanceBody');
+        const noDataMessage = document.getElementById('noDataMessage');
+        const statusMessage = document.getElementById('statusMessage');
+        const lastSyncedText = document.getElementById('lastSyncedText');
+        const searchInput = document.getElementById('searchInput');
+        const syncButton = document.getElementById('syncButton');
+        const syncButtonLabel = document.getElementById('syncButtonLabel');
+        const attendanceDate = document.getElementById('attendanceDate');
+        const deviceSelect = document.getElementById('deviceSelect');
+        const resetButton = document.getElementById('resetButton');
+        const viewAllButton = document.getElementById('viewAllButton');
+        const viewAbsentButton = document.getElementById('viewAbsentButton');
+        const viewLateButton = document.getElementById('viewLateButton');
+        const viewMissingButton = document.getElementById('viewMissingButton');
+        const viewHolidaysButton = document.getElementById('viewHolidaysButton');
+        const viewStaffWiseButton = document.getElementById('viewStaffWiseButton');
+        const holidaySummary = document.getElementById('holidaySummary');
+        const holidayPanel = document.getElementById('holidayPanel');
+        const staffReportPanel = document.getElementById('staffReportPanel');
+        const holidayMonthLabel = document.getElementById('holidayMonthLabel');
+        const holidayMonthButton = document.getElementById('holidayMonthButton');
+        const holidayMonthPopup = document.getElementById('holidayMonthPopup');
+        const holidayMonthGrid = document.getElementById('holidayMonthGrid');
+        const holidayYearButton = document.getElementById('holidayYearButton');
+        const holidayYearPopup = document.getElementById('holidayYearPopup');
+        const holidayYearRangeLabel = document.getElementById('holidayYearRangeLabel');
+        const holidayYearRangePrev = document.getElementById('holidayYearRangePrev');
+        const holidayYearRangeNext = document.getElementById('holidayYearRangeNext');
+        const holidayYearGrid = document.getElementById('holidayYearGrid');
+        const holidayPrevMonthButton = document.getElementById('holidayPrevMonthButton');
+        const holidayNextMonthButton = document.getElementById('holidayNextMonthButton');
+        const holidayTodayButton = document.getElementById('holidayTodayButton');
+        const holidayCalendarInline = document.getElementById('holidayCalendarInline');
+        const holidayBody = document.getElementById('holidayBody');
+        const attendanceTableContainer = document.getElementById('attendanceTable').parentElement;
+        const selectedHolidayCount = document.getElementById('selectedHolidayCount');
+        const saveSelectedHolidaysButton = document.getElementById('saveSelectedHolidaysButton');
+        const refreshHolidaysButton = document.getElementById('refreshHolidaysButton');
+        const staffReportMonth = document.getElementById('staffReportMonth');
+        const staffReportEmployee = document.getElementById('staffReportEmployee');
+        const staffReportFromDate = document.getElementById('staffReportFromDate');
+        const staffReportToDate = document.getElementById('staffReportToDate');
+        const staffReportGenerateButton = document.getElementById('staffReportGenerateButton');
+        const staffReportRangeLabel = document.getElementById('staffReportRangeLabel');
+        const staffReportSummary = document.getElementById('staffReportSummary');
+        const staffReportBody = document.getElementById('staffReportBody');
+        const staffReportNoData = document.getElementById('staffReportNoData');
+        const holidayEditModal = document.getElementById('holidayEditModal');
+        const editHolidayDate = document.getElementById('editHolidayDate');
+        const editHolidayName = document.getElementById('editHolidayName');
+        const closeHolidayEditModal = document.getElementById('closeHolidayEditModal');
+        const saveHolidayEditButton = document.getElementById('saveHolidayEditButton');
+        const cancelHolidayEditButton = document.getElementById('cancelHolidayEditButton');
+        let attendanceDataTable = null;
+        let attendanceRecords = [];
+        const declaredHolidaysByMonth = {
+            '2026-04': {
+                label: 'April 2026',
+                description: '4 Sunday Holidays + 1 Tamil New Year',
+                holidays: [{ 
+                        date: '2026-04-05',
+                        name: 'Sunday Holiday'
+                    },
+                    {
+                        date: '2026-04-12',
+                        name: 'Sunday Holiday'
+                    },
+                    {
+                        date: '2026-04-14',
+                        name: 'Tamil New Year'
+                    },
+                    {
+                        date: '2026-04-19',
+                        name: 'Sunday Holiday'
+                    },
+                    {
+                        date: '2026-04-26',
+                        name: 'Sunday Holiday'
+                    }
+                ]
+            }
+        };
+        const masterAttendance = {
+            '192.168.203': [{
+                    name: 'Ramesh Kumar',
+                    code: 'EMP001',
+                    date: '',
+                    inTime: '09:05 AM',
+                    outTime: '06:10 PM',
+                    hours: '9.1',
+                    status: 'Present'
+                },
+                {
+                    name: 'Nisha Gupta',
+                    code: 'EMP007',
+                    date: '',
+                    inTime: '09:12 AM',
+                    outTime: '-',
+                    hours: '-',
+                    status: 'Punch Out Missing'
+                },
+                {
+                    name: 'Karthick',
+                    code: 'EMP002',
+                    date: '',
+                    inTime: '09:35 AM',
+                    outTime: '05:55 PM',
+                    hours: '8.3',
+                    status: 'Late'
+                },
+                {
+                    name: 'Akash Mehta',
+                    code: 'EMP003',
+                    date: '',
+                    inTime: '08:50 AM',
+                    outTime: '07:15 PM',
+                    hours: '10.4',
+                    status: 'Overtime'
+                },
+                {
+                    name: 'Sunita Reddy',
+                    code: 'EMP006',
+                    date: '',
+                    inTime: '-',
+                    outTime: '-',
+                    hours: '-',
+                    status: 'Absent'
+                }
+            ],
+            '192.168.204': [{
+                    name: 'Ramesh Kumar',
+                    code: 'EMP001',
+                    date: '',
+                    inTime: '09:10 AM',
+                    outTime: '06:05 PM',
+                    hours: '8.9',
+                    status: 'Present'
+                },
+                {
+                    name: 'Nisha Gupta',
+                    code: 'EMP007',
+                    date: '',
+                    inTime: '09:15 AM',
+                    outTime: '-',
+                    hours: '-',
+                    status: 'Punch Out Missing'
+                },
+                {
+                    name: 'Karthick',
+                    code: 'EMP002',
+                    date: '',
+                    inTime: '09:20 AM',
+                    outTime: '06:00 PM',
+                    hours: '8.7',
+                    status: 'Late'
+                },
+                {
+                    name: 'Akash Mehta',
+                    code: 'EMP003',
+                    date: '',
+                    inTime: '08:40 AM',
+                    outTime: '07:00 PM',
+                    hours: '10.3',
+                    status: 'Overtime'
+                },
+                {
+                    name: 'Sunita Reddy',
+                    code: 'EMP006',
+                    date: '',
+                    inTime: '-',
+                    outTime: '-',
+                    hours: '-',
+                    status: 'Absent'
+                }
+            ]
+        };
+        let currentView = 'all';
+        let activeHolidayMonthKey = attendanceDate.value.slice(0, 7);
+        let holidayYearRangeStart = null;
+        const holidayMonthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let staffReportRecords = [];
 
+        function getBadgeClass(status) {
+            if (status === 'Present') return 'badge bg-success';
+            if (status === 'Late') return 'badge bg-danger';
+            if (status === 'Overtime') return 'badge bg-warning text-dark';
+            if (status === 'Absent') return 'badge bg-danger';
+            if (status === 'Punch Out Missing') return 'badge bg-danger';
+            if (status === 'Holiday') return 'badge bg-primary';
+            if (status === 'Week Off') return 'badge bg-secondary';
+            return 'badge bg-secondary';
+        }
+
+        function showStatus(type, message) {
+            statusMessage.className = 'alert alert-' + type + ' mb-4';
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('d-none');
+            setTimeout(() => {
+                statusMessage.classList.add('d-none');
+            }, 3000);
+        }
+
+        function formatDate(value) {
+            const date = new Date(value);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+
+        function formatMonthInputValue(dateValue) {
+            const date = new Date(dateValue);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function formatMonthYear(value) {
+            const date = new Date(value + '-01');
+            return date.toLocaleDateString('en-GB', {
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        function formatDateKey(value) {
+            const date = value instanceof Date ? value : new Date(value);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function renderSelectedHolidayTable() {
+            const displayRows = selectedHolidayDates
+                .slice()
+                .sort()
+                .map(date => ({
+                    date,
+                    name: selectedHolidayNames[date] || 'Declared Holiday'
+                }));
+
+            holidayBody.innerHTML = displayRows.length ?
+                renderHolidayRows(displayRows) :
+                '<tr><td colspan="3" class="text-center text-muted py-3">No holidays declared for this month.</td></tr>';
+        }
+
+        function updateAttendanceDateForMonth(year, monthIndex) {
+            const currentDay = Number(attendanceDate.value.split('-')[2] || '1');
+            const month = monthIndex + 1;
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const nextDay = String(Math.min(currentDay, daysInMonth)).padStart(2, '0');
+            attendanceDate.value = `${year}-${String(month).padStart(2, '0')}-${nextDay}`;
+        }
+
+        function getHolidayYearRangeStart(year) {
+            return Math.floor(Number(year) / 10) * 10;
+        }
+
+        function updateHolidayMonthButton(monthIndex, year) {
+            holidayMonthButton.textContent = `${holidayMonthLabels[monthIndex]} ${year}`;
+        }
+
+        function closeHolidayMonthPopup() {
+            holidayMonthPopup.classList.add('d-none');
+            holidayMonthButton.setAttribute('aria-expanded', 'false');
+        }
+
+        function renderHolidayMonthPopup(selectedMonthIndex) {
+            const months = holidayMonthLabels.map((label, index) => {
+                const classes = ['holiday-month-option'];
+                if (index === selectedMonthIndex) {
+                    classes.push('active');
+                }
+                return `<button type="button" class="${classes.join(' ')}" data-month-index="${index}">${label}</button>`;
+            });
+
+            holidayMonthGrid.innerHTML = months.join('');
+            holidayMonthGrid.querySelectorAll('[data-month-index]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const pickedMonthIndex = Number(this.getAttribute('data-month-index'));
+                    const {
+                        year
+                    } = getActiveHolidayMonthParts();
+                    updateAttendanceDateForMonth(year, pickedMonthIndex);
+                    updateHolidayBanner();
+                    renderHolidayPanel();
+                    closeHolidayMonthPopup();
+                });
+            });
+        }
+
+        function openHolidayMonthPopup(monthIndex) {
+            renderHolidayMonthPopup(monthIndex);
+            holidayMonthPopup.classList.remove('d-none');
+            holidayMonthButton.setAttribute('aria-expanded', 'true');
+        }
+
+        function updateHolidayYearButton(year) {
+            holidayYearButton.textContent = year;
+        }
+
+        function closeHolidayYearPopup() {
+            holidayYearPopup.classList.add('d-none');
+            holidayYearButton.setAttribute('aria-expanded', 'false');
+        }
+
+        function openHolidayYearPopup(year) {
+            holidayYearRangeStart = getHolidayYearRangeStart(year);
+            renderHolidayYearPopup(Number(year));
+            holidayYearPopup.classList.remove('d-none');
+            holidayYearButton.setAttribute('aria-expanded', 'true');
+        }
+
+        function renderHolidayYearPopup(selectedYear) {
+            const startYear = holidayYearRangeStart ?? getHolidayYearRangeStart(selectedYear);
+            const years = [];
+            holidayYearRangeLabel.textContent = `${startYear} - ${startYear + 9}`;
+
+            for (let year = startYear - 2; year <= startYear + 11; year++) {
+                const classes = ['holiday-year-option'];
+                if (year === selectedYear) {
+                    classes.push('active');
+                }
+                if (year < startYear || year > startYear + 9) {
+                    classes.push('outside');
+                }
+
+                years.push(`<button type="button" class="${classes.join(' ')}" data-year="${year}">${year}</button>`);
+            }
+
+            holidayYearGrid.innerHTML = years.join('');
+            holidayYearGrid.querySelectorAll('[data-year]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const pickedYear = Number(this.getAttribute('data-year'));
+                    const {
+                        monthIndex
+                    } = getActiveHolidayMonthParts();
+                    updateAttendanceDateForMonth(pickedYear, monthIndex);
+                    updateHolidayBanner();
+                    renderHolidayPanel();
+                    closeHolidayYearPopup();
+                });
+            });
+        }
+
+        function getActiveHolidayMonthParts() {
+            const [year, month] = attendanceDate.value.slice(0, 7).split('-').map(Number);
+            return {
+                year,
+                monthIndex: month - 1
+            };
+        }
+
+        function getHolidayConfigForMonth(monthKey) {
+            return declaredHolidaysByMonth[monthKey] || null;
+        }
+
+        function isDeclaredHoliday(dateValue) {
+            const monthKey = dateValue.slice(0, 7);
+            const config = getHolidayConfigForMonth(monthKey);
+            return config ? config.holidays.some(item => item.date === dateValue) : false;
+        }
+
+        function getHolidaySummary(dateValue) {
+            const monthKey = dateValue.slice(0, 7);
+            const config = getHolidayConfigForMonth(monthKey);
+            if (!config) {
+                return `No declared holidays set manually for ${formatMonthYear(monthKey)}.`;
+            }
+            const dates = config.holidays.map(item => formatDate(item.date)).join(', ');
+            return `${config.label}: ${config.description}. Dates: ${dates}.`;
+        }
+
+        function updateHolidayBanner() {
+            if (currentView !== 'holiday') {
+                holidaySummary.textContent = '';
+                holidaySummary.style.display = 'none';
+                return;
+            }
+
+            holidaySummary.style.display = 'block';
+            holidaySummary.textContent = getHolidaySummary(attendanceDate.value);
+        }
+
+        function getHolidayRowsForMonth(dateValue) {
+            const monthKey = dateValue.slice(0, 7);
+            const config = getHolidayConfigForMonth(monthKey);
+            return config ? config.holidays : [];
+        }
+
+        function getEmployeeDirectory() {
+            const seen = new Map();
+            Object.entries(masterAttendance).forEach(([device, records]) => {
+                records.forEach(record => {
+                    if (!seen.has(record.code)) {
+                        seen.set(record.code, {
+                            code: record.code,
+                            name: record.name,
+                            preferredDevice: device
+                        });
+                    }
+                });
+            });
+            return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        function populateStaffEmployeeOptions() {
+            const options = ['<option value="">Choose employee</option>'];
+            getEmployeeDirectory().forEach(employee => {
+                options.push(`<option value="${employee.code}">${employee.name} (${employee.code})</option>`);
+            });
+            staffReportEmployee.innerHTML = options.join('');
+        }
+
+        function updateStaffReportRangeFields() {
+            const monthValue = staffReportMonth.value || attendanceDate.value.slice(0, 7);
+            if (!monthValue) {
+                staffReportFromDate.value = '';
+                staffReportToDate.value = '';
+                return;
+            }
+
+            const [year, month] = monthValue.split('-').map(Number);
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0);
+            staffReportFromDate.value = formatDate(startDate);
+            staffReportToDate.value = formatDate(endDate);
+            staffReportRangeLabel.textContent = `${formatDate(startDate)} to ${formatDate(endDate)}`;
+        }
+
+        function generateStaffReportRecords(employeeCode, monthValue) {
+            if (!employeeCode || !monthValue) {
+                return [];
+            }
+
+            const [year, month] = monthValue.split('-').map(Number);
+            const employee = getEmployeeDirectory().find(item => item.code === employeeCode);
+            if (!employee) {
+                return [];
+            }
+
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const preferredDevice = employee.preferredDevice;
+            const records = [];
+            const selectedMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+            const holidayDates = new Set(getHolidayRowsForMonth(`${selectedMonthKey}-01`).map(item => item.date));
+            const codeSeed = employee.code.split('').reduce((total, char) => total + char.charCodeAt(0), 0);
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateValue = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const currentDate = new Date(year, month - 1, day);
+                const weekDay = currentDate.getDay();
+                const daySeed = (codeSeed + day) % 11;
+                let status = 'Present';
+                let inTime = '09:05 AM';
+                let outTime = '06:05 PM';
+                let hours = '9.0';
+
+                if (holidayDates.has(dateValue)) {
+                    status = 'Holiday';
+                    inTime = '-';
+                    outTime = '-';
+                    hours = '-';
+                } else if (weekDay === 0) {
+                    status = 'Week Off';
+                    inTime = '-';
+                    outTime = '-';
+                    hours = '-';
+                } else if (daySeed === 0) {
+                    status = 'Absent';
+                    inTime = '-';
+                    outTime = '-';
+                    hours = '-';
+                } else if (daySeed === 1) {
+                    status = 'Punch Out Missing';
+                    inTime = '09:18 AM';
+                    outTime = '-';
+                    hours = '-';
+                } else if (daySeed === 2 || daySeed === 3) {
+                    status = 'Late';
+                    inTime = `09:${String(20 + (day % 20)).padStart(2, '0')} AM`;
+                    outTime = '06:00 PM';
+                    hours = '8.4';
+                } else if (daySeed === 4) {
+                    status = 'Overtime';
+                    inTime = '08:45 AM';
+                    outTime = '07:20 PM';
+                    hours = '10.6';
+                } else {
+                    const inMinute = String((5 + daySeed) % 60).padStart(2, '0');
+                    const outMinute = String((10 + daySeed) % 60).padStart(2, '0');
+                    inTime = `09:${inMinute} AM`;
+                    outTime = `06:${outMinute} PM`;
+                    hours = (8.8 + ((daySeed % 3) * 0.2)).toFixed(1);
+                }
+
+                records.push({
+                    date: dateValue,
+                    employee: employee.name,
+                    code: employee.code,
+                    device: preferredDevice,
+                    inTime,
+                    outTime,
+                    hours,
+                    status
+                });
+            }
+
+            return records;
+        }
+
+        function renderStaffReportRows(records) {
+            return records.map((record, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${formatDate(record.date)}</td>
+                    <td>${record.employee}</td>
+                    <td>${record.code}</td>
+                    <td>${record.device}</td>
+                    <td>${record.inTime}</td>
+                    <td>${record.outTime}</td>
+                    <td>${record.hours}</td>
+                    <td><span class="${getBadgeClass(record.status)}">${record.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateStaffReportSummary(records, employeeCode, monthValue) {
+            if (!employeeCode || !monthValue) {
+                staffReportSummary.textContent = 'No employee selected.';
+                return;
+            }
+
+            const employee = getEmployeeDirectory().find(item => item.code === employeeCode);
+            const presentCount = records.filter(item => item.status === 'Present').length;
+            const lateCount = records.filter(item => item.status === 'Late').length;
+            const absentCount = records.filter(item => item.status === 'Absent').length;
+            staffReportSummary.textContent = `${employee ? employee.name : employeeCode}: ${records.length} day(s), ${presentCount} present, ${lateCount} late, ${absentCount} absent.`;
+        }
+
+        function loadStaffReport() {
+            const employeeCode = staffReportEmployee.value;
+            const monthValue = staffReportMonth.value;
+            updateStaffReportRangeFields();
+
+            if (!employeeCode || !monthValue) {
+                staffReportRecords = [];
+                staffReportBody.innerHTML = '';
+                staffReportNoData.style.display = 'block';
+                updateStaffReportSummary([], employeeCode, monthValue);
+                return;
+            }
+
+            staffReportRecords = generateStaffReportRecords(employeeCode, monthValue);
+            staffReportBody.innerHTML = renderStaffReportRows(staffReportRecords);
+            staffReportNoData.style.display = staffReportRecords.length ? 'none' : 'block';
+            updateStaffReportSummary(staffReportRecords, employeeCode, monthValue);
+        }
+
+        function renderStaffReportPanel() {
+            staffReportMonth.value = staffReportMonth.value || attendanceDate.value.slice(0, 7);
+            updateStaffReportRangeFields();
+            loadStaffReport();
+        }
+
+        let selectedHolidayDates = [];
+        let selectedHolidayNames = {};
+        let currentEditingDate = null;
+
+        function resetHolidaySelectionState(rows) {
+            selectedHolidayDates = rows.map(item => item.date);
+            selectedHolidayNames = {};
+            rows.forEach(item => {
+                selectedHolidayNames[item.date] = item.name;
+            });
+        }
+
+        function updateSelectedHolidayCount() {
+            selectedHolidayCount.textContent = `${selectedHolidayDates.length} date(s) selected`;
+        }
+
+        function openHolidayEditModal(dateValue) {
+            currentEditingDate = dateValue;
+            editHolidayDate.value = dateValue;
+            editHolidayName.value = selectedHolidayNames[dateValue] || 'Declared Holiday';
+            holidayEditModal.style.display = 'block';
+            setTimeout(() => editHolidayName.focus(), 100);
+        }
+
+        function closeHolidayModal() {
+            holidayEditModal.style.display = 'none';
+            currentEditingDate = null;
+        }
+
+        function toggleHolidayDate(dateValue) {
+            if (selectedHolidayDates.includes(dateValue)) {
+                selectedHolidayDates = selectedHolidayDates.filter(date => date !== dateValue);
+                delete selectedHolidayNames[dateValue];
+            } else {
+                selectedHolidayDates.push(dateValue);
+                selectedHolidayDates.sort();
+                openHolidayEditModal(dateValue);
+            }
+
+            updateSelectedHolidayCount();
+            renderSelectedHolidayTable();
+            renderHolidayCalendar();
+        }
+
+        function renderHolidayCalendar() {
+            const {
+                year,
+                monthIndex
+            } = getActiveHolidayMonthParts();
+            const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+            const firstDay = new Date(year, monthIndex, 1).getDay();
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+            const config = getHolidayConfigForMonth(monthKey);
+            const declaredDates = config ? config.holidays.map(item => item.date) : [];
+            const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+            const cells = [];
+
+            updateHolidayMonthButton(monthIndex, year);
+            updateHolidayYearButton(year);
+            holidayYearRangeStart = getHolidayYearRangeStart(year);
+
+            dayLabels.forEach(label => {
+                cells.push(`<div class="calendar-cell header"><strong>${label}</strong></div>`);
+            });
+
+            for (let index = 0; index < firstDay; index++) {
+                cells.push('<div class="calendar-cell empty"></div>');
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const classes = ['calendar-cell'];
+                if (selectedHolidayDates.includes(dateValue)) {
+                    classes.push('selected');
+                }
+                if (declaredDates.includes(dateValue)) {
+                    classes.push('declared');
+                }
+                if (selectedHolidayNames[dateValue]) {
+                    classes.push('has-name');
+                }
+
+                cells.push(`<button type="button" class="${classes.join(' ')}" data-date="${dateValue}" title="${selectedHolidayNames[dateValue] || ''}">${day}</button>`);
+            }
+
+            holidayCalendarInline.innerHTML = cells.join('');
+            holidayCalendarInline.querySelectorAll('[data-date]').forEach(cell => {
+                cell.addEventListener('click', function() {
+                    toggleHolidayDate(this.getAttribute('data-date'));
+                });
+            });
+        }
+
+        function renderHolidayRows(records) {
+            return records.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${formatDate(item.date)}</td>
+                    <td>${item.name}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderHolidayPanel() {
+            const monthKey = attendanceDate.value.slice(0, 7);
+            const config = getHolidayConfigForMonth(monthKey);
+            holidayMonthLabel.textContent = config ? config.label : formatMonthYear(monthKey);
+            const rows = getHolidayRowsForMonth(attendanceDate.value);
+
+            if (activeHolidayMonthKey !== monthKey) {
+                resetHolidaySelectionState(rows);
+                activeHolidayMonthKey = monthKey;
+            }
+
+            if (selectedHolidayDates.length === 0 && rows.length > 0) {
+                resetHolidaySelectionState(rows);
+            }
+
+            renderSelectedHolidayTable();
+            updateSelectedHolidayCount();
+            renderHolidayCalendar();
+        }
+
+        function reloadHolidayPanelFromSavedData() {
+            const rows = getHolidayRowsForMonth(attendanceDate.value);
+            resetHolidaySelectionState(rows);
+            activeHolidayMonthKey = attendanceDate.value.slice(0, 7);
+            renderHolidayPanel();
+        }
+
+        function saveSelectedHolidaysForMonth() {
+            const monthKey = attendanceDate.value.slice(0, 7);
+            if (!declaredHolidaysByMonth[monthKey]) {
+                declaredHolidaysByMonth[monthKey] = {
+                    label: formatMonthYear(monthKey),
+                    description: 'Manually declared holidays',
+                    holidays: []
+                };
+            }
+            declaredHolidaysByMonth[monthKey].holidays = selectedHolidayDates
+                .sort()
+                .map(date => ({
+                    date,
+                    name: selectedHolidayNames[date] || 'Declared Holiday'
+                }));
+        }
+
+        function renderRows(records) {
+            return records.map((item, index) => {
+                const rowDate = item.date || formatDate(attendanceDate.value);
+                const inTime = item.inTime || '-';
+                const outTime = item.outTime || '-';
+                const hours = item.hours || '-';
+                return `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${item.name}</td>
+                            <td>${item.code}</td>
+                            <td>${rowDate}</td>
+                            <td>${inTime}</td>
+                            <td>${outTime}</td>
+                            <td>${hours}</td>
+                            <td><span class="${getBadgeClass(item.status)}">${item.status}</span></td>
+                            <td>
+                                <a href="{{ url('view_attendance') }}" class="btn btn-sm btn-light text-primary" title="View details">
+                                    <i class="ri ri-eye-line"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+            }).join('');
+        }
+
+        function destroyDataTable() {
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#attendanceTable')) {
+                $('#attendanceTable').DataTable().destroy();
+            }
+        }
+
+        function initDataTable() {
+            if (!$.fn.DataTable) return;
+            destroyDataTable();
+            attendanceDataTable = $('#attendanceTable').DataTable({
+                paging: true,
+                searching: false,
+                info: false,
+                lengthChange: false,
+                pageLength: 5,
+                responsive: true,
+                autoWidth: false,
+                columnDefs: [{
+                    orderable: false,
+                    targets: 8
+                }]
+            });
+        }
+
+        function getCurrentRecords() {
+            const selectedHoliday = isDeclaredHoliday(attendanceDate.value);
+            if (selectedHoliday && (currentView === 'absent' || currentView === 'missing')) {
+                return [];
+            }
+            if (currentView === 'absent') {
+                return attendanceRecords.filter(item => item.status === 'Absent');
+            }
+            if (currentView === 'late') {
+                return attendanceRecords.filter(item => item.status === 'Late');
+            }
+            if (currentView === 'missing') {
+                return attendanceRecords.filter(item => item.outTime === '-' && item.status !== 'Absent');
+            }
+            return attendanceRecords;
+        }
+
+        function renderTable() {
+            if (currentView === 'holiday') {
+                destroyDataTable();
+                noDataMessage.style.display = 'none';
+                attendanceTableContainer.classList.add('d-none');
+                staffReportPanel.classList.add('d-none');
+                holidayPanel.classList.remove('d-none');
+                renderHolidayPanel();
+                return;
+            }
+
+            if (currentView === 'staff') {
+                destroyDataTable();
+                noDataMessage.style.display = 'none';
+                attendanceTableContainer.classList.add('d-none');
+                holidayPanel.classList.add('d-none');
+                staffReportPanel.classList.remove('d-none');
+                renderStaffReportPanel();
+                return;
+            }
+
+            holidayPanel.classList.add('d-none');
+            staffReportPanel.classList.add('d-none');
+            attendanceTableContainer.classList.remove('d-none');
+            destroyDataTable();
+            const records = getCurrentRecords();
+
+            if (records.length === 0) {
+                attendanceBody.innerHTML = '';
+                destroyDataTable();
+                noDataMessage.style.display = 'block';
+                return;
+            }
+
+            noDataMessage.style.display = 'none';
+            attendanceBody.innerHTML = renderRows(records);
+            initDataTable();
+
+            if (attendanceDataTable && searchInput.value.trim()) {
+                attendanceDataTable.search(searchInput.value.trim()).draw();
+            }
+        }
+
+        function setActiveView(view) {
+            currentView = view;
+            viewAllButton.classList.toggle('active', view === 'all');
+            viewAbsentButton.classList.toggle('active', view === 'absent');
+            viewLateButton.classList.toggle('active', view === 'late');
+            viewMissingButton.classList.toggle('active', view === 'missing');
+            viewHolidaysButton.classList.toggle('active', view === 'holiday');
+            viewStaffWiseButton.classList.toggle('active', view === 'staff');
+            viewAllButton.setAttribute('aria-selected', view === 'all' ? 'true' : 'false');
+            viewAbsentButton.setAttribute('aria-selected', view === 'absent' ? 'true' : 'false');
+            viewLateButton.setAttribute('aria-selected', view === 'late' ? 'true' : 'false');
+            viewMissingButton.setAttribute('aria-selected', view === 'missing' ? 'true' : 'false');
+            viewHolidaysButton.setAttribute('aria-selected', view === 'holiday' ? 'true' : 'false');
+            viewStaffWiseButton.setAttribute('aria-selected', view === 'staff' ? 'true' : 'false');
+            viewModeLabel.textContent = view === 'all' ?
+                'Showing all attendance records' :
+                view === 'absent' ?
+                'Showing absent report records' :
+                view === 'late' ?
+                'Showing later comer report records' :
+                view === 'missing' ?
+                'Showing missing time card records' :
+                view === 'staff' ?
+                'Showing staff wise attendance report' :
+                'Showing declared holiday settings';
+            renderTable();
+        }
+
+        function resetAttendancePage() {
+            attendanceRecords = [];
+            searchInput.value = '';
+            deviceSelect.value = '';
+            attendanceDate.value = new Date().toISOString().slice(0, 10);
+            lastSyncedText.textContent = 'Not synced yet';
+            syncButton.disabled = false;
+            syncButtonLabel.textContent = 'Sync Attendance';
+            setActiveView('all');
+            updateHolidayBanner();
+            showStatus('info', 'Attendance view reset.');
+        }
+
+        viewAllButton.addEventListener('click', function() {
+            setActiveView('all');
+        });
+
+        viewAbsentButton.addEventListener('click', function() {
+            setActiveView('absent');
+        });
+
+        viewLateButton.addEventListener('click', function() {
+            setActiveView('late');
+        });
+
+        viewMissingButton.addEventListener('click', function() {
+            setActiveView('missing');
+        });
+
+        viewHolidaysButton.addEventListener('click', function() {
+            setActiveView('holiday');
+        });
+
+        viewStaffWiseButton.addEventListener('click', function() {
+            setActiveView('staff');
+        });
+
+        resetButton.addEventListener('click', resetAttendancePage);
+
+        attendanceDate.addEventListener('change', function() {
+            updateHolidayBanner();
+            if (!staffReportMonth.value) {
+                staffReportMonth.value = attendanceDate.value.slice(0, 7);
+            }
+            if (currentView === 'holiday') {
+                renderHolidayPanel();
+            }
+            if (currentView === 'staff') {
+                renderStaffReportPanel();
+            }
+        });
+
+        saveHolidayEditButton.addEventListener('click', function() {
+            if (!editHolidayName.value.trim()) {
+                showStatus('warning', 'Please enter a holiday name.');
+                return;
+            }
+            if (currentEditingDate) {
+                selectedHolidayNames[currentEditingDate] = editHolidayName.value.trim();
+            }
+            closeHolidayModal();
+            const displayRows = selectedHolidayDates
+                .sort()
+                .map(date => ({
+                    date,
+                    name: selectedHolidayNames[date] || 'Declared Holiday'
+                }));
+            holidayBody.innerHTML = displayRows.length ?
+                renderHolidayRows(displayRows) :
+                '<tr><td colspan="3" class="text-center text-muted py-3">No holidays declared for this month.</td></tr>';
+            renderHolidayCalendar();
+        });
+
+        closeHolidayEditModal.addEventListener('click', closeHolidayModal);
+        cancelHolidayEditButton.addEventListener('click', closeHolidayModal);
+
+        holidayEditModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHolidayModal();
+            }
+        });
+
+        saveSelectedHolidaysButton.addEventListener('click', function() {
+            saveSelectedHolidaysForMonth();
+            showStatus('success', 'Selected holidays saved for the month.');
+            renderHolidayPanel();
+            updateHolidayBanner();
+        });
+
+        refreshHolidaysButton.addEventListener('click', function() {
+            reloadHolidayPanelFromSavedData();
+            showStatus('info', 'Holiday list refreshed from saved data.');
+        });
+
+        holidayPrevMonthButton.addEventListener('click', function() {
+            const {
+                year,
+                monthIndex
+            } = getActiveHolidayMonthParts();
+            const nextDate = new Date(year, monthIndex - 1, 1);
+            updateAttendanceDateForMonth(nextDate.getFullYear(), nextDate.getMonth());
+            updateHolidayBanner();
+            renderHolidayPanel();
+        });
+
+        holidayNextMonthButton.addEventListener('click', function() {
+            const {
+                year,
+                monthIndex
+            } = getActiveHolidayMonthParts();
+            const nextDate = new Date(year, monthIndex + 1, 1);
+            updateAttendanceDateForMonth(nextDate.getFullYear(), nextDate.getMonth());
+            updateHolidayBanner();
+            renderHolidayPanel();
+        });
+
+        holidayTodayButton.addEventListener('click', function() {
+            const today = new Date();
+            updateAttendanceDateForMonth(today.getFullYear(), today.getMonth());
+            updateHolidayBanner();
+            renderHolidayPanel();
+        });
+
+        holidayYearButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeHolidayMonthPopup();
+            const {
+                year
+            } = getActiveHolidayMonthParts();
+            if (holidayYearPopup.classList.contains('d-none')) {
+                openHolidayYearPopup(year);
+            } else {
+                closeHolidayYearPopup();
+            }
+        });
+
+        holidayMonthButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            closeHolidayYearPopup();
+            const {
+                monthIndex
+            } = getActiveHolidayMonthParts();
+            if (holidayMonthPopup.classList.contains('d-none')) {
+                openHolidayMonthPopup(monthIndex);
+            } else {
+                closeHolidayMonthPopup();
+            }
+        });
+
+        holidayYearRangePrev.addEventListener('click', function(e) {
+            e.stopPropagation();
+            holidayYearRangeStart -= 10;
+            renderHolidayYearPopup(getActiveHolidayMonthParts().year);
+        });
+
+        holidayYearRangeNext.addEventListener('click', function(e) {
+            e.stopPropagation();
+            holidayYearRangeStart += 10;
+            renderHolidayYearPopup(getActiveHolidayMonthParts().year);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!holidayMonthPopup.classList.contains('d-none') && !e.target.closest('.holiday-month-picker')) {
+                closeHolidayMonthPopup();
+            }
+            if (!holidayYearPopup.classList.contains('d-none') && !e.target.closest('.holiday-year-picker')) {
+                closeHolidayYearPopup();
+            }
+        });
+
+        staffReportMonth.addEventListener('change', function() {
+            updateStaffReportRangeFields();
+            if (currentView === 'staff' && staffReportEmployee.value) {
+                loadStaffReport();
+            }
+        });
+
+        staffReportEmployee.addEventListener('change', function() {
+            if (currentView === 'staff') {
+                loadStaffReport();
+            }
+        });
+
+        staffReportGenerateButton.addEventListener('click', function() {
+            loadStaffReport();
+        });
+
+        syncButton.addEventListener('click', function() {
+            const device = deviceSelect.value;
+            if (!device) {
+                showStatus('warning', 'Please select a device before syncing.');
+                return;
+            }
+
+            syncButton.disabled = true;
+            syncButtonLabel.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Syncing...';
+            attendanceBody.innerHTML = '';
+            destroyDataTable();
+            noDataMessage.style.display = 'block';
+
+            setTimeout(() => {
+                attendanceRecords = masterAttendance[device].map(item => ({
+                    ...item,
+                    date: formatDate(attendanceDate.value)
+                }));
+                updateHolidayBanner();
+                lastSyncedText.textContent = new Date().toLocaleString('en-GB', {
+                    hour12: true
+                });
+                showStatus('success', 'Attendance synced successfully.');
+                syncButton.disabled = false;
+                syncButtonLabel.textContent = 'Sync Attendance';
+                setActiveView('all');
+            }, 2200);
+        });
+
+        searchInput.addEventListener('input', function() {
+            if (attendanceDataTable) {
+                attendanceDataTable.search(this.value.trim()).draw();
+            }
+        });
+
+        populateStaffEmployeeOptions();
+        staffReportMonth.value = attendanceDate.value.slice(0, 7);
+        updateStaffReportRangeFields();
+        setActiveView('all');
+        updateHolidayBanner();
+    });
+</script>
 @endsection
