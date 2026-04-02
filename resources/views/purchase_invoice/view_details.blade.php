@@ -66,6 +66,10 @@
                                     <span class="badge {{ $statusClass }} px-3 py-2">{{ $invoice->invoice_status }}</span>
                                 </div>
                             </div>
+                            <div class="col-md-3">
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Commission Agent</div>
+                                <div class="fw-bold text-dark">{{ $invoice->purchaseCommissionAgent->name ?? '-' }}</div>
+                            </div>
 
                             <!-- Transport Fields -->
                             <div class="col-md-3 mt-3">
@@ -332,6 +336,13 @@
                                     <span
                                         class="fw-bold text-dark">+₹{{ number_format($preGstCharges->sum('charge_amount'), 2) }}</span>
                                 </div>
+
+                                @if($invoice->commission_amount > 0)
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span class="text-muted small fw-bold">Commission ({{ number_format($invoice->commission, 2) }}%)</span>
+                                        <span class="fw-bold text-dark">₹{{ number_format($invoice->commission_amount, 2) }}</span>
+                                    </div>
+                                @endif
 
                                 <div class="d-flex justify-content-between mb-3 pt-3 border-top">
                                     <span class="text-dark fw-bold small">Taxable Amount</span>

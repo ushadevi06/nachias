@@ -157,7 +157,7 @@
                                                                 <input type="hidden" name="items[{{$idx}}][purchase_invoice_item_id]" value="{{ $itemObj->purchase_invoice_item_id }}">
                                                                 <input type="text" name="items[{{$idx}}][art_no]" value="{{ $itemObj->art_no }}" 
                                                                     class="form-control art-no-input @error("items.$idx.art_no") is-invalid @enderror"
-                                                                    {{ (isset($itemObj->purchaseInvoiceItem->rawMaterial->store_category_id) && $itemObj->purchaseInvoiceItem->rawMaterial->store_category_id == 2) ? 'readonly' : '' }}>
+                                                                    {{ (isset($itemObj->purchaseInvoiceItem->rawMaterial->store_category_id) && $itemObj->purchaseInvoiceItem->rawMaterial->store_category_id == 2) ? 'readonly style=background-color:#e9ecef;' : '' }}>
                                                                 @error("items.$idx.art_no") <div class="text-danger small">{{ $message }}</div> @enderror
                                                             </td>
                                                             <td>{{ $uomName }}</td>
@@ -351,7 +351,7 @@
                                 <td>
                                     <input type="hidden" name="items[${idx}][purchase_invoice_item_id]" value="${item.id}">
                                     <input type="text" name="items[${idx}][art_no]" value="${item.art_no}" 
-                                        class="form-control art-no-input" ${item.store_category_id == 2 ? 'readonly' : ''}>
+                                        class="form-control art-no-input" ${item.store_category_id == 2 ? 'readonly style="background-color:#e9ecef;"' : ''}>
                                 </td>
                                 <td>${item.uom}</td>
                                 <td><select class="form-control select2" name="items[${idx}][fabric_type_id]"><option value="">Select Fabric</option>${fabrics_options}</select></td>

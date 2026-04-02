@@ -466,7 +466,7 @@ class PurchaseInvoiceController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-invoice')) {
             return unauthorizedRedirect();
         }
-        $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'charges', 'purchaseCommissionAgent'])->findOrFail($id);
         return view('purchase_invoice.view_details', compact('invoice'));
     }
 
