@@ -14,6 +14,9 @@ class PurchaseInvoice extends Model
         'invoice_no',
         'invoice_date',
         'purchase_order_id',
+        'purchase_commission_agent_id',
+        'commission',
+        'commission_amount',
         'supplier_id',
         'consignee_location',
         'dispatch_location',
@@ -63,6 +66,11 @@ class PurchaseInvoice extends Model
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    public function purchaseCommissionAgent()
+    {
+        return $this->belongsTo(PurchaseCommissionAgent::class);
     }
 
     public function supplier()

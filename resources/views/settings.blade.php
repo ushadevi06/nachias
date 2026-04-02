@@ -133,7 +133,7 @@
                                 </div>
                             </div>
                             
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('purchase_invoice_prefix') is-invalid @enderror" id="purchase_invoice_prefix" placeholder="Inv Prefix (e.g., INV/24-25/)" name="purchase_invoice_prefix" value="{{ old('purchase_invoice_prefix', $setting->purchase_invoice_prefix ?? '') }}">
                                     <label for="purchase_invoice_prefix">Purchase Invoice Prefix</label>
@@ -141,7 +141,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                            </div>
+                            </div> --}}
                             
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">

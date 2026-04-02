@@ -70,7 +70,7 @@ class SupplierController extends Controller
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
-                    'name'   => $supplier->name . ' (' . $supplier->code . ')',
+                    'name' => $supplier->name . ' (' . $supplier->code . ')',
                     'contact_info' => '
                         <div class="contact-info">
                             <div><i class="ri ri-mail-line icon-phone"></i> ' . ($supplier->mobile_no ?? '-') . '</div>
@@ -108,7 +108,7 @@ class SupplierController extends Controller
         }
         $supplier = null;
         if ($id) {
-            $supplier = Supplier::with(['state', 'city', 'place', 'tax','purchaseCommissionAgent', 'storeType'])->findOrFail($id);
+            $supplier = Supplier::with(['state', 'city', 'place', 'tax', 'purchaseCommissionAgent', 'storeType'])->findOrFail($id);
         }
 
         if (request()->isMethod('post')) {
@@ -167,15 +167,15 @@ class SupplierController extends Controller
             ];
             $messages = [
                 '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
+                '*.unique' => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',
                 '*.numeric' => 'This field must be a number.',
                 '*.url' => 'This field is an invalid URL.',
             ];
-            $validated = $request->validate($rules,$messages);
+            $validated = $request->validate($rules, $messages);
 
             $data = [
                 'name' => $request->name,
@@ -249,7 +249,7 @@ class SupplierController extends Controller
             $places = Place::where('city_id', $cityId)->get();
         }
         $latestSupplier = Supplier::orderByRaw('CAST(code AS UNSIGNED) DESC')->first();
-        $nextCode = $latestSupplier && is_numeric($latestSupplier->code) ? ((int)$latestSupplier->code + 1) : 1000;
+        $nextCode = $latestSupplier && is_numeric($latestSupplier->code) ? ((int) $latestSupplier->code + 1) : 1000;
 
         return view('suppliers.add', compact('supplier', 'states', 'cities', 'places', 'taxes', 'purchase_commission_agents', 'store_types', 'nextCode'));
     }
@@ -302,5 +302,71 @@ class SupplierController extends Controller
         $newData = $supplier->toArray();
         addLog('update_status', 'Supplier Status', 'suppliers', $id, $oldData, $newData);
         return response()->json(['success' => true]);
+    }
+
+    public function import(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create suppliers')) {
+            return unauthorizedRedirect();
+        }
+
+        $request->validate([
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\SupplierImport, $request->file('import_file'));
+            return redirect('suppliers')->with('success', 'Suppliers imported successfully.');
+        } catch (\Exception $e) {
+            return redirect('suppliers')->with('error', $e->getMessage());
+        }
+    }
+
+    public function downloadSample()
+    {
+        $headers = [
+            'Name',
+            'Code',
+            'Mobile Number',
+            'Email',
+            'Website URL',
+            'Transport Name',
+            'Booking Area',
+            'Store',
+            'Status (Active/Inactive)',
+            'State',
+            'City',
+            'Place',
+            'Address Line 1',
+            'Address Line 2',
+            'Address Line 3',
+            'Zip Code',
+            'Contact Person Name',
+            'Designation',
+            'Contact Mobile No',
+            'Contact Email',
+            'Commission Agent',
+            'Commission Percentage',
+            'Tax Type',
+            'GST No',
+            'PAN No',
+            'ECC No',
+            'Payment Terms',
+            'Credit Limit',
+            'Bank Name',
+            'Branch',
+            'Account Number',
+            'IFSC Code'
+        ];
+
+        $callback = function () use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'Supplier_Sample_Format.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

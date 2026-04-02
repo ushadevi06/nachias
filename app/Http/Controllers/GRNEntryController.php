@@ -69,8 +69,7 @@ class GrnEntryController extends Controller
                 if ($qcStatuses->contains('Fail')) {
                     $finalQcStatus = 'Fail';
                     $badgeClass = 'bg-danger';
-                }
-                elseif ($qcStatuses->contains('Hold')) {
+                } elseif ($qcStatuses->contains('Hold')) {
                     $finalQcStatus = 'Hold';
                     $badgeClass = 'bg-warning';
                 }
@@ -101,16 +100,15 @@ class GrnEntryController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit grn-entry')) {
                 return unauthorizedRedirect();
             }
-            $grn = GrnEntry::with(['grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'purchaseInvoice.purchaseOrder'])->findOrFail($id);
+            $grn = GrnEntry::with(['grnEntryItems.purchaseInvoiceItem.rawMaterial', 'grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'purchaseInvoice.purchaseOrder'])->findOrFail($id);
             $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) use ($id) {
                 $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.grn_entry_id != ? AND grn_entry_items.deleted_at IS NULL)', [$id]);
             })->orWhere('id', $grn->purchase_invoice_id)->orderBy('invoice_no')->get();
-        }
-        else {
+        } else {
             if (auth()->id() != 1 && !auth()->user()->can('create grn-entry')) {
                 return unauthorizedRedirect();
             }
-            $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) {
+            $purchaseInvoices = PurchaseInvoice::with('purchaseOrder.storeType')->whereHas('items', function ($query) {
                 $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.deleted_at IS NULL)');
             })->orderBy('invoice_no')->get();
         }
@@ -158,21 +156,21 @@ class GrnEntryController extends Controller
                     $rules["items.$index.art_no"] = [
                         'required',
                         function ($attribute, $value, $fail) use ($request) {
-                        $allArtNos = collect($request->items)->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))->pluck('art_no')->map(fn($art) => (string)$art)->toArray();
+                            $allArtNos = collect($request->items)->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))->pluck('art_no')->map(fn($art) => (string) $art)->toArray();
 
-                        $counts = array_count_values($allArtNos);
+                            $counts = array_count_values($allArtNos);
 
-                        if (isset($counts[$value]) && $counts[$value] > 1) {
-                            $fail('This article number is duplicated within this entry.');
+                            if (isset($counts[$value]) && $counts[$value] > 1) {
+                                $fail('This article number is duplicated within this entry.');
+                            }
+
+                            $id = $request->route('id');
+                            $exists = GrnEntryItem::where('art_no', $value)->whereNull('deleted_at')->where('grn_entry_id', '!=', $id ?? 0)->exists();
+
+                            if ($exists) {
+                                $fail('This article number already exists in another GRN entry.');
+                            }
                         }
-
-                        $id = $request->route('id');
-                        $exists = GrnEntryItem::where('art_no', $value)->whereNull('deleted_at')->where('grn_entry_id', '!=', $id ?? 0)->exists();
-
-                        if ($exists) {
-                            $fail('This article number already exists in another GRN entry.');
-                        }
-                    }
                     ];
                     $rules["items.$index.qty_received"] = 'required|numeric|gt:0';
                     $rules["items.$index.qty_accepted"] = 'required|numeric|min:0';
@@ -225,10 +223,9 @@ class GrnEntryController extends Controller
                     $grn->update($headerData);
                     $newData = $grn->fresh()->toArray();
                     addLog('update', 'GRN Entry', 'grn_entries', $id, $oldData, $newData);
-                }
-                else {
+                } else {
                     $lastGrn = GrnEntry::latest('id')->first();
-                    $nextNumber = $lastGrn ? (int)substr($lastGrn->grn_number, 3) + 1 : 1;
+                    $nextNumber = $lastGrn ? (int) substr($lastGrn->grn_number, 3) + 1 : 1;
                     $headerData['grn_number'] = 'GRN' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
                     $headerData['created_by'] = auth()->id();
                     $grn = GrnEntry::create($headerData);
@@ -277,8 +274,7 @@ class GrnEntryController extends Controller
                             $updateData['image'] = $imagePath;
                         }
                         $item->update($updateData);
-                    }
-                    else {
+                    } else {
                         $item = GrnEntryItem::create([
                             'grn_entry_id' => $grn->id,
                             'purchase_invoice_item_id' => $piItemId,
@@ -344,8 +340,7 @@ class GrnEntryController extends Controller
 
                 $message = $id ? 'GRN Entry updated successfully' : 'GRN Entry saved successfully';
                 return redirect('grn_entries')->with('success', $message);
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => $e->getMessage()]);
             }
@@ -358,19 +353,44 @@ class GrnEntryController extends Controller
 
     public function getInvoiceDetails($id)
     {
-        $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'items.purchaseOrderItem'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with(['purchaseOrder.storeType', 'supplier', 'items.rawMaterial', 'items.uom', 'items.purchaseOrderItem.brand'])->findOrFail($id);
 
-        $items = $invoice->items->map(function ($item) {
+        $brandSequences = [];
+
+        $items = $invoice->items()->get()->map(function ($item) use (&$brandSequences) {
             $already_received = GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_received');
+
+            $art_no = $item->purchaseOrderItem->art_no ?? '';
+            $store_category_id = $item->rawMaterial->store_category_id ?? 0;
+
+            if ($store_category_id == 2) {
+                $brand = $item->purchaseOrderItem->brand->code ?? 'ACC';
+                if (!isset($brandSequences[$brand])) {
+                    $latestItem = GrnEntryItem::where('art_no', 'like', $brand . '-%')->whereNull('deleted_at')->orderByRaw('CAST(SUBSTRING_INDEX(art_no, "-", -1) AS UNSIGNED) DESC')->first();
+
+                    if ($latestItem && preg_match('/-(\d+)$/', $latestItem->art_no, $matches)) {
+                        $brandSequences[$brand] = intval($matches[1]) + 1;
+                    } else {
+                        $brandSequences[$brand] = 1001;
+                    }
+                }
+
+                if (empty($art_no)) {
+                    $art_no = $brand . '-' . $brandSequences[$brand];
+                    $brandSequences[$brand]++;
+                }
+            }
+
             return [
-            'id' => $item->id,
-            'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
-            'art_no' => $item->purchaseOrderItem->art_no ?? '',
-            'uom' => $item->uom->uom_code ?? 'MTR',
-            'qty_ordered' => $item->quantity,
-            'qty_already_received' => $already_received,
-            'rate' => $item->rate,
-            'amount' => $item->amount,
+                'id' => $item->id,
+                'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
+                'art_no' => $art_no,
+                'uom' => $item->uom->uom_code ?? 'MTR',
+                'qty_ordered' => $item->quantity,
+                'qty_already_received' => $already_received,
+                'rate' => $item->rate,
+                'amount' => $item->amount,
+                'store_category_id' => $store_category_id,
             ];
         })->filter(function ($item) {
             return ($item['qty_ordered'] - $item['qty_already_received']) > 0;
@@ -381,6 +401,8 @@ class GrnEntryController extends Controller
             'supplier_id' => $invoice->supplier_id,
             'supplier_name' => $invoice->supplier->name ?? 'N/A',
             'invoice_date' => $invoice->invoice_date->format('d-m-Y'),
+            'store_type_name' => $invoice->purchaseOrder->storeType->store_type_name ?? '',
+            'po_number' => $invoice->purchaseOrder->po_number ?? '',
             'items' => $items
         ]);
     }
@@ -432,12 +454,13 @@ class GrnEntryController extends Controller
             'grnEntryItems.variants.color',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.brand',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.style',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.color',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
         ])->findOrFail($id);
 
         $setting = \App\Models\Setting::with(['state', 'city'])->first();
         $pdf = Pdf::loadView('grn_entry.grn_pdf', compact('grn', 'setting'));
-        $pdf->setPaper('A4', 'portrait');
+        $pdf->setPaper('A4', 'landscape');
         $safeGrnNumber = str_replace(['/', '\\'], '_', $grn->grn_number);
         return $pdf->stream('GRN_' . $safeGrnNumber . '.pdf');
     }
@@ -454,6 +477,7 @@ class GrnEntryController extends Controller
             'grnEntryItems.variants.color',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.brand',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.style',
+            'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.color',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
         ])->findOrFail($id);
 

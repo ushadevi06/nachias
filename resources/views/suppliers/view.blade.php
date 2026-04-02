@@ -7,9 +7,14 @@
             <div class="table-header-box">
                 <h4>Suppliers</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create suppliers'))
-                <a href="{{ url('suppliers/add') }}" class="btn btn-primary">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
+                    </button>
+                    <a href="{{ url('suppliers/add') }}" class="btn btn-primary">
+                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                    </a>
+                </div>
                 @endif
             </div>
             <div class="col-lg-12">
@@ -36,6 +41,36 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Suppliers</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url('suppliers/import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">Upload File (CSV, Excel)</label>
+                        <input class="form-control" type="file" id="import_file" name="import_file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
+                    </div>
+                    <div class="mb-3">
+                        <a href="{{ url('suppliers/download-sample') }}" class="btn btn-sm btn-outline-info">
+                            <i class="ri ri-download-2-line"></i> Download Sample Format
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Import</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

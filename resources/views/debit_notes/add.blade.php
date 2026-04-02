@@ -4,7 +4,8 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <form action="{{ url('debit_notes/add/' . ($debitNote->id ?? '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
+            <form action="{{ url('debit_notes/add/' . ($debitNote->id ?? '')) }}" method="POST" class="common-form"
+                enctype="multipart/form-data" autocomplete="off">
                 @csrf
                 <div class="card mb-4">
                     <div class="card-body">
@@ -45,7 +46,6 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="hidden" id="supplier_id_hidden" name="supplier_id" value="{{ old('supplier_id', $debitNote->supplier_id ?? '') }}">
                                     <input type="text" id="supplier_name" class="form-control" value="{{ old('supplier_id') ? \App\Models\Supplier::find(old('supplier_id'))?->name : ($debitNote->supplier->name ?? '') }}" readonly>
-
                                     <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
                                 </div>
                                 @error('supplier_id') <div class="text-danger">{{ $message }}</div> @enderror
@@ -92,6 +92,15 @@
                                 <tbody id="items_tbody">
                                     @if(old('items'))
                                         @foreach(old('items') as $index => $item)
+                                            @php
+                                            $invItemId = $item['purchase_invoice_item_id'] ?? 0;
+                                            $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->sum('qty_rejected');
+                                            $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $invItemId)
+                                                ->when(isset($debitNote), function ($q) use ($debitNote) {
+                                                    $q->where('debit_note_id', '!=', $debitNote->id);
+                                                })->sum('quantity');
+                                            $maxQty = $rejectedQty - $alreadyDebited;
+                                            @endphp
                                             <tr class="item-row">
                                                 <td>
                                                     <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
@@ -106,7 +115,11 @@
                                                     {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item['quantity'] ?? 0 }}" step="0.01">
+                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item['quantity'] ?? 0 }}" step="0.01" data-max="{{ $maxQty }}">
+                                                    @error("items.$index.quantity")
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                    <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
                                                 </td>
 
                                                 <td>
@@ -120,6 +133,11 @@
                                         @endforeach
                                     @elseif(isset($debitNote))
                                         @foreach($debitNote->items as $index => $item)
+                                            @php
+                                                $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
+                                                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
+                                                $maxQty = $rejectedQty - $alreadyDebited;
+                                            @endphp
                                             <tr class="item-row">
                                                 <td>
                                                     <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" checked>
@@ -132,7 +150,11 @@
                                                     {{ $item->uom->uom_code ?? '-' }}
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item->quantity }}" step="0.01">
+                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item->quantity }}" step="0.01" data-max="{{ $maxQty }}">
+                                                    @error("items.$index.quantity")
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                    <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
                                                 </td>
                                                 <td>
                                                     <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item->rate }}" step="0.01" readonly>
@@ -147,6 +169,119 @@
                                             <td colspan="7" class="text-center">No items added yet.</td>
                                         </tr>
                                     @endif
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-4" id="tax_charges_card">
+                    <div class="card-body">
+                        <div class="card-header-box">
+                            <h4>Tax & Charges</h4>
+                        </div>
+                        <div class="row g-4 mb-3">
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="charges_select" class="select2 form-select @error('charges_select') is-invalid @enderror" data-placeholder="Select Charge">
+                                        <option value="">Loading charges...</option>
+                                    </select>
+                                    <label>Charges</label>
+                                </div>
+                                @error('charges_select')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-2">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" min="0" step="0.01" class="form-control @error('charge_amount') is-invalid @enderror" id="charge_amount" placeholder="Charge Amount">
+                                    <label>Amount</label>
+                                </div>
+                                @error('charge_amount')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="charge_tax_type" class="form-select select2">
+                                        <option value="Pre-GST">Pre-GST (Taxable)</option>
+                                        <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
+                                    </select>
+                                    <label>Tax Type</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-xl-2 d-flex align-items-center">
+                                <button type="button" id="add_charge_btn" class="btn btn-primary w-100">Add Charge</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive mt-4 {{ (isset($charges) && $charges->count() || (old('charges') && isset(old('charges')['charge_id']))) ? '' : 'd-none' }}"
+                            id="charges_table">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Charge Name</th>
+                                        <th>Tax Type</th>
+                                        <th>Amount</th>
+                                        <th width="80px">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="added_charges_list">
+                                    @php
+                                        $oldCharges = old('charges');
+                                        $chargesToLoop = [];
+
+                                        if ($oldCharges && isset($oldCharges['charge_id'])) {
+                                            foreach ($oldCharges['charge_id'] as $index => $id) {
+                                                $chargesToLoop[] = (object) [
+                                                        'charge_id' => $id,
+                                                        'charge_name' => $oldCharges['name'][$index] ?? '',
+                                                        'charge_amount' => $oldCharges['amount'][$index] ?? 0,
+                                                        'tax_type' => $oldCharges['tax_type'][$index] ?? 'Post-GST',
+                                                        'id' => null
+                                                    ];
+                                                }
+                                            } else {
+                                                $chargesToLoop = $charges ?? [];
+                                            }
+
+                                            $preGstTotal = 0;
+                                            $postGstTotal = 0;
+                                    @endphp
+
+                                    @foreach($chargesToLoop as $charge)
+                                        @php
+                                            $chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
+                                            $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
+                                            $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+                                            $taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
+                                            if ($taxType === 'Pre-GST')
+                                                $preGstTotal += $chargeAmount;
+                                            else
+                                                $postGstTotal += $chargeAmount;
+                                        @endphp
+
+                                        <tr class="charge-row" data-charge-id="{{ $chargeId }}" data-tax-type="{{ $taxType }}">
+                                            <td>
+                                                {{ $chargeName }}
+                                                <input type="hidden" name="charges[charge_id][]" value="{{ $chargeId }}">
+                                                <input type="hidden" name="charges[name][]" value="{{ $chargeName }}">
+                                            </td>
+                                            <td>
+                                                {{ $taxType }}
+                                                <input type="hidden" name="charges[tax_type][]" value="{{ $taxType }}">
+                                            </td>
+                                            <td>
+                                                {{ number_format($chargeAmount, 2) }}
+                                                <input type="hidden" name="charges[amount][]" value="{{ $chargeAmount }}">
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-danger btn-sm remove-charge">X</button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
                                 </tbody>
                             </table>
                         </div>
@@ -174,27 +309,24 @@
                                             <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
                                             @error('reference_document') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                             @if(isset($debitNote) && !empty($debitNote->reference_document))
-                                            <div class="mt-2 preview-container">
-                                                @php
-                                                    $attachment = $debitNote->reference_document;
-                                                    $extension = pathinfo($attachment, PATHINFO_EXTENSION);
-                                                    $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                                    $url = url('uploads/debit_notes/' . $attachment);
-                                                @endphp
+                                                <div class="mt-2 preview-container">
+                                                    @php
+                                                        $attachment = $debitNote->reference_document;
+                                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                        $url = url('uploads/debit_notes/' . $attachment);
+                                                    @endphp
 
-                                                <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
-                                                    @if($isImage)
-                                                        <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Reference">
-                                                    @else
-                                                        <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
-                                                            <i class="ri ri-file-text-line fs-2"></i>
-                                                            <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
-                                                        </a>
-                                                    @endif
+                                                    <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                        @if($isImage)
+                                                            <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Reference">
+                                                        @else
+                                                            <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary"><i class="ri ri-file-text-line fs-2"></i><span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span></a>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                            </div>
                                             @else
-                                            <div class="mt-2 preview-container"></div>
+                                                <div class="mt-2 preview-container"></div>
                                             @endif
                                         </div>
                                     </div>
@@ -210,7 +342,7 @@
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <h5 class="mb-0">Tax Summary</h5>
                                     <div class="d-flex gap-3 align-items-center">
-                                        <label class="fw-bold small mb-0">Other State?</label>
+                                        <label class="small mb-0">Other State?</label>
                                         <div class="d-flex gap-3">
                                             <div class="form-check m-0">
                                                 <input class="form-check-input" type="radio" name="other_state" id="other_state_yes" value="Y" {{ (old('other_state', $debitNote->other_state ?? '') == 'Y') ? 'checked' : '' }} onclick="return false;">
@@ -225,16 +357,32 @@
                                 </div>
 
                                 <div class="d-flex justify-content-between mb-3">
-                                    <label class="fw-bold text-muted">Sub total:</label>
+                                    <label class="text-muted">Sub total:</label>
                                     <div class="text-end">
                                         <input type="hidden" id="sub_total" name="sub_total" value="{{ old('sub_total', $debitNote->sub_total ?? '0.00') }}">
                                         <span id="sub_total_display" class="fw-bold">₹{{ number_format(old('sub_total', $debitNote->sub_total ?? 0), 2) }}</span>
                                     </div>
                                 </div>
 
+                                <div class="d-flex justify-content-between mb-3" id="pre_gst_charges_div" style="{{ $preGstTotal > 0 ? '' : 'display: none;' }}">
+                                    <label class="text-muted">Pre-GST Charges:</label>
+                                    <div class="text-end">
+                                        <input type="hidden" id="pre_gst_total" name="pre_gst_total" value="{{ $preGstTotal }}">
+                                        <span id="pre_gst_total_display" class="fw-bold">₹{{ number_format($preGstTotal, 2) }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <label class="text-muted">Taxable Total:</label>
+                                    <div class="text-end">
+                                        @php $taxableAmt = old('sub_total', $debitNote->sub_total ?? 0) + $preGstTotal; @endphp
+                                        <input type="hidden" id="taxable_amount" name="taxable_amount" value="{{ $taxableAmt }}">
+                                        <span id="taxable_amount_display" class="fw-bold">₹{{ number_format($taxableAmt, 2) }}</span>
+                                    </div>
+                                </div>
+
                                 <div id="igst_div" style="display: none;">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <label class="fw-bold text-muted">IGST:</label>
+                                        <label class="text-muted">IGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
                                             <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
@@ -245,7 +393,7 @@
 
                                 <div id="cgst_sgst_div" style="display: none;">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <label class="fw-bold text-muted">CGST:</label>
+                                        <label class="text-muted">CGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
                                             <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
@@ -253,7 +401,7 @@
                                         </div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <label class="fw-bold text-muted">SGST:</label>
+                                        <label class="text-muted">SGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
                                             <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
@@ -263,15 +411,23 @@
                                 </div>
 
                                 <div class="d-flex justify-content-between mb-3 mt-4">
-                                    <label class="fw-bold text-muted">Tax Amount:</label>
+                                    <label class="text-muted">Tax Amount:</label>
                                     <div class="text-end">
                                         <input type="hidden" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $debitNote->tax_amount ?? '0.00') }}">
                                         <span id="tax_amount_display" class="fw-bold">₹{{ number_format(old('tax_amount', $debitNote->tax_amount ?? 0), 2) }}</span>
                                     </div>
                                 </div>
 
+                                <div class="d-flex justify-content-between mb-3" id="post_gst_charges_div" style="{{ $postGstTotal > 0 ? '' : 'display: none;' }}">
+                                    <label class="text-muted">Post-GST Charges:</label>
+                                    <div class="text-end">
+                                        <input type="hidden" id="post_gst_total" name="post_gst_total" value="{{ $postGstTotal }}">
+                                        <span id="post_gst_total_display" class="fw-bold">₹{{ number_format($postGstTotal, 2) }}</span>
+                                    </div>
+                                </div>
+
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <label class="fw-bold text-muted">Round Off:</label>
+                                    <label class="text-muted">Round Off:</label>
                                     <div class="d-flex align-items-center">
                                         <div class="form-check form-check-inline me-2 m-0 mt-1">
                                             <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $debitNote->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
@@ -301,7 +457,7 @@
                 <div class="text-end mb-5 me-4 mt-5">
                     <button type="submit" class="btn btn-primary">Submit</button>
                     <a href="{{ url('debit_notes') }}" class="btn btn-secondary">Cancel</a>
-                </div>  
+                </div>
             </form>
         </div>
     </div>
@@ -314,20 +470,83 @@
         sgst_percent: 0
     };
 
-    $(document).ready(function() {
-        $('#purchase_invoice_id').on('change', function() {
+    $(document).ready(function () {
+        $.get('{{ url('get_charges') }}', function (data) {
+            let select = $('#charges_select');
+            select.empty();
+            select.append('<option value="">Select Charge</option>');
+            $.each(data, function (key, value) {
+                select.append('<option value="' + value.id + '">' + value.charge_name + '</option>');
+            });
+        });
+
+        $('#add_charge_btn').click(function () {
+            let chargeId = $('#charges_select').val();
+            let chargeName = $('#charges_select option:selected').text();
+            let chargeAmount = parseFloat($('#charge_amount').val());
+            let taxType = $('#charge_tax_type').val();
+
+            if (!chargeId || isNaN(chargeAmount) || chargeAmount <= 0) {
+                alert('Please select a charge and enter a valid amount greater than 0.');
+                return;
+            }
+
+            let existingRow = $('#added_charges_list').find('tr[data-charge-id="' + chargeId + '"]');
+            if (existingRow.length > 0) {
+                alert('This charge is already added.');
+                return;
+            }
+
+            let newRow = `
+                <tr class="charge-row" data-charge-id="${chargeId}" data-tax-type="${taxType}">
+                    <td>
+                        ${chargeName}
+                        <input type="hidden" name="charges[charge_id][]" value="${chargeId}">
+                        <input type="hidden" name="charges[name][]" value="${chargeName}">
+                    </td>
+                    <td>
+                        ${taxType}
+                        <input type="hidden" name="charges[tax_type][]" value="${taxType}">
+                    </td>
+                    <td>
+                        ${chargeAmount.toFixed(2)}
+                        <input type="hidden" name="charges[amount][]" value="${chargeAmount.toFixed(2)}">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm remove-charge">X</button>
+                    </td>
+                </tr>
+            `;
+
+            $('#added_charges_list').append(newRow);
+            $('#charges_table').removeClass('d-none');
+
+            $('#charges_select').val('').trigger('change');
+            $('#charge_amount').val('');
+
+            calculateTotals();
+        });
+
+        $(document).on('click', '.remove-charge', function () {
+            $(this).closest('tr').remove();
+            if ($('#added_charges_list tr').length === 0) {
+                $('#charges_table').addClass('d-none');
+            }
+            calculateTotals();
+        });
+        $('#purchase_invoice_id').on('change', function () {
             let invoiceId = $(this).val();
             if (invoiceId) {
-                $.get("{{ url('debit_notes/get-invoice-details') }}/" + invoiceId, function(res) {
+                $.get("{{ url('debit_notes/get-invoice-details') }}/" + invoiceId, function (res) {
                     if (res.success) {
                         $('#supplier_name').val(res.supplier_name);
                         $('#supplier_id_hidden').val(res.supplier_id);
-                        
+
                         $('input[name="other_state"][value="' + res.other_state + '"]').prop('checked', true);
                         $('#igst_percent').val(res.igst_percent);
                         $('#cgst_percent').val(res.cgst_percent);
                         $('#sgst_percent').val(res.sgst_percent);
-                        
+
                         toggleTaxDivs();
 
                         let tbody = $('#items_tbody');
@@ -346,7 +565,8 @@
                                         ${item.uom_code}
                                     </td>
                                     <td>
-                                        <input type="number" name="items[${index}][quantity]" class="form-control item-qty" value="${item.quantity}" step="0.01" max="${item.quantity}">
+                                        <input type="number" name="items[${index}][quantity]" class="form-control item-qty" value="${item.quantity}" step="0.01" data-max="${item.max_quantity}">
+                                        <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
                                     </td>
                                     <td>
                                         <input type="number" name="items[${index}][rate]" class="form-control item-rate" value="${item.rate}" step="0.01" readonly>
@@ -368,7 +588,7 @@
             }
         });
 
-        $('input[name="other_state"]').on('change', function() {
+        $('input[name="other_state"]').on('change', function () {
             if ($(this).val() === 'Y') {
                 if (parseFloat($('#igst_percent').val()) == 0) {
                     $('#igst_percent').val("{{ $web_settings->igst }}");
@@ -396,7 +616,7 @@
             }
         }
 
-        $(document).on('input', '.item-qty, #igst_percent, #cgst_percent, #sgst_percent', function() {
+        $(document).on('input', '.item-qty, #igst_percent, #cgst_percent, #sgst_percent', function () {
             let row = $(this).closest('tr');
             if (row.hasClass('item-row')) {
                 let qty = parseFloat(row.find('.item-qty').val()) || 0;
@@ -406,48 +626,80 @@
             calculateTotals();
         });
 
-        $(document).on('change', '.item-checkbox, input[name="round_off_type"]', function() {
+        $(document).on('change', '.item-checkbox, input[name="round_off_type"]', function () {
             calculateTotals();
         });
 
-        $(document).on('input', '#round_off', function() {
+        $(document).on('input', '#round_off', function () {
             calculateTotals();
         });
 
         function calculateTotals() {
             let subTotal = 0;
-            $('.item-row').each(function() {
+            $('.item-row').each(function () {
                 if ($(this).find('.item-checkbox').is(':checked')) {
                     subTotal += parseFloat($(this).find('.item-amount').val()) || 0;
                 }
             });
 
             $('#sub_total').val(subTotal.toFixed(2));
-            $('#sub_total_display').text('₹' + subTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#sub_total_display').text('₹' + subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+            let preGstTotal = 0;
+            let postGstTotal = 0;
+            $('#added_charges_list tr').each(function () {
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $(this).find('input[name="charges[tax_type][]"]').val();
+                if (taxType === 'Pre-GST') {
+                    preGstTotal += amount;
+                } else {
+                    postGstTotal += amount;
+                }
+            });
+
+            $('#pre_gst_total').val(preGstTotal.toFixed(2));
+            $('#pre_gst_total_display').text('₹' + preGstTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            if (preGstTotal > 0) {
+                $('#pre_gst_charges_div').show();
+            } else {
+                $('#pre_gst_charges_div').hide();
+            }
+
+            let taxableAmount = subTotal + preGstTotal;
+            $('#taxable_amount').val(taxableAmount.toFixed(2));
+            $('#taxable_amount_display').text('₹' + taxableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
+            $('#post_gst_total').val(postGstTotal.toFixed(2));
+            $('#post_gst_total_display').text('₹' + postGstTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            if (postGstTotal > 0) {
+                $('#post_gst_charges_div').show();
+            } else {
+                $('#post_gst_charges_div').hide();
+            }
 
             let otherState = $('input[name="other_state"]:checked').val();
             let taxAmount = 0;
 
             if (otherState === 'Y') {
                 let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                let igstAmt = subTotal * (igstPercent / 100);
-                $('#igst_amt').text('₹' + igstAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                let igstAmt = taxableAmount * (igstPercent / 100);
+                $('#igst_amt').text('₹' + igstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                 taxAmount = igstAmt;
             } else {
                 let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                 let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-                let cgstAmt = subTotal * (cgstPercent / 100);
-                let sgstAmt = subTotal * (sgstPercent / 100);
-                $('#cgst_amt').text('₹' + cgstAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                $('#sgst_amt').text('₹' + sgstAmt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                let cgstAmt = taxableAmount * (cgstPercent / 100);
+                let sgstAmt = taxableAmount * (sgstPercent / 100);
+                $('#cgst_amt').text('₹' + cgstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $('#sgst_amt').text('₹' + sgstAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                 taxAmount = cgstAmt + sgstAmt;
             }
 
             $('#tax_amount').val(taxAmount.toFixed(2));
-            $('#tax_amount_display').text('₹' + taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#tax_amount_display').text('₹' + taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
-            let totalBeforeRoundOff = subTotal + taxAmount;
-            
+            let totalBeforeRoundOff = taxableAmount + taxAmount + postGstTotal;
+
             let roundOffAmount = parseFloat($('#round_off').val()) || 0;
             let roundOffType = $('input[name="round_off_type"]:checked').val() || 'Add';
             let grandTotal = 0;
@@ -458,18 +710,39 @@
                 grandTotal = totalBeforeRoundOff - roundOffAmount;
             }
 
+            if ($('#hidden_other_charges').length === 0) {
+                $('#tax_charges_card').append('<input type="hidden" id="hidden_other_charges" name="other_charges" value="0">');
+            }
+            $('#hidden_other_charges').val((preGstTotal + postGstTotal).toFixed(2));
+
             $('#grand_total').val(grandTotal.toFixed(2));
-            $('#grand_total_display').text('₹' + grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#grand_total_display').text('₹' + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
         }
 
         @if(isset($debitNote) || old('other_state'))
             toggleTaxDivs();
             calculateTotals();
         @endif
-        
+
         if (!$('input[name="other_state"]:checked').length) {
             $('#other_state_no').prop('checked', true);
         }
+        $(document).on('input', '.item-qty', function () {
+            let qty = parseFloat($(this).val()) || 0;
+            let max = parseFloat($(this).attr('data-max')) || 0;
+            let errorMsg = $(this).closest('td').find('.qty-error-msg');
+            let parentRow = $(this).closest('tr');
+
+            if (qty > max) {
+                errorMsg.text('Quantity exceeds available rejected quantity (' + max + ')').show();
+                $(this).addClass('is-invalid');
+            } else {
+                errorMsg.hide();
+                $(this).removeClass('is-invalid');
+            }
+            calculateTotals();
+        });
+
         toggleTaxDivs();
     });
 </script>

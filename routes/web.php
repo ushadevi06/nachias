@@ -290,6 +290,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('customers/status/{id}', [CustomerController::class, 'updateStatus']);
     Route::get('customers/view/{id}', [CustomerController::class, 'view']);
     Route::get('customers/delete/{id}', [CustomerController::class, 'destroy']);
+    Route::post('customers/import', [CustomerController::class, 'import']);
+    Route::get('customers/download-sample', [CustomerController::class, 'downloadSample']);
 
     /* Customer/Suppliers */
     Route::get('/suppliers', [SupplierController::class, 'index']);
@@ -297,6 +299,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/supplier/delete/{id}', [SupplierController::class, 'destroy']);
     Route::post('/supplier/status/{id}', [SupplierController::class, 'updateStatus']);
     Route::get('/suppliers/view_details/{id}', [SupplierController::class, 'view']);
+    Route::post('/suppliers/import', [SupplierController::class, 'import']);
+    Route::get('/suppliers/download-sample', [SupplierController::class, 'downloadSample']);
 
     /* Service Providers */
     Route::get('service_providers', [ServiceProviderController::class, 'index']);
@@ -322,6 +326,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('purchase_orders/print/{id}', [PurchaseOrderController::class, 'print']);
     Route::get('/purchase_orders/delete/{id}', [PurchaseOrderController::class, 'destroy'])->name('purchase_orders.delete');
     Route::post('/purchase_orders/status/{id}', [PurchaseOrderController::class, 'updateStatus'])->name('purchase_orders.status');
+    Route::post('/purchase_orders/toggle-self-close/{id}', [PurchaseOrderController::class, 'toggleSelfClose'])->name('purchase_orders.toggle_self_close');
 
     /* Purchase Invoice */
     Route::get('purchase_invoices', [PurchaseInvoiceController::class, 'index']);

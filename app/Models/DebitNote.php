@@ -52,6 +52,11 @@ class DebitNote extends Model
         return $this->hasMany(DebitNoteItem::class);
     }
 
+    public function charges()
+    {
+        return $this->hasMany(DebitNoteCharge::class);
+    }
+
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');

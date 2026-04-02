@@ -28,6 +28,7 @@
                                     <th>Operation Stage name</th>
                                     <th>Working Days</th>
                                     <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -63,6 +64,7 @@
                 { data: 'operation_stage_name', name: 'operation_stage_name' },
                 { data: 'working_days', name: 'working_days' },
                 { data: 'status', name: 'status', orderable: false, searchable: false },
+                { data: 'action', name: 'action', orderable: false, searchable: false },
             ]
         });
 

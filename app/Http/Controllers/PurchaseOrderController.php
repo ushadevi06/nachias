@@ -41,8 +41,7 @@ class PurchaseOrderController extends Controller
                     $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
                     $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
                     $query->whereBetween('po_date', [$startDate, $endDate]);
-                }
-                elseif (count($dates) == 1) {
+                } elseif (count($dates) == 1) {
                     $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
                     $query->whereDate('po_date', $startDate);
                 }
@@ -84,23 +83,31 @@ class PurchaseOrderController extends Controller
                 </div>
                 <div class="status_msg_' . $po->id . ' mt-1"></div>';
 
-                $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view purchase-order')) {
-                    $action .= '<a href="' . url('purchase_orders/view/' . $po->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
-                }
+                $action = '<div class="d-inline-block text-nowrap">';
+
                 if ($po->status == 'Draft') {
                     if (auth()->id() == 1 || auth()->user()->can('edit purchase-order')) {
-                        $action .= '<a href="' . url('purchase_orders/add/' . $po->id) . '" class="btn btn-edit">
-                        <i class="icon-base ri ri-edit-box-line"></i>
-                    </a>';
+                        $action .= '<a href="' . url('purchase_orders/add/' . $po->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                     }
                 }
 
-                // if (auth()->id() == 1 || auth()->user()->can('delete purchase-order')) {
-                //     $action .= '<button class="btn btn-delete" onclick="delete_data(\'' . url('purchase_orders/delete/' . $po->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></button>';
-                // }
+                $action .= '<button class="btn dropdown-toggle hide-arrow" data-bs-toggle="dropdown"><i class="icon-base ri ri-more-2-fill"></i></button>';
 
-                $action .= '</div>';
+                $action .= '<div class="dropdown-menu dropdown-menu-end m-0">';
+                if (auth()->id() == 1 || auth()->user()->can('view purchase-order')) {
+                    $action .= '<a href="' . url('purchase_orders/view/' . $po->id) . '" class="dropdown-item"><i class="icon-base ri ri-eye-line me-2"></i>View</a>';
+                }
+
+                $action .= '<div class="dropdown-divider"></div>';
+                $action .= '<div class="px-4 py-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input po-self-close-toggle" type="checkbox" data-id="' . $po->id . '" ' . ($po->is_self_closed ? 'checked' : '') . '>
+                                    <label class="form-check-label small ms-1">Self Close</label>
+                                </div>
+                                <div class="self_close_msg_' . $po->id . ' mt-1" style="height: 15px;"></div>
+                            </div>';
+
+                $action .= '</div></div>';
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -111,7 +118,6 @@ class PurchaseOrderController extends Controller
                     'due_date' => $po->due_date->format('d-m-Y'),
                     'delivery_location' => $po->storeType->store_type_name ?? '-',
                     'total_qty' => number_format($po->total_qty, 2),
-
                     'status' => $statusDropdown,
                     'total_amount' => '₹' . number_format($po->total_amount, 2),
                     'action' => $action,
@@ -130,8 +136,7 @@ class PurchaseOrderController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit purchase-order')) {
                 return unauthorizedRedirect();
             }
-        }
-        else {
+        } else {
             if (auth()->id() != 1 && !auth()->user()->can('create purchase-order')) {
                 return unauthorizedRedirect();
             }
@@ -171,15 +176,16 @@ class PurchaseOrderController extends Controller
                 'items.*.remarks' => 'nullable|string|min:5|max:255',
                 'items.*.attached_file' => 'nullable|mimes:jpeg,jpg,png,webp|max:2048',
                 'items.*.color_id' => 'nullable|exists:colors,id',
-                'items.*.style_id' => 'nullable|exists:styles,id',
-                'items.*.brand_id' => 'nullable|exists:brands,id',
+                'items.*.brand_id' => 'required|exists:brands,id',
                 'items.*.fabric_width_id' => 'nullable|exists:size_ratios,id',
+                'items.*.style_id' => 'required_if:items.*.store_category_id,1|nullable|exists:styles,id',
                 'discount_percent' => 'nullable',
                 'additional_attachments' => 'nullable|array|max:5',
                 'additional_attachments.*' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
                 'existing_additional_attachments' => 'nullable|array',
                 'round_off_type' => 'nullable|in:Add,Less',
                 'round_off' => 'nullable|numeric|min:0',
+                'is_self_closed' => 'nullable|boolean',
             ];
 
             $messages = [
@@ -216,8 +222,7 @@ class PurchaseOrderController extends Controller
                 $finalTotal = $totalBeforeRoundOff;
                 if ($roundOffType === 'Add') {
                     $finalTotal += $roundOffAmount;
-                }
-                elseif ($roundOffType === 'Less') {
+                } elseif ($roundOffType === 'Less') {
                     $finalTotal -= $roundOffAmount;
                 }
 
@@ -246,6 +251,7 @@ class PurchaseOrderController extends Controller
                     'round_off_type' => $roundOffType,
                     'round_off' => $roundOffAmount,
                     'total_amount' => $finalTotal,
+                    'is_self_closed' => $request->has('is_self_closed'),
                 ];
 
                 if ($id) {
@@ -257,8 +263,7 @@ class PurchaseOrderController extends Controller
                     $newData = $purchaseOrder->fresh()->toArray();
                     addLog('update', 'Purchase Order', 'purchase_orders', $id, $oldData, $newData);
                     $message = 'Purchase Order updated successfully';
-                }
-                else {
+                } else {
                     $poData['created_by'] = auth()->id();
                     $purchaseOrder = PurchaseOrder::create($poData);
                     $newData = $purchaseOrder->toArray();
@@ -340,8 +345,7 @@ class PurchaseOrderController extends Controller
 
                 DB::commit();
                 return redirect('purchase_orders')->with('success', $message);
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => 'Failed to save purchase order: ' . $e->getMessage()]);
             }
@@ -368,8 +372,7 @@ class PurchaseOrderController extends Controller
                     $lastNumberStr = substr($lastPo->po_number, strlen($prefix));
                     $lastNumber = intval($lastNumberStr);
                     $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
-                }
-                else {
+                } else {
                     $nextNumber = '0001';
                 }
                 $nextPoNumber = $prefix . $nextNumber;
@@ -384,9 +387,16 @@ class PurchaseOrderController extends Controller
             return unauthorizedRedirect();
         }
         $purchaseOrder = PurchaseOrder::with([
-            'purchaseCommissionAgent', 'supplier', 'storeType',
-            'items.storeCategory', 'items.rawMaterial', 'items.uom',
-            'items.style', 'items.color', 'items.brand', 'items.fabricWidth'
+            'purchaseCommissionAgent',
+            'supplier',
+            'storeType',
+            'items.storeCategory',
+            'items.rawMaterial',
+            'items.uom',
+            'items.style',
+            'items.color',
+            'items.brand',
+            'items.fabricWidth'
         ])->findOrFail($id);
         return view('purchase_orders.view_details', compact('purchaseOrder'));
     }
@@ -398,9 +408,16 @@ class PurchaseOrderController extends Controller
         }
 
         $purchaseOrder = PurchaseOrder::with([
-            'purchaseCommissionAgent', 'supplier', 'storeType',
-            'items.storeCategory', 'items.rawMaterial', 'items.uom',
-            'items.style', 'items.color', 'items.brand', 'items.fabricWidth'
+            'purchaseCommissionAgent',
+            'supplier',
+            'storeType',
+            'items.storeCategory',
+            'items.rawMaterial',
+            'items.uom',
+            'items.style',
+            'items.color',
+            'items.brand',
+            'items.fabricWidth'
         ])->findOrFail($id);
 
         $setting = Setting::first();
@@ -417,9 +434,16 @@ class PurchaseOrderController extends Controller
         }
 
         $purchaseOrder = PurchaseOrder::with([
-            'purchaseCommissionAgent', 'supplier', 'storeType',
-            'items.storeCategory', 'items.rawMaterial', 'items.uom',
-            'items.style', 'items.color', 'items.brand', 'items.fabricWidth'
+            'purchaseCommissionAgent',
+            'supplier',
+            'storeType',
+            'items.storeCategory',
+            'items.rawMaterial',
+            'items.uom',
+            'items.style',
+            'items.color',
+            'items.brand',
+            'items.fabricWidth'
         ])->findOrFail($id);
 
         $setting = Setting::first();
@@ -472,4 +496,14 @@ class PurchaseOrderController extends Controller
         return response()->json(['success' => true, 'message' => 'Status updated successfully']);
     }
 
+    public function toggleSelfClose(Request $request, $id)
+    {
+        $purchaseOrder = PurchaseOrder::findOrFail($id);
+        $oldData = $purchaseOrder->toArray();
+        $purchaseOrder->is_self_closed = $request->is_self_closed == 'true' ? 1 : 0;
+        $purchaseOrder->save();
+        $newData = $purchaseOrder->toArray();
+        addLog('update_self_close', 'Purchase Order Self Close', 'purchase_orders', $id, $oldData, $newData);
+        return response()->json(['success' => true, 'message' => 'Self-close status updated successfully']);
+    }
 }

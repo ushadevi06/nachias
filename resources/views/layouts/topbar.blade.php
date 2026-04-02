@@ -500,9 +500,9 @@
                                 @endif
 
                                 <!-- Purchase -->
-                                @if($user && ($isSuper || $user->can('view purchase-order') || $user->can('view purchase-invoice') || $user->can('view debit-notes')))
+                                @if($user && ($isSuper || $user->can('view purchase-order') || $user->can('view purchase-invoice')))
                                     <li
-                                        class="menu-item {{ (request()->is('purchase_orders*') || request()->is('purchase_invoices*') || request()->is('debit_notes*')) ? 'active' : '' }}">
+                                        class="menu-item {{ (request()->is('purchase_orders*') || request()->is('purchase_invoices*')) ? 'active' : '' }}">
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-file-list-3-line"></i>
                                             <div>Purchase</div>
@@ -523,22 +523,14 @@
                                                     </a>
                                                 </li>
                                             @endif
-
-                                            @if($isSuper || $user->can('view debit-notes'))
-                                                <li class="menu-item {{ request()->is('debit_notes*') ? 'active' : '' }}">
-                                                    <a href="{{ url('debit_notes') }}" class="menu-link">
-                                                        <div>Debit Notes</div>
-                                                    </a>
-                                                </li>
-                                            @endif
                                         </ul>
                                     </li>
                                 @endif
 
                                 <!-- Store -->
-                                @if($user && ($isSuper || $user->can('view grn-entry') || $user->can('view stock-entry') || $user->can('view stock-consumable-return')))
+                                @if($user && ($isSuper || $user->can('view grn-entry') || $user->can('view stock-entry') || $user->can('view debit-notes') || $user->can('view stock-consumable-return')))
                                     <li
-                                        class="menu-item {{ (request()->is('grn_entries*') || request()->is('stock_entries*') || request()->is('stock_consumables_returns*')) ? 'active' : '' }}">
+                                        class="menu-item {{ (request()->is('grn_entries*') || request()->is('stock_entries*') || request()->is('debit_notes*') || request()->is('stock_consumables_returns*')) ? 'active' : '' }}">
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-shopping-bag-line"></i>
                                             <div>Store</div>
@@ -556,6 +548,14 @@
                                                 <li class="menu-item {{ request()->is('stock_entries*') ? 'active' : '' }}">
                                                     <a href="{{ url('stock_entries') }}" class="menu-link">
                                                         <div>Stock Entry</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+
+                                            @if($isSuper || $user->can('view debit-notes'))
+                                                <li class="menu-item {{ request()->is('debit_notes*') ? 'active' : '' }}">
+                                                    <a href="{{ url('debit_notes') }}" class="menu-link">
+                                                        <div>Debit Notes</div>
                                                     </a>
                                                 </li>
                                             @endif

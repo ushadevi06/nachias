@@ -155,7 +155,9 @@
                                                             </td>
                                                             <td>
                                                                 <input type="hidden" name="items[{{$idx}}][purchase_invoice_item_id]" value="{{ $itemObj->purchase_invoice_item_id }}">
-                                                                <input type="text" name="items[{{$idx}}][art_no]" value="{{ $itemObj->art_no }}" class="form-control art-no-input @error("items.$idx.art_no") is-invalid @enderror">
+                                                                <input type="text" name="items[{{$idx}}][art_no]" value="{{ $itemObj->art_no }}" 
+                                                                    class="form-control art-no-input @error("items.$idx.art_no") is-invalid @enderror"
+                                                                    {{ (isset($itemObj->purchaseInvoiceItem->rawMaterial->store_category_id) && $itemObj->purchaseInvoiceItem->rawMaterial->store_category_id == 2) ? 'readonly' : '' }}>
                                                                 @error("items.$idx.art_no") <div class="text-danger small">{{ $message }}</div> @enderror
                                                             </td>
                                                             <td>{{ $uomName }}</td>
@@ -193,7 +195,7 @@
                                                                 </div>
                                                                 <div class="mb-2">
                                                                     <label class="small d-block fw-bold">Rejected:</label>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control" readonly>
+                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control">
                                                                 </div>
                                                                 <div>
                                                                     <label class="small d-block fw-bold">Balanced:</label>
@@ -327,6 +329,8 @@
                     $('#supplier_display').val(res.supplier_name);
                     $('#sup_inv_date').val(res.invoice_date);
                     
+                    let poNumber = res.po_number || '';
+                    
                     let tbody = $('#grn-items-table tbody').empty();
                     res.items.forEach((item, idx) => {
                         tbody.append(`
@@ -346,7 +350,8 @@
                                 </td>
                                 <td>
                                     <input type="hidden" name="items[${idx}][purchase_invoice_item_id]" value="${item.id}">
-                                    <input type="text" name="items[${idx}][art_no]" value="${item.art_no}" class="form-control">
+                                    <input type="text" name="items[${idx}][art_no]" value="${item.art_no}" 
+                                        class="form-control art-no-input" ${item.store_category_id == 2 ? 'readonly' : ''}>
                                 </td>
                                 <td>${item.uom}</td>
                                 <td><select class="form-control select2" name="items[${idx}][fabric_type_id]"><option value="">Select Fabric</option>${fabrics_options}</select></td>
@@ -373,7 +378,7 @@
                                     </div>
                                     <div class="mb-2">
                                         <label class="small d-block fw-bold">Rejected:</label>
-                                        <input type="number" step="0.01" name="items[${idx}][qty_rejected]" value="0" class="qty-rejected form-control" readonly>
+                                        <input type="number" step="0.01" name="items[${idx}][qty_rejected]" value="0" class="qty-rejected form-control">
                                     </div>
                                     <div>
                                         <label class="small d-block fw-bold">Balanced:</label>
@@ -423,7 +428,6 @@
             updateModalSummary(currentReceived, ordered);
             $('#variant-error').hide();
             
-            // Reload existing variants into modal
             let container = $(this).closest('td').find('.variants-data-container');
             let selectedColors = [];
             let tbody = $('#variantQtyTable tbody').empty();
@@ -518,7 +522,6 @@
         $(document).on('input', '.qty-received, .qty-accepted, .qty-rejected, .rate-input', function() {
             let row = $(this).closest('.item-row');
             
-            // If received is changed, default accepted to the same value
             if ($(this).hasClass('qty-received')) {
                 let received = parseFloat($(this).val()) || 0;
                 row.find('.qty-accepted').val(received);
@@ -527,7 +530,6 @@
             updateRowCalculations(row);
             validateForm();
 
-            // Enable/Disable variant button based on received quantity
             let received = parseFloat(row.find('.qty-received').val()) || 0;
             row.find('.btn-variants').prop('disabled', received <= 0);
         });
@@ -536,7 +538,7 @@
             let hasError = false;
             $('.item-row').each(function() {
                 let isChecked = $(this).find('.row-select').is(':checked');
-                if (!isChecked) return; // Only validate selected rows
+                if (!isChecked) return;
 
                 let ordered = parseFloat($(this).find('.qty-ordered').val()) || 0;
                 let received = parseFloat($(this).find('.qty-received').val()) || 0;

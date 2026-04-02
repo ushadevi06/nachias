@@ -143,11 +143,10 @@
 </head>
 <body>
     <div class="header-section">
-        <div class="company-name">{{ $setting->company_name ?? 'Nachias Fashion Private Limited' }}</div>
+        <div class="company-name">{{ $setting->company_name ?? '' }}</div>
         <div class="company-address">
-            {{ $setting->address ?? '272/2, Somu Nagar, Siringeri Nagar, (Sarathambal Kovil Backside), Byepass Road, Madurai - 625016' }}<br>
+            {{ $setting->address ?? '' }}<br>
             @if(isset($setting))
-                {{ $setting->city->city_name ?? $setting->city ?? '' }} - {{ $setting->zip_code ?? '' }}<br>
                 GSTIN: <strong>{{ $setting->gst_no ?? '' }}</strong> &nbsp;&nbsp; MOB: {{ $setting->toll_free_no ?? '' }}
             @endif
         </div>
@@ -218,34 +217,37 @@
     <table class="items-table">
         <thead>
             <tr>
-                <th width="30">S.No</th>
-                <th width="80">Item</th>
-                <th>Description</th>
-                <th width="40">Size</th>
-                <th width="70">Art</th>
-                <th width="60">Location</th>
-                <th width="40">UOM</th>
-                <th width="70">Quantity</th>
+                <th width="20">S.No</th>
+                <th width="130">Raw Material</th>
+                <th width="40">Style</th>
+                <th width="40">Color</th>
+                <th width="40">Width</th>
+                <th width="50">Supplier Design</th>
+                <th width="50">Art No</th>
+                <th width="40">Location</th>
+                <th width="30">UOM</th>
+                <th width="40">Quantity</th>
             </tr>
         </thead>
         <tbody>
             @php $totalQty = 0; @endphp
             @foreach($grn->grnEntryItems as $index => $item)
-                @php $totalQty += $item->qty_received; @endphp
+                @php 
+                    $totalQty += $item->qty_received;
+                    $rawMaterialName = $item->purchaseInvoiceItem->rawMaterial->name ?? '-';
+                    $brandName = $item->purchaseInvoiceItem->purchaseOrderItem->brand->brand_name ?? '-';
+                    $styleName = $item->purchaseInvoiceItem->purchaseOrderItem->style->style_name ?? '-';
+                    $colorName = $item->purchaseInvoiceItem->purchaseOrderItem->color->color_name ?? '-';
+                    $widthVal = $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->size ?? '-';
+                    $supplierArtNo = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name ?? '-';
+                @endphp
                 <tr class="{{ ($index % 2 != 0) ? 'alt-row' : '' }}">
                     <td class="text-center">{{ $index + 1 }}</td>
-                    <td class="text-left">{{ $item->purchaseInvoiceItem->rawMaterial->code ?? '-' }}</td>
-                    <td class="text-left">
-                        @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
-                            {{ strtoupper($item->purchaseInvoiceItem->rawMaterial->name) }}
-                            @if($item->fabricType)
-                                ({{ strtoupper($item->fabricType->fabric_type) }})
-                            @endif
-                        @else
-                            -
-                        @endif
-                    </td>
-                    <td class="text-center">{{ $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->size ?? '-' }}</td>
+                    <td class="text-left">{{ $rawMaterialName }} <br> [{{ $brandName }}]</td>
+                    <td class="text-center">{{ $styleName }}</td>
+                    <td class="text-center">{{ $colorName }}</td>
+                    <td class="text-center">{{ $widthVal }}</td>
+                    <td class="text-center">{{ $supplierArtNo }}</td>
                     <td class="text-center">{{ $item->art_no ?? '-' }}</td>
                     <td class="text-center">{{ $item->storeLocation->store_location ?? '-' }}</td>
                     <td class="text-center">{{ $item->purchaseInvoiceItem->uom->uom_code ?? 'MTR' }}</td>
@@ -268,10 +270,12 @@
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
                 </tr>
             @endfor
             <tr style="font-weight: bold;">
-                <td colspan="7" class="text-right" style="border: none; border-top: 1px solid #000; border-left-style: hidden;">&nbsp;</td>
+                <td colspan="9" class="text-right" style="border: none; border-top: 1px solid #000; border-left-style: hidden;">Total Quantity: &nbsp;</td>
                 <td class="text-right" style="border: 1px solid #000; border-top: 1px solid #000; padding: 6px 4px;">{{ number_format($totalQty, 2) }}</td>
             </tr>
         </tbody>

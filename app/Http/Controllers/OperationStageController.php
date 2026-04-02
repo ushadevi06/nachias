@@ -15,7 +15,7 @@ class OperationStageController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $operationStages = OperationStage::orderBy('id','desc')->get();
+            $operationStages = OperationStage::orderBy('id', 'desc')->get();
             $data = [];
             $count = 1;
             foreach ($operationStages as $stage) {
@@ -30,11 +30,19 @@ class OperationStageController extends Controller
                 </label>
                 <div class="status_msg_' . $stage->id . '"></div>';
 
+                $action = '';
+                if (auth()->id() == 1 || auth()->user()->can('edit operation-stages')) {
+                    $action .= '<a href="' . url('operation_stages/add/' . $stage->id) . '" class="btn btn-edit">
+                                    <i class="icon-base ri ri-edit-box-line"></i>
+                                </a>';
+                }
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'operation_stage_name' => $stage->operation_stage_name,
                     'working_days' => $stage->working_days ?? 0,
                     'status' => $status,
+                    'action' => $action,
                 ];
             }
             return response()->json(['data' => $data]);
@@ -76,9 +84,9 @@ class OperationStageController extends Controller
             ];
             $messages = [
                 '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
+                '*.unique' => 'This field already exists.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field should not be more than :max characters.',
             ];
             $validated = $request->validate($rules, $messages);
             $data = [

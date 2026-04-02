@@ -8,6 +8,8 @@ use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\Supplier;
 use App\Models\Setting;
+use App\Models\Charge;
+use App\Models\DebitNoteCharge;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,8 +54,8 @@ class DebitNoteController extends Controller
                     $action .= '<a href="' . url('debit_notes/add/' . $note->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 /* if (auth()->id() == 1 || auth()->user()->can('delete debit-note')) {
-                 $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('debit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                 } */
+                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('debit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                } */
                 $action .= '</div>';
 
                 $data[] = [
@@ -81,15 +83,16 @@ class DebitNoteController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit debit-note')) {
                 return unauthorizedRedirect();
             }
-            $debitNote = DebitNote::with(['items.rawMaterial', 'items.uom'])->findOrFail($id);
-        }
-        else {
+            $debitNote = DebitNote::with(['items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+            $charges = $debitNote->charges;
+        } else {
             if (auth()->id() != 1 && !auth()->user()->can('create debit-note')) {
                 return unauthorizedRedirect();
             }
         }
 
         $debitNote = $debitNote ?? null;
+        $charges = $charges ?? collect();
 
         if (request()->isMethod('post')) {
             $request = request();
@@ -102,6 +105,10 @@ class DebitNoteController extends Controller
                 'reason' => 'nullable|string|min:5|max:255',
                 'items' => 'required|array|min:1',
                 'sub_total' => 'required|numeric|min:0',
+                'other_charges' => 'nullable|numeric|min:0',
+                'charges_select' => 'nullable',
+                'charge_amount' => 'nullable|numeric|min:0',
+                'charges.amount.*' => 'nullable|numeric|min:0',
                 'grand_total' => 'required|numeric|min:0',
                 'status' => 'required|in:Draft,Approved,Cancelled',
                 'reference_document' => 'nullable|mimes:pdf,jpg,jpeg,png,webp,doc,docx|max:2048',
@@ -152,6 +159,7 @@ class DebitNoteController extends Controller
                     'cgst_percent' => $request->cgst_percent ?? 0,
                     'sgst_percent' => $request->sgst_percent ?? 0,
                     'sub_total' => $request->sub_total,
+                    'other_charges' => $request->other_charges ?? 0,
                     'tax_amount' => $request->tax_amount ?? 0,
                     'round_off_type' => $request->round_off_type ?? 'Add',
                     'round_off' => $request->round_off ?? 0,
@@ -164,14 +172,38 @@ class DebitNoteController extends Controller
                 if ($id) {
                     $debitNote->update($debitNoteData);
                     DebitNoteItem::where('debit_note_id', $id)->delete();
+                    DebitNoteCharge::where('debit_note_id', $id)->delete();
                     $message = 'Debit Note updated successfully';
                     addLog('update', 'Debit Note', 'debit_notes', $id, null, $debitNoteData);
-                }
-                else {
+                } else {
                     $debitNoteData['created_by'] = auth()->id();
                     $debitNote = DebitNote::create($debitNoteData);
                     $message = 'Debit Note created successfully';
                     addLog('create', 'Debit Note', 'debit_notes', $debitNote->id, null, $debitNoteData);
+                }
+
+                $itemErrors = [];
+                foreach ($request->items as $index => $item) {
+                    if (isset($item['selected']) && $item['selected'] == '1') {
+                        $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'])->sum('qty_rejected');
+
+                        $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id']);
+                        if ($id) {
+                            $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
+                        }
+                        $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
+
+                        $availableQty = $rejectedQty - $alreadyDebited;
+                        if ($item['quantity'] > $availableQty) {
+                            $rawMatName = \App\Models\RawMaterial::find($item['raw_material_id'])->name ?? 'Item';
+                            $itemErrors["items.$index.quantity"] = "Quantity exceeds available rejected quantity ($availableQty).";
+                        }
+                    }
+                }
+
+                if (!empty($itemErrors)) {
+                    DB::rollBack();
+                    return back()->withInput()->withErrors($itemErrors);
                 }
 
                 foreach ($request->items as $item) {
@@ -188,10 +220,26 @@ class DebitNoteController extends Controller
                     }
                 }
 
+                if ($request->has('charges') && isset($request->charges['charge_id'])) {
+                    $chargeIds = $request->charges['charge_id'];
+                    $chargeNames = $request->charges['name'];
+                    $chargeAmounts = $request->charges['amount'];
+                    $taxTypes = $request->charges['tax_type'] ?? [];
+
+                    foreach ($chargeIds as $index => $chargeId) {
+                        DebitNoteCharge::create([
+                            'debit_note_id' => $debitNote->id,
+                            'charge_id' => $chargeId,
+                            'charge_name' => $chargeNames[$index],
+                            'charge_amount' => $chargeAmounts[$index],
+                            'tax_type' => $taxTypes[$index] ?? 'Post-GST',
+                        ]);
+                    }
+                }
+
                 DB::commit();
                 return redirect('debit_notes')->with('success', $message);
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => 'Failed to save: ' . $e->getMessage()]);
             }
@@ -207,13 +255,12 @@ class DebitNoteController extends Controller
             if ($lastDebitNote) {
                 $lastNumber = intval(substr($lastDebitNote->debit_note_no, strlen($prefix)));
                 $nextDebitNoteNo = $prefix . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-            }
-            else {
+            } else {
                 $nextDebitNoteNo = $prefix . '0001';
             }
         }
 
-        return view('debit_notes.add', compact('debitNote', 'purchaseInvoices', 'nextDebitNoteNo'));
+        return view('debit_notes.add', compact('debitNote', 'purchaseInvoices', 'nextDebitNoteNo', 'charges'));
     }
 
     public function view($id)
@@ -240,18 +287,25 @@ class DebitNoteController extends Controller
         $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
 
         $items = collect($invoice->items)->map(function ($item) {
+            $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
+            $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)->sum('quantity');
+            $availableQty = $rejectedQty - $alreadyDebited;
+
             return [
-            'id' => $item->id,
-            'raw_material_id' => $item->raw_material_id,
-            'raw_material_name' => $item->rawMaterial ? $item->rawMaterial->name : '-',
-            'uom_id' => $item->uom_id,
-            'uom_code' => $item->uom ? $item->uom->uom_code : '-',
-            'hsn_code' => $item->hsn_code,
-            'quantity' => $item->quantity,
-            'rate' => $item->rate,
-            'amount' => $item->amount,
+                'id' => $item->id,
+                'raw_material_id' => $item->raw_material_id,
+                'raw_material_name' => $item->rawMaterial ? $item->rawMaterial->name : '-',
+                'uom_id' => $item->uom_id,
+                'uom_code' => $item->uom ? $item->uom->uom_code : '-',
+                'hsn_code' => $item->hsn_code,
+                'quantity' => $availableQty,
+                'max_quantity' => $availableQty,
+                'rate' => $item->rate,
+                'amount' => $availableQty * $item->rate,
             ];
-        });
+        })->filter(function ($item) {
+            return $item['quantity'] > 0;
+        })->values();
 
         return response()->json([
             'success' => true,
@@ -267,10 +321,7 @@ class DebitNoteController extends Controller
     }
     public function getSupplierInvoices($supplierId)
     {
-        $invoices = PurchaseInvoice::where('supplier_id', $supplierId)
-            ->orderBy('id', 'desc')
-            ->get(['id', 'invoice_no']);
-
+        $invoices = PurchaseInvoice::where('supplier_id', $supplierId)->orderBy('id', 'desc')->get(['id', 'invoice_no']);
         return response()->json([
             'success' => true,
             'invoices' => $invoices

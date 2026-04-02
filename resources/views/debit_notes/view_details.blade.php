@@ -154,24 +154,41 @@
                                 <span class="fw-bold">{{ number_format($debitNote->items->sum('quantity'), 2) }}</span>
                             </div>
                             
+                            @php
+                                $preGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Pre-GST')->sum('charge_amount') : 0;
+                                $postGstCharges = $debitNote->charges ? $debitNote->charges->where('tax_type', 'Post-GST')->sum('charge_amount') : 0;
+                                $taxableAmt = $debitNote->sub_total + $preGstCharges;
+                            @endphp
+
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-muted fw-medium">Sub Total</span>
                                 <span class="fw-bold">₹{{ number_format($debitNote->sub_total, 2) }}</span>
                             </div>
 
+                            @if($preGstCharges > 0)
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Pre-GST Charges</span>
+                                <span class="fw-bold">₹{{ number_format($preGstCharges, 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Taxable Total</span>
+                                <span class="fw-bold">₹{{ number_format($taxableAmt, 2) }}</span>
+                            </div>
+                            @endif
+
                             @if($debitNote->other_state == 'Y')
                                 <div class="d-flex justify-content-between mb-3">
                                     <span class="text-muted fw-medium">IGST ({{ $debitNote->igst_percent }}%)</span>
-                                    <span class="fw-bold">₹{{ number_format($debitNote->sub_total * ($debitNote->igst_percent / 100), 2) }}</span>
+                                    <span class="fw-bold">₹{{ number_format($taxableAmt * ($debitNote->igst_percent / 100), 2) }}</span>
                                 </div>
                             @else
                                 <div class="d-flex justify-content-between mb-3 text-muted small">
                                     <span>CGST ({{ $debitNote->cgst_percent }}%)</span>
-                                    <span>₹{{ number_format($debitNote->sub_total * ($debitNote->cgst_percent / 100), 2) }}</span>
+                                    <span>₹{{ number_format($taxableAmt * ($debitNote->cgst_percent / 100), 2) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-3 text-muted small">
                                     <span>SGST ({{ $debitNote->sgst_percent }}%)</span>
-                                    <span>₹{{ number_format($debitNote->sub_total * ($debitNote->sgst_percent / 100), 2) }}</span>
+                                    <span>₹{{ number_format($taxableAmt * ($debitNote->sgst_percent / 100), 2) }}</span>
                                 </div>
                             @endif
 
@@ -179,6 +196,13 @@
                                 <span class="text-dark fw-bold">Total Tax</span>
                                 <span class="fw-bold">₹{{ number_format($debitNote->tax_amount, 2) }}</span>
                             </div>
+
+                            @if($postGstCharges > 0)
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Post-GST Charges</span>
+                                <span class="fw-bold">₹{{ number_format($postGstCharges, 2) }}</span>
+                            </div>
+                            @endif
 
                             @if($debitNote->round_off > 0)
                             <div class="d-flex justify-content-between mb-3 text-muted italic">

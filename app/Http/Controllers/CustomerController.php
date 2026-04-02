@@ -272,4 +272,45 @@ class CustomerController extends Controller
         addLog('update_status', 'Customer Status', 'customers', $id, $oldData, $newData);
         return response()->json(['success' => true]);
     }
+
+    public function import(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create customers')) {
+            return unauthorizedRedirect();
+        }
+
+        $request->validate([
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\CustomerImport, $request->file('import_file'));
+            return redirect('customers')->with('success', 'Customers imported successfully.');
+        } catch (\Exception $e) {
+            return redirect('customers')->with('error', $e->getMessage());
+        }
+    }
+
+    public function downloadSample()
+    {
+        $headers = [
+            'Category (Retailer/Wholesaler)', 'Name', 'Code', 'Mobile Number', 'Email', 'Website URL', 
+            'Transport Name', 'Booking Office', 'Zone', 'Store', 'Status (Active/Inactive)', 
+            'State', 'City', 'Place', 'Address Line 1', 'Address Line 2', 'Address Line 3', 
+            'Zip Code', 'Contact Person Name', 'Designation', 'Contact Mobile No', 
+            'Contact Email', 'Tax Type', 'GST No', 'PAN No', 'Payment Terms', 
+            'Credit Limit', 'Sales Discount', 'Box Discount', 'Bank Name', 'Branch', 
+            'Account Number', 'IFSC Code'
+        ];
+
+        $callback = function() use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'Customer_Sample_Format.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
 }

@@ -141,7 +141,7 @@
                 let password = $('#password').val();
 
                 if (!password) {
-                    toastr.error('Please enter your password to confirm.');
+                    alert('Please enter your password to confirm.');
                     return;
                 }
 
@@ -170,13 +170,13 @@
                                 location.reload();
                             }, 2000);
                         } else {
-                            toastr.error(response.message);
+                            alert(response.message);
                         }
                     },
                     error: function () {
                         $('#restoreModal').modal('hide');
                         btn.prop('disabled', false).text('Restore Database');
-                        toastr.error('An error occurred during restoration.');
+                        alert('An error occurred during restoration.');
                     }
                 });
             });

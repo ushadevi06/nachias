@@ -106,7 +106,7 @@ class PurchaseInvoiceController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit purchase-invoice')) {
                 return unauthorizedRedirect();
             }
-            $invoice = PurchaseInvoice::with(['items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+            $invoice = PurchaseInvoice::with(['items.rawMaterial', 'items.uom', 'charges', 'purchaseCommissionAgent'])->findOrFail($id);
             $charges = $invoice->charges;
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create purchase-invoice')) {
@@ -187,6 +187,7 @@ class PurchaseInvoiceController extends Controller
 
             $validated = $request->validate($rules, $messages);
             $purchaseOrder = PurchaseOrder::with('items')->findOrFail($request->purchase_order_id);
+
             $errors = [];
             $hasSelectedItems = false;
 
@@ -199,7 +200,7 @@ class PurchaseInvoiceController extends Controller
                     $errors["items.$index.quantity"] = 'This field is required.';
                     continue;
                 }
-                $poItem = $purchaseOrder->items->firstWhere('id', $item['purchase_order_item_id']);
+                $poItem = $purchaseOrder->items()->where('id', $item['purchase_order_item_id'])->first();
 
                 if ($poItem) {
                     $alreadyInvoiced = PurchaseInvoiceItem::where('purchase_order_item_id', $poItem->id)->sum('quantity');
@@ -269,6 +270,9 @@ class PurchaseInvoiceController extends Controller
                     'due_date' => $request->due_date ? Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d') : null,
                     'notes' => $request->notes,
                     'transaction_id' => $request->transaction_id,
+                    'purchase_commission_agent_id' => $request->purchase_commission_agent_id,
+                    'commission' => $request->commission ?? 0,
+                    'commission_amount' => $request->commission_amount ?? 0,
                 ];
 
                 $uploadPath = public_path('uploads/purchase_invoices');
@@ -421,6 +425,7 @@ class PurchaseInvoiceController extends Controller
 
         $purchaseOrders = PurchaseOrder::with('supplier')
             ->where('purchase_orders.status', '!=', 'Draft')
+            ->where('purchase_orders.is_self_closed', 0)
             ->where(function ($query) use ($invoice) {
                 $query->whereIn(
                     'purchase_orders.id',
@@ -451,21 +456,6 @@ class PurchaseInvoiceController extends Controller
         $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
 
         $nextInvoiceNumber = '';
-        if (!$id) {
-            $setting = Setting::first();
-            if ($setting && $setting->purchase_invoice_prefix) {
-                $prefix = $setting->purchase_invoice_prefix;
-                $lastInvoice = PurchaseInvoice::where('invoice_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
-                if ($lastInvoice) {
-                    $lastNumberStr = substr($lastInvoice->invoice_no, strlen($prefix));
-                    $lastNumber = intval($lastNumberStr);
-                    $nextNumber = str_pad($lastNumber + 1, max(strlen($lastNumberStr), 4), '0', STR_PAD_LEFT);
-                } else {
-                    $nextNumber = '0001';
-                }
-                $nextInvoiceNumber = $prefix . $nextNumber;
-            }
-        }
 
         return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber'));
     }
@@ -525,7 +515,7 @@ class PurchaseInvoiceController extends Controller
             'items.storeCategory'
         ])->findOrFail($id);
 
-        $items = $purchaseOrder->items->map(function ($item) {
+        $items = $purchaseOrder->items()->get()->map(function ($item) {
             $alreadyInvoicedQty = PurchaseInvoiceItem::where(
                 'purchase_order_item_id',
                 $item->id
@@ -552,9 +542,7 @@ class PurchaseInvoiceController extends Controller
                 'rate' => $item->rate,
                 'amount' => $item->amount,
             ];
-        })
-            ->filter()
-            ->values();
+        })->filter()->values();
 
         return response()->json([
             'success' => true,
@@ -562,6 +550,15 @@ class PurchaseInvoiceController extends Controller
             'supplier_id' => $purchaseOrder->supplier_id,
             'supplier_state_id' => $purchaseOrder->supplier->state_id ?? null,
             'supplier_name' => $purchaseOrder->supplier->name . ' (' . $purchaseOrder->supplier->code . ')',
+            'discount_percent' => $purchaseOrder->discount_percent,
+            'commission' => $purchaseOrder->commission ?? 0,
+            'purchase_commission_agent_id' => $purchaseOrder->purchase_commission_agent_id,
+            'purchase_commission_agent_name' => $purchaseOrder->purchaseCommissionAgent->name ?? '',
+            'round_off' => $purchaseOrder->round_off,
+            'round_off_type' => $purchaseOrder->round_off_type,
+            'igst_percent' => $purchaseOrder->igst_percent,
+            'cgst_percent' => $purchaseOrder->cgst_percent,
+            'sgst_percent' => $purchaseOrder->sgst_percent,
             'items' => $items,
         ]);
     }

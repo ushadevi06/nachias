@@ -38,6 +38,7 @@ class PurchaseOrder extends Model
         'round_off',
         'total_amount',
         'additional_attachments',
+        'is_self_closed',
     ];
 
 
@@ -60,6 +61,7 @@ class PurchaseOrder extends Model
         'round_off' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'additional_attachments' => 'array',
+        'is_self_closed' => 'boolean',
     ];
 
     public function purchaseCommissionAgent()
