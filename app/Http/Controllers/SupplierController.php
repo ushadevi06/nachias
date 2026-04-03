@@ -311,7 +311,7 @@ class SupplierController extends Controller
         }
 
         $request->validate([
-            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'  
         ]);
 
         try {

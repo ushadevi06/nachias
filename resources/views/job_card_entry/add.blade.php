@@ -93,9 +93,6 @@
                                         <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off" {{ $hasTasks ? 'readonly' : '' }}>
                                         <label for="stock_entry_search">Type Stock Entry No or Material Name</label>
                                     </div>
-                                    <button class="btn btn-primary" type="button" id="generate-matrix-btn" {{ $hasTasks ? 'disabled' : '' }}>
-                                        <i class="ri ri-play-circle-line me-1"></i> GO
-                                    </button>
                                 </div>
                                 <div id="stock-entry-tags" class="mt-2 d-flex flex-wrap gap-1"></div>
                                 <div id="fabric-validation-error" class="text-danger small fw-bold mt-2" style="display: none;"></div>
@@ -208,7 +205,6 @@
                             window._initialStockEntries = @json($initialEntries);
                             </script>
                             @endif
-                            {{-- hidden purchase_order_id kept for backward compatibility --}}
                             <input type="hidden" name="purchase_order_id" value="{{ old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') }}">
                             <input type="hidden" name="fabric_type_id" id="fabric_type_id" value="{{ old('fabric_type_id', $jobCard ? $jobCard->fabric_type_id : '') }}">
                             <div class="col-md-6 col-xl-4">
@@ -346,33 +342,29 @@
                         </div>
                     </div>
                 </div>
-                <div class="card mb-4">
+                <div class="card mb-4" id="item-details-card">
                     <div class="card-body">
-                        <div class="card-header-box">
-                            <h4>Item Details</h4>
+                        <div class="card-header-box mb-3 d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">Item Details</h4>
                         </div>
-                        <div class="row g-4">
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="brand_category_id" name="brand_category_id" class="form-select select2" data-placeholder="Select Brand Category">
-                                        <option value="">Select Brand Category</option>
-                                        @foreach($brandCategories as $cat)
-                                            <option value="{{ $cat->id }}" {{ (old('brand_category_id', $jobCard ? $jobCard->brand_category_id : '') == $cat->id) ? 'selected' : '' }}>{{ $cat->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="brand_category_id">Brand Category *</label>
-                                </div>
-                                @error('brand_category_id') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="item_id" name="item_id" class="form-select select2" data-placeholder="Select Item">
-                                        <option value="">Select Item</option>
-                                    </select>
-                                    <label for="item_id">Item *</label>
-                                </div>
-                                @error('item_id') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
+                        <div id="item-details-table-wrapper" class="table-responsive d-none">
+                            <table class="table table-bordered table-sm align-middle" id="item-details-table">
+                                <thead class="bg-primary">
+                                    <tr>
+                                        <th class="text-center" style="width: 50px;">S.No</th>
+                                        <th>Raw Material Name</th>
+                                        <th class="text-center" style="width: 150px;">Total Quantity</th>
+                                        <th class="text-center" style="width: 180px;">Quantity Used</th>
+                                        <th class="text-center" style="width: 150px;">Quantity Remaining</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="item-details-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="no-materials-msg" class="text-center py-4 bg-light rounded text-muted">
+                            <i class="ri-information-line fs-3 d-block mb-2 text-primary"></i>
+                            <span id="no-material-text">Please select a Stock Entry Number to fetch material details.</span>
                         </div>
                     </div>
                 </div>
@@ -578,19 +570,35 @@
                         </div>
                         <div class="row g-4 mb-3">
                             <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="size_ratio_select" name="size_ratio_id" class="form-select select2" data-placeholder="Select Size Ratio">
-                                        <option value="">Select Size Ratio</option>
-                                        @foreach($sizeRatios as $sr)
-                                            <option value="{{ $sr->id }}" data-sizes="{{ $sr->size }}" data-ratios="{{ $sr->ratio }}" {{ (old('size_ratio_id', $jobCard ? $jobCard->size_ratio_id : '') == $sr->id) ? 'selected' : '' }}>({{ $sr->size }}) - ({{ $sr->ratio }})</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="size_ratio_select">Select Size Ratio</label>
+                                <div id="sleeve-instance-manager" class="p-3 border rounded shadow-sm">
+                                    <label class="d-block mb-2 fw-bold text-primary">Sleeve Configuration</label>
+                                    <div class="d-flex gap-2 mb-3">
+                                        <button type="button" class="btn btn-sm btn-outline-primary shadow-sm hover-lift" id="add-fs-instance">
+                                            <i class="ri ri-add-line me-1"></i>  ADD F/S
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info shadow-sm hover-lift" id="add-hs-instance">
+                                            <i class="ri ri-add-line me-1"></i>  ADD H/S
+                                        </button>
+                                    </div>
+                                    
+                                    <div id="sleeve-instance-list" class="d-flex flex-wrap gap-2"></div>
+                                    
+                                    <div id="no-sleeve-msg" class="text-muted small mt-2">
+                                        <i class="ri ri-information-line me-1"></i> No sleeves added yet.
+                                    </div>
+                                    
+                                    {{-- 
+                                    <hr class="my-3">
+                                    <label class="d-block mb-2 fw-bold text-secondary small">Add Extra Size (Optional)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="extra_size_input" class="form-control" placeholder="e.g. 36 or 48">
+                                        <button class="btn btn-dark" type="button" id="add-extra-size-btn">
+                                            <i class="ri ri-add-line me-1"></i> Add Size
+                                        </button>
+                                    </div>
+                                    --}}
                                 </div>
-                                <small class="text-muted">
-                                    Note: Size ratio will be used to calculate production quantity for each size.
-                                </small><br>
-                                @error('size_ratio_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                @error('sleeve_types') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
                         </div>
 
@@ -600,17 +608,11 @@
                                     <tr>
                                         <th rowspan="2" class="align-middle">SIZE</th>
                                         <th colspan="{{ count($sizes) }}" class="ratio-header">CUTTING SIZE RATIO</th>
-                                        <th colspan="2" class=""></th>
-                                        <th colspan="2">CUTTING MARK AND LAY</th>
                                     </tr>
                                     <tr class="size-header-row">
                                         @foreach($sizes as $s)
                                             <th class="dynamic-size-head">{{ $s }}</th>
                                         @endforeach
-                                        <th class="extra-col-1"></th>
-                                        <th class="extra-col-2"></th>
-                                        <th>SIZE</th>
-                                        <th>MARK</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -755,20 +757,6 @@
                                         </tr>
                                         <tr>
                                             @foreach($fabrics as $index => $fabric)
-                                                <td class="fw-bold">SLEEVE WISE QTY</td>
-                                                <td>
-                                                    <div class="input-group input-group-sm flex-nowrap">
-                                                        <span class="input-group-text px-1">F/S</span>
-                                                        <input type="text" name="fabrics[{{ $index }}][fs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="{{ $fabric['art_no'] ?? '' }}" value="{{ $fabric['fs_qty'] ?? '' }}">
-                                                        <span class="input-group-text px-1">H/S</span>
-                                                        <input type="text" name="fabrics[{{ $index }}][hs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="{{ $fabric['art_no'] ?? '' }}" value="{{ $fabric['hs_qty'] ?? '' }}">
-                                                        <span class="input-group-text px-1 uom-label">{{ $fabric['uom_code'] ?? 'PCS' }}</span>
-                                                    </div>
-                                                </td>
-                                            @endforeach
-                                        </tr>
-                                        <tr>
-                                            @foreach($fabrics as $index => $fabric)
                                                 <td class="fw-bold">N.PATTI</td>
                                                 <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}"></td>
                                             @endforeach
@@ -782,31 +770,17 @@
 
                 <div class="card mb-4 d-none" id="article-matrix-card">
                     <div class="card-body">
-                        <div class="card-header-box mb-3">
-                            <h4>Article Quantity Matrix</h4>
+                        <div class="card-header-box mb-3 border-bottom pb-2 align-items-center">
+                            <h4 class="mb-0"><i class="ri ri-grid-fill me-2 text-primary"></i>Article Quantity Matrix</h4>
                             <div id="article-matrix-error" class="text-danger small fw-bold mb-2" style="display: none;"></div>
                             @error('article_matrix') <div class="text-danger small fw-bold mb-2 backend-error">{{ $message }}</div> @enderror
                         </div>
-                        <div class="mb-4">
-                            <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3">1. Fabric Pieces (Source)</h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered text-center align-middle mb-0" id="article-qty-matrix-1">
-                                    <thead></thead>
-                                    <tbody id="article-qty-matrix-1-body"></tbody>
-                                    <tfoot></tfoot>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3">2. Consumables (Derived)</h6>
-                            <div class="table-responsive">
-                                <table class="table table-bordered text-center align-middle mb-0" id="article-qty-matrix-2">
-                                    <thead></thead>
-                                    <tbody id="article-qty-matrix-2-body"></tbody>
-                                    <tfoot></tfoot>
-                                </table>
-                            </div>
+                        <div class="table-responsive mt-3">
+                            <table class="table table-bordered text-center align-middle mb-0 shadow-sm" id="article-qty-matrix">
+                                <thead class="table-light text-uppercase small fw-bold"></thead>
+                                <tbody id="article-qty-matrix-body"></tbody>
+                                <tfoot class="table-light"></tfoot>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -974,14 +948,16 @@
         }
         const articleUoms = @json(collect($fabrics)->pluck('uom_code', 'art_no')) || {};
         let currentArtData = []; 
-        let currentSizes = @json($sizes);
-        let currentRatios = @json($ratios);
+        let currentSizes = ['36', '38', '40', '42', '44'];
+        let currentRatios = ['', '', '', '', ''];
         let currentProcessGroupId = '{{ old("process_group_id", $jobCard ? $jobCard->process_group_id : "") }}';
         let currentProcessGroup = '{{ old("process_group_display", $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : "") }}';
         let addedStages = [];
         let fsMeterValue = '{{ old("fs_meter", $jobCard ? ($jobCard->sleeveMeters->where("sleeve_type", "Full Sleeve")->first()->meter ?? "") : "") }}';
         let hsMeterValue = '{{ old("hs_meter", $jobCard ? ($jobCard->sleeveMeters->where("sleeve_type", "Half Sleeve")->first()->meter ?? "") : "") }}';
 
+        let sleeveInstances = []; // [{ id: number, type: 'fs'|'hs' }]
+        
         function syncReferenceNo() {
             const jobCardNo = $('#job_card_no').val();
             if(jobCardNo) {
@@ -1382,8 +1358,7 @@
                         ${removeButton}
                     </span>`);
                 $tags.append($tag);
-                
-                $('#generate-matrix-btn').prop('disabled', false);
+                refreshMatrixFromIds();
             }
 
             function removeTag(id) {
@@ -1391,26 +1366,16 @@
                 selectedIds = selectedIds.filter(x => x !== id);
                 $hiddenWrap.find(`input[value="${id}"]`).remove();
                 $tags.find(`[data-id="${id}"]`).remove();
-                
-                if (selectedIds.length === 0) {
-                    $('#generate-matrix-btn').prop('disabled', true);
-                }
+                refreshMatrixFromIds();
             }
 
-            $('#generate-matrix-btn').on('click', function() {
-                refreshMatrixFromIds();
-            });
 
             function refreshMatrixFromIds() {
                 if (selectedIds.length === 0) {
                     $('#fabric-validation-error').hide();
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Selection Required',
-                        text: 'Please add at least one material to generate the matrix.',
-                        confirmButtonColor: '#6200ee'
-                    });
                     $('#fabric-details-card').addClass('d-none');
+                    $('#item-details-table-wrapper').addClass('d-none');
+                    $('#no-materials-msg').removeClass('d-none');
                     $('#article-matrix-card').addClass('d-none');
                     return;
                 }
@@ -1449,8 +1414,10 @@
                     $('#fabric-validation-error').hide();
 
                     $('#fabric-details-card').removeClass('d-none');
-                    $('#article-matrix-card').removeClass('d-none');
                     renderFabricDetails();
+                    if (typeof renderItemDetailsTable === "function") {
+                        renderItemDetailsTable(currentArtData);
+                    }
                     
                     if (typeof globalActiveSizes !== 'undefined') {
                         renderArticleQtyMatrix(data.art_numbers, globalActiveSizes.fs || [], globalActiveSizes.hs || []);
@@ -1464,11 +1431,6 @@
                     }
                     updateQuantityRowVisibility();
                     
-                    setTimeout(function() {
-                        $('html, body').animate({
-                            scrollTop: $("#article-matrix-card").offset().top - 80
-                        }, 500);
-                    }, 100);
                 });
             }
 
@@ -1554,10 +1516,16 @@
                         if (!isEditMode && $('#fabric-details-body tr').length === 0) {
                             $('#fabric-details-card').removeClass('d-none');
                             renderFabricDetails();
+                            if (typeof renderItemDetailsTable === "function") {
+                                renderItemDetailsTable(currentArtData);
+                            }
                             renderCuttingSizeTable(currentSizes, currentRatios);
                             updateQuantityRowVisibility();
                         } else {
                             renderFabricDetails();
+                            if (typeof renderItemDetailsTable === "function") {
+                                renderItemDetailsTable(currentArtData);
+                            }
                             renderCuttingSizeTable(currentSizes, currentRatios);
                             syncMatrixWithMasterTable(false);
                             renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
@@ -1568,53 +1536,6 @@
             }
         })();
 
-
-        function resetItemSelect(selectedId = null) {
-            const $item = $('#item_id');
-            $item.empty().append('<option value="">Select Item</option>');
-            if (selectedId) {
-                $item.val(String(selectedId)).trigger('change');
-            } else {
-                $item.val('').trigger('change');
-            }
-        }
-
-        function loadItemsByBrandCategory(brandCategoryId, selectedItemId = null) {
-            if (!brandCategoryId) {
-                resetItemSelect();
-                return;
-            }
-
-            $.get(`{{ url('job_card_entries/get_items_by_brand_category') }}`, { brand_category_id: brandCategoryId }, function(res) {
-                const items = res && res.items ? res.items : [];
-                const $item = $('#item_id');
-                $item.empty().append('<option value="">Select Item</option>');
-                items.forEach(it => {
-                    const text = it.code ? `${it.name} (${it.code})` : it.name;
-                    $item.append(`<option value="${it.id}">${text}</option>`);
-                });
-                if (selectedItemId) {
-                    $item.val(String(selectedItemId)).trigger('change');
-                } else {
-                    $item.val('').trigger('change');
-                }
-            }).fail(function() {
-                resetItemSelect();
-            });
-        }
-
-        $('#brand_category_id').on('change', function() {
-            loadItemsByBrandCategory($(this).val(), null);
-        });
-
-        const initialBrandCategoryId = $('#brand_category_id').val();
-        const initialItemId = @json(old('item_id', $jobCard ? $jobCard->item_id : null));
-        if (initialBrandCategoryId) {
-            loadItemsByBrandCategory(initialBrandCategoryId, initialItemId);
-        } else {
-            resetItemSelect(initialItemId);
-        }
-
         const initialPoId = $('#purchase_order').val();
         if (initialPoId) {
             $.get(`{{ url('job_card_entries/get-po-details') }}/${initialPoId}`, function(data) {
@@ -1624,10 +1545,16 @@
                 if (!isEditMode && $('#fabric-details-body tr').length === 0) {
                     $('#fabric-details-card').removeClass('d-none');
                     renderFabricDetails();
+                    if (typeof renderItemDetailsTable === "function") {
+                        renderItemDetailsTable(currentArtData);
+                    }
                     renderCuttingSizeTable(currentSizes, currentRatios);
                     updateQuantityRowVisibility();
                 } else {
                     renderFabricDetails(); 
+                    if (typeof renderItemDetailsTable === "function") {
+                        renderItemDetailsTable(currentArtData);
+                    }
                     renderCuttingSizeTable(currentSizes, currentRatios); 
                     syncMatrixWithMasterTable(false);
                     renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
@@ -1637,41 +1564,32 @@
         }
 
         function renderArticleQtyMatrix(artNumbers, activeFsSizes = [], activeHsSizes = []) {
-            const tableIds = ['#article-qty-matrix-1', '#article-qty-matrix-2'];
-            
-            tableIds.forEach(id => {
-                const $table = $(id);
-                $table.find('thead').empty();
-                $table.find('tbody').empty();
-                $table.find('tfoot').empty();
+            const $table = $('#article-qty-matrix');
+            const $thead = $table.find('thead');
+            const $tbody = $('#article-qty-matrix-body');
+            const $tfoot = $table.find('tfoot');
 
-                const headHtml = `
-                    <tr>
-                        <th rowspan="2" class="align-middle" style="min-width: 150px;">ART NO / MATERIAL</th>
-                        ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
-                        ${activeHsSizes.length > 0 ? `<th colspan="${activeHsSizes.length}">H/S</th>` : ''}
-                        <th rowspan="2" class="align-middle">TOTAL</th>
-                    </tr>
-                    <tr class="size-headers">
-                        ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
-                        ${activeHsSizes.map(s => `<th class="mat-hs-head">${s}</th>`).join('')}
-                    </tr>`;
-                $table.find('thead').append(headHtml);
-                
-                const footHtml = `
-                    <tr class="${id === '#article-qty-matrix-2' ? 'd-none' : ''}">
-                        <td class="fw-bold text-center small">TOTAL</td>
-                        ${activeFsSizes.map(s => `<td><div class="col-total text-center fw-bold small py-1 bg-secondary-subtle border rounded" data-col="fs-${s}" style="min-height: 30px;"></div></td>`).join('')}
-                        ${activeHsSizes.map(s => `<td><div class="col-total text-center fw-bold small py-1 bg-secondary-subtle border rounded" data-col="hs-${s}" style="min-height: 30px;"></div></td>`).join('')}
-                        <td><div id="${id.replace('#','')}-grand-total" class="grand-total text-center fw-bold py-1 bg-secondary-subtle border rounded small" style="min-height: 30px;"></div></td>
-                    </tr>`;
-                $table.find('tfoot').append(footHtml);
-            });
+            $thead.empty();
+            $tbody.empty();
+            $tfoot.empty();
 
             if (!artNumbers || artNumbers.length === 0) return;
 
+            const headHtml = `
+                <tr>
+                    <th rowspan="2" class="align-middle" style="min-width: 150px;">ART NO / MATERIAL</th>
+                    ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
+                    ${activeHsSizes.length > 0 ? `<th colspan="${activeHsSizes.length}">H/S</th>` : ''}
+                    <th rowspan="2" class="align-middle">TOTAL</th>
+                </tr>
+                <tr class="size-headers">
+                    ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
+                    ${activeHsSizes.map(s => `<th class="mat-hs-head">${s}</th>`).join('')}
+                </tr>`;
+            $thead.append(headHtml);
+
             artNumbers.forEach((art, index) => {
-                const existingRow = isEditMode && existingMatrix.length > 0  ? existingMatrix.find(r => String(r.art_no).trim() == String(art).trim()) : null;
+                const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).trim() == String(art).trim()) : null;
                 const oldRow = oldMatrix && oldMatrix.length > 0 ? (oldMatrix.find(r => String(r.art_no).trim() == String(art).trim()) || oldMatrix[index]) : null;
                 
                 let uom = (articleUoms[art] || 'PCS').toUpperCase();
@@ -1688,10 +1606,8 @@
                 }
                 
                 const isTaskReadOnly = hasTasks ? 'readonly tabindex="-1"' : '';
-                const readonlyAttr = (catId != 1) ? 'readonly tabindex="-1"' : isTaskReadOnly;
+                const readonlyAttr = isTaskReadOnly;
                 const rowClass = (catId != 1) ? 'cat2-row' : 'cat1-row';
-                const sectionId = (catId == 1) ? 1 : 2;
-                const $targetTbody = $(`#article-qty-matrix-${sectionId}-body`);
 
                 let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}">
                                 <td>
@@ -1702,9 +1618,8 @@
                 
                 activeFsSizes.forEach(s => {
                     let fsVal = '';
-                    if (oldRow && oldRow[`fs_${s}`] !== undefined) {
-                        fsVal = oldRow[`fs_${s}`];
-                    } else if (existingRow && existingRow.quantities) {
+                    if (oldRow && oldRow[`fs_${s}`] !== undefined) fsVal = oldRow[`fs_${s}`];
+                    else if (existingRow && existingRow.quantities) {
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
                     }
@@ -1713,9 +1628,8 @@
 
                 activeHsSizes.forEach(s => {
                     let hsVal = '';
-                    if (oldRow && oldRow[`hs_${s}`] !== undefined) {
-                        hsVal = oldRow[`hs_${s}`];
-                    } else if (existingRow && existingRow.quantities) {
+                    if (oldRow && oldRow[`hs_${s}`] !== undefined) hsVal = oldRow[`hs_${s}`];
+                    else if (existingRow && existingRow.quantities) {
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
                     }
@@ -1723,8 +1637,18 @@
                 });
 
                 rowHtml += `<td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td></tr>`;
-                $targetTbody.append(rowHtml);
+                $tbody.append(rowHtml);
             });
+
+            const footHtml = `
+                <tr>
+                    <td class="fw-bold text-center small">CUTTING TOTAL (PCS)</td>
+                    ${activeFsSizes.map(s => `<td><div class="col-total text-center fw-bold small py-1 border rounded" data-col="fs-${s}" style="min-height: 30px;"></div></td>`).join('')}
+                    ${activeHsSizes.map(s => `<td><div class="col-total text-center fw-bold small py-1 border rounded" data-col="hs-${s}" style="min-height: 30px;"></div></td>`).join('')}
+                    <td><div id="article-qty-matrix-grand-total" class="grand-total text-center fw-bold py-1 border rounded small" style="min-height: 30px;"></div></td>
+                </tr>`;
+            $tfoot.append(footHtml);
+
             calculateMatrixTotals();
         }
 
@@ -1732,10 +1656,10 @@
             if (isSyncing) return;
             const $el = $(this);
             const $row = $el.closest('tr');
-            if ($row.closest('table').is('#article-qty-matrix-1, #article-qty-matrix-2')) {
+            if ($row.closest('table').is('#article-qty-matrix')) {
                 const isCat1 = ($row.attr('data-category') == 1);
 
-                if (isCat1 && $row.is(':first-child')) {
+                if (isCat1 && $('#article-qty-matrix-body tr.cat1-row').first().is($row)) {
                     const col = $el.data('col');
                     const parts = (col || "").split('-');
                     if (parts.length >= 2) {
@@ -1768,75 +1692,43 @@
 
             try {
                 const cat1ColSums = {};
-                $('#article-qty-matrix-1-body tr').each(function() {
-                    let rowTotal = 0;
-                    $(this).find('.qty-input').each(function() {
-                        const col = $(this).data('col');
-                        const val = parseFloat($(this).val()) || 0;
-                        cat1ColSums[col] = (cat1ColSums[col] || 0) + val;
-                        rowTotal += val;
-                    });
-                    $(this).find('.row-total').val(rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(3)) : '');
-                });
-
-                $('#article-qty-matrix-2-body tr').each(function() {
+                $('#article-qty-matrix-body tr').each(function() {
                     const $row = $(this);
-                    const art = $row.data('art');
+                    const isFabric = $row.hasClass('cat1-row');
                     let rowTotal = 0;
                     $row.find('.qty-input').each(function() {
                         const col = $(this).data('col');
-                        const parts = col.split('-');
-                        const type = parts[0];
-                        const size = parts[1];
-                        
-                        const pieces = cat1ColSums[col] || 0;
-                        const cons = getConsumptionValue(art, type, size);
-                        const calcVal = pieces * cons;
-                        
-                        $(this).val(calcVal > 0 ? (calcVal % 1 === 0 ? calcVal : calcVal.toFixed(3)) : '');
-                        rowTotal += (parseFloat($(this).val()) || 0);
+                        const val = parseFloat($(this).val()) || 0;
+                        if (isFabric) {
+                            cat1ColSums[col] = (cat1ColSums[col] || 0) + val;
+                        }
+                        rowTotal += val;
                     });
-                    $(this).find('.row-total').val(rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(3)) : '');
+                    $row.find('.row-total').val(rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(3)) : '');
                 });
 
-                const tableIds = ['#article-qty-matrix-1', '#article-qty-matrix-2'];
+                const $table = $('#article-qty-matrix');
                 let totalFS = 0;
                 let totalHS = 0;
+                let grandTotal = 0;
 
-                tableIds.forEach(id => {
-                    const colSums = {};
-                    let tableGrandTotal = 0;
+                $table.find('.col-total').each(function() {
+                    const col = $(this).data('col');
+                    const sum = cat1ColSums[col] || 0;
+                    $(this).text(sum > 0 ? (sum % 1 === 0 ? sum : sum.toFixed(3)) : ''); 
                     
-                    $(`${id}-body tr`).each(function() {
-                        const uom = ($(this).attr('data-uom') || '').toUpperCase();
-                        const isMtr = (uom === 'MTR');
-
-                        $(this).find('.qty-input').each(function() {
-                            const val = parseFloat($(this).val()) || 0;
-                            const col = $(this).data('col');
-                            colSums[col] = (colSums[col] || 0) + val;
-                            tableGrandTotal += val;
-                            
-                            if (id === '#article-qty-matrix-1') {
-                                if (col.startsWith('fs')) totalFS += val;
-                                else if (col.startsWith('hs')) totalHS += val;
-                            }
-                        });
-                    });
-
-                    $(`${id} .col-total`).each(function() {
-                        const col = $(this).data('col');
-                        const sum = colSums[col] || 0;
-                        $(this).text(sum > 0 ? (sum % 1 === 0 ? sum : sum.toFixed(3)) : ''); 
-                    });
-                    $(`${id}-grand-total`).text(tableGrandTotal > 0 ? (tableGrandTotal % 1 === 0 ? tableGrandTotal : tableGrandTotal.toFixed(3)) : '');
+                    if (col.startsWith('fs')) totalFS += sum;
+                    else if (col.startsWith('hs')) totalHS += sum;
+                    grandTotal += sum;
                 });
+
+                $('#article-qty-matrix-grand-total').text(grandTotal > 0 ? (grandTotal % 1 === 0 ? grandTotal : grandTotal.toFixed(3)) : '');
 
                 $('#total_qty_fs').val(totalFS > 0 ? Math.round(totalFS) : '');
                 $('#total_qty_hs').val(totalHS > 0 ? Math.round(totalHS) : '');
                 $('.total-summary-fs').text(totalFS > 0 ? Math.round(totalFS) : '0');
                 $('.total-summary-hs').text(totalHS > 0 ? Math.round(totalHS) : '0');
-
+                
             } finally {
                 if (!wasSyncing) isSyncing = false;
             }
@@ -1880,75 +1772,84 @@
             }
         });
 
-        $('#size_ratio_select').on('change', function() {
-            const $this = $(this);
-            const $selected = $this.find(':selected');
-            const selectedValue = $this.val();
-            
-            if (selectedValue) {
-                // Check if Materials (Stock Entries) are selected
-                const materialCount = $('input[name="stock_entry_ids[]"]').length;
-                if (materialCount === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Selection Required',
-                        text: 'Please select at least one material/stock entry first.',
-                        confirmButtonColor: '#6200ee'
-                    });
-                    $this.val('').trigger('change.select2');
-                    return;
-                }
+        $('#add-fs-instance').on('click', function() { addSleeveInstance('fs'); });
+        $('#add-hs-instance').on('click', function() { addSleeveInstance('hs'); });
 
-                // Check if GO button was clicked (matrix card is visible)
-                if ($('#article-matrix-card').hasClass('d-none')) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Generate Matrix',
-                        text: 'Please click the "GO" button to generate the Article Quantity Matrix before selecting a size ratio.',
-                        confirmButtonColor: '#6200ee'
-                    });
-                    $this.val('').trigger('change.select2');
-                    return;
-                }
+        $('#add-extra-size-btn').on('click', function() {
+            const val = $('#extra_size_input').val().trim();
+            if (val && !currentSizes.includes(val)) {
+                currentSizes.push(val);
+                currentSizes.sort((a, b) => {
+                    const numA = parseFloat(a);
+                    const numB = parseFloat(b);
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    return String(a).localeCompare(String(b));
+                });
+                $('#extra_size_input').val('');
+                renderCuttingSizeTable(currentSizes, currentRatios);
+                syncMatrixWithMasterTable(true);
+            } else if (currentSizes.includes(val)) {
+                $('#extra_size_input').val('');
+            }
+        });
 
-                const processGroupId = $('#process_group_id').val();
-                if (!processGroupId) {
-                    showFieldError('#process_group_display', 'Please select Process Group first');
-                    $this.val('').trigger('change.select2');
-                    return;
-                }
+        $('#extra_size_input').on('keypress', function(e) {
+            if (e.which == 13) {
+                e.preventDefault();
+                $('#add-extra-size-btn').click();
             }
-            
-            const sizesStr = $selected.data('sizes') || '';
-            const ratiosStr = $selected.data('ratios') || '';
-            
-            if (sizesStr) {
-                currentSizes = sizesStr.toString().split(',').map(s => s.trim());
-                currentRatios = ratiosStr.toString().split(',').map(r => r.trim());
-                $('#cutting-size-table-wrapper').show();
-                $('#trigger-sync-wrapper').show();
-                $('#article-matrix-card').removeClass('d-none');
-            } else {
-                currentSizes = ['36', '38', '40', '42', '44'];
-                currentRatios = ['', '', '', '', ''];
-                $('#cutting-size-table-wrapper').hide();
-                $('#trigger-sync-wrapper').hide();
-            }
+        });
+
+        function addSleeveInstance(type) {
+            const id = Date.now();
+            sleeveInstances.push({ id, type });
+            renderSleeveInstanceList();
             renderCuttingSizeTable(currentSizes, currentRatios);
-            syncMatrixWithMasterTable(false);
+            syncMatrixWithMasterTable(true);
+            updateQuantityRowVisibility();
+        }
+
+        $(document).on('click', '.remove-sleeve-instance', function() {
+            const id = $(this).data('instance-id');
+            sleeveInstances = sleeveInstances.filter(i => i.id != id);
+            renderSleeveInstanceList();
+            renderCuttingSizeTable(currentSizes, currentRatios);
+            syncMatrixWithMasterTable(true);
             updateQuantityRowVisibility();
         });
-        const $initialSizeRatio = $('#size_ratio_select').find(':selected');
-        if ($initialSizeRatio.val()) {
-            const sizesStr = $initialSizeRatio.data('sizes') || '';
-            const ratiosStr = $initialSizeRatio.data('ratios') || '';
-            if (sizesStr) {
-                currentSizes = sizesStr.toString().split(',').map(s => s.trim());
-                currentRatios = ratiosStr.toString().split(',').map(r => r.trim());
-                renderCuttingSizeTable(currentSizes, currentRatios);
-                syncMatrixWithMasterTable(false);
+
+        function renderSleeveInstanceList() {
+            const $list = $('#sleeve-instance-list');
+            const $msg = $('#no-sleeve-msg');
+            $list.empty();
+            
+            if (sleeveInstances.length === 0) {
+                $msg.show();
+                $('#cutting-size-table-wrapper').hide();
+                $('#trigger-sync-wrapper').hide();
+                $('#article-matrix-card').addClass('d-none');
+                return;
             }
+
+            $msg.hide();
+            $('#cutting-size-table-wrapper').show();
+            $('#trigger-sync-wrapper').show();
+            $('#article-matrix-card').removeClass('d-none');
+
+            sleeveInstances.forEach((inst, idx) => {
+                const label = inst.type === 'fs' ? 'F/S row' : 'H/S row';
+                const colorClass = inst.type === 'fs' ? 'bg-primary' : 'bg-info';
+                const badge = $(`
+                    <span class="badge ${colorClass} d-inline-flex align-items-center gap-1 px-2 py-1 fs-6">
+                        ${label} ${idx + 1}
+                        <i class="ri ri-close-line ms-1 cursor-pointer remove-sleeve-instance" data-instance-id="${inst.id}" title="Remove"></i>
+                    </span>
+                `);
+                $list.append(badge);
+            });
         }
+
+        renderCuttingSizeTable(currentSizes, currentRatios);
 
         function renderFabricDetails() {
             const $tbody = $('#fabric-details-body');
@@ -1963,7 +1864,6 @@
             let mtrRow = '<tr>';
             let inOutRow = '<tr>';
             let nPattiRow = '<tr>';
-            let sleeveQtyRow = '<tr>';
 
             currentArtNumbers.forEach((art, index) => {
                 let existingImagesHtml = '';
@@ -2033,71 +1933,6 @@
                     }
                 }
 
-                if (catId === 1) {
-                    let sizes = [...new Set([...globalActiveSizes.fs, ...globalActiveSizes.hs])].sort((a,b) => parseFloat(a)-parseFloat(b) || String(a).localeCompare(String(b)));
-                    
-                    let sizeTableHtml = '';
-                    if (sizes.length > 0) {
-                        sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1" style="font-size: 11px;">
-                            <thead class="bg-light"><tr><th>Size</th><th>F/S</th><th>H/S</th></tr></thead>
-                            <tbody>`;
-                        
-                        sizes.forEach(sz => {
-                            let vSzFs = '';
-                            let vSzHs = '';
-                            
-                            if (oldFabrics && oldFabrics[index] && oldFabrics[index]['consumptions'] && oldFabrics[index]['consumptions'][sz]) {
-                                vSzFs = oldFabrics[index]['consumptions'][sz]['fs_cons'] || '';
-                                vSzHs = oldFabrics[index]['consumptions'][sz]['hs_cons'] || '';
-                            }
-                            
-                            if (!vSzFs && isEditMode && existingMatrix.length > 0) {
-                                const m = existingMatrix.find(m => m.art_no == art);
-                                if (m && m.consumptions) {
-                                    const c = m.consumptions.find(c => String(c.size) === String(sz));
-                                    if (c) {
-                                        vSzFs = c.fs_cons || '';
-                                        vSzHs = c.hs_cons || '';
-                                    }
-                                }
-                            }
-
-                            sizeTableHtml += `<tr>
-                                <td>${sz}</td>
-                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][fs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vSzFs}" ${isTaskReadOnly}></td>
-                                <td><input type="text" name="fabrics[${index}][consumptions][${sz}][hs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vSzHs}" ${isTaskReadOnly}></td>
-                            </tr>`;
-                        });
-                        sizeTableHtml += `</tbody></table>`;
-                    } else {
-                        sizeTableHtml = `<div class="small text-muted p-1">Enter Matrix Qty first to see sizes</div>`;
-                    }
-
-                    sleeveQtyRow += `<td class="fw-bold">SLEEVE WISE QTY<br><span class="badge bg-info uom-label" data-art="${art}">${uom}</span></td>
-                        <td>${sizeTableHtml}</td>`;
-                } else {
-                    let vFsQty = (oldFabrics && oldFabrics[index] && oldFabrics[index]['fs_qty']) ? oldFabrics[index]['fs_qty'] : '';
-                    let vHsQty = (oldFabrics && oldFabrics[index] && oldFabrics[index]['hs_qty']) ? oldFabrics[index]['hs_qty'] : '';
-
-                    if (!vFsQty && existingMatrix.length > 0) {
-                        const m = existingMatrix.find(m => m.art_no == art);
-                        if (m) {
-                            vFsQty = m.fs_qty || '';
-                            vHsQty = m.hs_qty || '';
-                        }
-                    }
-
-                    sleeveQtyRow += `<td class="fw-bold">SLEEVE WISE QTY</td>
-                    <td>
-                        <div class="input-group input-group-sm flex-nowrap">
-                            <span class="input-group-text px-1">F/S</span>
-                            <input type="text" name="fabrics[${index}][fs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vFsQty}" ${isTaskReadOnly}>
-                            <span class="input-group-text px-1">H/S</span>
-                            <input type="text" name="fabrics[${index}][hs_qty]" class="form-control text-center px-1 sleeve-qty-input" data-art="${art}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vHsQty}" ${isTaskReadOnly}>
-                            <span class="input-group-text px-1 uom-label">${uom}</span>
-                        </div>
-                    </td>`;
-                }
             });
 
             $thead.append(headHtml + '</tr>');
@@ -2105,13 +1940,15 @@
             $tbody.append(widthRow + '</tr>');
             $tbody.append(mtrRow + '</tr>');
             $tbody.append(inOutRow + '</tr>');
-            $tbody.append(sleeveQtyRow + '</tr>');
             $tbody.append(nPattiRow + '</tr>');
         }
 
         if (currentArtNumbers.length > 0) {
             $('#fabric-details-card').removeClass('d-none');
             renderFabricDetails();
+            if (typeof renderItemDetailsTable === "function") {
+                renderItemDetailsTable(currentArtData);
+            }
         }
 
         if (oldMatrix && Object.keys(oldMatrix).length > 0) {
@@ -2123,7 +1960,7 @@
             const $sizeHeaderRow = $table.find('.size-header-row');
             
             $table.find('.ratio-header').attr('colspan', sizes.length);
-            $sizeHeaderRow.find('th').not('.extra-col-1, .extra-col-2, :nth-last-child(1), :nth-last-child(2)').remove();
+            $sizeHeaderRow.find('th').not('.extra-col-1, .extra-col-2').remove();
             
             let sizeHeadersHtml = '';
             sizes.forEach(s => sizeHeadersHtml += `<th class="dynamic-size-head">${s}</th>`);
@@ -2132,16 +1969,10 @@
             const $tbody = $table.find('tbody');
             $tbody.empty();
 
-            const name = (currentProcessGroup || '').toUpperCase();
-            const hasFS = !currentProcessGroup || name.includes('F/S') || name.includes('FULL');
-            const hasHS = !currentProcessGroup || name.includes('H/S') || name.includes('HALF');
-            const hasSpecial = name.includes('SPECIAL');
-
-
             const selectedRatioDisplay = $('#size_ratio_display').val() || '';
             const sizeStr = selectedRatioDisplay ? selectedRatioDisplay.split(' - ')[0] : '';
 
-            const addTypeRows = (type, label, isVisible, showInfo = true, infoLabel = 'SIZE') => {
+            const addTypeRows = (type, label, isVisible, showInfo = true, infoLabel = 'SIZE', instanceId = null) => {
                 const style = isVisible ? '' : 'display:none;';
                 
                 let vRow = `<tr class="qty-${type}-row" style="${style}"><td><strong>${label}</strong></td>`;
@@ -2159,35 +1990,32 @@
                     const finalVal = savedVal || ratioVal;
                     
                     vRow += `<td>
-                        <input type="number" name="matrix_items[${idx}][qty_${type}]" class="form-control form-control-sm text-center fw-bold qty-direct-input ${type}-summary-${s}" data-type="${type}" data-size="${s}" value="${finalVal}">
-                        ${type === 'fs' ? `<input type="hidden" name="matrix_items[${idx}][size]" value="${s}">` : ''} 
+                        <input type="number" class="form-control form-control-sm text-center fw-bold qty-direct-input ${type}-summary-${s}" data-type="${type}" data-size="${s}" data-instance="${instanceId}" value="${finalVal}">
                     </td>`;
                 });
                 
-                vRow += `<td class=""></td><td class=""></td>
-                <td><input type="text" name="mark_lay[${type}][size]" class="form-control form-control-sm text-center"></td>
-                <td><input type="text" name="mark_lay[${type}][mark]" class="form-control form-control-sm text-center"></td></tr>`;
+                vRow += `</tr>`;
                 $tbody.append(vRow);
 
                 if (showInfo) {
                     let iRow = `<tr class="qty-${type}-info-row" style="${style}"><td><strong>${infoLabel}</strong></td>`;
-                    iRow += `<td colspan="${sizes.length}"><input type="text" name="matrix_items_info[${type}]" class="form-control form-control-sm text-center text-muted" value="${infoLabel === 'SIZE' ? sizeStr : ''}"></td>`;
-                    iRow += `<td class=""></td><td class=""></td><td></td><td></td></tr>`;
+                    iRow += `<td colspan="${sizes.length}"><input type="text" class="form-control form-control-sm text-center text-muted" value="${infoLabel === 'SIZE' ? sizeStr : ''}"></td>`;
+                    iRow += `</tr>`;
                     $tbody.append(iRow);
                 }
             };
 
-            const fsInfoLabel = name.includes('OTHERS') ? 'QTY - F/S' : 'SIZE';
-            addTypeRows('fs', 'QTY - F/S', true, true, fsInfoLabel);
-            addTypeRows('hs', 'QTY - H/S', true, false);
+            sleeveInstances.forEach((inst, instIdx) => {
+                const label = inst.type === 'fs' ? 'QTY - F/S' : 'QTY - H/S';
+                addTypeRows(inst.type, label, true, false, 'SIZE', inst.id);
+            });
 
             syncSummaryToHeader(); 
         }
 
         function updateQuantityRowVisibility() {
-            const name = (currentProcessGroup || '').toUpperCase();
-            const hasFS = !currentProcessGroup || name.includes('F/S') || name.includes('FULL');
-            const hasHS = !currentProcessGroup || name.includes('H/S') || name.includes('HALF');
+            const hasFS = sleeveInstances.some(i => i.type === 'fs');
+            const hasHS = sleeveInstances.some(i => i.type === 'hs');
             $('#total_qty_fs').closest('.col-md-6').toggle(hasFS);
             $('#total_qty_hs').closest('.col-md-6').toggle(hasHS);
         }
@@ -2263,65 +2091,11 @@
             let activeFsSizes = [];
             let activeHsSizes = [];
             try {
-                $('.qty-direct-input[data-type="fs"]').each(function() {
-                    const val = parseFloat($(this).val()) || 0;
-                    const size = String($(this).data('size'));
-                    if (!activeFsSizes.includes(size)) activeFsSizes.push(size);
-                });
-                $('.qty-direct-input[data-type="hs"]').each(function() {
-                    const val = parseFloat($(this).val()) || 0;
-                    const size = String($(this).data('size'));
-                    if (!activeHsSizes.includes(size)) activeHsSizes.push(size);
-                });
+                const hasFS = sleeveInstances.some(i => i.type === 'fs');
+                const hasHS = sleeveInstances.some(i => i.type === 'hs');
 
-                [oldMatrix, existingMatrix].forEach(matrix => {
-                    if (matrix && matrix.length > 0) {
-                        matrix.forEach(row => {
-                            for (const key in row) {
-                                let val = parseFloat(row[key]) || 0;
-                                if (val > 0) {
-                                    if (key.startsWith('fs_') && key !== 'fs_qty') {
-                                        const sz = key.replace('fs_', ''); 
-                                        if (!activeFsSizes.includes(sz)) activeFsSizes.push(sz);
-                                    } else if (key.startsWith('hs_') && key !== 'hs_qty') {
-                                        const sz = key.replace('hs_', '');
-                                        if (!activeHsSizes.includes(sz)) activeHsSizes.push(sz);
-                                    }
-                                }
-                            }
-                            if (row.quantities && row.quantities.length > 0) {
-                                row.quantities.forEach(q => {
-                                    const sz = String(q.size);
-                                    if ((parseFloat(q.qty_fs) || 0) > 0 && !activeFsSizes.includes(sz)) activeFsSizes.push(sz);
-                                    if ((parseFloat(q.qty_hs) || 0) > 0 && !activeHsSizes.includes(sz)) activeHsSizes.push(sz);
-                                });
-                            }
-                        });
-                    }
-                });
-
-                $('.qty-input').each(function() {
-                    const val = parseFloat($(this).val()) || 0;
-                    if (val > 0) {
-                        const col = $(this).data('col') || '';
-                        const parts = col.split('-');
-                        if (parts.length >= 2) {
-                            const type = parts[0];
-                            const size = String(parts[1]);
-                            if (type === 'fs' && !activeFsSizes.includes(size)) activeFsSizes.push(size);
-                            if (type === 'hs' && !activeHsSizes.includes(size)) activeHsSizes.push(size);
-                        }
-                    }
-                });
-
-                const sizeSort = (a, b) => {
-                    const numA = parseFloat(a);
-                    const numB = parseFloat(b);
-                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-                    return String(a).localeCompare(String(b));
-                };
-                activeFsSizes.sort(sizeSort);
-                activeHsSizes.sort(sizeSort);
+                if (hasFS) activeFsSizes = [...currentSizes];
+                if (hasHS) activeHsSizes = [...currentSizes];
 
                 const sizesChanged = JSON.stringify(globalActiveSizes.fs) !== JSON.stringify(activeFsSizes) || JSON.stringify(globalActiveSizes.hs) !== JSON.stringify(activeHsSizes);
 
@@ -2334,30 +2108,23 @@
                     $('#article-matrix-card').removeClass('d-none');
                     
                     if (populateValues) {
-                        $('.qty-direct-input').each(function() {
-                            const type = $(this).data('type');
-                            const size = String($(this).data('size'));
-                            
-                            if (targetType && targetSize && (type !== targetType || size !== String(targetSize))) return;
+                        currentSizes.forEach(size => {
+                            ['fs', 'hs'].forEach(type => {
+                                let totalVal = 0;
+                                $(`.qty-direct-input[data-type="${type}"][data-size="${size}"]`).each(function() {
+                                    totalVal += parseFloat($(this).val()) || 0;
+                                });
 
-                            const val = parseFloat($(this).val()); 
-                            const pieces = isNaN(val) ? 0 : val;
-
-                            $('table[id^="article-qty-matrix-"] tbody tr.cat1-row .qty-input').filter(function() {
-                                return $(this).data('col') === `${type}-${size}`;
-                            }).each(function() {
-                                const uom = ($(this).closest('tr').attr('data-uom') || '').toUpperCase();
-                                let finalCalc;
-                                
-                                if (uom === 'PCS') {
-                                    finalCalc = pieces > 0 ? Math.round(pieces).toString() : '';
-                                } else {
-                                    finalCalc = pieces > 0 ? pieces.toString() : '';
-                                }
-                                
-                                if ($(this).val() != finalCalc) {
-                                    $(this).val(finalCalc);
-                                }
+                                $('table[id^="article-qty-matrix"] tbody tr.cat1-row .qty-input').filter(function() {
+                                    return $(this).data('col') === `${type}-${size}`;
+                                }).each(function() {
+                                    const uom = ($(this).closest('tr').attr('data-uom') || '').toUpperCase();
+                                    let finalCalc = totalVal > 0 ? (uom === 'PCS' ? Math.round(totalVal).toString() : totalVal.toString()) : '';
+                                    
+                                    if ($(this).val() != finalCalc) {
+                                        $(this).val(finalCalc);
+                                    }
+                                });
                             });
                         });
                     }
@@ -2371,6 +2138,9 @@
                 if (reRenderFabric && sizesChanged) {
                     globalActiveSizes = { fs: activeFsSizes, hs: activeHsSizes };
                     renderFabricDetails();
+                    if (typeof renderItemDetailsTable === "function") {
+                        renderItemDetailsTable(currentArtData);
+                    }
                 } else {
                     globalActiveSizes = { fs: activeFsSizes, hs: activeHsSizes };
                 }
@@ -2452,9 +2222,7 @@
             $('.dynamic-stage-date').flatpickr(flatpickrConfig);
         }
 
-        if ($('#size_ratio_select').val()) {
-            $('#size_ratio_select').trigger('change');
-        } else if (matrixItems.length > 0 || @json(old('matrix_items') ? true : false)) {
+        if (oldMatrix && Object.keys(oldMatrix).length > 0) {
             renderCuttingSizeTable(currentSizes, currentRatios);
         }
 
@@ -2473,6 +2241,9 @@
                             existingImages.splice(index, 1);
                         }
                         renderFabricDetails();
+                    if (typeof renderItemDetailsTable === "function") {
+                        renderItemDetailsTable(currentArtData);
+                    }
                     }
                 },
                 error: function(xhr) {
@@ -2644,6 +2415,85 @@
                 remarks: remarks
             });
             window.open(baseUrl + '?' + params.toString(), '_blank');
+        });
+
+        function renderItemDetailsTable(artData) {
+            const $wrapper = $('#item-details-table-wrapper');
+            const $tbody = $('#item-details-tbody');
+            const $msg = $('#no-materials-msg');
+            
+            $tbody.empty();
+            
+            if (!artData || artData.length === 0) {
+                $wrapper.addClass('d-none');
+                $msg.removeClass('d-none');
+                $('#no-material-text').text('No materials found for selected Stock Entry Number.');
+                return;
+            }
+            
+            $wrapper.removeClass('d-none');
+            $msg.addClass('d-none');
+            
+            artData.forEach((item, index) => {
+                const total = parseFloat(item.mtr) || 0;
+                const used = parseFloat(item.already_issued) || 0;
+                const remaining = total - used;
+                const artNo = item.art_no;
+                
+                const row = `
+                    <tr data-art="${artNo}">
+                        <td class="text-center">${index + 1}</td>
+                        <td class="fw-bold">${item.art_name || ''} <br> <small class="text-muted">${artNo}</small></td>
+                        <td class="text-center item-total-qty">${total.toFixed(2)}</td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <input type="number" step="0.01" class="form-control text-center fw-bold item-used-input" 
+                                       data-art="${artNo}" value="${used.toFixed(2)}">
+                                <span class="input-group-text">${item.uom_code || 'MTR'}</span>
+                            </div>
+                        </td>
+                        <td class="text-center item-remaining-qty fw-bold ${remaining < 0 ? 'text-danger' : 'text-success'}">${remaining.toFixed(2)}</td>
+                    </tr>
+                `;
+                $tbody.append(row);
+            });
+        }
+
+        $(document).on('input', '.item-used-input', function() {
+            const $input = $(this);
+            const $row = $input.closest('tr');
+            const artNo = $input.data('art');
+            const total = parseFloat($row.find('.item-total-qty').text()) || 0;
+            const used = parseFloat($input.val()) || 0;
+            const remaining = total - used;
+            
+            const $remainingCell = $row.find('.item-remaining-qty');
+            $remainingCell.text(remaining.toFixed(2));
+    
+            if (remaining < 0) {
+                $remainingCell.removeClass('text-success').addClass('text-danger');
+                $input.addClass('border-danger');
+                if (!$row.find('.qty-error-msg').length) {
+                    $input.parent().after('<small class="text-danger qty-error-msg d-block mt-1" style="font-size: 10px;">Used Qty cannot exceed Total Qty</small>');
+                }
+            } else {
+                $remainingCell.removeClass('text-danger').addClass('text-success');
+                $input.removeClass('border-danger');
+                $row.find('.qty-error-msg').remove();
+            }
+            
+            $(`.mtr-input[data-art="${artNo}"]`).val(used.toFixed(2)).trigger('change');
+        });
+
+        $(document).on('input', '.mtr-input', function() {
+            const $input = $(this);
+            const artNo = $input.data('art');
+            const val = parseFloat($input.val()) || 0;
+            
+            const $itemInput = $(`.item-used-input[data-art="${artNo}"]`);
+            if ($itemInput.length && parseFloat($itemInput.val()) !== val) {
+                $itemInput.val(val.toFixed(2)).trigger('input');
+            }
         });
     });
 </script>

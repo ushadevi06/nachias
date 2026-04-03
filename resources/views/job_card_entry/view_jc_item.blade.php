@@ -105,8 +105,8 @@
                                                 $total_qty = $item->quantities->sum('total_qty'); 
                                                 $produced_qty = $total_qty; 
                                                 $savedItem = $issueItemMap[$item->id] ?? null;
-                                                $itemDisplayName = $jobCard->item->code ?: $jobCard->item->name;
-                                                $itemDescription = $jobCard->item->name;
+                                                $itemDisplayName = $jobCard->brand->brand_name ?? '-';
+                                                $itemDescription = $jobCard->brand->code ?? '-';
                                             @endphp
                                             
                                             <tr data-line="{{ $lineNum }}">

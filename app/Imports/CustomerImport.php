@@ -145,9 +145,9 @@ class CustomerImport implements ToCollection, WithHeadingRow
             $validator = Validator::make($data, [
                 'category' => 'required|in:Retailer,Wholesaler',
                 'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:20|unique:customers,code' . ($customerId ? ',' . $customerId : ''),
-                'mobile_no' => 'required|numeric|digits_between:10,15|unique:customers,mobile_no' . ($customerId ? ',' . $customerId : ''),
-                'email' => 'nullable|email|max:128|unique:customers,email' . ($customerId ? ',' . $customerId : ''),
+                'code' => 'required|string|min:3|max:20|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|numeric|digits_between:10,15|unique:customers,mobile_no,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
+                'email' => 'nullable|email|max:128|unique:customers,email,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'zone_id' => 'required',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required',

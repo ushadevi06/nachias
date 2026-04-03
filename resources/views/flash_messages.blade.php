@@ -12,7 +12,8 @@
 @endif
 @if(Session::get('error'))
 <div class="alert alert-danger alert-dismissible fade show mb-5" role="alert">
-    <strong>{{ session('error') }}</strong>
+    <strong>Import Errors:</strong>
+    <div class="mt-1">{!! session('error') !!}</div>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif

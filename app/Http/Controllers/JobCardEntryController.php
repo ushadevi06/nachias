@@ -131,8 +131,6 @@ class JobCardEntryController extends Controller
                 'cuff_type_id' => 'nullable|exists:cuff_types,id',
                 'pocket_type_id' => 'nullable|exists:pocket_types,id',
                 'bottom_cut_id' => 'nullable|exists:bottom_cuts,id',
-                'brand_category_id' => 'required|exists:brand_categories,id',
-                'item_id' => 'required|exists:items,id',
                 'production_stages' => 'nullable|array',
                 'production_stages.*.stage_id' => 'required|exists:operation_stages,id',
                 'production_stages.*.service_provider_id' => 'required|exists:service_providers,id',
@@ -233,8 +231,6 @@ class JobCardEntryController extends Controller
                     'hs_qty' => $request->hs,
                     'remarks' => $request->remarks,
                     'status' => $request->status ?? '',
-                    'brand_category_id' => $request->brand_category_id,
-                    'item_id' => $request->item_id,
                     'fit_id' => $request->fit_id,
                     'patti_type_id' => $request->patti_type_id,
                     'collar_type_id' => $request->collar_type_id,
@@ -487,8 +483,6 @@ class JobCardEntryController extends Controller
         }
 
         $jobCard = $id ? JobCardEntry::with(['cuttingSizeRatios', 'images', 'sizeRatio', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'issueItems', 'sleeveMeters', 'operations'])->findOrFail($id) : null;
-        $brandCategories = BrandCategory::where('status', 'Active')->get();
-
         $allPurchaseOrders = PurchaseOrder::with(['items'])->orderBy('id', 'desc')->get();
         $purchaseOrders = $allPurchaseOrders->filter(function ($po) use ($jobCard) {
             if ($jobCard && $po->id == $jobCard->purchase_order_id) {
@@ -558,7 +552,6 @@ class JobCardEntryController extends Controller
             'cuttingMasters',
             'plants',
             'storeTypes',
-            'brandCategories',
             'operationStages',
             'stageTaskStatus',
             'hasTasks',
@@ -604,7 +597,7 @@ class JobCardEntryController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('issue-item job-card')) {
             return unauthorizedRedirect();
         }
-        $jobCard = JobCardEntry::with(['brand', 'item', 'issueStore', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems', 'sleeveMeters'])->findOrFail($id);
+        $jobCard = JobCardEntry::with(['brand', 'issueStore', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'purchaseOrder.items.rawMaterial.uom', 'purchaseOrder.supplier', 'purchaseOrder.items.uom', 'purchaseOrder.items.brand', 'purchaseOrder.items.style', 'issueItems', 'sleeveMeters'])->findOrFail($id);
         $issueItemMap = $jobCard->issueItems->keyBy('job_card_article_matrix_id');
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
         $grnItems = GrnEntryItem::whereIn('grn_entry_id', function ($query) use ($invoiceIds) {
@@ -1078,6 +1071,23 @@ class JobCardEntryController extends Controller
             }
 
             return false;
+        });
+
+        $idOrderMap = array_flip($ids);
+        $filteredItems = $filteredItems->sortBy(function($item) use ($idOrderMap, $filters) {
+            $seId = (string) $item->stock_entry_id;
+            if (isset($filters[$seId])) {
+                foreach($filters[$seId] as $f) {
+                    if (($f['type'] === 'rm' && $item->raw_material_id == $f['val']) ||
+                        ($f['type'] === 'item' && $item->item_id == $f['val']) ||
+                        ($f['type'] === 'art' && $item->art_no == $f['val'])) {
+                        $combinedId = $seId . '::' . $f['type'] . '|' . $f['val'];
+                        if (isset($idOrderMap[$combinedId])) return $idOrderMap[$combinedId];
+                    }
+                }
+            }
+            
+            return $idOrderMap[$seId] ?? 999;
         });
 
         $grouped = $filteredItems->groupBy('art_no');

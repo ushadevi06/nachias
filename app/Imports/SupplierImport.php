@@ -143,9 +143,9 @@ class SupplierImport implements ToCollection, WithHeadingRow
 
             $validator = Validator::make($data, [
                 'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:20|unique:suppliers,code' . ($supplierId ? ',' . $supplierId : ''),
-                'mobile_no' => 'required|numeric|digits_between:10,15|unique:suppliers,mobile_no' . ($supplierId ? ',' . $supplierId : ''),
-                'email' => 'nullable|email|max:128|unique:suppliers,email' . ($supplierId ? ',' . $supplierId : ''),
+                'code' => 'required|string|min:3|max:20|unique:suppliers,code,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|numeric|digits_between:10,15|unique:suppliers,mobile_no,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
+                'email' => 'nullable|email|max:128|unique:suppliers,email,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required',
                 'city_id' => 'required',
