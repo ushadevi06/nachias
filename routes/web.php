@@ -604,5 +604,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
             return "All caches cleared successfully! Please visit /nachias now.";
         }
     );
+
+    Route::get('/run-seeder', function () {
+        Artisan::call('db:seed', [
+            '--class' => 'PermissionSeeder',
+            '--force' => true
+        ]);
+        return "Permission Seeder run successfully!";
+    });
 });
 

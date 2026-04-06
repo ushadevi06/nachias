@@ -96,6 +96,8 @@ class PermissionSeeder extends Seeder
             'employee-report' => ['view'],
 
             'settings' => ['edit','view'],
+
+            'dashboard' => [],
         ];
 
         foreach ($modules as $module => $actions) {
@@ -112,6 +114,20 @@ class PermissionSeeder extends Seeder
                     ]
                 );
             }
+        }
+
+        // Dashboard permissions with custom labels
+        $dashboardPerms = [
+            ['action' => 'view-sales-order',       'label' => 'Sales & Order Dashboard'],
+            ['action' => 'view-accounts-financial', 'label' => 'Accounts & Financial Dashboard'],
+            ['action' => 'view-production',         'label' => 'Production Dashboard'],
+            ['action' => 'view-maintenance',         'label' => 'Maintenance Dashboard'],
+        ];
+        foreach ($dashboardPerms as $dp) {
+            Permission::firstOrCreate(
+                ['name' => $dp['action'] . ' dashboard', 'guard_name' => 'web'],
+                ['module' => 'dashboard', 'action' => $dp['action'], 'label' => $dp['label']]
+            );
         }
 
         $this->command->info('✅ All permissions seeded successfully!');

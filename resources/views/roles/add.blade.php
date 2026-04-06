@@ -100,7 +100,7 @@
                                                         @foreach($others as $other)
                                                             <div class="form-check mb-2">
                                                                 <input type="checkbox" class="permission form-check-input" data-sub="{{ $main }}" name="permissions[]" value="{{ $other->name }}" {{ in_array($other->name, $rolePermissions ?? []) ? 'checked' : '' }}>
-                                                                <p class="small">{{ ucwords(str_replace(['-', '_'], ' ', $other->action)) }}</p>
+                                                                <p class="small">{{ $other->label ?: ucwords(str_replace(['-', '_'], ' ', $other->action)) }}</p>
                                                             </div>
                                                         @endforeach
                                                     @else

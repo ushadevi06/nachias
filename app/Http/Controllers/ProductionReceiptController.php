@@ -83,7 +83,7 @@ class ProductionReceiptController extends Controller
 
             $jobCards = JobCardEntry::with('serviceProvider')
                 ->where(function ($query) use ($currentReceipt, $usedJobCardIds) {
-                $query->where('status', 'Production Completed')->whereNotIn('id', $usedJobCardIds);
+                $query->whereNotIn('id', $usedJobCardIds);
                 if ($currentReceipt && $currentReceipt->job_card_id) {
                     $query->orWhere('id', $currentReceipt->job_card_id);
                 }
@@ -91,7 +91,7 @@ class ProductionReceiptController extends Controller
         }
         else {
             $usedJobCardIds = ProductionReceipt::whereNotNull('job_card_id')->pluck('job_card_id')->toArray();
-            $jobCards = JobCardEntry::with('serviceProvider')->where('status', 'Production Completed')->whereNotIn('id', $usedJobCardIds)->orderBy('id', 'desc')->get();
+            $jobCards = JobCardEntry::with('serviceProvider')->whereNotIn('id', $usedJobCardIds)->orderBy('id', 'desc')->get();
         }
         $storeTypes = StoreType::where('status', 'Active')->orderBy('store_type_name')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->get();
@@ -330,9 +330,13 @@ class ProductionReceiptController extends Controller
     {
         $jobCard = JobCardEntry::with([
             'serviceProvider',
+            'brand',
             'purchaseOrder.supplier',
+            'purchaseOrder.items.style',
             'item',
             'item.uom',
+            'item.brand',
+            'item.style',
             'fabricDetails',
             'sleeveMeters',
             'cuttingSizeRatios',
@@ -404,6 +408,23 @@ class ProductionReceiptController extends Controller
         })->map(function ($group) {
             return $group->sum('qty_to_receive');
         });
+
+        // Resolve PO and Style if direct link is missing (Consistency with PDF report)
+        $allPOItems = $jobCard->purchaseOrder?->items;
+        if (!$allPOItems) {
+            $firstArtNo = $jobCard->fabricDetails->first()?->art_no;
+            if ($firstArtNo) {
+                $grnItem = \App\Models\GrnEntryItem::where('art_no', $firstArtNo)->whereHas('purchaseInvoiceItem.purchaseOrderItem')->first();
+                $allPOItems = $grnItem?->purchaseInvoiceItem?->purchaseOrderItem?->purchaseOrder?->items ?? null;
+            }
+        }
+        
+        $fallbackStyleName = '';
+        if ($allPOItems) {
+            $fabricPoItem = $allPOItems->where('store_category_id', 1)->whereNotNull('style_id')->first() 
+                            ?: $allPOItems->whereNotNull('style_id')->first();
+            $fallbackStyleName = $fabricPoItem && $fabricPoItem->style ? $fabricPoItem->style->style_name : '';
+        }
 
         $items = [];
         $tempGrouped = [];
@@ -515,7 +536,7 @@ class ProductionReceiptController extends Controller
             ];
         };
 
-        $processQty = function ($sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice) {
+        $processQty = function ($sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleName) {
             if ($qty > 0) {
                 $sizeVariant = $size . ' - ' . $sleeve;
                 $itemKey = $jobCard->item_id ?? '0';
@@ -524,15 +545,22 @@ class ProductionReceiptController extends Controller
                 if (!isset($tempGrouped[$key])) {
                     $pricing = $calculateItemUnitPrice($size, $sleeve);
                     $unitPrice = $pricing['total_cost'];
+                    
+                    $brandCode = ($jobCard->brand ? $jobCard->brand->code : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->code : ''));
+                    $brandName = ($jobCard->brand ? $jobCard->brand->brand_name : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->brand_name : ''));
+                    
+                    // Style logic similar to PDF report
+                    $styleName = ($jobCard->item && $jobCard->item->style ? $jobCard->item->style->style_name : $fallbackStyleName);
+
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
-                        'item_code' => ($jobCard->item ? $jobCard->item->code : '') . ' - ' . $sleeve,
+                        'item_code' => trim($brandCode . ' - ' . $styleName . ' - ' . $sleeve, ' - '),
                         'service_name' => $serviceName,
                         'sleeve' => $sleeve,
                         'size' => $size,
                         'item_name' => $serviceName,
                         'art_no' => null,
-                        'description' => ($jobCard->item && $jobCard->item->name) ? $jobCard->item->name : '',
+                        'description' => trim($brandName . ' ' . $styleName . ' ' . $sleeve),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
                         'uom_id' => $jobCard->item ? $jobCard->item->uom_id : null,

@@ -82,8 +82,6 @@
         <tr>
             <td class="label">Printed On:</td>
             <td>{{ now()->format('d/m/Y H:i') }}</td>
-            <td style="text-align: right;" class="label">Page:</td>
-            <td style="text-align: left; width: 40px;">1/1</td>
         </tr>
     </table>
 
@@ -113,6 +111,8 @@
         $sizes = $defaultSizes;
         if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
             $sizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
+        } else {
+            $sizes = $jobCard->fabricDetails->pluck('quantities')->flatten()->pluck('size')->unique()->values()->toArray();
         }
     @endphp
 
@@ -125,7 +125,6 @@
                 <th rowspan="2">UOM</th>
                 <th rowspan="2">Art</th>
                 <th colspan="{{ count($sizes) }}">Size</th>
-                <th rowspan="2">Total</th>
             </tr>
             <tr>
                 @foreach($sizes as $size)
@@ -137,32 +136,35 @@
             @php
                 $grandTotal = 0;
                 $sizeTotals = array_fill_keys($sizes, 0);
-                
+
                 $fullSleeveRows = [];
                 $halfSleeveRows = [];
 
                 foreach($jobCard->fabricDetails as $detail) {
                     $allPOItems = $jobCard->purchaseOrder?->items;
-                    $matchingPOItem = $allPOItems ? ($allPOItems->where('art_no', $detail->art_no)->whereNotNull('style_id')->first() ?: $allPOItems->where('art_no', $detail->art_no)->first()) : null;
                     
-                    $uom = ($matchingPOItem && $matchingPOItem->uom) ? $matchingPOItem->uom->uom_code : (($matchingPOItem && $matchingPOItem->rawMaterial && $matchingPOItem->rawMaterial->uom) ? $matchingPOItem->rawMaterial->uom->uom_code : ($artUomMap[$detail->art_no] ?? '-'));
-                    
-                    $style = $matchingPOItem?->style?->style_name ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->style_name ?? '';
-                    // Use item name if available, otherwise fallback to brand name
-                    if ($jobCard->item && $jobCard->item->name) {
-                        $description = trim($jobCard->item->name . ' ' . $style);
-                    } else {
-                        $description = trim(($jobCard->brand->brand_name ?? '') . ' ' . $style);
+                    if (!$allPOItems && $detail->art_no) {
+                        $grnItem = \App\Models\GrnEntryItem::where('art_no', $detail->art_no)->whereHas('purchaseInvoiceItem.purchaseOrderItem')->first();
+                        $allPOItems = $grnItem?->purchaseInvoiceItem?->purchaseOrderItem?->purchaseOrder?->items;
                     }
-                    $description = $description ?: '-';
-                    $artNo = $detail->art_no;
 
-                    // Helper to check if any size has value
+                    $matchingPOItem = $allPOItems ? (
+                        $allPOItems->where('store_category_id', 1)->whereNotNull('style_id')->first() 
+                        ?: $allPOItems->whereNotNull('style_id')->first() 
+                        ?: $allPOItems->first()
+                    ) : null;
+
+                    $uom = ($matchingPOItem && $matchingPOItem->uom) ? $matchingPOItem->uom->uom_code : (($matchingPOItem && $matchingPOItem->rawMaterial && $matchingPOItem->rawMaterial->uom) ? $matchingPOItem->rawMaterial->uom->uom_code : ($artUomMap[$detail->art_no] ?? '-'));
+                    $style = $matchingPOItem?->style?->style_name ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->style_name ?? '';
+                    $brandCode = $jobCard->brand->code ?? '';
+                    $brandName = $jobCard->brand->brand_name ?? '';
+                    $artNo = $detail->art_no;
+                    $displayStyle = $style ?: $artNo;
+
                     $hasValue = function($prefix) use ($detail) {
                         return $detail->quantities->where('qty_' . $prefix, '>', 0)->count() > 0;
                     };
-                    
-                    // Helper to get sizes array
+
                     $getSizesArray = function($prefix) use ($detail, $sizes) {
                         $arr = [];
                         foreach($sizes as $s) {
@@ -172,22 +174,20 @@
                         return $arr;
                     };
 
-                    // Full Sleeve
                     if ($hasValue('fs')) {
                         $fullSleeveRows[] = [
-                            'item_no' => $artNo . '-F/S',
-                            'description' => $description . ' (F/S)',
+                            'item_no' => trim($brandCode . '-' . $displayStyle . '-F/S', '-'),
+                            'description' => trim($brandName . ' ' . $style . ' F/S'),
                             'uom' => $uom,
                             'art' => $artNo,
                             'sizes' => $getSizesArray('fs')
                         ];
                     }
 
-                    // Half Sleeve
                     if ($hasValue('hs')) {
                         $halfSleeveRows[] = [
-                            'item_no' => $artNo . '-H/S',
-                            'description' => $description . ' (H/S)',
+                            'item_no' => trim($brandCode . '-' . $displayStyle . '-H/S', '-'),
+                            'description' => trim($brandName . ' ' . $style . ' H/S'),
                             'uom' => $uom,
                             'art' => $artNo,
                             'sizes' => $getSizesArray('hs')
@@ -198,13 +198,6 @@
                 $allRows = array_merge($fullSleeveRows, $halfSleeveRows);
             @endphp
             @foreach($allRows as $row)
-                @php
-                    $rowTotal = array_sum($row['sizes']);
-                    $grandTotal += $rowTotal;
-                    foreach($row['sizes'] as $size => $qty) {
-                        $sizeTotals[$size] += $qty;
-                    }
-                @endphp
                 <tr>
                     <td>{{ $row['item_no'] }}</td>
                     <td>{{ $row['description'] }}</td>
@@ -212,22 +205,11 @@
                     <td>{{ $row['uom'] }}</td>
                     <td>{{ $row['art'] }}</td>
                     @foreach($sizes as $sizeKey)
-                        <td>{{ $row['sizes'][$sizeKey] > 0 ? $row['sizes'][$sizeKey] : '' }}</td>
+                        <td>{{ $row['sizes'][$sizeKey] > 0 ? (int)$row['sizes'][$sizeKey] : '' }}</td>
                     @endforeach
-                    <td class="bg-matrix">{{ $rowTotal }}</td>
                 </tr>
             @endforeach
         </tbody>
-        <tfoot>
-            <tr class="footer-row">
-                <td colspan="5" class="text-end">Total</td>
-                @foreach($sizes as $sizeKey)
-                    <td>{{ $sizeTotals[$sizeKey] > 0 ? $sizeTotals[$sizeKey] : '' }}</td>
-                @endforeach
-
-                <td class="bg-matrix">{{ $grandTotal }}</td>
-            </tr>
-        </tfoot>
     </table>
 </body>
 </html>

@@ -93,7 +93,7 @@
 
                             <tr>
                                 <!-- SEASON VALUE -->
-                                <td style="font-weight:bold; font-size:16px;">{{ $jobCard->season->season_code }}</td>
+                                <td style="font-weight:bold; font-size:16px;">{{ $jobCard->season->season_code ?? '' }}</td>
 
                                 <!-- STYLE NAME -->
                                 <td colspan="4" style="font-weight:bold; font-size:18px;">

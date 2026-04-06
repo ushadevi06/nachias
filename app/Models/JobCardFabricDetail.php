@@ -14,7 +14,7 @@ class JobCardFabricDetail extends Model
     protected $fillable = [
         'job_card_entry_id', 'art_no', 
         'width', 'mtr', 'in_out', 'n_patti', 'row_total',
-        'fs_qty', 'hs_qty'
+        'fs_qty', 'hs_qty', 'total_qty', 'used_qty', 'remaining_qty'
     ];
 
     public function jobCardEntry()

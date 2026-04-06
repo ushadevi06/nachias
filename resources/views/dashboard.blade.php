@@ -14,7 +14,7 @@
     </div>
 
     <!-- SECTION 1: SALES & ORDER DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->hasRole(['Sales Manager', 'Purchase Manager']))
+    @if(auth()->id() == 1 || auth()->user()->can('view-sales-order dashboard'))
     <div class="mb-5">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-primary me-2"></div>
@@ -139,7 +139,7 @@
     @endif
 
     <!-- SECTION 2: ACCOUNTS DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->hasRole('Account Manager'))
+    @if(auth()->id() == 1 || auth()->user()->can('view-accounts-financial dashboard'))
     <div class="mb-5">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-success me-2"></div>
@@ -344,7 +344,7 @@
     @endif
 
     <!-- SECTION 3: PRODUCTION DASHBOARD -->
-    @if(auth()->id() == 1 || auth()->user()->hasRole('Production Manager'))
+    @if(auth()->id() == 1 || auth()->user()->can('view-production dashboard'))
     <div class="mb-5">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-warning me-2"></div>
@@ -358,7 +358,7 @@
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <h6 class="mb-0 fw-bold"><i class="ri ri-loader-line me-2"></i>Production WIP (Unit Wise)</h6>
                         <div class="search-box">
-                            <input type="text" id="wipSearchInput" class="form-control form-control-sm" placeholder="Search Job Card...">
+                            <input type="text" id="wipSearchInput" class="form-control form-control-sm" placeholder="Search Process...">
                         </div>
                     </div>
                     <div class="card-body p-0">
@@ -366,7 +366,6 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th class="small">Job Card</th>
                                         <th class="small">Process</th>
                                         <th class="small text-center">Opening</th>
                                         <th class="small text-center">Inward</th>
@@ -378,13 +377,7 @@
                                     @if($production_wip->count() > 0)
                                         @foreach($production_wip as $wip)
                                         <tr class="wip-row">
-                                            <td class="wip-jc-no"><strong>{{ $wip->job_card_no }}</strong></td>
-                                            <td>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 me-1 toggle-service-wip" data-jc="{{ $wip->job_card_no }}" data-stage="{{ $wip->operation_stage_name }}" title="View Services">
-                                                    <i class="ri ri-add-line"></i>
-                                                </button>
-                                                {{ $wip->operation_stage_name }}
-                                            </td>
+                                            <td class="wip-process-name"><strong>{{ $wip->operation_stage_name }}</strong></td>
                                             <td class="text-center">{{ number_format($wip->opening ?: 0, 2) }}</td>
                                             <td class="text-center text-success">{{ number_format($wip->inward ?: 0, 2) }}</td>
                                             <td class="text-center text-primary">{{ number_format($wip->outward ?: 0, 2) }}</td>
@@ -392,7 +385,7 @@
                                         </tr>
                                         @endforeach
                                     @else
-                                    <tr><td colspan="6" class="text-center text-muted py-4">No WIP data available</td></tr>
+                                     <tr><td colspan="5" class="text-center text-muted py-4">No WIP data available</td></tr>
                                     @endif
                                 </tbody>
                             </table>
@@ -548,7 +541,7 @@
     @endif
 
     <!-- SECTION 4: MAINTENANCE -->
-    @if(auth()->id() == 1 || auth()->user()->hasRole('Production Manager'))
+    @if(auth()->id() == 1 || auth()->user()->can('view-maintenance dashboard'))
     <div class="mb-4">
         <div class="d-flex align-items-center mb-3">
             <div class="section-indicator bg-danger me-2"></div>
@@ -603,6 +596,7 @@
             </div>
 
             <!-- Machinery & Other Service Due (Unit Wise) -->
+            <!--
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm h-100 text-navy">
                     <div class="card-header bg-white py-3">
@@ -639,6 +633,7 @@
                     </div>
                 </div>
             </div>
+            -->
 
             <!-- Maintenance Requirements Log -->
             <div class="col-lg-3">
@@ -682,7 +677,6 @@
         border-radius: 4px;
     }
 
-    /* KPI Widget Styles */
     .kpi-widget {
         transition: transform 0.3s ease;
     }
@@ -758,7 +752,7 @@
                 const rows = document.querySelectorAll('.wip-row');
                 
                 rows.forEach(row => {
-                    const text = row.querySelector('.wip-jc-no').textContent.toLowerCase();
+                    const text = row.querySelector('.wip-process-name').textContent.toLowerCase();
                     row.style.display = text.includes(value) ? '' : 'none';
                 });
             });
@@ -776,71 +770,6 @@
                 });
             });
         }
-
-        document.querySelectorAll('.toggle-service-wip').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const tr = this.closest('tr');
-                const jc = this.getAttribute('data-jc');
-                const stage = this.getAttribute('data-stage');
-                const icon = this.querySelector('i');
-
-                if (tr.nextElementSibling && tr.nextElementSibling.classList.contains('service-wip-row')) {
-                    tr.nextElementSibling.remove();
-                    icon.classList.remove('ri-subtract-line');
-                    icon.classList.add('ri-add-line');
-                    this.classList.remove('btn-primary');
-                    this.classList.add('btn-outline-secondary');
-                    return;
-                }
-
-                icon.classList.remove('ri-add-line');
-                icon.classList.add('ri-loader-4-line', 'ri-spin');
-                this.classList.remove('btn-outline-secondary');
-                this.classList.add('btn-primary');
-
-                fetch(`{{ url('/dashboard/service-wip') }}?job_card_no=${encodeURIComponent(jc)}&operation_stage_name=${encodeURIComponent(stage)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        icon.classList.remove('ri-loader-4-line', 'ri-spin');
-                        icon.classList.add('ri-subtract-line');
-
-                        let html = '';
-                        if (data.length === 0) {
-                            html = '<tr><td colspan="6" class="text-center text-muted small bg-light">No service details found.</td></tr>';
-                        } else {
-                            html = `<tr class="service-wip-row bg-light"><td colspan="6" class="p-3">
-                                <div class="px-3">
-                                <h6 class="small fw-bold text-navy mb-2"><i class="ri ri-arrow-right-down-line me-1"></i>Micro-Services (Sub-Tasks)</h6>
-                                <table class="table table-sm table-bordered shadow-sm bg-white mb-0">
-                                    <thead class="bg-light-primary text-secondary">
-                                        <tr>
-                                            <th class="x-small">Service Name</th>
-                                            <th class="x-small text-center">Completed</th>
-                                            <th class="x-small text-center">In Progress</th>
-                                            <th class="x-small text-center text-danger">Wastage</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>`;
-                            data.forEach(service => {
-                                html += `<tr>
-                                    <td class="small pt-2 pb-2">${service.name}</td>
-                                    <td class="small pt-2 pb-2 text-center text-success fw-bold">${service.completed}</td>
-                                    <td class="small pt-2 pb-2 text-center text-warning">${service.in_progress}</td>
-                                    <td class="small pt-2 pb-2 text-center text-danger">${service.wastage}</td>
-                                </tr>`;
-                            });
-                            html += `</tbody></table></div></td></tr>`;
-                        }
-                        
-                        tr.insertAdjacentHTML('afterend', html);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching service details:', error);
-                        icon.classList.remove('ri-loader-4-line', 'ri-spin');
-                        icon.classList.add('ri-error-warning-line');
-                    });
-            });
-        });
 
         Chart.defaults.font.family = "'Inter', sans-serif";
         Chart.defaults.color = '#64748b';

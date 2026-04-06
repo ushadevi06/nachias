@@ -121,12 +121,20 @@ class HomeController extends Controller
 
         $wipQuery = JobCardEntry::with([
             'processGroup',
-            'tasks'
+            'tasks.assignee.serviceProvider'
         ])->where('grand_total_qty', '>', 0)
             ->whereNotIn('status', ['Production Completed', 'Closed']);
 
         $jobCards = $wipQuery->get();
-        $rows = [];
+        $groupedRows = [];
+        
+        $userSpId = auth()->user()->service_provider_id;
+        $isAdmin = auth()->id() == 1 || auth()->user()->hasRole('Super Admin');
+        
+        $userUnitStageId = null;
+        if (!$isAdmin && $userSpId && auth()->user()->serviceProvider) {
+            $userUnitStageId = auth()->user()->serviceProvider->operation_stage_id;
+        }
 
         $allMovements = DB::table('production_movements')
             ->select(
@@ -151,14 +159,38 @@ class HomeController extends Controller
                 $currentWip = max(0, $periodInward - $periodOutward);
 
                 if ($currentWip > 0) {
-                    $rows[] = (object) [
-                        'job_card_no' => $jc->job_card_no,
-                        'operation_stage_name' => $processName,
-                        'opening' => 0,
-                        'inward' => $periodInward,
-                        'outward' => $periodOutward,
-                        'wip' => $currentWip,
-                    ];
+                    $hasSpTask = false;
+                    $unitName = 'Unassigned';
+                    
+                    if (!$isAdmin && $userSpId) {
+                        $hasSpTask = $jc->tasks->filter(function($t) use ($userSpId) {
+                            return $t->assignee && $t->assignee->service_provider_id == $userSpId;
+                        })->isNotEmpty();
+                        
+                        $isProcessResponsible = ($userUnitStageId && $jc->process_group_id == $userUnitStageId); 
+                        
+                        if (!$hasSpTask && !$isProcessResponsible) continue;
+                        $unitName = auth()->user()->serviceProvider->name ?? 'Unknown Unit';
+                    } else {
+                        $firstTask = $jc->tasks->first();
+                        $unitName = ($firstTask && $firstTask->assignee && $firstTask->assignee->serviceProvider) ? $firstTask->assignee->serviceProvider->name : 'Unassigned';
+                    }
+
+                    $stageName = $processName;
+                    $key = $stageName;
+
+                    if (!isset($groupedRows[$key])) {
+                        $groupedRows[$key] = (object) [
+                            'operation_stage_name' => $stageName,
+                            'opening' => 0,
+                            'inward' => 0,
+                            'outward' => 0,
+                            'wip' => 0,
+                        ];
+                    }
+                    $groupedRows[$key]->inward += $periodInward;
+                    $groupedRows[$key]->outward += $periodOutward;
+                    $groupedRows[$key]->wip += $currentWip;
                 }
                 continue;
             }
@@ -175,22 +207,39 @@ class HomeController extends Controller
 
                 $wip = max(0, $inward - $outward);
 
-                $hasActiveTask = $jc->tasks->where('stage_id', $schedule->id)->where('status', '!=', 'Completed')->isNotEmpty();
+                $hasSpTask = false;
+                
+                if (!$isAdmin && $userSpId) {
+                    $hasSpTask = $jc->tasks->where('stage_id', $schedule->id)->filter(function($t) use ($userSpId) {
+                        return $t->assignee && $t->assignee->service_provider_id == $userSpId;
+                    })->isNotEmpty();
 
-                if ($wip > 0 || $hasActiveTask) {
-                    $rows[] = (object) [
-                        'job_card_no' => $jc->job_card_no,
-                        'operation_stage_name' => $schedule->operationStage->operation_stage_name ?? 'N/A',
+                    $isStageResponsible = ($userUnitStageId && $schedule->operation_stage_id == $userUnitStageId);
+
+                    if (!$hasSpTask && !$isStageResponsible) continue;
+                }
+
+                $stageName = $schedule->operationStage->operation_stage_name ?? 'N/A';
+                $key = $stageName;
+
+                if (!isset($groupedRows[$key])) {
+                    $groupedRows[$key] = (object) [
+                        'operation_stage_name' => $stageName,
                         'opening' => 0,
-                        'inward' => $inward,
-                        'outward' => $outward,
-                        'wip' => $wip,
+                        'inward' => 0,
+                        'outward' => 0,
+                        'wip' => 0,
                     ];
                 }
+                $groupedRows[$key]->inward += $inward;
+                $groupedRows[$key]->outward += $outward;
+                $groupedRows[$key]->wip += $wip;
             }
         }
 
-        $production_wip = collect($rows);
+        $production_wip = collect(array_values($groupedRows))->filter(function($row) {
+            return $row->inward > 0 || $row->outward > 0 || $row->wip > 0;
+        })->values();
 
         $production_plan_qty = JobCardEntry::whereMonth('job_card_date', Carbon::now()->month)->whereYear('job_card_date', Carbon::now()->year)->whereNull('deleted_at')->sum('grand_total_qty');
 
@@ -218,7 +267,7 @@ class HomeController extends Controller
         return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents'));
     }
 
-    public function getServiceWipDetails(\Illuminate\Http\Request $request)
+    public function getServiceWipDetails(Request $request)
     {
         $jobCardNo = $request->job_card_no;
         $operationStageName = $request->operation_stage_name;
