@@ -245,7 +245,11 @@ class DebitNoteController extends Controller
             }
         }
 
-        $purchaseInvoices = PurchaseInvoice::with('supplier')->orderBy('id', 'desc')->get();
+        $purchaseInvoices = PurchaseInvoice::with('supplier')
+            ->whereHas('grnEntries.grnEntryItems', function ($q) {
+                $q->where('qty_rejected', '>', 0);
+            })
+            ->orderBy('id', 'desc')->get();
 
         $nextDebitNoteNo = '';
         if (!$id) {
@@ -321,7 +325,11 @@ class DebitNoteController extends Controller
     }
     public function getSupplierInvoices($supplierId)
     {
-        $invoices = PurchaseInvoice::where('supplier_id', $supplierId)->orderBy('id', 'desc')->get(['id', 'invoice_no']);
+        $invoices = PurchaseInvoice::where('supplier_id', $supplierId)
+            ->whereHas('grnEntries.grnEntryItems', function ($q) {
+                $q->where('qty_rejected', '>', 0);
+            })
+            ->orderBy('id', 'desc')->get(['id', 'invoice_no']);
         return response()->json([
             'success' => true,
             'invoices' => $invoices

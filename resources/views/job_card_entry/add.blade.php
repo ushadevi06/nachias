@@ -59,18 +59,6 @@
         <div class="col-lg-12">
             <form action="{{ url('job_card_entries/add/'. ($jobCard ?  $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                 @csrf
-                <div class="col-lg-12">
-                    @include('flash_messages')
-                </div>
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
 
                 <div class="card mb-4">
                     <div class="card-body">
@@ -939,6 +927,7 @@
         const oldMatrix = Array.isArray(rawOldMatrix) ? rawOldMatrix : Object.values(rawOldMatrix);
         const rawExistingMatrix = @json($jobCard && $jobCard->fabricDetails ? $jobCard->fabricDetails : []);
         const existingMatrix = Array.isArray(rawExistingMatrix) ? rawExistingMatrix : Object.values(rawExistingMatrix);
+        const validationErrors = @json($errors->toArray());
         
         const rawOldFabrics = @json(old('fabrics', []));
         const oldFabrics = Array.isArray(rawOldFabrics) ? rawOldFabrics : Object.values(rawOldFabrics);
@@ -973,12 +962,31 @@
         let hsMeterValue = '{{ old("hs_meter", $jobCard ? ($jobCard->sleeveMeters->where("sleeve_type", "Half Sleeve")->first()->meter ?? "") : "") }}';
 
 
+        let sleeveValues = {};
+        function captureSleeveValues() {
+            $('.qty-direct-input').each(function() {
+                const instId = $(this).data('instance');
+                const size = $(this).data('size');
+                const val = $(this).val();
+                if (instId && size) {
+                    if (!sleeveValues[instId]) sleeveValues[instId] = {};
+                    sleeveValues[instId][size] = val;
+                }
+            });
+        }
+
         let sleeveInstances = []; 
         if (matrixItems && matrixItems.length > 0) {
             let hasFs = matrixItems.some(i => (parseFloat(i.qty_fs) || 0) > 0);
             let hasHs = matrixItems.some(i => (parseFloat(i.qty_hs) || 0) > 0);
-            if (hasFs) sleeveInstances.push({ id: Date.now() + Math.random(), type: 'fs' });
-            if (hasHs) sleeveInstances.push({ id: Date.now() + Math.random(), type: 'hs' });
+            if (hasFs) {
+                const id = Date.now() + Math.random();
+                sleeveInstances.push({ id: id, type: 'fs' });
+            }
+            if (hasHs) {
+                const id = Date.now() + Math.random();
+                sleeveInstances.push({ id: id, type: 'hs' });
+            }
         }
         
         function syncReferenceNo() {
@@ -1367,8 +1375,7 @@
 
                 const removeButton = hasTasks ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${id}" title="Remove"></button>`;
                 const $tag = $(`
-                    <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6"
-                          data-id="${id}" style="cursor:default; max-width:300px; white-space:normal; text-align:left;">
+                    <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6" data-id="${id}" style="cursor:default; max-width:300px; white-space:normal; text-align:left;">
                         <span style="font-size:11px; line-height:1.3;">${text}</span>
                         ${removeButton}
                     </span>`);
@@ -1756,7 +1763,6 @@
                     $row.find('.row-total').val(finalRowTotal);
                     
                     const $itemUsed = $(`.item-used-input[data-art="${art}"]`);
-                    // Only auto-sync if the box is currently empty or zero, OR if it's the first time
                     if ($itemUsed.length && (!$itemUsed.val() || parseFloat($itemUsed.val()) == 0)) {
                         $itemUsed.val(finalRowTotal).trigger('input');
                     }
@@ -1859,7 +1865,8 @@
         });
 
         function addSleeveInstance(type) {
-            const id = Date.now();
+            captureSleeveValues();
+            const id = Date.now() + Math.random();
             sleeveInstances.push({ id, type });
             renderSleeveInstanceList();
             renderCuttingSizeTable(currentSizes, currentRatios);
@@ -1868,8 +1875,10 @@
         }
 
         $(document).on('click', '.remove-sleeve-instance', function() {
+            captureSleeveValues();
             const id = $(this).data('instance-id');
             sleeveInstances = sleeveInstances.filter(i => i.id != id);
+            if (sleeveValues[id]) delete sleeveValues[id];
             renderSleeveInstanceList();
             renderCuttingSizeTable(currentSizes, currentRatios);
             syncMatrixWithMasterTable(true);
@@ -1913,7 +1922,6 @@
             const $tbody = $('#fabric-details-body');
             const $thead = $('#fabric-details-head');
             
-            // Capture manual metric values before clearing
             const currentManualMtr = {};
             $tbody.find('.mtr-input').each(function() {
                 const art = $(this).data('art');
@@ -1993,7 +2001,7 @@
 
                 const isTaskReadOnly = hasTasks ? 'readonly' : '';
                 widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center" value="${vWidth}" ${isTaskReadOnly}></td>`;
-                mtrRow += `<td class="fw-bold">ISSUED METERS</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}></td>`;
+                mtrRow += `<td class="fw-bold">ISSUED METERS</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}>${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}</td>`;
                 inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center" value="${vInOut}" ${isTaskReadOnly}></td>`;
                 nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center" value="${vNPatti}" ${isTaskReadOnly}></td>`;
                 
@@ -2113,7 +2121,11 @@
                         }
                     }
                     const ratioVal = (ratios[idx] && !savedVal) ? ratios[idx] : '';
-                    const finalVal = savedVal || ratioVal;
+                    let finalVal = savedVal || ratioVal;
+                    
+                    if (sleeveValues[instanceId] && sleeveValues[instanceId][s] !== undefined) {
+                        finalVal = sleeveValues[instanceId][s];
+                    }
                     
                     vRow += `<td>
                         <input type="number" name="matrix_items[${idx}][qty_${type}]" class="form-control form-control-sm text-center fw-bold qty-direct-input ${type}-summary-${s}" data-type="${type}" data-size="${s}" data-instance="${instanceId}" value="${finalVal}">
@@ -2550,8 +2562,6 @@
             const $wrapper = $('#item-details-table-wrapper');
             const $tbody = $('#item-details-tbody');
             const $msg = $('#no-materials-msg');
-            
-            // Capture current manual inputs before clearing
             const currentManualUsed = {};
             $tbody.find('.item-used-input').each(function() {
                 const art = $(this).data('art');
@@ -2574,12 +2584,13 @@
                 const total = parseFloat(item.mtr) || 0;
                 const artNo = item.art_no;
                 
-                // Prioritize manual UI value over original server values
-                let usedStr = (currentManualUsed[artNo] !== undefined && currentManualUsed[artNo] !== '') ? currentManualUsed[artNo] : (parseFloat(item.already_issued) || 0).toFixed(2);
+                let usedStr = (currentManualUsed[artNo] !== undefined && currentManualUsed[artNo] !== '') 
+                    ? currentManualUsed[artNo] 
+                    : (isEditMode && parseFloat(item.already_issued) > 0 ? parseFloat(item.already_issued).toFixed(2) : total.toFixed(2));
+                
                 const used = parseFloat(usedStr) || 0;
                 const remaining = total - used;
                 
-                // Sync to hidden inputs
                 $(`.total-qty-hidden[data-art="${artNo}"]`).val(total.toFixed(2));
                 $(`.used-qty-hidden[data-art="${artNo}"]`).val(used.toFixed(2));
                 $(`.remaining-qty-hidden[data-art="${artNo}"]`).val(remaining.toFixed(2));
@@ -2595,6 +2606,7 @@
                                        data-art="${artNo}" value="${usedStr}">
                                 <span class="input-group-text">${item.uom_code || 'MTR'}</span>
                             </div>
+                            ${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}
                         </td>
                         <td class="text-center item-remaining-qty fw-bold ${remaining < 0 ? 'text-danger' : 'text-success'}">${remaining.toFixed(2)}</td>
                     </tr>

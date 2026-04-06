@@ -137,6 +137,7 @@ class JobCardEntryController extends Controller
                 'production_stages.*.issue_date' => 'required|date_format:d-m-Y',
                 'production_stages.*.deadline_date' => 'required|date_format:d-m-Y',
                 'stages' => 'nullable|array|min:1',
+                'fabrics.*.mtr' => 'required|numeric|min:0.01',
                 // 'size_ratio_id' => 'required|exists:size_ratios,id',
             ];
 
@@ -150,6 +151,8 @@ class JobCardEntryController extends Controller
                 'production_stages.*.deadline_date.required' => 'This field is required',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
+                'fabrics.*.mtr.required' => 'This field is required.',
+                'fabrics.*.mtr.min' => 'This field must be at least :min.',
             ];
 
             $validator = Validator::make($request->all(), $rules, $messages);

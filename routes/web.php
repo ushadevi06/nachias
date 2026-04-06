@@ -595,6 +595,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     Route::get(
         '/clear-cache',
+
         function () {
             Artisan::call('optimize:clear');
             Artisan::call('config:clear');
@@ -605,12 +606,5 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
         }
     );
 
-    Route::get('/run-seeder', function () {
-        Artisan::call('db:seed', [
-            '--class' => 'PermissionSeeder',
-            '--force' => true
-        ]);
-        return "Permission Seeder run successfully!";
-    });
 });
 

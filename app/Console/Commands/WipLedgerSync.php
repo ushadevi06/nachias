@@ -73,21 +73,39 @@ class WipLedgerSync extends Command
                 if ($assignments->isEmpty())
                     continue;
 
-                $requiredServices = ProductionService::where('operation_stage_id', $stageId)->active()->get();
-
                 $actualOutward = 0;
-                if ($requiredServices->isNotEmpty()) {
-                    $serviceCompletions = $requiredServices->map(function ($service) use ($assignments) {
-                        $sa = $assignments->where('service_id', $service->id);
-                        if ($sa->isEmpty()) return 0;
-                        $isSeq = $sa->count() > 1 && $sa->max('issue_qty') >= $sa->sum('issue_qty') * 0.9;
-                        return $isSeq ? (float) $sa->min('completed_qty') : (float) $sa->sum('completed_qty');
-                    });
-                    $actualOutward = (float) $serviceCompletions->min();
+                if ($assignments->isNotEmpty()) {
+                    $assignedServiceIds = $assignments->pluck('service_id')->unique()->filter()->toArray();
+                    
+                    if (empty($assignedServiceIds)) {
+                        $actualOutward = (float) $assignments->sum('completed_qty');
+                    } else {
+                        // Only consider services that were actually assigned to this stage/task
+                        $relevantServices = ProductionService::whereIn('id', $assignedServiceIds)->active()->get();
+                        
+                        if ($relevantServices->isNotEmpty()) {
+                            $serviceCompletions = $relevantServices->map(function ($service) use ($assignments) {
+                                $sa = $assignments->where('service_id', $service->id);
+                                if ($sa->isEmpty()) return 0;
+                                $isSeq = $sa->count() > 1 && $sa->max('issue_qty') >= $sa->sum('issue_qty') * 0.9;
+                                return $isSeq ? (float) $sa->min('completed_qty') : (float) $sa->sum('completed_qty');
+                            });
+                            $actualOutward = (float) $serviceCompletions->min();
+                        } else {
+                            $actualOutward = (float) $assignments->sum('completed_qty');
+                        }
+                    }
+                }
+
+                $task = $stageTasks->first();
+                // If the entire task is marked as Completed, ensure actualOutward is at least the issue_qty
+                if ($task && $task->status == 'Completed' && $actualOutward < (float)$task->issue_qty) {
+                    $actualOutward = (float)$task->issue_qty;
                 }
 
                 if ($actualOutward <= 0)
                     continue;
+
 
                 $task = $stageTasks->first();
 

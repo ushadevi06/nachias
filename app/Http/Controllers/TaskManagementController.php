@@ -931,28 +931,40 @@ class TaskManagementController extends Controller
 
         $assignments = $stageTasks->flatMap->assignments;
 
-        $requiredServices = ProductionService::where('operation_stage_id', $stageId)->active()->get();
-
         $actualOutward = 0;
-        if ($requiredServices->isNotEmpty()) {
-            $serviceCompletions = $requiredServices->map(function ($service) use ($assignments) {
-                $serviceAssignments = $assignments->where('service_id', $service->id);
-                if ($serviceAssignments->isEmpty())
-                    return 0;
+        if ($assignments->isNotEmpty()) {
+            $assignedServiceIds = $assignments->pluck('service_id')->unique()->filter()->toArray();
+            
+            if (empty($assignedServiceIds)) {
+                // If no specific services are linked, use the total completed qty of assignments
+                $actualOutward = (float) $assignments->sum('completed_qty');
+            } else {
+                // Only consider services that were actually assigned to this stage/task
+                $relevantServices = ProductionService::whereIn('id', $assignedServiceIds)->active()->get();
+                
+                if ($relevantServices->isNotEmpty()) {
+                    $serviceCompletions = $relevantServices->map(function ($service) use ($assignments) {
+                        $serviceAssignments = $assignments->where('service_id', $service->id);
+                        if ($serviceAssignments->isEmpty()) return 0;
 
-                $isSequential = $serviceAssignments->count() > 1 && $serviceAssignments->max('issue_qty') >= $serviceAssignments->sum('issue_qty') * 0.9;
-
-                if ($isSequential) {
-                    return (float) $serviceAssignments->min('completed_qty');
+                        $isSequential = $serviceAssignments->count() > 1 && $serviceAssignments->max('issue_qty') >= $serviceAssignments->sum('issue_qty') * 0.9;
+                        return $isSequential ? (float) $serviceAssignments->min('completed_qty') : (float) $serviceAssignments->sum('completed_qty');
+                    });
+                    $actualOutward = $serviceCompletions->min();
                 } else {
-                    return (float) $serviceAssignments->sum('completed_qty');
+                    $actualOutward = (float) $assignments->sum('completed_qty');
                 }
-            });
-            $actualOutward = $serviceCompletions->min();
+            }
+        }
+
+        // If the entire task is marked as Completed, ensure actualOutward is at least the issue_qty
+        if ($task->status == 'Completed' && $actualOutward < (float)$task->issue_qty) {
+            $actualOutward = (float)$task->issue_qty;
         }
 
         if ($actualOutward <= 0)
             return;
+
 
         $recordedOutward = \App\Models\ProductionMovement::where('job_card_id', $jobCardId)->where('process_schedule_id', $processScheduleId)->sum('outward_qty');
 
