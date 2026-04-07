@@ -174,7 +174,7 @@ class PurchaseOrderController extends Controller
                 'items.*.supplier_design_name' => 'nullable|string|min:3|max:50',
                 'items.*.rate' => 'required|numeric|min:0',
                 'items.*.remarks' => 'nullable|string|min:5|max:255',
-                'items.*.attached_file' => 'nullable|mimes:jpeg,jpg,png,webp|max:2048',
+                'items.*.attached_file' => 'nullable|mimes:jpg,jpeg,png,webp|max:2048',
                 'items.*.color_id' => 'nullable|exists:colors,id',
                 'items.*.brand_id' => 'required|exists:brands,id',
                 'items.*.fabric_width_id' => 'nullable|exists:size_ratios,id',
@@ -200,11 +200,11 @@ class PurchaseOrderController extends Controller
                 'items.required' => 'At least one item is required.',
                 'items.*.*' => 'This field is required.',
                 'items.*.attached_file.image' => 'File must be an image.',
-                'items.*.attached_file.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
+                'items.*.attached_file.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp).',
                 'items.*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
                 'regex' => 'This field is an invalid format',
                 'additional_attachments.max' => 'You can upload a maximum of 5 files.',
-                'additional_attachments.*.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
+                'additional_attachments.*.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'additional_attachments.*.max' => 'Uploaded file cannot exceed 2MB.',
             ];
 

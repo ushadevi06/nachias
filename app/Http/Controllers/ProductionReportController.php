@@ -325,6 +325,19 @@ class ProductionReportController extends Controller
             return $rows;
         })->values();
 
+        if ($request->ajax()) {
+            return response()->json([
+                'production-wip' => view('reports.production_report.production_wip', compact('productionWip'))->render(),
+                'performance-report' => view('reports.production_report.performance_individual', compact('performanceIndividual'))->render(),
+                'incentive-report' => view('reports.production_report.incentive_report')->render(),
+                'process-wise' => view('reports.production_report.section_wise_production', compact('sectionWiseProduction'))->render(),
+                'production-cost' => view('reports.production_report.production_cost')->render(),
+                'alteration-report' => view('reports.production_report.alteration_quantity')->render(),
+                'completion-report' => view('reports.production_report.job_card_completion', compact('jobCardCompletion'))->render(),
+                'brand-production' => view('reports.production_report.brand_wise_production', compact('brandWiseProduction'))->render(),
+            ]);
+        }
+
         $units = ServiceProvider::where('status', 'Active')->get();
         return view('reports/production_report', compact('productionWip', 'units', 'performanceIndividual', 'sectionWiseProduction', 'jobCardCompletion', 'brandWiseProduction'));
     }

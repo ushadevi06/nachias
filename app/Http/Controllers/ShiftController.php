@@ -81,7 +81,7 @@ class ShiftController extends Controller
             $rules = [
                 'shift_name' => 'required|string|min:1|max:50|unique:shifts,shift_name,' . $id . ',id,deleted_at,NULL',
                 'start_time' => 'required',
-                'end_time'   => 'required',
+                'end_time'   => 'required|after:start_time',
                 'status'     => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -89,6 +89,7 @@ class ShiftController extends Controller
                 '*.unique'   => 'This field already exists.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
+                'end_time.after' => 'The end time must be after the start time.',
             ];
             $request->validate($rules, $messages);
 

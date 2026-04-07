@@ -97,12 +97,13 @@ class CityController extends Controller
 
             $validated = $request->validate([
                 'state_id'   => 'required|exists:states,id',
-                'city_code' => ['nullable','min:2','max:10',Rule::unique('cities', 'city_code')->ignore($id)->whereNull('deleted_at')],
+                'city_code' => ['nullable','alpha_num','min:2','max:10',Rule::unique('cities', 'city_code')->ignore($id)->whereNull('deleted_at')],
                 'city_name' => ['required','min:3','max:50',Rule::unique('cities', 'city_name')->ignore($id)->whereNull('deleted_at')],
                 'status'    => 'required|in:Active,Inactive',
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ]);
@@ -148,12 +149,11 @@ class CityController extends Controller
         $references = [
             [Supplier::class, 'city_id', 'Suppliers'],
             [Customer::class, 'city_id', 'Customers'],
-            [Employee::class, 'city_id', 'Employees'],
             [SalesAgent::class, 'city_id', 'Sales Agents'],
             [PurchaseCommissionAgent::class, 'city_id', 'Purchase Commission Agents'],
             [ServiceProvider::class, 'city_id', 'Service Providers'],
             [Place::class, 'city_id', 'Places'],
-            [User::class, 'city_id', 'Users'],
+            [User::class, 'city_id', 'Employees'],
             [Setting::class, 'city_id', 'Settings'],
         ];
 

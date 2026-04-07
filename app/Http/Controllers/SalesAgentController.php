@@ -101,7 +101,7 @@ class SalesAgentController extends Controller
             $rules = [
                 'agent_type' => 'required|string|max:50',
                 'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:50|unique:sales_agents,code,' . $id . ',id,deleted_at,NULL',
+                'code' => 'required|string|min:3|max:50|alpha_num|unique:sales_agents,code,' . $id . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:sales_agents,email,' . $id . ',id,deleted_at,NULL',
                 'mobile_no' => 'required|numeric|digits_between:10,15|unique:sales_agents,mobile_no,' . $id . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
@@ -134,6 +134,7 @@ class SalesAgentController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
+                '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 '*.numeric' => 'This field must be a number.',

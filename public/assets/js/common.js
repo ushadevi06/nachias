@@ -4,7 +4,8 @@ $(document).ready(function () {
     /*  Fetch Cities */
     $('#state_id').on('change', function () {
         var state_id = $(this).val();
-        $('#city_id').html('<option value="">Select City</option>');
+        $('#city_id').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
+        $('#zone_id').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
 
         if (state_id) {
             $.ajax({
@@ -12,14 +13,14 @@ $(document).ready(function () {
                 type: 'GET',
                 dataType: 'json',
                 success: function (data) {
-                    $('#city_id').empty();
-                    $('#city_id').append('<option value="">-- Select City --</option>');
+                    $('#city_id').empty().append('<option value="">-- Select City --</option>');
 
                     $.each(data, function (key, city) {
                         $('#city_id').append(
                             '<option value="' + city.id + '">' + city.city_name + '</option>'
                         );
                     });
+                    $('#city_id').prop('disabled', false).trigger('change.select2').trigger('change');
                 }
             });
 
@@ -28,16 +29,19 @@ $(document).ready(function () {
                 type: 'GET',
                 dataType: 'json',
                 success: function (data) {
-                    $('#zone_id').empty();
-                    $('#zone_id').append('<option value="">-- Select Zone --</option>');
+                    $('#zone_id').empty().append('<option value="">-- Select Zone --</option>');
 
                     $.each(data, function (key, zone) {
                         $('#zone_id').append(
                             '<option value="' + zone.id + '">' + zone.zone_name + '</option>'
                         );
                     });
+                    $('#zone_id').prop('disabled', false).trigger('change.select2').trigger('change');
                 }
             });
+        } else {
+            $('#city_id').empty().append('<option value="">Select City</option>').prop('disabled', false).trigger('change.select2').trigger('change');
+            $('#zone_id').empty().append('<option value="">Select Zone</option>').prop('disabled', false).trigger('change.select2').trigger('change');
         }
     });
 
@@ -45,28 +49,29 @@ $(document).ready(function () {
     /* Fetch Places */
     $('#city_id').on('change', function () {
         var city_id = $(this).val();
-        $('#place_id').html('<option value="">Select Place</option>');
+        $('#place_id').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
         if (city_id) {
             $.ajax({
                 url: APP_URL + '/get-places/' + city_id,
                 type: 'GET',
                 dataType: 'json',
                 success: function (data) {
-                    $('#place_id').empty();
-                    $('#place_id').append('<option value="">-- Select Place --</option>');
+                    $('#place_id').empty().append('<option value="">-- Select Place --</option>');
                     $.each(data, function (key, place) {
                         $('#place_id').append('<option value="' + place.id + '">' + place.place_name + '</option>');
                     });
-                    $('#place_id').trigger('change');
+                    $('#place_id').prop('disabled', false).trigger('change.select2').trigger('change');
                 }
             });
+        } else {
+            $('#place_id').empty().append('<option value="">Select Place</option>').prop('disabled', false).trigger('change.select2').trigger('change');
         }
     });
 
     /* Fetch Multiple Cities for Zones */
     $('#zone_state_id').on('change', function () {
         var state_id = $(this).val();
-        $('#city_ids').html('<option value="">Select City</option>');
+        $('#city_ids').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
 
         if (state_id) {
             $.ajax({
@@ -74,14 +79,15 @@ $(document).ready(function () {
                 type: 'GET',
                 dataType: 'json',
                 success: function (data) {
-                    $('#city_ids').empty();
-                    $('#city_ids').append('<option value="">-- Select City --</option>');
+                    $('#city_ids').empty().append('<option value="">-- Select City --</option>');
                     $.each(data, function (key, city) {
                         $('#city_ids').append('<option value="' + city.id + '">' + city.city_name + '</option>');
                     });
-                    $('#city_ids').trigger('change');
+                    $('#city_ids').prop('disabled', false).trigger('change.select2').trigger('change');
                 }
             });
+        } else {
+            $('#city_ids').empty().append('<option value="">Select City</option>').prop('disabled', false).trigger('change.select2').trigger('change');
         }
     });
 
@@ -105,10 +111,25 @@ $(document).ready(function () {
             materialSelect.html('<option value="">Select Material</option>');
         }
     });
+
+    /* Global Double Submission Prevention */
+    $(document).on('submit', '.common-form', function (e) {
+        var $form = $(this);
+        var $submitBtn = $form.find('button[type="submit"]');
+
+        if ($form.data('submitted') === true) {
+            e.preventDefault();
+            return false;
+        }
+
+        $form.data('submitted', true);
+        $submitBtn.prop('disabled', true);
+        $submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...');
+    });
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    //     /* ── Build the floating two-panel box ── */
+    /* ── Build the floating two-panel box ── */
     var mega = document.createElement('div');
     mega.id = 'nd-mega';
     mega.innerHTML = '<div id="nd-left"></div><div id="nd-right"></div>';

@@ -196,7 +196,7 @@ class SalesOrderController extends Controller
                 'items.*.rate.nullable' => 'This field is optional.',
                 'items.*.art_no.required' => 'This field is required.',
                 'items.*.mrp.required' => 'This field is required.',
-                'attachment.*.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
+                'attachment.*.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'attachment.*.max' => 'Uploaded file cannot exceed 2MB.',
             ];
 

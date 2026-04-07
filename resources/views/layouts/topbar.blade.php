@@ -1,6 +1,6 @@
 @php
-    $user = auth()->user();
-    $isSuper = $user->id == 1;
+$user = auth()->user();
+$isSuper = $user->id == 1;
 @endphp
 <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
     <div class="layout-container">
@@ -29,13 +29,13 @@
                                 data-bs-toggle="dropdown">
                                 <div class="avatar avatar-online">
                                     @php
-                                        $user = auth()->user();
-                                        $profileImagePath = $user->profile_image
-                                            ? public_path('uploads/employee/' . $user->id . '/' . $user->profile_image)
-                                            : null;
-                                        $profileImageUrl = ($user->profile_image && file_exists($profileImagePath))
-                                            ? url('uploads/employee/' . $user->id . '/' . $user->profile_image)
-                                            : url('assets/images/user.jpg');
+$user = auth()->user();
+$profileImagePath = $user->profile_image
+    ? public_path('uploads/employee/' . $user->id . '/' . $user->profile_image)
+    : null;
+$profileImageUrl = ($user->profile_image && file_exists($profileImagePath))
+    ? url('uploads/employee/' . $user->id . '/' . $user->profile_image)
+    : url('assets/images/user.jpg');
                                     @endphp
                                     <img src="{{ $profileImageUrl }}" alt="alt" class="rounded-circle">
                                 </div>
@@ -406,7 +406,13 @@
                                                                 </a>
                                                             </li>
                                                         @endif
-
+                                                        @if($isSuper || $user->can('view purchase-commission-agent'))
+                                                            <li class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
+                                                                <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
+                                                                    <div>Purchase Commission Agent</div>
+                                                                </a>
+                                                            </li>
+                                                        @endif
                                                         @if($isSuper || $user->can('view suppliers'))
                                                             <li class="menu-item {{ request()->is('suppliers*') ? 'active' : '' }}">
                                                                 <a href="{{ url('suppliers') }}" class="menu-link">
@@ -433,14 +439,7 @@
                                                             </li>
                                                         @endif
 
-                                                        @if($isSuper || $user->can('view purchase-commission-agent'))
-                                                            <li
-                                                                class="menu-item {{ request()->is('purchase_commission_agent*') ? 'active' : '' }}">
-                                                                <a href="{{ url('purchase_commission_agent') }}" class="menu-link">
-                                                                    <div>Purchase Commission Agent</div>
-                                                                </a>
-                                                            </li>
-                                                        @endif
+
                                                     </ul>
                                                 </li>
                                             @endif

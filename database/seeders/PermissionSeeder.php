@@ -94,6 +94,8 @@ class PermissionSeeder extends Seeder
             'daily-production-report' => ['view'],
             'order-report' => ['view'],
             'employee-report' => ['view'],
+            
+            'ticket-management' => ['create', 'edit', 'delete', 'view'],
 
             'settings' => ['edit','view'],
 
@@ -117,7 +119,7 @@ class PermissionSeeder extends Seeder
         }
 
         // Dashboard permissions with custom labels
-        $dashboardPerms = [
+        $dashboardPerms = [ 
             ['action' => 'view-sales-order',       'label' => 'Sales & Order Dashboard'],
             ['action' => 'view-accounts-financial', 'label' => 'Accounts & Financial Dashboard'],
             ['action' => 'view-production',         'label' => 'Production Dashboard'],

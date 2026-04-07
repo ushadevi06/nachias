@@ -16,9 +16,7 @@
                             <div class="row g-4">
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('po_number') is-invalid @enderror"
-                                            id="po_number" name="po_number" placeholder="Enter PO Number"
-                                            value="{{ old('po_number', $purchaseOrder->po_number ?? $nextPoNumber ?? '') }}">
+                                        <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? $nextPoNumber ?? '') }}">
                                         <label for="po_number">PO Number <span class="text-danger">*</span></label>
                                     </div>
                                     @error('po_number')
@@ -27,10 +25,7 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text"
-                                            class="form-control po_date @error('po_date') is-invalid @enderror" id="po_date"
-                                            name="po_date" autocomplete="off" placeholder="Enter PO Date"
-                                            value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
+                                        <input type="text" class="form-control po_date @error('po_date') is-invalid @enderror" id="po_date" name="po_date" autocomplete="off" placeholder="Enter PO Date" value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
                                         <label for="po_date">PO Date <span class="text-danger">*</span></label>
                                     </div>
                                     @error('po_date')
@@ -56,9 +51,7 @@
 
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="number" class="form-control @error('commission') is-invalid @enderror"
-                                            id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)"
-                                            value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
+                                        <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
                                         <label for="commission">Commission (%)</label>
                                     </div>
                                     @error('commission')
@@ -68,13 +61,10 @@
 
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <select id="supplier_id" name="supplier_id"
-                                            class="select2 form-select @error('supplier_id') is-invalid @enderror"
-                                            data-placeholder="Select Supplier">
+                                        <select id="supplier_id" name="supplier_id" class="select2 form-select @error('supplier_id') is-invalid @enderror" data-placeholder="Select Supplier">
                                             <option value="">Select Supplier</option>
                                             @foreach($suppliers as $supplier)
-                                                <option value="{{ $supplier->id }}" data-state-id="{{ $supplier->state_id }}"
-                                                    data-payment-terms="{{ $supplier->payment_terms ?? '' }}" {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }} ({{ $supplier->code }})</option>
+                                                <option value="{{ $supplier->id }}" data-state-id="{{ $supplier->state_id }}" data-payment-terms="{{ $supplier->payment_terms ?? '' }}" {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }} ({{ $supplier->code }})</option>
                                             @endforeach
                                         </select>
                                         <label for="supplier_id">Supplier <span class="text-danger">*</span></label>
@@ -86,9 +76,7 @@
 
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('reference_no') is-invalid @enderror"
-                                            id="reference_no" name="reference_no" placeholder="Enter Reference No"
-                                            value="{{ old('reference_no', $purchaseOrder->reference_no ?? '') }}">
+                                        <input type="text" class="form-control @error('reference_no') is-invalid @enderror" id="reference_no" name="reference_no" placeholder="Enter Reference No" value="{{ old('reference_no', $purchaseOrder->reference_no ?? '') }}">
                                         <label for="reference_no">Reference No <span class="text-danger">*</span></label>
                                     </div>
                                     @error('reference_no')
@@ -98,13 +86,8 @@
 
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text"
-                                            class="form-control reference_date @error('reference_date') is-invalid @enderror"
-                                            id="reference_date" name="reference_date" autocomplete="off"
-                                            placeholder="Enter Reference Date"
-                                            value="{{ old('reference_date', $purchaseOrder ? optional($purchaseOrder->reference_date)->format('d-m-Y') : '') }}" />
-                                        <label for="reference_date">Reference / Order Date <span
-                                                class="text-danger">*</span></label>
+                                        <input type="text" class="form-control reference_date @error('reference_date') is-invalid @enderror" id="reference_date" name="reference_date" autocomplete="off" placeholder="Enter Reference Date" value="{{ old('reference_date', $purchaseOrder ? optional($purchaseOrder->reference_date)->format('d-m-Y') : '') }}" />
+                                        <label for="reference_date">Reference / Order Date <span class="text-danger">*</span></label>
                                     </div>
                                     @error('reference_date')
                                         <div class="text-danger mt-1">{{ $message }}</div>
@@ -113,10 +96,7 @@
 
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text"
-                                            class="form-control due_date @error('due_date') is-invalid @enderror"
-                                            id="due_date" name="due_date" autocomplete="off" placeholder="Enter Due Date"
-                                            value="{{ old('due_date', $purchaseOrder ? $purchaseOrder->due_date->format('d-m-Y') : '') }}" />
+                                        <input type="text" class="form-control due_date @error('due_date') is-invalid @enderror" id="due_date" name="due_date" autocomplete="off" placeholder="Enter Due Date" value="{{ old('due_date', $purchaseOrder ? $purchaseOrder->due_date->format('d-m-Y') : '') }}" />
                                         <label for="due_date">Due Date <span class="text-danger">*</span></label>
                                     </div>
                                     @error('due_date')
@@ -126,14 +106,10 @@
 
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <select id="store_type_id" name="store_type_id"
-                                            class="select2 form-select @error('store_type_id') is-invalid @enderror"
-                                            data-placeholder="Select Store Type">
+                                        <select id="store_type_id" name="store_type_id" class="select2 form-select @error('store_type_id') is-invalid @enderror" data-placeholder="Select Store Type">
                                             <option value="">Select Store Type</option>
                                             @foreach($storeTypes as $storeType)
-                                                <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>
-                                                    {{ $storeType->store_type_name }}
-                                                </option>
+                                                <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>{{ $storeType->store_type_name }}</option>
                                             @endforeach
                                         </select>
                                         <label for="store_type_id">Store Type <span class="text-danger">*</span></label>
@@ -171,7 +147,7 @@
                                             <th style="min-width: 150px;">Rate *</th>
                                             <th style="min-width: 120px;">Amount</th>
                                             <th style="min-width: 150px;">Remarks</th>
-                                            <th style="min-width: 100px;">File</th>
+                                            <th style="min-width: 200px;">File</th>
                                             <th style="min-width: 50px;">Action</th>
                                         </tr>
                                     </thead>
@@ -730,18 +706,13 @@
                                                                 $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp']);
                                                                 $fileUrl = url('uploads/purchase_orders/' . $attachment);
                                                             @endphp
-                                                            <div class="attachment-item position-relative border rounded p-1 bg-white shadow-sm"
-                                                                style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                            <div class="attachment-item position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="{{ $attachment }}">
                                                                 @if($isImage)
-                                                                    <img src="{{ $fileUrl }}"
-                                                                        class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image"
-                                                                        data-image="{{ $fileUrl }}" alt="Attachment">
+                                                                    <img src="{{ $fileUrl }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" alt="Attachment">
                                                                 @else
-                                                                    <a href="{{ $fileUrl }}" target="_blank"
-                                                                        class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                                    <a href="{{ $fileUrl }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
                                                                         <i class="ri ri-file-text-line fs-2"></i>
-                                                                        <span class="badge bg-primary text-white mt-1"
-                                                                            style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
                                                                     </a>
                                                                 @endif
                                                                 <button type="button"
@@ -749,8 +720,7 @@
                                                                     style="width: 20px; height: 20px; border: 2px solid white; line-height: 1;">
                                                                     <i class="ri ri-close-line fs-6"></i>
                                                                 </button>
-                                                                <input type="hidden" name="existing_additional_attachments[]"
-                                                                    value="{{ $attachment }}">
+                                                                <input type="hidden" name="existing_additional_attachments[]" value="{{ $attachment }}">
                                                             </div>
                                                         @endforeach
                                                     @endif
@@ -773,37 +743,24 @@
                                         <div class="col-12">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="total_qty" class="fw-medium">Total Qty:</label>
-                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold"
-                                                    id="total_qty" name="total_qty"
-                                                    value="{{ old('total_qty', $purchaseOrder->total_qty ?? '') }}"
-                                                    readonly>
+                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="total_qty" name="total_qty" value="{{ old('total_qty', $purchaseOrder->total_qty ?? '') }}" readonly>
                                             </div>
 
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="sub_total" class="fw-medium">Sub Total:</label>
-                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold"
-                                                    id="sub_total" name="sub_total"
-                                                    value="{{ old('sub_total', $purchaseOrder->sub_total ?? '') }}"
-                                                    readonly>
+                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="sub_total" name="sub_total" value="{{ old('sub_total', $purchaseOrder->sub_total ?? '') }}" readonly>
                                             </div>
 
                                             <div class="mb-2">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <label class="fw-medium">Discount:</label>
                                                     <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number"
-                                                            class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror"
-                                                            id="discount_percent" name="discount_percent" step="0.01"
-                                                            value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
+                                                        <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent" step="0.01" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
                                                         <span class="input-group-text px-1">%</span>
                                                     </div>
                                                 </div>
                                                 <div class="text-end mt-1">
-                                                    <input type="text"
-                                                        class="form-control-plaintext form-control-sm text-end py-0"
-                                                        id="discount_amount" name="discount_amount"
-                                                        value="{{ old('discount_amount', $purchaseOrder->discount_amount ?? '') }}"
-                                                        readonly>
+                                                    <input type="text" class="form-control-plaintext form-control-sm text-end py-0" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $purchaseOrder->discount_amount ?? '') }}" readonly>
                                                 </div>
                                             </div>
 
@@ -817,72 +774,49 @@
                                             </div>
 
                                             <div class="d-flex justify-content-between align-items-center border-top pt-2">
-                                                <label for="taxable_amount" class="fw-medium">Net Amount (Before
-                                                    Tax):</label>
-                                                <input type="text" id="taxable_amount" name="taxable_amount"
-                                                    class="form-control-plaintext text-end w-50 fw-bold"
-                                                    value="{{ old('taxable_amount', $purchaseOrder->taxable_amount ?? '') }}"
-                                                    readonly>
+                                                <label for="taxable_amount" class="fw-medium">Net Amount (Before Tax):</label>
+                                                <input type="text" id="taxable_amount" name="taxable_amount" class="form-control-plaintext text-end w-50 fw-bold" value="{{ old('taxable_amount', $purchaseOrder->taxable_amount ?? '') }}" readonly>
                                             </div>
 
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">Other State:</label>
                                                 <div>
                                                     <div class="form-check form-check-inline">
-                                                        <input
-                                                            class="form-check-input @error('other_state') is-invalid @enderror"
-                                                            type="radio" name="other_state" id="other_state_yes" value="yes"
-                                                            {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
+                                                        <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
                                                         <label class="form-check-label" for="other_state_yes">Yes</label>
                                                     </div>
                                                     <div class="form-check form-check-inline">
-                                                        <input
-                                                            class="form-check-input @error('other_state') is-invalid @enderror"
-                                                            type="radio" name="other_state" id="other_state_no" value="no"
-                                                            {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
+                                                        <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
                                                         <label class="form-check-label" for="other_state_no">No</label>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <input type="hidden" name="round_off_type" id="round_off_type"
-                                                value="{{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') }}">
-                                            <div
-                                                class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
+                                            <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') }}">
+                                            <div class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <label for="igst_percent" class="fw-medium">IGST :</label>
                                                     <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number"
-                                                            class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror"
-                                                            id="igst_percent" name="igst_percent" step="0.01"
-                                                            value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
+                                                        <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
                                                         <span class="input-group-text px-1">%</span>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div
-                                                class="cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
+                                            <div class="cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <label for="cgst_percent" class="fw-medium">CGST :</label>
                                                     <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number"
-                                                            class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror"
-                                                            id="cgst_percent" name="cgst_percent" step="0.01"
-                                                            value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
+                                                        <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
                                                         <span class="input-group-text px-1">%</span>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div
-                                                class="sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
+                                            <div class="sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <label for="sgst_percent" class="fw-medium">SGST :</label>
                                                     <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number"
-                                                            class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror"
-                                                            id="sgst_percent" name="sgst_percent" step="0.01"
-                                                            value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
+                                                        <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
                                                         <span class="input-group-text px-1">%</span>
                                                     </div>
                                                 </div>
@@ -890,41 +824,27 @@
 
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label for="tax_amount" class="fw-medium">Tax Amount:</label>
-                                                <input type="text" class="form-control-plaintext text-end w-50"
-                                                    id="tax_amount" name="tax_amount"
-                                                    value="{{ old('tax_amount', $purchaseOrder->tax_amount ?? '') }}"
-                                                    readonly>
+                                                <input type="text" class="form-control-plaintext text-end w-50" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $purchaseOrder->tax_amount ?? '') }}" readonly>
                                             </div>
 
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="fw-medium">Round Off:</label>
                                                 <div class="d-flex align-items-center">
                                                     <div class="form-check form-check-inline me-2">
-                                                        <input class="form-check-input" type="radio" name="round_off_type"
-                                                            id="round_off_add" value="Add" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
+                                                        <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
                                                         <label class="form-check-label" for="round_off_add">Add</label>
                                                     </div>
                                                     <div class="form-check form-check-inline me-2">
-                                                        <input class="form-check-input" type="radio" name="round_off_type"
-                                                            id="round_off_less" value="Less" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
+                                                        <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
                                                         <label class="form-check-label" for="round_off_less">Less</label>
                                                     </div>
-                                                    <input type="number" class="form-control form-control-sm text-end"
-                                                        style="width: 100px;" id="round_off" name="round_off" step="0.01"
-                                                        min="0"
-                                                        value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}"
-                                                        autocomplete="off">
+                                                    <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}" autocomplete="off">
                                                 </div>
                                             </div>
 
-                                            <div
-                                                class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                                            <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
                                                 <label for="total_amount" class="fw-bold fs-5">Total Amount:</label>
-                                                <input type="text"
-                                                    class="form-control-plaintext text-end w-50 fw-bold fs-5 text-primary"
-                                                    id="total_amount" name="total_amount"
-                                                    value="{{ old('total_amount', $purchaseOrder->total_amount ?? '') }}"
-                                                    readonly>
+                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold fs-5 text-primary" id="total_amount" name="total_amount" value="{{ old('total_amount', $purchaseOrder->total_amount ?? '') }}" readonly>
                                             </div>
                                         </div>
                                     </div>
@@ -940,7 +860,6 @@
             </div>
         </div>
     </div>
-
 @endsection
 
 @section('scripts')
@@ -949,87 +868,87 @@
             let itemIndex = Number($('#itemIndex').val());
             $(document).on('click', '.add_item', function () {
                 let rowHtml = `
-                                                                <tr class="item-row">
-                                                                    <td>
-                                                                        <select class="select2 form-select po_store_category" name="items[${itemIndex}][store_category_id]" data-placeholder="Select Store Category">
-                                                                            <option value="">Select Store Category</option>
-                                                                            @foreach($storeCategories as $category)
-                                                                                <option value="{{ $category->id }}">{{ $category->category_name }}({{ $category->code }})</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    </td>
-                                                                    <td>
-                                                                        <select class="select2 form-select brand" name="items[${itemIndex}][brand_id]" data-placeholder="Select Brand">
-                                                                            <option value="">Select Brand</option>
-                                                                            @foreach($brands as $brand)
-                                                                                <option value="{{ $brand->id }}">{{ $brand->brand_name }} ({{ $brand->code }})</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    </td>
-                                                                    <td>
-                                                                        <select class="select2 form-select material" name="items[${itemIndex}][raw_material_id]" data-placeholder="Select Raw Material">
-                                                                            <option value="">Select Raw Material</option>
-                                                                        </select>
-                                                                    </td>
-                                                                    <td>
-                                                                        <select class="select2 form-select style" name="items[${itemIndex}][style_id]" data-placeholder="Select Style">
-                                                                            <option value="">Select Style</option>
-                                                                            @foreach($styles as $style)
-                                                                                <option value="{{ $style->id }}">{{ $style->style_name }}</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    </td>
-                                                                    <td>
-                                                                        <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" data-placeholder="Select Width">
-                                                                            <option value="">Select Width</option>
-                                                                            @foreach($sizeRatios as $ratio)
-                                                                                <option value="{{ $ratio->id }}">{{ $ratio->size }} - ({{ $ratio->ratio }})</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    </td>
-                                                                    <td>
-                                                                        <select class="select2 form-select uom" name="items[${itemIndex}][uom_id]" disabled data-placeholder="Select UOM">
-                                                                            <option value="">Select UOM</option>
-                                                                            @foreach($uoms as $uom)
-                                                                                <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                        <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
-                                                                    </td>
-                                                                    <td>
-                                                                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
-                                                                    </td>
-                                                                    <td>
-                                                                        <input type="text" class="form-control supplier_design_name" name="items[${itemIndex}][supplier_design_name]" placeholder="Enter Supplier Design Name">
-                                                                    </td>
-                                                                    <td>
-                                                                        <select class="select2 form-select color" name="items[${itemIndex}][color_id]" data-placeholder="Select Color">
-                                                                            <option value="">Select Color</option>
-                                                                            @foreach($colors as $color)
-                                                                                <option value="{{ $color->id }}">{{ $color->color_name }}</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    </td>
-                                                                    <td>
-                                                                        <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="0.01" min="0" placeholder="Enter Rate">
-                                                                    </td>
-                                                                    <td>
-                                                                        <input type="text" class="form-control amount" readonly>
-                                                                    </td>
-                                                                    <td>
-                                                                        <textarea class="form-control remarks" name="items[${itemIndex}][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
-                                                                    </td>
-                                                                    <td>
-                                                                        <input type="file" class="form-control file-input" name="items[${itemIndex}][attached_file]" accept="*">
-                                                                        <input type="hidden" name="items[${itemIndex}][existing_file]" value="">
-                                                                        <div class="mt-2 preview-container"></div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <button type="button" class="btn btn-danger delete_item">
-                                                                            <i class="ri ri-delete-bin-line"></i>
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>`;
+                <tr class="item-row">
+                    <td>
+                        <select class="select2 form-select po_store_category" name="items[${itemIndex}][store_category_id]" data-placeholder="Select Store Category">
+                            <option value="">Select Store Category</option>
+                            @foreach($storeCategories as $category)
+                                <option value="{{ $category->id }}">{{ $category->category_name }}({{ $category->code }})</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <select class="select2 form-select brand" name="items[${itemIndex}][brand_id]" data-placeholder="Select Brand">
+                            <option value="">Select Brand</option>
+                            @foreach($brands as $brand)
+                                <option value="{{ $brand->id }}">{{ $brand->brand_name }} ({{ $brand->code }})</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <select class="select2 form-select material" name="items[${itemIndex}][raw_material_id]" data-placeholder="Select Raw Material">
+                            <option value="">Select Raw Material</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="select2 form-select style" name="items[${itemIndex}][style_id]" data-placeholder="Select Style">
+                            <option value="">Select Style</option>
+                            @foreach($styles as $style)
+                                <option value="{{ $style->id }}">{{ $style->style_name }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" data-placeholder="Select Width">
+                            <option value="">Select Width</option>
+                            @foreach($sizeRatios as $ratio)
+                                <option value="{{ $ratio->id }}">{{ $ratio->size }} - ({{ $ratio->ratio }})</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <select class="select2 form-select uom" name="items[${itemIndex}][uom_id]" disabled data-placeholder="Select UOM">
+                            <option value="">Select UOM</option>
+                            @foreach($uoms as $uom)
+                                <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control supplier_design_name" name="items[${itemIndex}][supplier_design_name]" placeholder="Enter Supplier Design Name">
+                    </td>
+                    <td>
+                        <select class="select2 form-select color" name="items[${itemIndex}][color_id]" data-placeholder="Select Color">
+                            <option value="">Select Color</option>
+                            @foreach($colors as $color)
+                                <option value="{{ $color->id }}">{{ $color->color_name }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="0.01" min="0" placeholder="Enter Rate">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control amount" readonly>
+                    </td>
+                    <td>
+                        <textarea class="form-control remarks" name="items[${itemIndex}][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
+                    </td>
+                    <td>
+                        <input type="file" class="form-control file-input" name="items[${itemIndex}][attached_file]" accept="*">
+                        <input type="hidden" name="items[${itemIndex}][existing_file]" value="">
+                        <div class="mt-2 preview-container"></div>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger delete_item">
+                            <i class="ri ri-delete-bin-line"></i>
+                        </button>
+                    </td>
+                </tr>`;
 
                 $('#item-rows tbody').append(rowHtml);
                 initSelect2Fields();

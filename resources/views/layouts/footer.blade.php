@@ -8,6 +8,15 @@
 <script src="{{ url('assets/datatables/js/jquery.dataTables.min.js') }}"></script>
 <script src="{{ url('assets/datatables/js/dataTables.bootstrap5.min.js') }}"></script>
 <script src="{{ url('assets/datatables/js/dataTables.responsive.min.js') }}"></script>
+
+<!-- DataTables Buttons Extension -->
+<script src="{{ url('assets/js/buttons/dataTables.buttons.min.js') }}"></script>
+<script src="{{ url('assets/js/buttons/buttons.bootstrap5.min.js') }}"></script>
+<script src="{{ url('assets/js/buttons/jszip.min.js') }}"></script>
+<script src="{{ url('assets/js/buttons/pdfmake.min.js') }}"></script>
+<script src="{{ url('assets/js/buttons/vfs_fonts.js') }}"></script>
+<script src="{{ url('assets/js/buttons/buttons.html5.min.js') }}"></script>
+<script src="{{ url('assets/js/buttons/buttons.print.min.js') }}"></script>
 <script src="{{ url('assets/js/bs-stepper.js') }}"></script>
 <script src="{{ url('assets/js/form-wizard-numbered.js') }}"></script>
 <script src="{{ url('assets/js/sweetalert2.all.min.js') }}"></script>
@@ -51,7 +60,16 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10
+            pageLength: 10,
+            dom: '<"d-none"B>lfrtip', 
+            buttons: [
+                'excel', 'pdf', 'print'
+            ],
+            language: {
+                emptyTable: "No data found matching your filters",
+                zeroRecords: "No matching records found",
+                infoEmpty: "Showing 0 to 0 entries",
+            }
         });
 
         table.on('responsive-display.dt', function(e, datatable, row, showHide, update) {

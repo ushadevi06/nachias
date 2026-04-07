@@ -320,6 +320,36 @@
         </tbody>
     </table>
 
+    </table>
+
+    @if($jobCard->operations && $jobCard->operations->count() > 0)
+    <table class="table table-bordered" style="margin-top: 10pt;">
+        <thead>
+            <tr class="bg-light text-center">
+                <th colspan="5" class="fw-bold" style="font-size: 8pt;">PRODUCTION STAGES</th>
+            </tr>
+            <tr class="bg-light text-center fw-bold">
+                <th style="width: 20%;">Stage</th>
+                <th style="width: 25%;">Issue Unit (Plant)</th>
+                <th style="width: 15%;">Issue Date</th>
+                <th style="width: 15%;">Deadline Date</th>
+                <th style="width: 25%;">Remarks</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($jobCard->operations as $operation)
+                <tr class="text-center">
+                    <td>{{ $operation->stage->operation_stage_name ?? '-' }}</td>
+                    <td>{{ $operation->serviceProvider->name ?? '-' }}</td>
+                    <td>{{ $operation->assigned_date ? date('d-m-Y', strtotime($operation->assigned_date)) : '-' }}</td>
+                    <td>{{ $operation->deadline_date ? date('d-m-Y', strtotime($operation->deadline_date)) : '-' }}</td>
+                    <td>{{ $operation->remarks ?? '-' }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     {{-- Signatures Section --}}
     <table class="table table-bordered signature-section" style="margin-top: 10pt;">
         <tr class="bg-light fw-bold">

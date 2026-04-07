@@ -160,11 +160,26 @@ class SalesMarketingReportController extends Controller
             }
         }
 
-        // Sort by Zone then Customer
         usort($outstandingReport, function($a, $b) {
             if ($a['zone'] == $b['zone']) return strcmp($a['customer_name'], $b['customer_name']);
             return strcmp($a['zone'], $b['zone']);
         });
+
+        if ($request->ajax()) {
+            return response()->json([
+                'order-report' => view('reports.sales_marketing_reports._order_report', compact('orders'))->render(),
+                'pending-report' => view('reports.sales_marketing_reports._pending_report', compact('orders'))->render(),
+                'incentive-report' => view('reports.sales_marketing_reports._incentive_report', compact('incentiveReport'))->render(),
+                'comparison-report' => view('reports.sales_marketing_reports._comparison_report', compact('comparisonReport'))->render(),
+                'outstanding-report' => view('reports.sales_marketing_reports._outstanding_report', compact('outstandingReport'))->render(),
+                'tracker-report' => view('reports.sales_marketing_reports._tracker_report')->render(),
+                'location-report' => view('reports.sales_marketing_reports._location_report')->render(),
+                'trip-report' => view('reports.sales_marketing_reports._trip_report')->render(),
+                'expense-report' => view('reports.sales_marketing_reports._expense_report')->render(),
+                'swatch-report' => view('reports.sales_marketing_reports._swatch_report')->render(),
+                'complaint-report' => view('reports.sales_marketing_reports._complaint_report')->render(),
+            ]);
+        }
 
         return view('reports/sales_marketing_report', compact('orders', 'customers', 'executives', 'incentiveReport', 'comparisonReport', 'outstandingReport', 'zones'));
     }

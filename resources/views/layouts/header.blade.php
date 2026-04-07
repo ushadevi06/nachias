@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="{{ url('assets/css/flatpickr.css') }}">
     <link rel="stylesheet" href="{{ url('assets/datatables/css/dataTables.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/datatables/css/responsive.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ url('assets/css/buttons.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ url('assets/css/jquery-ui.css') }}">
 
     <!-- Core JS -->

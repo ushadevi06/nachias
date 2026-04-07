@@ -103,7 +103,7 @@ class CustomerController extends Controller
             $rules = [
                 'category' => 'required|in:Retailer,Wholesaler',
                 'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:20|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|min:3|max:20|alpha_num|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'mobile_no' => 'required|numeric|digits_between:10,15|unique:customers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
@@ -155,6 +155,7 @@ class CustomerController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
+                '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',

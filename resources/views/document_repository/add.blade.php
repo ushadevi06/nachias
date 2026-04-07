@@ -73,6 +73,7 @@
                                 <input class="form-control" type="file" id="formFile" name="file">
                                 <label for="formFile" class="form-label">File Upload {{ $document ? '' : '*' }}</label>
                             </div>
+                            <small class="text-muted d-block mt-2">Max file size: 2MB per file. Supported: JPG, PNG, WEBP, PDF, DOC, DOCX</small>
                             @error('file')
                             <div class="text-danger mt-1">{{ $message }}</div>
                             @enderror

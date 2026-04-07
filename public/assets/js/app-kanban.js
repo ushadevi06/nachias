@@ -155,7 +155,9 @@
             console.log('Kanban Move:', { taskId, newStatus });
 
             if (taskId && newStatus) {
-                updateTaskProgress(el, newStatus);
+                // If moving to Completed, it will be validated on the server.
+                // We keep track of the source status to revert if needed.
+                const sourceStatus = source ? (source.getAttribute('data-id') || source.closest('.kanban-board').getAttribute('data-id')) : null;
 
                 $.ajax({
                     url: window.kanbanUpdateStatusUrl,
@@ -166,12 +168,67 @@
                         status: newStatus
                     },
                     success: function (response) {
-                        if (!response.success) {
-                            console.error('Update failed:', response.message || 'Server error');
+                        // Debug log to console
+                        console.log('Kanban API Response:', response);
+
+                        if (response && response.success === true) {
+                            updateTaskProgress(el, newStatus);
+                        } else {
+                            const errorMsg = response.message || 'Action Blocked: Please complete all assignments first.';
+                            
+                            // 1. Show the error first (ensures user sees it even if revert fails)
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Action Blocked',
+                                    text: errorMsg,
+                                    icon: 'warning',
+                                    confirmButtonText: 'OK',
+                                    customClass: {
+                                        confirmButton: 'btn btn-primary'
+                                    }
+                                });
+                            } else {
+                                alert(errorMsg);
+                            }
+
+                            // 2. Revert movement with safety check
+                            if (window.kanban && sourceStatus) {
+                                try {
+                                    window.kanban.moveElement(taskId, sourceStatus);
+                                } catch (e) {
+                                    console.error('Failed to revert Kanban move:', e);
+                                    // Manual fallback if moveElement fails
+                                    if (source && el) {
+                                        source.appendChild(el);
+                                    }
+                                }
+                            }
                         }
                     },
                     error: function (xhr) {
                         console.error('AJAX Error:', xhr.responseText);
+                        
+                        // Revert on server error too
+                        if (window.kanban && sourceStatus) {
+                            window.kanban.moveElement(taskId, sourceStatus);
+                        }
+                        
+                        let errorMessage = 'An error occurred while updating task status.';
+                        try {
+                            const resObj = JSON.parse(xhr.responseText);
+                            if (resObj && resObj.message) errorMessage = resObj.message;
+                        } catch(e) {}
+                        
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                title: 'Error',
+                                text: errorMessage,
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        } else {
+                            alert(errorMessage);
+                        }
                     }
                 });
             }
@@ -283,9 +340,40 @@
         const newStatus = $(this).data('status');
         const taskItem = $(this).closest('.kanban-item')[0];
         const taskId = taskItem.getAttribute('data-eid');
+        const currentBoard = $(this).closest('.kanban-board').data('id');
 
         if (window.kanban && taskId && newStatus) {
-            window.kanban.moveElement(newStatus, taskId);
+            // We use the same AJAX here instead of moveElement immediately
+            // to ensure validation passes before UI update
+             $.ajax({
+                    url: window.kanbanUpdateStatusUrl,
+                    method: 'POST',
+                    data: {
+                        _token: window.csrfToken,
+                        task_id: taskId,
+                        status: newStatus
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            window.kanban.moveElement(taskId, newStatus);
+                            updateTaskProgress(taskItem, newStatus);
+                        } else {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Action Blocked',
+                                    text: response.message,
+                                    icon: 'warning',
+                                    confirmButtonText: 'OK'
+                                });
+                            } else {
+                                alert(response.message);
+                            }
+                        }
+                    },
+                    error: function (xhr) {
+                         alert('An error occurred while updating task status.');
+                    }
+                });
         }
     });
 

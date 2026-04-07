@@ -22,10 +22,6 @@
                         <td class="text-center fw-bold">{{ number_format($row['current_wip']) }}</td>
                     </tr>
                 @endforeach
-            @else
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">No WIP data found for the selected criteria.</td>
-                </tr>
             @endif
         </tbody>
     </table>

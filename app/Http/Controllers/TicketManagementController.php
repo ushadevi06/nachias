@@ -16,8 +16,8 @@ class TicketManagementController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view tickets')) {
-            // return unauthorizedRedirect(); // Assuming this helper exists as seen in FitController
+        if (auth()->id() != 1 && !auth()->user()->can('view ticket-management')) {
+            return unauthorizedRedirect(); 
         }
 
         if ($request->ajax()) {
@@ -75,6 +75,15 @@ class TicketManagementController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit ticket-management')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create ticket-management')) {
+                return unauthorizedRedirect();
+            }
+        }
         $ticket = $id ? Ticket::findOrFail($id) : null;
 
         if ($request->isMethod('post')) {
@@ -169,7 +178,7 @@ class TicketManagementController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete tickets')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete ticket-management')) {
             return unauthorizedRedirect();
         }
         $ticket = Ticket::findOrFail($id);

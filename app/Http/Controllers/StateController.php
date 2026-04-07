@@ -92,6 +92,7 @@ class StateController extends Controller
             $validated = $request->validate([
                 'state_code' => [
                     'required',
+                    'alpha_num',
                     'min:2',
                     'max:10',
                     'unique:states,state_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
@@ -106,6 +107,7 @@ class StateController extends Controller
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
             ]);
@@ -152,13 +154,12 @@ class StateController extends Controller
             [City::class, 'state_id', 'Cities'],
             [Supplier::class, 'state_id', 'Suppliers'],
             [Customer::class, 'state_id', 'Customers'],
-            [Employee::class, 'state_id', 'Employees'],
             [Zone::class, 'state_id', 'Zones'],
             [SalesAgent::class, 'state_id', 'Sales Agents'],
             [PurchaseCommissionAgent::class, 'state_id', 'Purchase Commission Agents'],
             [ServiceProvider::class, 'state_id', 'Service Providers'],
             [Place::class, 'state_id', 'Places'],
-            [User::class, 'state_id', 'Users'],
+            [User::class, 'state_id', 'Employees'],
             [Setting::class, 'state_id', 'Settings'],
         ];
 

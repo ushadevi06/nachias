@@ -113,7 +113,7 @@ class ServiceProviderController extends Controller
             $rules = [
                 'operation_stage_id' => 'required|exists:operation_stages,id',
                 'name' => 'required|string|max:50',
-                'code' => 'required|string|max:25|unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|max:25|alpha_num|unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:service_providers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'mobile_no' => 'required|numeric|digits_between:10,15|unique:service_providers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'zip_code' => 'nullable|string|min:6|max:10',
@@ -154,6 +154,7 @@ class ServiceProviderController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
+                '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 '*.numeric' => 'This field should be a number.',

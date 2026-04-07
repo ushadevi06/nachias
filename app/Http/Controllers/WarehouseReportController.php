@@ -319,6 +319,22 @@ class WarehouseReportController extends Controller
             ->orderBy('ageing_days', 'desc')
             ->get();
 
+        if ($request->ajax()) {
+            return response()->json([
+                'brand-sales' => view('reports.warehouse_report.brandwise_sales', compact('brandwiseSales'))->render(),
+                'brand-stock' => view('reports.warehouse_report.brandwise_stock', compact('brandwiseStock'))->render(),
+                'assorted-stock' => view('reports.warehouse_report.assorted_stock', compact('assortedStock'))->render(),
+                'order-dispatch' => view('reports.warehouse_report.order_vs_dispatch', compact('orderVsDispatch'))->render(),
+                'sales-return' => view('reports.warehouse_report.sales_return')->render(),
+                'white-dhoti' => view('reports.warehouse_report.white_dhoti')->render(),
+                'dispatch' => view('reports.warehouse_report.dispatch_report', compact('dispatchReport'))->render(),
+                'inward' => view('reports.warehouse_report.stock_inward', compact('stockInward'))->render(),
+                'discount' => view('reports.warehouse_report.regular_discount', compact('regularDiscount'))->render(),
+                'priority' => view('reports.warehouse_report.priority_stock', compact('priorityStock'))->render(),
+                'damage' => view('reports.warehouse_report.damage_sales_split')->render(),
+            ]);
+        }
+
         return view('reports/warehouse_report', compact(
             'brandwiseSales',
             'brandwiseStock',

@@ -3,6 +3,11 @@
 @section('content')
 
 <div class="container-xxl section-padding container-p-y">
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ url('task_management') }}" class="btn btn-sm btn-label-secondary px-3 fw-bold">
+            <i class="ri ri-arrow-left-line me-1"></i> Back
+        </a>
+    </div>
     <div class="row">
         <div class="col-lg-12">
             
@@ -17,6 +22,11 @@
                 if($task->status == 'Completed') $progress = 100;
                 else if($task->status == 'In Progress') $progress = 50;
                 else if($task->status == 'Hold') $progress = 25;
+
+                $totalAssigned = $task->assignments->sum('issue_qty');
+                $totalCompleted = $task->assignments->sum('completed_qty');
+                $totalWastage = $task->assignments->sum('wastage_qty');
+                $totalReceived = $totalCompleted + $totalWastage;
             @endphp
             {{-- 🚀 TOP BAR: ERP HEADER CARD --}}
             <div class="card border-0 shadow-sm mb-4">
@@ -32,7 +42,10 @@
                             </p>
                         </div>
                         <div class="col-md-5 text-md-end mt-3 mt-md-0">
-                            <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                             <div class="d-flex flex-wrap justify-content-md-end gap-2 align-items-center">
+                                <span class="badge bg-label-info rounded-pill px-3 py-2 fw-bold">
+                                    <i class="ri-checkbox-circle-line me-1"></i> Received: {{ (float)$totalReceived }} / {{ (float)$totalAssigned }} PCS
+                                </span>
                                 @if($task->due_date)
                                 <span class="badge bg-label-danger rounded-pill px-3 py-2 fw-bold">
                                     <i class="ri-calendar-event-line me-1"></i> Deadline: {{ \Carbon\Carbon::parse($task->due_date)->format('d-m-Y') }}
@@ -81,16 +94,17 @@
                                     @if($task->assignments->count() > 0)
                                         <div class="table-responsive">
                                             <table class="table table-sm table-bordered align-middle mb-0">
-                                                <thead class="table-light extra-small fw-bold text-uppercase">
+                                                <thead class="table-light extra-small fw-bold text-uppercase text-center">
                                                     <tr>
                                                         <th>#</th>
-                                                        <th>Employee</th>
+                                                        <th class="text-start">Employee</th>
                                                         <th>Service</th>
                                                         <th>Issue Date</th>
                                                         <th>Due Date</th>
-                                                        <th>Qty</th>
-                                                        <th>Hrs</th>
                                                         <th>Status</th>
+                                                        <th>Assigned</th>
+                                                        <th>Completed</th>
+                                                        <th>Wastage</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -106,9 +120,10 @@
                                                         <td>{{ $asgn->service->service_name ?? 'N/A' }}</td>
                                                         <td>{{ $asgn->issue_date ? $asgn->issue_date->format('d-m-Y') : '—' }}</td>
                                                         <td>{{ $asgn->due_date ? $asgn->due_date->format('d-m-Y') : '—' }}</td>
-                                                        <td>{{ $asgn->issue_qty ?? '—' }}</td>
-                                                        <td>{{ $asgn->total_hrs ?? '—' }}</td>
                                                         <td><span class="badge bg-label-primary">{{ $asgn->status }}</span></td>
+                                                        <td class="fw-bold">{{ (float)$asgn->issue_qty }}</td>
+                                                        <td class="text-success fw-bold">{{ (float)$asgn->completed_qty }}</td>
+                                                        <td class="text-danger small">{{ (float)$asgn->wastage_qty }}</td>
                                                     </tr>
                                                     @endforeach
                                                 </tbody>

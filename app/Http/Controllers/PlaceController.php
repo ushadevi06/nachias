@@ -38,35 +38,16 @@ class PlaceController extends Controller
             foreach ($places as $place) {
 
                 $checked = $place->status === 'Active' ? 'checked' : '';
-                $statusSwitch = '
-                <label class="switch switch-success switch-lg">
-                    <input type="checkbox"
-                        class="switch-input place-status-toggle"
-                        data-id="' . $place->id . '"
-                        ' . $checked . '>
-                    <span class="switch-toggle-slider">
-                        <span class="switch-on"></span>
-                        <span class="switch-off"></span>
-                    </span>
-                </label>
-                <div class="status_msg_' . $place->id . '"></div>
-                ';
-                
+                $statusSwitch = '<label class="switch switch-success switch-lg"><input type="checkbox" class="switch-input place-status-toggle" data-id="' . $place->id . '"' . $checked . '><span class="switch-toggle-slider"><span class="switch-on"></span><span class="switch-off"></span></span></label><div class="status_msg_' . $place->id . '"></div>';
 
                 $actionBtn = '<div class="button-box">';
 
                 if (auth()->id() == 1 || auth()->user()->can('edit service-points')) {
-                    $actionBtn .= '
-                    <a href="' . url('places/add/' . $place->id) . '" class="btn btn-edit">
-                        <i class="icon-base ri ri-edit-box-line"></i>
-                    </a>';
+                    $actionBtn .= '<a href="' . url('places/add/' . $place->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 if (auth()->id() == 1 || auth()->user()->can('delete service-points')) {
-                    $actionBtn .= '
-                    <a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('places/delete/' . $place->id) . '\')">
-                        <i class="icon-base ri ri-delete-bin-line"></i>
-                    </a>';
+                    $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('places/delete/' . $place->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
                 $actionBtn .= '</div>';
@@ -105,7 +86,7 @@ class PlaceController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        $place = $id ? Place::findOrFail($id) : new Place();
+        $place = $id ? Place::findOrFail($id) : null;
         $oldData = $id ? $place->toArray() : null;
 
         if (request()->isMethod('post')) {
@@ -121,8 +102,8 @@ class PlaceController extends Controller
                     Rule::unique('places', 'place_name')->ignore($id)->whereNull('deleted_at')
                 ],
                 'place_type' => 'required|max:50',
-                'latitude' => 'nullable|numeric|max_length[10]',
-                'longitude' => 'nullable|numeric|max_length[11]',
+                'latitude' => 'nullable|numeric|max:10',
+                'longitude' => 'nullable|numeric|max:11',
                 'status' => 'required|in:Active,Inactive'
             ], [
                 '*.required' => 'This field is required.',
@@ -181,7 +162,6 @@ class PlaceController extends Controller
         $oldData = $place->toArray();
         $place->delete();
         addLog('delete', 'Place', 'places', $id, $oldData, null);
-
         return redirect('places')->with('success', 'Place deleted successfully');
     }
 
@@ -193,7 +173,6 @@ class PlaceController extends Controller
         $place->save();
         $newData = $place->toArray();
         addLog('update_status', 'Place Status', 'places', $place->id, $oldData, $newData);
-
         return response()->json([
             'success' => true,
             'message' => 'Status updated successfully'

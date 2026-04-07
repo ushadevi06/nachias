@@ -14,16 +14,16 @@
             </nav>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary btn-sm rounded-pill"><i class="ri ri-file-excel-line me-1"></i> Excel</button>
-            <button class="btn btn-outline-danger btn-sm rounded-pill"><i class="ri ri-file-pdf-line me-1"></i> PDF</button>
-            <button class="btn btn-primary btn-sm rounded-pill px-3"><i class="ri ri-printer-line me-1"></i> Print</button>
+            <button id="btn-excel" class="btn btn-outline-primary btn-sm rounded-pill"><i class="ri ri-file-excel-line me-1"></i> Excel</button>
+            <button id="btn-pdf" class="btn btn-outline-danger btn-sm rounded-pill"><i class="ri ri-file-pdf-line me-1"></i> PDF</button>
+            <button id="btn-print" class="btn btn-primary btn-sm rounded-pill px-3"><i class="ri ri-printer-line me-1"></i> Print</button>
         </div>
     </div>
 
     <!-- Global Filter Card -->
     <div class="card shadow-sm border-0 mb-4 premium-filter-card">
         <div class="card-body py-4">
-            <form class="row g-3 align-items-end">
+            <form id="warehouseReportForm" class="row g-3 align-items-end" method="GET" action="{{ url('warehouse_reports') }}">
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">From Date</label>
                     <input type="text" class="form-control start_date" name="from_date" value="{{ request('from_date') }}" placeholder="DD-MM-YYYY">
@@ -63,9 +63,9 @@
                     <button type="submit" class="btn btn-primary w-100 rounded-pill">
                         <i class="ri ri-search-line me-1"></i> Search
                     </button>
-                    <button type="reset" class="btn btn-light w-100 rounded-pill border">
+                    <a href="{{ url('warehouse_reports') }}" class="btn btn-outline-light w-100 rounded-pill border">
                         <i class="ri ri-refresh-line me-1"></i> Reset
-                    </button>
+                    </a>
                 </div>
             </form>
         </div>
@@ -246,4 +246,60 @@
     .badge.bg-label-info { background: #e0f2fe; color: #0369a1; }
 
 </style>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    $('#warehouseReportForm').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const submitBtn = form.find('button[type="submit"]');
+        const originalBtnHtml = submitBtn.html();
+
+        submitBtn.html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...').prop('disabled', true);
+        $('.tab-content').css('opacity', '0.6');
+
+        $.ajax({
+            url: form.attr('action'),
+            method: 'GET',
+            data: form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                $.each(response, function(tabId, html) {
+                    const targetTab = $('#' + tabId);
+                    if (targetTab.length) {
+                        targetTab.html(html);
+                    }
+                });
+                
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+                    tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl)
+                    });
+                }
+            },
+            error: function() {
+                alert('An error occurred while fetching the report data. Please try again.');
+            },
+            complete: function() {
+                submitBtn.html(originalBtnHtml).prop('disabled', false);
+                $('.tab-content').css('opacity', '1');
+            }
+        });
+    });
+
+    // Export Handlers
+    $('#btn-excel').on('click', function() {
+        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-excel').trigger();
+    });
+    $('#btn-pdf').on('click', function() {
+        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-pdf').trigger();
+    });
+    $('#btn-print').on('click', function() {
+        $('.tab-pane.active .datatables-products').DataTable().button('.buttons-print').trigger();
+    });
+});
+</script>
 @endsection

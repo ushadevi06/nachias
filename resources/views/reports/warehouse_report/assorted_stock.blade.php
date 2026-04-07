@@ -9,7 +9,7 @@
             </tr>
         </thead>
         <tbody>
-            @if(count($assortedStock) > 0)
+            @if($assortedStock && $assortedStock->count() > 0)
                 @foreach($assortedStock as $stock)
                 <tr>
                     <td>{{ $stock->store }}</td>

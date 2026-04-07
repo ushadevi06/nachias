@@ -32,9 +32,7 @@ class OperationStageController extends Controller
 
                 $action = '';
                 if (auth()->id() == 1 || auth()->user()->can('edit operation-stages')) {
-                    $action .= '<a href="' . url('operation_stages/add/' . $stage->id) . '" class="btn btn-edit">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </a>';
+                    $action .= '<a href="' . url('operation_stages/add/' . $stage->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
                 $data[] = [
@@ -79,7 +77,7 @@ class OperationStageController extends Controller
                         ->ignore($id)
                         ->whereNull('deleted_at')
                 ],
-                'working_days' => 'nullable|integer|min:0',
+                'working_days' => 'nullable|integer|min:0|max:999',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [

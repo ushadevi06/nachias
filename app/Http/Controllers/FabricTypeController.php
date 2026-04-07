@@ -123,7 +123,6 @@ class FabricTypeController extends Controller
         $fabricType = FabricType::findOrFail($id);
         $references = [
             [Item::class, 'fabric_type_id', 'Items'],
-            [RawMaterial::class, 'fabric_type_id', 'Raw Materials'],
         ];
         foreach ($references as [$model, $column, $label]) {
             if ($model::where($column, $id)->exists()) {

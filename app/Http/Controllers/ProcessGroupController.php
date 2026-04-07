@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ProcessGroup;
 use App\Models\JobCardEntry;
-use App\Models\Production;
 use Illuminate\Http\Request;
 
 class ProcessGroupController extends Controller
@@ -111,10 +110,6 @@ class ProcessGroupController extends Controller
 
         if (JobCardEntry::where('process_group_id', $id)->exists()) {
             return redirect('process_groups')->with('danger', "This Process Group is currently referenced in Job Cards and cannot be deleted.");
-        }
-
-        if (Production::where('process_group_id', $id)->exists()) {
-            return redirect('process_groups')->with('danger', "This Process Group is currently referenced in Production records and cannot be deleted.");
         }
 
         $processGroup = ProcessGroup::findOrFail($id);

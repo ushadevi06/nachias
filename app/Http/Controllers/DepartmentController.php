@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
-use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
@@ -97,7 +97,7 @@ class DepartmentController extends Controller
             return unauthorizedRedirect();
         }
         $department = Department::findOrFail($id);
-        if (Employee::where('department_id', $id)->exists()) {
+        if (User::where('department_id', $id)->exists()) {
             session()->flash('danger', "This department is currently referenced in Employees and cannot be deleted.");
             return redirect('departments');
         }

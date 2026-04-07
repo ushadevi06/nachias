@@ -93,29 +93,27 @@ class UomController extends Controller
             $rules = [
                 'uom_code' => [
                     'required',
+                    'alpha_num',
                     'string',
                     'min:1',
                     'max:10',
-                    Rule::unique('uoms', 'uom_code')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
+                    Rule::unique('uoms', 'uom_code')->ignore($id)->whereNull('deleted_at')
                 ],
                 'uom_name' => [
                     'required',
                     'string',
                     'min:3',
                     'max:50',
-                    Rule::unique('uoms', 'uom_name')
-                        ->ignore($id)
-                        ->whereNull('deleted_at')
+                    Rule::unique('uoms', 'uom_name')->ignore($id)->whereNull('deleted_at')
                 ],
-                'description' => ['nullable', 'string', 'max:255', 'regex:/^[^<>]*$/'],
+                // 'description' => ['nullable', 'string', 'max:255', 'regex:/^[^<>]*$/'],
                 'status' => 'required|in:Active,Inactive'
             ];
 
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
@@ -126,7 +124,7 @@ class UomController extends Controller
             if ($id) {
                 $uom->uom_code = $request->uom_code;
                 $uom->uom_name = $request->uom_name;
-                $uom->description = $request->description;
+                // $uom->description = $request->description;
                 $uom->status = $request->status;
                 $uom->updated_by = auth()->id();
                 $uom->save();
@@ -137,7 +135,7 @@ class UomController extends Controller
             } else {
                 $uom->uom_code = $request->uom_code;
                 $uom->uom_name = $request->uom_name;
-                $uom->description = $request->description;
+                // $uom->description = $request->description;
                 $uom->status = $request->status;
                 $uom->created_by = auth()->id();
                 $uom->save();

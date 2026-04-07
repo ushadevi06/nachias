@@ -138,8 +138,8 @@ class StoreController extends Controller
             return redirect('stores')->with('danger', 'This store is currently referenced in Job Card Entries (Receipt Store) and cannot be deleted.');
         }
         
-        if (TaskAdjustmentItem::where('store_id', $id)->exists()) {
-            return redirect('stores')->with('danger', 'This store is currently referenced in Task Adjustment Items and cannot be deleted.');
+        if (JobCardEntry::where('receipt_store_id', $id)->exists()) {
+            return redirect('stores')->with('danger', 'This store is currently referenced in Job Card Entries (Receipt Store) and cannot be deleted.');
         }
         
         $oldData = $storeType->toArray();

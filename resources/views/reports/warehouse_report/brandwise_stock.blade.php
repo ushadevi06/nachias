@@ -10,7 +10,7 @@
             </tr>
         </thead>
         <tbody>
-            @if(count($brandwiseStock) > 0)
+            @if($brandwiseStock && $brandwiseStock->count() > 0)
                 @foreach($brandwiseStock as $stock)
                 <tr>
                     <td><strong>{{ $stock->brand }}</strong></td>

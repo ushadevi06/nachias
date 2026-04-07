@@ -96,7 +96,7 @@ class StoreCategoryController extends Controller
             $rules = [
                 'code' => 'required|string|min:3|max:50|unique:store_categories,code,' . ($id ? $id : 'NULL') . ',id',
                 'category_name' => 'required|string|min:3|max:100',
-                'description' => 'nullable|string|max:255|regex:/^[^<>]*$/',
+                // 'description' => 'nullable|string|max:255|regex:/^[^<>]*$/',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
@@ -110,7 +110,7 @@ class StoreCategoryController extends Controller
             $data = [
                 'code' => $request->code,
                 'category_name' => $request->category_name,
-                'description' => $request->description,
+                // 'description' => $request->description,
                 'status' => $request->status,
                 'created_by' => auth()->id() ?? 1,
             ];

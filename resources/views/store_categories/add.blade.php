@@ -34,7 +34,7 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6 col-xl-12">
+                            {{-- <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
                                     <textarea class="form-control h-px-100 @error('description') is-invalid @enderror" id="description"
                                         placeholder="Enter Description"
@@ -44,7 +44,7 @@
                                 @error('description')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
-                            </div>
+                            </div> --}}
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"

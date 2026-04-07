@@ -1,62 +1,62 @@
 @extends('layouts.common')
 @section('title', 'Stock Consumables & Return Management - ' . env('WEBSITE_NAME'))
 @section('content')
-<div class="container-xxl section-padding">
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="table-header-box">
-                <h4>Stock Consumables & Return Management</h4>
-                {{-- <a class="btn btn-primary" href="{{ url('add_stock_consumables_return') }}">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a> --}}
-            </div>
-            <div class="card">
-                <div class="card-body">
-                    <div class="filter-box">
-                        <div class="row g-3">
-                            <div class="col-lg-12">
-                                <h5>Filter</h5>
-                            </div>
-                            <div class="col-md-4 col-lg-3 state">
-                                <select name="production" id="production" class="form-select select2" data-placeholder="Select Production">
-                                    <option value="">Select Production</option>
-                                    @foreach($stages as $stage)
-                                        <option value="{{ $stage->operation_name }}">{{ $stage->operation_name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <button type="button" class="btn btn-primary">Filter</button>
-                                <button type="button" class="btn btn-secondary">Reset</button>
-                            </div>
+    <div class="container-xxl section-padding">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="table-header-box">
+                    <h4>Stock Consumables & Return Management</h4>
+                    {{-- <a class="btn btn-primary" href="{{ url('add_stock_consumables_return') }}">
+                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                    </a> --}}
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        {{--<div class="filter-box">
+                            <div class="row g-3">
+                                <div class="col-lg-12">
+                                    <h5>Filter</h5>
+                                </div>
+                                <div class="col-md-4 col-lg-3 state">
+                                    <select name="production" id="production" class="form-select select2" data-placeholder="Select Production">
+                                        <option value="">Select Production</option>
+                                        @foreach($stages as $stage)
+                                            <option value="{{ $stage->operation_name }}">{{ $stage->operation_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-primary">Filter</button>
+                                    <button type="button" class="btn btn-secondary">Reset</button>
+                                </div>
+                            </div> 
+                        </div> --}}
+                        <div class="card-datatable">
+                            <table id="consumablesInventoryTable" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Job Card ID</th>
+                                        <th>Production Stage</th>
+                                        <th>Art No</th>
+                                        <th>Material Name</th>
+                                        <th>UOM</th>
+                                        <th>F/S Qty</th>
+                                        <th>H/S Qty</th>
+                                        <th>Total Issue Qty</th>
+                                        <th>Issued Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                    <div class="card-datatable">
-                        <table id="consumablesInventoryTable" class="table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Job Card ID</th>
-                                    <th>Production Stage</th>
-                                    <th>Art No</th>
-                                    <th>Material Name</th>
-                                    <th>UOM</th>
-                                    <th>F/S Qty</th>
-                                    <th>H/S Qty</th>
-                                    <th>Total Issue Qty</th>
-                                    <th>Issued Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
 @section('scripts')
 <script>

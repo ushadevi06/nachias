@@ -121,7 +121,7 @@ class DebitNoteController extends Controller
                 '*.regex' => 'This field is an invalid format',
                 'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
-                '*.attached_file.mimes' => 'Upload a valid file (e.g.,.pdf,.doc,.docx,.jpg, .png, .jpeg, .webp).',
+                '*.attached_file.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 '*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',

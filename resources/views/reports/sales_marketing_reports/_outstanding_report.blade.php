@@ -11,6 +11,7 @@
             </tr>
         </thead>
         <tbody>
+            @if(count($outstandingReport) > 0)
             @foreach($outstandingReport as $data)
             <tr>
                 <td><span class="badge bg-label-secondary">{{ $data['zone'] }}</span></td>
@@ -30,6 +31,7 @@
                 </td>
             </tr>
             @endforeach
+            @endif
         </tbody>
         @if(count($outstandingReport) > 0)
         <tfoot class="bg-light fw-bold">

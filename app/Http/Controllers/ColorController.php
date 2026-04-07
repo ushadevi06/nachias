@@ -74,7 +74,7 @@ class ColorController extends Controller
 
             $rules = [
                 'color_name' => ['required','string','min:3','max:50',Rule::unique('colors', 'color_name')->ignore($id)->whereNull('deleted_at')],
-                'description' => 'nullable|string|min:3|max:255|regex:/^[^<>]*$/',
+                // 'description' => 'nullable|string|min:3|max:255|regex:/^[^<>]*$/',
                 'status' => 'required|in:Active,Inactive'
             ];
 
@@ -90,7 +90,7 @@ class ColorController extends Controller
 
             if ($id) {
                 $color->color_name = $request->color_name;
-                $color->description = $request->description;
+                // $color->description = $request->description;
                 $color->status = $request->status;
                 $color->updated_by = auth()->id();
                 $color->save();
@@ -100,7 +100,7 @@ class ColorController extends Controller
                 $message = 'Color updated successfully';
             } else {
                 $color->color_name = $request->color_name;
-                $color->description = $request->description;
+                // $color->description = $request->description;
                 $color->status = $request->status;
                 $color->created_by = auth()->id();
                 $color->save();

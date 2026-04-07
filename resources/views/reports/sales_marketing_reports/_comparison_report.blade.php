@@ -9,6 +9,7 @@
             </tr>
         </thead>
         <tbody>
+            @if($comparisonReport && count($comparisonReport) > 0)
             @foreach($comparisonReport as $data)
             <tr>
                 <td class="fw-bold">{{ $data['month_name'] }}</td>
@@ -25,6 +26,7 @@
                 </td>
             </tr>
             @endforeach
+            @endif
         </tbody>
         <tfoot class="bg-light fw-bold">
             <tr>

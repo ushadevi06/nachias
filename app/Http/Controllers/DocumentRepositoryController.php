@@ -21,9 +21,14 @@ class DocumentRepositoryController extends Controller
             foreach ($documents as $row) {
                 $file = '-';
                 if ($row->file) {
-                    $ext = pathinfo($row->file, PATHINFO_EXTENSION);
-                    $img = ($ext == 'pdf') ? 'pdf_image.jpg' : 'word_image.png';
-                    $file = '<a href="' . url('uploads/documents/' . $row->file) . '" target="_blank"><img src="' . url('assets/images/' . $img) . '" alt="file" class="table-img"></a>';
+                    $ext = strtolower(pathinfo($row->file, PATHINFO_EXTENSION));
+                    if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                        $imgUrl = url('uploads/documents/' . $row->file);
+                    } else {
+                        $img = ($ext == 'pdf') ? 'pdf_image.jpg' : 'word_image.png';
+                        $imgUrl = url('assets/images/' . $img);
+                    }
+                    $file = '<a href="' . url('uploads/documents/' . $row->file) . '" target="_blank"><img src="' . $imgUrl . '" alt="file" class="table-img"></a>';
                 }
 
                 $action = '<div class="button-box">';
@@ -80,12 +85,14 @@ class DocumentRepositoryController extends Controller
                 'department_id' => 'required|exists:departments,id',
                 'validity_date' => 'nullable|date_format:d-m-Y',
                 'remarks' => 'nullable|string',
-                'file' => ($id ? 'nullable' : 'required') . '|file|mimes:pdf,doc,docx|max:2048',
+                'file' => ($id ? 'nullable' : 'required') . '|file|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
             ];
             $messages = [
                 '*.required' => 'This field is required', 
                 '*.min'      => 'This field must be at least :min characters.',
+                'file.max' => 'Uploaded file cannot exceed 2MB.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                'file.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
             ];
             $request->validate($rules, $messages);
             $data = [

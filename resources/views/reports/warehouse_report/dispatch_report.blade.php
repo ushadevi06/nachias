@@ -12,19 +12,21 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($dispatchReport as $data)
-            <tr>
-                <td>{{ $data->so_date->format('d-m-Y') }}</td>
-                <td><strong>{{ $data->so_no }}</strong></td>
-                <td>{{ $data->customer->name ?? 'N/A' }}</td>
-                <td>{{ $data->customer->city->city_name ?? 'N/A' }}</td>
-                <td>{{ $data->transporter_name ?? ($data->dispatch_through ?? 'N/A') }}</td>
-                <td>{{ $data->lr_no ?? 'N/A' }}</td>
-                <td class="text-center">
-                    <span class="badge bg-label-success">{{ $data->status }}</span>
-                </td>
-            </tr>
-            @endforeach
+            @if($dispatchReport && count($dispatchReport) > 0)
+                @foreach($dispatchReport as $data)
+                <tr>
+                    <td>{{ $data->so_date->format('d-m-Y') }}</td>
+                    <td><strong>{{ $data->so_no }}</strong></td>
+                    <td>{{ $data->customer->name ?? 'N/A' }}</td>
+                    <td>{{ $data->customer->city->city_name ?? 'N/A' }}</td>
+                    <td>{{ $data->transporter_name ?? ($data->dispatch_through ?? 'N/A') }}</td>
+                    <td>{{ $data->lr_no ?? 'N/A' }}</td>
+                    <td class="text-center">
+                        <span class="badge bg-label-success">{{ $data->status }}</span>
+                    </td>
+                </tr>
+                @endforeach
+            @endif
         </tbody>
     </table>
 </div>

@@ -7,7 +7,7 @@
             <div class="table-header-box">
                 <h4>Stock Entry</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('add stock entries'))
-                <a class="btn btn-primary" href="{{ url('stock_entries/add') }}">
+                <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
                 @endif
@@ -160,6 +160,7 @@
             
             if($(this).data('entry-type') === 'Finished Goods') {
                 $('.filter-box').hide();
+                $('#add-stock-entry-btn').hide();
                 table.column(1).visible(false);
                 $(table.column(3).header()).text('Job Card No.');
                 table.column(4).visible(true); // Fabric Type
@@ -168,6 +169,7 @@
                 table.column(7).visible(true); // SKU
             } else {
                 $('.filter-box').show();
+                $('#add-stock-entry-btn').show();
                 table.column(1).visible(true);
                 $(table.column(3).header()).text('GRN No.');
                 table.column(4).visible(false);

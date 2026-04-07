@@ -81,7 +81,7 @@ class BrandCategoryController extends Controller
             $rules = [
                 'code' => ['required','string','min:3','max:50',Rule::unique('brand_categories', 'code')->ignore($id)->whereNull('deleted_at')],
                 'name' => ['required','string','min:3','max:100',Rule::unique('brand_categories', 'name')->ignore($id)->whereNull('deleted_at')],
-                'description' => 'nullable|string',
+                // 'description' => 'nullable|string',
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
@@ -94,7 +94,7 @@ class BrandCategoryController extends Controller
             $data = [
                 'code' => $request->code,
                 'name' => $request->name,
-                'description' => $request->description,
+                // 'description' => $request->description,
                 'status' => $request->status,
             ];
             if ($id) {

@@ -297,8 +297,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="input-group">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" id="process_group_display" name="process_group_display" class="form-control" placeholder="Select Process Group" readonly value="{{ old('process_group_display', $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : '') }}">
+                                    <div class="form-floating form-floating-outline" data-bs-toggle="modal" data-bs-target="#processGroupModal" style="cursor: pointer;">
+                                        <input type="text" id="process_group_display" name="process_group_display" class="form-control" placeholder="Select Process Group" readonly value="{{ old('process_group_display', $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : '') }}" style="cursor: pointer;">
                                         <input type="hidden" id="process_group_id" name="process_group_id" value="{{ old('process_group_id', $jobCard ? $jobCard->process_group_id : '') }}">
                                         <label for="process_group_display">Process Group *</label>
                                     </div>
@@ -2476,25 +2476,31 @@
             let $providerSelect = $row.find('.provider-select');
             let $issueDate = $row.find('.issue-date');
 
-            $providerSelect.html('<option value="">Select Unit</option>').trigger('change');
+            $providerSelect.prop('disabled', true).html('<option value="">Loading...</option>').trigger('change.select2');
 
             if (stageId) {
                 $.ajax({
                     url: `{{ url('get-service-providers-by-stage') }}/${stageId}`,
                     type: 'GET',
                     success: function(response) {
-                        if (response.success) {
+                        $providerSelect.prop('disabled', false).html('<option value="">Select Unit</option>');
+                        if (response.success && response.providers) {
                             response.providers.forEach(p => {
                                 let selected = ($providerSelect.data('selected') == p.id) ? 'selected' : '';
                                 $providerSelect.append(`<option value="${p.id}" ${selected}>${p.name}</option>`);
                             });
-                            $providerSelect.trigger('change');
                         }
+                        $providerSelect.trigger('change.select2');
+                    },
+                    error: function() {
+                        $providerSelect.prop('disabled', false).html('<option value="">Error loading units</option>').trigger('change.select2');
                     }
                 });
                 if ($issueDate.val()) {
                     $issueDate.trigger('change');
                 }
+            } else {
+                $providerSelect.prop('disabled', false).html('<option value="">Select Unit</option>').trigger('change.select2');
             }
         });
         

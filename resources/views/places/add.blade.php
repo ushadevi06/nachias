@@ -15,8 +15,7 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="state_id" id="state_id" class="select2 form-select @error('state_id') is-invalid @enderror"
-                                        data-placeholder="Select State">
+                                    <select name="state_id" id="state_id" class="select2 form-select @error('state_id') is-invalid @enderror" data-placeholder="Select State">
                                         <option value="">Select State</option>
                                         @foreach($states as $state)
                                         <option value="{{ $state->id }}" {{ old('state_id', $place->state_id ?? '') == $state->id ? 'selected' : '' }}>{{ $state->state_name }}</option>

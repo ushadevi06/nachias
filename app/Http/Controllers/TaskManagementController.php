@@ -405,7 +405,31 @@ class TaskManagementController extends Controller
     public function updateStatus(Request $request)
     {
         try {
-            $task = Task::findOrFail($request->task_id);
+            $task = Task::with('assignments')->findOrFail($request->task_id);
+            
+            if ($request->status === 'Completed') {
+                $incompleteAssignments = $task->assignments->where('status', '!=', 'Completed');
+                if ($incompleteAssignments->count() > 0) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Please complete full task. There are still ' . $incompleteAssignments->count() . ' incomplete assignments.'
+                    ], 200);
+                }
+            }
+
+            if ($request->status === 'In Progress') {
+                $hasProgress = $task->assignments->contains(function($as) {
+                    return (float)$as->completed_qty > 0 || (float)$as->wastage_qty > 0 || $as->status === 'In Progress';
+                });
+                
+                if (!$hasProgress) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Cannot move to In Progress. No progress has been recorded on any assignment yet.'
+                    ], 200);
+                }
+            }
+
             $task->status = $request->status;
             TaskStatus::firstOrCreate(['name' => $request->status], ['color' => 'info', 'progress_percent' => 10]);
             $task->save();

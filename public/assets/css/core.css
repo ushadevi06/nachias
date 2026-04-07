@@ -35458,3 +35458,14 @@ Responsive
         width: min(320px, calc(100vw - 32px));
     }
 }
+ .table td select.form-select[class*="status-change"] {
+    min-width: 145px !important;
+    padding-right: 2.3rem !important;
+    height: 38px !important;
+    font-size: 0.925rem !important;
+    white-space: nowrap !important;
+ }
+
+ .table td .form-floating-outline {
+    margin-bottom: 0 !important;
+ }
