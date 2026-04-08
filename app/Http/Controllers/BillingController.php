@@ -23,11 +23,19 @@ class BillingController extends Controller
             $i = 1;
 
             foreach ($billings as $row) {
-                $statusOptions = ['Pending', 'Paid', 'Partially Paid', 'Cancelled'];
+                $statusOptions = ['Pending', 'Partially Paid', 'Paid', 'Cancelled'];
                 $status = '<select class="form-select status-dropdown" data-id="' . $row->id . '">';
                 foreach ($statusOptions as $option) {
                     $selected = ($row->status == $option) ? 'selected' : '';
-                    $status .= '<option value="' . $option . '" ' . $selected . '>' . $option . '</option>';
+                    $disabled = '';
+
+                    if ($row->status === 'Paid' && $option !== 'Paid') {
+                        $disabled = 'disabled';
+                    } elseif ($row->status === 'Cancelled' && $option !== 'Cancelled') {
+                        $disabled = 'disabled';
+                    }
+
+                    $status .= '<option value="' . $option . '" ' . $selected . ' ' . $disabled . '>' . $option . '</option>';
                 }
                 $status .= '</select><div class="status-msg-' . $row->id . ' small mt-1"></div>';
 
@@ -41,7 +49,7 @@ class BillingController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $i++,
                     'bill_no' => $row->bill_no,
-                    'billing_type' => $row->billing_type,
+                    'billing_type' => $row->billing_type ?? '-',
                     'bill_date' => $row->bill_date ? $row->bill_date->format('d-m-Y') : '',
                     'amount' => '₹' . number_format($row->amount, 2),
                     'status' => $status,
@@ -62,11 +70,25 @@ class BillingController extends Controller
         if ($request->isMethod('POST')) {
             $request->validate([
                 'bill_no' => 'required|string|max:100',
-                'billing_type' => 'required|string',
+                'billing_type' => 'nullable|string',
                 'bill_date' => 'required|date',
                 'amount' => 'nullable|numeric|min:0',
                 'reason' => 'nullable|string',
-                'status' => 'required|string',
+                'status' => [
+                    'required',
+                    'string',
+                    function ($attribute, $value, $fail) use ($billing) {
+                        if ($billing) {
+                            $currentStatus = $billing->status;
+                            if ($currentStatus === 'Paid' && $value !== 'Paid') {
+                                $fail('Cannot change status from Paid.');
+                            }
+                            if ($currentStatus === 'Cancelled' && $value !== 'Cancelled') {
+                                $fail('Cannot change status from Cancelled.');
+                            }
+                        }
+                    }
+                ],
             ], [
                 'required' => 'This field is required.',
             ]);
@@ -109,8 +131,19 @@ class BillingController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $billing = Billing::findOrFail($id);
+
+        $currentStatus = $billing->status;
+        $newStatus = $request->status;
+
+        if ($currentStatus === 'Paid' && $newStatus !== 'Paid') {
+            return response()->json(['success' => false, 'message' => 'Cannot change status from Paid'], 422);
+        }
+        if ($currentStatus === 'Cancelled' && $newStatus !== 'Cancelled') {
+            return response()->json(['success' => false, 'message' => 'Cannot change status from Cancelled'], 422);
+        }
+
         $oldData = $billing->toArray();
-        $billing->status = $request->status;
+        $billing->status = $newStatus;
         $billing->save();
         addLog('update_status', 'Billing Status', 'billings', $id, $oldData, $billing->fresh()->toArray());
         return response()->json([

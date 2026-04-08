@@ -102,8 +102,8 @@ class PlaceController extends Controller
                     Rule::unique('places', 'place_name')->ignore($id)->whereNull('deleted_at')
                 ],
                 'place_type' => 'required|max:50',
-                'latitude' => 'nullable|numeric|max:10',
-                'longitude' => 'nullable|numeric|max:11',
+                'latitude' => 'nullable|string|max:15|numeric|between:-90,90',
+                'longitude' => 'nullable|string|max:15|numeric|between:-180,180',
                 'status' => 'required|in:Active,Inactive'
             ], [
                 '*.required' => 'This field is required.',

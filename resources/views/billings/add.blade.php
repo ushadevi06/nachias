@@ -50,8 +50,18 @@
                                 <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="form-select select2" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        @foreach(['Pending','Paid','Partially Paid','Cancelled'] as $st)
-                                            <option value="{{ $st }}" {{ old('status', $billing->status ?? '') == $st ? 'selected' : '' }}>{{ $st }}</option>
+                                        @foreach(['Pending','Partially Paid','Paid','Cancelled'] as $st)
+                                            @php
+                                                $optionDisabled = '';
+                                                if (isset($billing)) {
+                                                    if ($billing->status === 'Paid' && $st !== 'Paid') {
+                                                        $optionDisabled = 'disabled';
+                                                    } elseif ($billing->status === 'Cancelled' && $st !== 'Cancelled') {
+                                                        $optionDisabled = 'disabled';
+                                                    }
+                                                }
+                                            @endphp
+                                            <option value="{{ $st }}" {{ old('status', $billing->status ?? '') == $st ? 'selected' : '' }} {{ $optionDisabled }}>{{ $st }}</option>
                                         @endforeach
                                     </select>
                                     <label for="status">Status *</label>

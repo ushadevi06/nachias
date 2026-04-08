@@ -141,7 +141,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* States */
     Route::get('/states', [StateController::class, 'index']);
     Route::match(['get', 'post'], '/states/add/{id?}', [StateController::class, 'add']);
-    Route::post('state/status/{id}', [StateController::class, 'updateStatus']);
+    Route::post('states/status/{id}', [StateController::class, 'updateStatus']);
     Route::get('/states/delete/{id}', [StateController::class, 'destroy']);
 
     /* Cities */
