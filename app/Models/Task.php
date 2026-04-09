@@ -58,9 +58,17 @@ class Task extends Model
     {
         return $this->hasMany(TaskAssignEmployee::class, 'task_id');
     }
-    
+
     public function operationStage()
     {
         return $this->belongsTo(OperationStage::class, 'stage_id');
+    }
+
+    public function getEffectiveStageAttribute()
+    {
+        if ($this->stage) {
+            return $this->stage;
+        }
+        return null;
     }
 }

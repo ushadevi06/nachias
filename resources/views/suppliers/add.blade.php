@@ -314,7 +314,7 @@
                                 @enderror
                             </div>
 
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <select name="tax_id" id="tax_id" class="select2 form-select @error('tax_id') is-invalid @enderror" data-placeholder="Select Tax Types">
                                         <option value="">Select Tax Types</option>
@@ -325,6 +325,36 @@
                                     <label for="tax_id">Tax Types</label>
                                 </div>
                                 @error('tax_id')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div> --}}
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" step="0.01" class="form-control @error('igst_percent') is-invalid @enderror" id="igst_percent" placeholder="Enter IGST %" name="igst_percent" value="{{ old('igst_percent', $supplier->igst_percent ?? '') }}">
+                                    <label for="igst_percent">IGST %</label>
+                                </div>
+                                @error('igst_percent')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" step="0.01" class="form-control @error('cgst_percent') is-invalid @enderror" id="cgst_percent" placeholder="Enter CGST %" name="cgst_percent" value="{{ old('cgst_percent', $supplier->cgst_percent ?? '') }}">
+                                    <label for="cgst_percent">CGST %</label>
+                                </div>
+                                @error('cgst_percent')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" step="0.01" class="form-control @error('sgst_percent') is-invalid @enderror" id="sgst_percent" placeholder="Enter SGST %" name="sgst_percent" value="{{ old('sgst_percent', $supplier->sgst_percent ?? '') }}">
+                                    <label for="sgst_percent">SGST %</label>
+                                </div>
+                                @error('sgst_percent')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>

@@ -165,16 +165,17 @@
                             <div id="item-rows" class="table-responsive">
                                 <table class="table table-bordered align-middle">
                                     <thead>
-                                        <tr>
                                             <th width="50px">
                                                 <input type="checkbox" id="select_all_items" class="form-check-input">
                                             </th>
+                                            <th>Store Category</th>
                                             <th>Raw Material</th>
+                                            <th>Brand</th>
                                             <th>HSN Code</th>
+                                            <th>Fabric Width</th>
                                             <th>Ordered Qty</th>
-                                            <th>Invoiced Qty</th>
                                             <th>Balanced Qty</th>
-                                            <th>Received Qty <span class="text-danger">*</span></th>
+                                            <th>Invoiced Qty <span class="text-danger">*</span></th>
                                             <th>UOM</th>
                                             <th>Rate</th>
                                             <th>Amount</th>
@@ -196,15 +197,35 @@
                                                         <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $item['qty_ordered'] ?? 0 }}" class="qty-ordered-val">
                                                         <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $item['qty_invoiced'] ?? 0 }}" class="qty-invoiced-val">
                                                     </td>
+                                                    <td>{{ $item['store_category_name'] ?? '-' }}</td>
                                                     <td>{{ $item['raw_material_name'] ?? '-' }}</td>
+                                                    <td>
+                                                        <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
+                                                            <option value="">Select Brand</option>
+                                                            @foreach($brands as $brand)
+                                                                <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>
+                                                                    {{ $brand->brand_name }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </td>
                                                     <td>
                                                         <input type="text" name="items[{{ $index }}][hsn_code]" class="form-control form-control-sm item-hsn @error('items.' . $index . '.hsn_code') is-invalid @enderror" value="{{ $item['hsn_code'] ?? '' }}" {{ isset($item['selected']) ? '' : 'readonly' }}>
                                                         @error('items.' . $index . '.hsn_code')
                                                             <div class="invalid-feedback d-block">{{ $message }}</div>
                                                         @enderror
                                                     </td>
+                                                    <td>
+                                                        <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
+                                                            <option value="">Select Width</option>
+                                                            @foreach($fabricSizes as $size)
+                                                                <option value="{{ $size->id }}" {{ ($item['fabric_width_id'] ?? '') == $size->id ? 'selected' : '' }}>
+                                                                    {{ $size->width }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </td>
                                                     <td class="qty-ordered-display">{{ $item['qty_ordered'] ?? 0 }}</td>
-                                                    <td class="qty-invoiced-display">{{ $item['qty_invoiced'] ?? 0 }}</td>
                                                     <td class="balanced-qty-display">
                                                         {{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}
                                                     </td>
@@ -215,7 +236,7 @@
                                                             data-max-qty="{{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}"
                                                             {{ isset($item['selected']) ? '' : 'readonly' }}>
                                                         <small class="text-secondary">
-                                                            Note: Received quantity should not exceed 50% of ordered quantity.
+                                                            Note: Invoiced quantity should not exceed 50% of ordered quantity.
                                                         </small>
 
                                                         @error("items.$index.quantity")
@@ -245,9 +266,26 @@
                                                         <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="item-rate">
                                                         <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $invItem->qty_ordered }}" class="qty-ordered-val">
                                                         <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $invItem->qty_invoiced }}" class="qty-invoiced-val">
+                                                        <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $invItem->brand->brand_name ?? $invItem->purchaseOrderItem->brand->brand_name ?? '-' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $invItem->fabricWidth->width ?? $invItem->purchaseOrderItem->fabricWidth->width ?? '-' }}">
                                                     </td>
 
+                                                    <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}</td>
                                                     <td>{{ $invItem->rawMaterial->name ?? '-' }}</td>
+                                                    <td>
+                                                        <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
+                                                            <option value="">Select Brand</option>
+                                                            @foreach($brands as $brand)
+                                                                @php
+                                                                    $selectedBrandId = $invItem->brand_id ?? $invItem->purchaseOrderItem->brand_id ?? null;
+                                                                @endphp
+                                                                <option value="{{ $brand->id }}" {{ $selectedBrandId == $brand->id ? 'selected' : '' }}>
+                                                                    {{ $brand->brand_name }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </td>
 
                                                     <td>
                                                         <input type="text" name="items[{{ $index }}][hsn_code]" class="form-control form-control-sm item-hsn @error('items.' . $index . '.hsn_code') is-invalid @enderror" value="{{ $invItem->hsn_code }}">
@@ -256,14 +294,27 @@
                                                         @enderror
                                                     </td>
 
+                                                    <td>
+                                                        <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
+                                                            <option value="">Select Width</option>
+                                                            @foreach($fabricSizes as $size)
+                                                                @php
+                                                                    $selectedWidthId = $invItem->fabric_width_id ?? $invItem->purchaseOrderItem->fabric_width_id ?? null;
+                                                                @endphp
+                                                                <option value="{{ $size->id }}" {{ $selectedWidthId == $size->id ? 'selected' : '' }}>
+                                                                    {{ $size->width }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </td>
+
                                                     <td class="qty-ordered-display">{{ $invItem->qty_ordered }}</td>
-                                                    <td class="qty-invoiced-display">{{ $invItem->qty_invoiced }}</td>
                                                     <td class="balanced-qty-display">{{ $balancedQty }}</td>
 
                                                     <td>
                                                         <input type="number" name="items[{{ $index }}][quantity]" class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror" value="{{ $invItem->quantity }}" step="0.01" data-max-qty="{{ $balancedQty }}">
                                                         <small class="text-secondary">
-                                                            Note: Received quantity can exceed ordered quantity by up to 50% (Max:
+                                                            Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max:
                                                             {{ number_format($invItem->qty_ordered * 1.5, 2) }}).
                                                         </small>
                                                         @error('items.' . $index . '.quantity')
@@ -280,7 +331,7 @@
                                             @endforeach
                                         @else
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted">
+                                                <td colspan="12" class="text-center text-muted">
                                                     Please select a Purchase Order to load items
                                                 </td>
                                             </tr>
@@ -345,7 +396,7 @@
                                             <th>Charge Name</th>
                                             <th>Tax Type</th>
                                             <th>Amount</th>
-                                            <th width="80px">Action</th>
+                                            <th width="120px">Action</th>
                                         </tr>
                                     </thead>
 
@@ -392,8 +443,13 @@
                                                     {{ number_format($chargeAmount, 2) }}
                                                     <input type="hidden" name="charges[amount][]" value="{{ $chargeAmount }}">
                                                 </td>
-                                                <td>
-                                                    <button type="button" class="btn btn-danger btn-sm remove-charge {{ isset($invoice) ? 'disabled' : '' }}">X</button>
+                                                <td class="d-flex align-items-center">
+                                                    <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                                                        <i class="ri ri-pencil-line"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge" {{ isset($invoice) ? 'disabled' : '' }}>
+                                                        <i class="ri ri-delete-bin-line"></i>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -862,76 +918,111 @@
                                 if (response.supplier_state_id) {
                                     if (response.supplier_state_id == companyStateId) {
                                         $('input[name="other_state"][value="N"]').prop('checked', true).trigger('change');
-                                        if (parseFloat($('#cgst_percent').val()) == 0) $('#cgst_percent').val("{{ $web_settings->cgst }}");
-                                        if (parseFloat($('#sgst_percent').val()) == 0) $('#sgst_percent').val("{{ $web_settings->sgst }}");
+                                        $('#cgst_percent').val(response.cgst_percent);
+                                        $('#sgst_percent').val(response.sgst_percent);
+                                        $('#igst_percent').val(0);
                                     } else {
                                         $('input[name="other_state"][value="Y"]').prop('checked', true).trigger('change');
-                                        if (parseFloat($('#igst_percent').val()) == 0) $('#igst_percent').val("{{ $web_settings->igst }}");
+                                        $('#igst_percent').val(response.igst_percent);
+                                        $('#cgst_percent').val(0);
+                                        $('#sgst_percent').val(0);
                                     }
                                 }
 
                                 let itemsHtml = "";
+
+                                let brandOptions = '<option value="">Select Brand</option>';
+                                if (response.all_brands) {
+                                    response.all_brands.forEach(function(b) {
+                                        brandOptions += `<option value="${b.id}">${b.name}</option>`;
+                                    });
+                                }
+
+                                let widthOptions = '<option value="">Select Width</option>';
+                                if (response.all_fabric_widths) {
+                                    response.all_fabric_widths.forEach(function(f) {
+                                        widthOptions += `<option value="${f.id}">${f.name}</option>`;
+                                    });
+                                }
+
                                 response.items.forEach(function (item, index) {
                                     const balancedQty = item.qty_ordered - item.qty_invoiced;
-                                    console.log(item);
+                                    
+                                    let itemBrandSelect = `<select name="items[${index}][brand_id]" class="select2 form-select form-select-sm">${brandOptions}</select>`;
+                                    let itemWidthSelect = `<select name="items[${index}][fabric_width_id]" class="select2 form-select form-select-sm">${widthOptions}</select>`;
+
+                                    let brandSelectObj = $(itemBrandSelect);
+                                    brandSelectObj.find(`option[value="${item.brand_id}"]`).attr('selected', 'selected');
+                                    itemBrandSelect = brandSelectObj.prop('outerHTML');
+
+                                    let widthSelectObj = $(itemWidthSelect);
+                                    widthSelectObj.find(`option[value="${item.fabric_width_id}"]`).attr('selected', 'selected');
+                                    itemWidthSelect = widthSelectObj.prop('outerHTML');
+
                                     itemsHtml += `
-                                                <tr class="item-row">
-                                                    <td>
-                                                        <input type="checkbox" name="items[${index}][selected]" 
-                                                            class="form-check-input item-checkbox" value="1">
+                                        <tr class="item-row">
+                                            <td>
+                                                <input type="checkbox" name="items[${index}][selected]" 
+                                                    class="form-check-input item-checkbox" value="1">
 
-                                                        <input type="hidden" name="items[${index}][purchase_order_item_id]" value="${item.id}">
-                                                        <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
-                                                        <input type="hidden" name="items[${index}][raw_material_name]" value="${item.raw_material_name}">
-                                                        <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
-                                                        <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code}">
-                                                        <input type="hidden" name="items[${index}][rate]" value="${item.rate}" class="item-rate">
-                                                        <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
-                                                        <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
-                                                    </td>
-                                                    <td>${item.raw_material_name}</td>
-                                                    <td>
-                                                        <input type="text" 
-                                                            name="items[${index}][hsn_code]"
-                                                            class="form-control form-control-sm item-hsn" 
-                                                            value="${item.hsn_code || ''}"
-                                                            placeholder="Enter HSN"
-                                                            readonly>
-                                                    </td>
+                                                <input type="hidden" name="items[${index}][purchase_order_item_id]" value="${item.id}">
+                                                <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
+                                                <input type="hidden" name="items[${index}][raw_material_name]" value="${item.raw_material_name}">
+                                                <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
+                                                <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code}">
+                                                <input type="hidden" name="items[${index}][rate]" value="${item.rate}" class="item-rate">
+                                                <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
+                                                <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
+                                                <input type="hidden" name="items[${index}][store_category_name]" value="${item.store_category_name}">
+                                                <input type="hidden" name="items[${index}][brand_name]" value="${item.brand_name}">
+                                                <input type="hidden" name="items[${index}][fabric_width]" value="${item.fabric_width}">
+                                            </td>
+                                            <td>${item.store_category_name}</td>
+                                            <td>${item.raw_material_name}</td>
+                                            <td>${itemBrandSelect}</td>
+                                            <td>
+                                                <input type="text" 
+                                                    name="items[${index}][hsn_code]"
+                                                    class="form-control form-control-sm item-hsn" 
+                                                    value="${item.hsn_code || ''}"
+                                                    placeholder="Enter HSN"
+                                                    readonly>
+                                            </td>
+                                            <td>${itemWidthSelect}</td>
 
-                                                    <!-- Ordered Qty -->
-                                                    <td class="qty-ordered-display">${item.qty_ordered}</td>
+                                            <!-- Ordered Qty -->
+                                            <td class="qty-ordered-display">${item.qty_ordered}</td>
 
-                                                    <!-- Invoiced Qty -->
-                                                    <td class="qty-invoiced-display">${item.qty_invoiced}</td>
+                                            <!-- Balanced Qty -->
+                                            <td class="balanced-qty-display">${balancedQty.toFixed(2)}</td>
 
-                                                    <!-- Balanced Qty -->
-                                                    <td class="balanced-qty-display">${balancedQty.toFixed(2)}</td>
+                                            <!-- Invoiced Qty (Input Field) -->
+                                            <td>
+                                                <input type="number" 
+                                                    name="items[${index}][quantity]"
+                                                    class="form-control form-control-sm item-quantity received-qty-input" 
+                                                    step="0.01"
+                                                    value="${balancedQty}"
+                                                    readonly
+                                                    placeholder="0.00"
+                                                    data-max-qty="${balancedQty}"
+                                                    data-ordered-qty="${item.qty_ordered}">
+                                                    <small class="text-secondary">
+                                                    Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max: ${(item.qty_ordered * 1.5).toFixed(2)}).
+                                                </small>
+                                            </td>
 
-                                                    <!-- Received Qty (Input Field) -->
-                                                    <td>
-                                                        <input type="number" 
-                                                            name="items[${index}][quantity]"
-                                                            class="form-control form-control-sm item-quantity received-qty-input" 
-                                                            step="0.01"
-                                                            value="${balancedQty}"
-                                                            readonly
-                                                            placeholder="0.00"
-                                                            data-max-qty="${balancedQty}"
-                                                            data-ordered-qty="${item.qty_ordered}">
-                                                            <small class="text-secondary">
-                                                            Note: Received quantity can exceed ordered quantity by up to 50% (Max: ${(item.qty_ordered * 1.5).toFixed(2)}).
-                                                        </small>
-                                                    </td>
+                                            <td>${item.uom_code}</td>
+                                            <td class="rate-display">${parseFloat(item.rate).toFixed(2)}</td>
+                                            <td class="item-amount">0.00</td>
 
-                                                    <td>${item.uom_code}</td>
-                                                    <td class="rate-display">${parseFloat(item.rate).toFixed(2)}</td>
-                                                    <td class="item-amount">0.00</td>
-
-                                                </tr>`;
+                                        </tr>`;
                                 });
 
                                 $('#items_tbody').html(itemsHtml);
+                                $('#items_tbody .select2').select2({
+                                    width: '100%'
+                                });
                                 $('.item-row').each(function () {
                                     let $row = $(this);
                                     let qty = parseFloat($row.find('.item-quantity').val()) || 0;
@@ -981,7 +1072,7 @@
                         }
                     });
                 } else {
-                    $('#items_tbody').html('<tr><td colspan="10" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
+                    $('#items_tbody').html('<tr><td colspan="12" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
                     $('#purchase_order_no').val('');
                     $('#supplier_id').val('');
                     $('#purchase_commission_agent_id').val('');
@@ -1341,31 +1432,58 @@
                 $('#charges_table').removeClass('d-none');
 
                 let row = `
-                                                                                                <tr class="charge-row" data-charge-id="${chargeId}" data-tax-type="${taxType}">
-                                                                                                    <td>
-                                                                                                        ${chargeText}
-                                                                                                        <input type="hidden" name="charges[charge_id][]" value="${chargeId}">
-                                                                                                        <input type="hidden" name="charges[name][]" value="${chargeText}">
-                                                                                                    </td>
-                                                                                                    <td>
-                                                                                                        ${taxType}
-                                                                                                        <input type="hidden" name="charges[tax_type][]" value="${taxType}">
-                                                                                                    </td>
-                                                                                                    <td>
-                                                                                                        ${amount.toFixed(2)}
-                                                                                                        <input type="hidden" name="charges[amount][]" value="${amount.toFixed(2)}">
-                                                                                                    </td>
-                                                                                                    <td>
-                                                                                                        <button type="button" class="btn btn-danger btn-sm remove-charge">X</button>
-                                                                                                    </td>
-                                                                                                </tr>
-                                                                                            `;
+                            <tr class="charge-row" data-charge-id="${chargeId}" data-tax-type="${taxType}">
+                                <td>
+                                    ${chargeText}
+                                    <input type="hidden" name="charges[charge_id][]" value="${chargeId}">
+                                    <input type="hidden" name="charges[name][]" value="${chargeText}">
+                                </td>
+                                <td>
+                                    ${taxType}
+                                    <input type="hidden" name="charges[tax_type][]" value="${taxType}">
+                                </td>
+                                <td>
+                                    ${amount.toFixed(2)}
+                                    <input type="hidden" name="charges[amount][]" value="${amount.toFixed(2)}">
+                                </td>
+                                <td class="d-flex align-items-center">
+                                    <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                                        <i class="ri ri-pencil-line"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
+                                        <i class="ri ri-delete-bin-line"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
 
                 $('#added_charges_list').append(row);
 
                 $('#charges_select').val('').trigger('change');
                 $('#charge_amount').val('');
 
+                calculateChargesOnly();
+                refreshChargeDropdownState();
+            });
+
+            $(document).on('click', '.edit-charge', function () {
+                let $row = $(this).closest('tr');
+                let chargeId = $row.data('charge-id');
+                let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Post-GST';
+
+                // Populate inputs
+                $('#charges_select').val(chargeId).trigger('change');
+                $('#charge_amount').val(amount.toFixed(2));
+                $('#charge_tax_type').val(taxType).trigger('change');
+
+                // Remove the row
+                $row.remove();
+
+                // Recalculate and refresh
+                if ($('#added_charges_list tr').length === 0) {
+                    $('#charges_table').addClass('d-none');
+                }
                 calculateChargesOnly();
                 refreshChargeDropdownState();
             });
@@ -1675,10 +1793,10 @@
                                         hour12: true
                                     });
                                     html += `
-                                                                                    <tr>
-                                                                                        <td>${formattedDate}</td>
-                                                                                        <td class="text-end fw-bold">₹${parseFloat(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                                                                    </tr>`;
+                                            <tr>
+                                                <td>${formattedDate}</td>
+                                                <td class="text-end fw-bold">₹${parseFloat(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                            </tr>`;
                                     total += parseFloat(payment.amount);
                                 });
 

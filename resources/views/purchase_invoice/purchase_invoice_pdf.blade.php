@@ -313,7 +313,6 @@
         </tr>
         @endforeach
 
-        @for($i = count($invoice->items); $i < 10; $i++)
         <tr>
           <td style="height:30px; border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
@@ -325,7 +324,6 @@
           <td style="border-right:1px solid #000;"></td>
           <td></td>
         </tr>
-        @endfor
 
         <tr style="border-top:1px solid #000; border-bottom:1px solid #000; font-weight:bold; background-color:#f2f2f2; vertical-align:middle;">
           <td colspan="2" style="border-right:1px solid #000; border-left:1px solid #000;padding:6px; text-align:right; vertical-align:middle;">Gross Total</td>

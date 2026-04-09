@@ -40,6 +40,9 @@ class Supplier extends Model
 
         'gst_no',
         'tax_id',
+        'igst_percent',
+        'cgst_percent',
+        'sgst_percent',
         'pan_no',
         'ecc_no',
 

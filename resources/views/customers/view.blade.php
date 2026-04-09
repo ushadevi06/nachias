@@ -107,7 +107,6 @@
                 ordering: true,
                 info: true,
                 lengthChange: true,
-                pageLength: 10,
                 ajax: {
                     url: "{{ url('customers') }}",
                     data: function (d) {

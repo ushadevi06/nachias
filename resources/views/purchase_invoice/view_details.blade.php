@@ -117,32 +117,59 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="80">S.No</th>
+                                        <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="60">S.No</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold">Store Category</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold">Brand</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">HSN</th>
-                                        <th class="py-3 text-muted text-uppercase small fw-bold text-center">Quantity</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold text-center">Fabric Width</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold text-center">Ordered Qty</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold text-center">Balanced Qty</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold text-center">Invoiced Qty</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold">UOM</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
-                                        <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Total Amount
-                                        </th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @if($invoice->items->count() > 0)
                                         @foreach($invoice->items as $index => $item)
+                                            @php
+                                                $orderedQty = $item->qty_ordered ?? 0;
+                                                $invoicedQty = $item->quantity ?? 0;
+                                                $totalInvoicedSoFar = \App\Models\PurchaseInvoiceItem::where('purchase_order_item_id', $item->purchase_order_item_id)
+                                                    ->where('id', '<=', $item->id)
+                                                    ->sum('quantity');
+                                                $balancedQty = max(0, $orderedQty - $totalInvoicedSoFar);
+                                            @endphp
                                             <tr>
                                                 <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
+                                                <td>{{ $item->purchaseOrderItem->storeCategory->category_name ?? $item->rawMaterial->storeCategory->category_name ?? '-' }}</td>
                                                 <td>
                                                     <div class="fw-bold text-dark">{{ $item->rawMaterial->name ?? 'N/A' }}</div>
                                                     @if($item->rawMaterial && $item->rawMaterial->code)
                                                         <small class="text-primary fw-medium">({{ $item->rawMaterial->code }})</small>
                                                     @endif
                                                 </td>
+                                                <td>{{ $item->brand->brand_name ?? $item->purchaseOrderItem->brand->brand_name ?? '-' }}</td>
                                                 <td class="text-center">{{ $item->hsn_code ?? '-' }}</td>
+                                                <td class="text-center">{{ $item->fabricWidth->width ?? $item->purchaseOrderItem->fabricWidth->width ?? '-' }}</td>
                                                 <td class="text-center">
-                                                    <span class="badge bg-light text-dark px-3 py-2 fw-medium">
-                                                        {{ number_format($item->quantity, 0) }}
+                                                    <span class="badge bg-light text-dark px-2 py-1 fw-medium">
+                                                        {{ number_format($orderedQty, 2) }}
                                                     </span>
                                                 </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-light text-dark px-2 py-1 fw-medium">
+                                                        {{ number_format($balancedQty, 2) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-light text-dark px-2 py-1 fw-medium">
+                                                        {{ number_format($invoicedQty, 2) }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ $item->uom->uom_code ?? '-' }}</td>
                                                 <td class="text-end">₹{{ number_format($item->rate, 2) }}</td>
                                                 <td class="text-end fw-bold text-dark pe-4">
                                                     ₹{{ number_format($item->quantity * $item->rate, 2) }}</td>
@@ -150,14 +177,16 @@
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="6" class="text-center py-5 text-muted">No items found</td>
+                                            <td colspan="12" class="text-center py-5 text-muted">No items found</td>
                                         </tr>
                                     @endif
                                 </tbody>
                                 <tfoot class="bg-light fw-bold border-top">
                                     <tr>
-                                        <td colspan="5" class="text-end py-3 ps-4">Subtotal (Items)</td>
+                                    <tr>
+                                        <td colspan="11" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
                                         <td class="text-end pe-4 py-3">₹{{ number_format($invoice->sub_total, 2) }}</td>
+                                    </tr>
                                     </tr>
                                 </tfoot>
                             </table>

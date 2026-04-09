@@ -31,4 +31,9 @@ class JobCardFabricDetail extends Model
     {
         return $this->hasMany(JobCardFabricConsumption::class, 'job_card_fabric_detail_id');
     }
+
+    public function layMarks()
+    {
+        return $this->hasMany(JobCardLayMark::class, 'job_card_fabric_detail_id');
+    }
 }

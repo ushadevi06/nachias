@@ -148,6 +148,38 @@ class TaskManagementController extends Controller
                     }
                 }
             }
+        } else {
+            if (request()->has('job_card_id')) {
+                $jobCard = JobCardEntry::find(request()->job_card_id);
+                if ($jobCard) {
+                    $jobCardId = $jobCard->id;
+                    $stages = ProcessSchedule::with(['operationStage', 'serviceProvider'])->where('job_card_entry_id', $jobCardId)->get();
+                }
+            }
+        }
+
+        if ($stages->isNotEmpty() && request()->has('stage_id')) {
+            $sId = request()->stage_id;
+            $psStage = $stages->where('id', $sId)->first();
+            
+            if (!$psStage) {
+                $psStage = $stages->where('operation_stage_id', $sId)->first();
+                if ($psStage) {
+                    request()->merge(['stage_id' => $psStage->id]);
+                }
+            }
+
+            if ($psStage) {
+                if (!request()->has('issue_date') && $psStage->start_date) {
+                    request()->merge(['issue_date' => \Carbon\Carbon::parse($psStage->start_date)->format('d-m-Y')]);
+                }
+                if (!request()->has('due_date') && $psStage->due_date) {
+                    request()->merge(['due_date' => \Carbon\Carbon::parse($psStage->due_date)->format('d-m-Y')]);
+                }
+                if (!request()->has('remarks') && $psStage->remarks) {
+                    request()->merge(['remarks' => $psStage->remarks]);
+                }
+            }
         }
 
         if (request()->isMethod('post')) {
@@ -290,27 +322,15 @@ class TaskManagementController extends Controller
             }
         }
 
-        if (!$id) {
-            if (request()->has('job_card_id')) {
-                $jobCard = JobCardEntry::find(request()->job_card_id);
-                if ($jobCard) {
-                    $stages = ProcessSchedule::with([
-                        'operationStage',
-                        'serviceProvider'
-                    ])->where('job_card_entry_id', $jobCard->id)->get();
-                }
+        // Re-calculate stages if not already loaded (fallback)
+        if ($stages->isEmpty() && (request()->has('job_card_id') || (isset($jobCard) && $jobCard))) {
+            $jcId = request('job_card_id') ?: ($jobCard ? $jobCard->id : null);
+            if ($jcId) {
+                $stages = ProcessSchedule::with(['operationStage', 'serviceProvider'])->where('job_card_entry_id', $jcId)->get();
             }
         }
 
-        if ($stages->isNotEmpty() && request()->has('stage_id')) {
-            $sId = request()->stage_id;
-            if (!$stages->contains('id', $sId)) {
-                $psStage = $stages->where('operation_stage_id', $sId)->first();
-                if ($psStage) {
-                    request()->merge(['stage_id' => $psStage->id]);
-                }
-            }
-        }
+
         $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT);
         $users = User::where('id', '!=', 1)->where('status', 'Active')->get();
         $stores = StoreType::where('status', 'Active')->get();

@@ -64,7 +64,15 @@
                                         <select id="supplier_id" name="supplier_id" class="select2 form-select @error('supplier_id') is-invalid @enderror" data-placeholder="Select Supplier">
                                             <option value="">Select Supplier</option>
                                             @foreach($suppliers as $supplier)
-                                                <option value="{{ $supplier->id }}" data-state-id="{{ $supplier->state_id }}" data-payment-terms="{{ $supplier->payment_terms ?? '' }}" {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }} ({{ $supplier->code }})</option>
+                                                <option value="{{ $supplier->id }}" 
+                                                    data-state-id="{{ $supplier->state_id }}" 
+                                                    data-payment-terms="{{ $supplier->payment_terms ?? '' }}" 
+                                                    data-igst="{{ $supplier->igst_percent ?? 0 }}"
+                                                    data-cgst="{{ $supplier->cgst_percent ?? 0 }}"
+                                                    data-sgst="{{ $supplier->sgst_percent ?? 0 }}"
+                                                    {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>
+                                                    {{ $supplier->name }} ({{ $supplier->code }})
+                                                </option>
                                             @endforeach
                                         </select>
                                         <label for="supplier_id">Supplier <span class="text-danger">*</span></label>
@@ -226,9 +234,8 @@
                                                             name="items[{{ $index }}][fabric_width_id]"
                                                             data-placeholder="Select Width">
                                                             <option value="">Select Width</option>
-                                                            @foreach($sizeRatios as $ratio)
-                                                                <option value="{{ $ratio->id }}" {{ ($item['fabric_width_id'] ?? '') == $ratio->id ? 'selected' : '' }}>{{ $ratio->size }} -
-                                                                    ({{ $ratio->ratio }})</option>
+                                                            @foreach($fabricSizes as $fabricSize)
+                                                                <option value="{{ $fabricSize->id }}" {{ ($item['fabric_width_id'] ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                             @endforeach
                                                         </select>
                                                         @error('items.' . $index . '.fabric_width_id')
@@ -393,9 +400,8 @@
                                                             name="items[{{ $index }}][fabric_width_id]"
                                                             data-placeholder="Select Width">
                                                             <option value="">Select Width</option>
-                                                            @foreach($sizeRatios as $ratio)
-                                                                <option value="{{ $ratio->id }}" {{ ($item->fabric_width_id ?? '') == $ratio->id ? 'selected' : '' }}>{{ $ratio->size }} -
-                                                                    ({{ $ratio->ratio }})</option>
+                                                            @foreach($fabricSizes as $fabricSize)
+                                                                <option value="{{ $fabricSize->id }}" {{ ($item->fabric_width_id ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                             @endforeach
                                                         </select>
                                                         @error('items.' . $index . '.fabric_width_id')
@@ -559,9 +565,8 @@
                                                     <select class="select2 form-select fabric_width"
                                                         name="items[0][fabric_width_id]" data-placeholder="Select Width">
                                                         <option value="">Select Width</option>
-                                                        @foreach($sizeRatios as $ratio)
-                                                            <option value="{{ $ratio->id }}">{{ $ratio->size }} -
-                                                                ({{ $ratio->ratio }})</option>
+                                                        @foreach($fabricSizes as $fabricSize)
+                                                            <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                                                         @endforeach
                                                     </select>
                                                 </td>
@@ -901,8 +906,8 @@
                     <td>
                         <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" data-placeholder="Select Width">
                             <option value="">Select Width</option>
-                            @foreach($sizeRatios as $ratio)
-                                <option value="{{ $ratio->id }}">{{ $ratio->size }} - ({{ $ratio->ratio }})</option>
+                            @foreach($fabricSizes as $fabricSize)
+                                <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                             @endforeach
                         </select>
                     </td>
@@ -1000,7 +1005,7 @@
                                     materialName = materialName.en || materialName.value || Object.values(materialName)[0] || JSON.stringify(materialName);
                                 }
                                 materialsHtml += `
-                                                    <option value="${material.id}" data-uom-id="${material.uom_id}">${materialName} (${material.code})</option>`;
+                                                <option value="${material.id}" data-uom-id="${material.uom_id}">${materialName} (${material.code})</option>`;
                             });
                         } else {
                             materialsHtml += '<option value="">No materials found</option>';
@@ -1153,6 +1158,10 @@
                 let paymentTerms = selected.data('payment-terms');
                 let companyStateId = "{{ $web_settings->state_id ?? '' }}";
 
+                let supplierIgst = parseFloat(selected.data('igst')) || 0;
+                let supplierCgst = parseFloat(selected.data('cgst')) || 0;
+                let supplierSgst = parseFloat(selected.data('sgst')) || 0;
+
                 if (paymentTerms !== undefined) {
                     $('#payment_terms').val(paymentTerms);
                 }
@@ -1160,12 +1169,19 @@
                 if (supplierStateId && companyStateId) {
                     if (supplierStateId == companyStateId) {
                         $('#other_state_no').prop('checked', true).trigger('change');
-                        $('#cgst_percent').val("{{ $web_settings->cgst ?? 0 }}");
-                        $('#sgst_percent').val("{{ $web_settings->sgst ?? 0 }}");
+                        
+                        let cgst = supplierCgst > 0 ? supplierCgst : "{{ $web_settings->cgst ?? 0 }}";
+                        let sgst = supplierSgst > 0 ? supplierSgst : "{{ $web_settings->sgst ?? 0 }}";
+                        
+                        $('#cgst_percent').val(cgst);
+                        $('#sgst_percent').val(sgst);
                         $('#igst_percent').val(0);
                     } else {
                         $('#other_state_yes').prop('checked', true).trigger('change');
-                        $('#igst_percent').val("{{ $web_settings->igst ?? 0 }}");
+                        
+                        let igst = supplierIgst > 0 ? supplierIgst : "{{ $web_settings->igst ?? 0 }}";
+                        
+                        $('#igst_percent').val(igst);
                         $('#cgst_percent').val(0);
                         $('#sgst_percent').val(0);
                     }
@@ -1190,33 +1206,33 @@
                     const fileUrl = URL.createObjectURL(file);
 
                     const previewHtml = `<div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative" style="width: 100px; height: 100px;" title="${file.name}">
-                                                                        <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded overflow-hidden js-loading">
-                                                                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                                                        </div>
-                                                                    </div>`;
+                                            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded overflow-hidden js-loading">
+                                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                            </div>
+                                        </div>`;
 
                     $container.html(previewHtml);
 
                     if (isImage) {
                         reader.onload = function (e) {
                             $container.html(`
-                                                                                <div class="attachment-thumb bg-white position-relative">
-                                                                                    <button type="button" class="btn btn-sm btn-outline-primary view-image" data-image="${e.target.result}">
-                                                                                        <i class="ri ri-eye-line"></i> View
-                                                                                    </button>
-                                                                                </div>
-                                                                            `);
+                                                <div class="attachment-thumb bg-white position-relative">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary view-image" data-image="${e.target.result}">
+                                                        <i class="ri ri-eye-line"></i> View
+                                                    </button>
+                                                </div>
+                                            `);
                         };
                         reader.readAsDataURL(file);
                     } else {
                         $container.html(`
-                                                                            <div class="attachment-thumb bg-white position-relative">
-                                                                                <a href="${fileUrl}" target="_blank" class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border" style="width: 80px; height: 80px;">
-                                                                                    <i class="ri ri-file-text-line fs-2"></i>
-                                                                                    <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">${extension}</span>
-                                                                                </a>
-                                                                            </div>
-                                                                        `);
+                                        <div class="attachment-thumb bg-white position-relative">
+                                            <a href="${fileUrl}" target="_blank" class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border" style="width: 80px; height: 80px;">
+                                                <i class="ri ri-file-text-line fs-2"></i>
+                                                <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">${extension}</span>
+                                            </a>
+                                        </div>
+                                    `);
                     }
                 }
             });
@@ -1242,44 +1258,42 @@
 
                     const previewId = `preview-${index}`;
                     const previewHtml = `<div id="${previewId}" class="attachment-item new-attachment-preview position-relative border rounded bg-white shadow-sm mb-2" title="${file.name}">
-                                                                        <div class="d-flex align-items-center p-2">
-                                                                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                                                        </div>
-                                                                    </div>`;
+                                            <div class="d-flex align-items-center p-2">
+                                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                            </div>
+                                        </div>`;
 
                     $('#attachment-list').append(previewHtml);
 
                     if (isImage) {
                         reader.onload = function (e) {
                             $(`#${previewId}`).html(`
-                                                                                <div class="d-flex align-items-center p-2">
-                                                                                    <button type="button" class="btn btn-sm btn-outline-primary view-image" data-image="${e.target.result}">
-                                                                                        <i class="ri ri-eye-line"></i> View
-                                                                                    </button>
-                                                                                    <button type="button" class="btn btn-sm btn-link text-danger ms-2 remove-existing-attachment p-0">
-                                                                                        <i class="ri ri-close-line"></i>
-                                                                                    </button>
-                                                                                </div>
-                                                                            `);
+                                <div class="d-flex align-items-center p-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary view-image" data-image="${e.target.result}">
+                                        <i class="ri ri-eye-line"></i> View
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-link text-danger ms-2 remove-existing-attachment p-0">
+                                        <i class="ri ri-close-line"></i>
+                                    </button>
+                                </div>
+                            `);
                         };
                         reader.readAsDataURL(file);
                     } else {
                         $(`#${previewId}`).html(`
-                                                                            <div class="d-flex align-items-center p-2">
-                                                                                <a href="${fileUrl}" target="_blank" class="text-decoration-none text-primary d-flex align-items-center">
-                                                                                    <i class="ri ri-file-text-line fs-3 me-2"></i>
-                                                                                    <span class="badge bg-primary text-white">${extension}</span>
-                                                                                </a>
-                                                                                <button type="button" class="btn btn-sm btn-link text-danger ms-2 remove-existing-attachment p-0">
-                                                                                    <i class="ri ri-close-line"></i>
-                                                                                </button>
-                                                                            </div>
-                                                                        `);
+                            <div class="d-flex align-items-center p-2">
+                                <a href="${fileUrl}" target="_blank" class="text-decoration-none text-primary d-flex align-items-center">
+                                    <i class="ri ri-file-text-line fs-3 me-2"></i>
+                                    <span class="badge bg-primary text-white">${extension}</span>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-link text-danger ms-2 remove-existing-attachment p-0">
+                                    <i class="ri ri-close-line"></i>
+                                </button>
+                            </div>
+                        `);
                     }
                 });
             });
-
-
 
             initSelect2Fields();
             calculateTotals();

@@ -11,6 +11,8 @@ use App\Models\Supplier;
 use App\Models\Charge;
 use App\Models\PurchaseInvoicePayment;
 use Illuminate\Http\Request;
+use App\Models\Brand;
+use App\Models\FabricSize;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -106,7 +108,17 @@ class PurchaseInvoiceController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit purchase-invoice')) {
                 return unauthorizedRedirect();
             }
-            $invoice = PurchaseInvoice::with(['items.rawMaterial', 'items.uom', 'charges', 'purchaseCommissionAgent'])->findOrFail($id);
+            $invoice = PurchaseInvoice::with([
+                'items.rawMaterial', 
+                'items.uom', 
+                'items.brand', 
+                'items.fabricWidth', 
+                'items.purchaseOrderItem.storeCategory', 
+                'items.purchaseOrderItem.brand', 
+                'items.purchaseOrderItem.fabricWidth', 
+                'charges', 
+                'purchaseCommissionAgent'
+            ])->findOrFail($id);
             $charges = $invoice->charges;
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create purchase-invoice')) {
@@ -367,11 +379,11 @@ class PurchaseInvoiceController extends Controller
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == '1') {
                             if ($id) {
-                                $existingItem = PurchaseInvoiceItem::where('purchase_invoice_id', $id)
-                                    ->where('purchase_order_item_id', $item['purchase_order_item_id'] ?? null)
-                                    ->first();
+                                $existingItem = PurchaseInvoiceItem::where('purchase_invoice_id', $id)->where('purchase_order_item_id', $item['purchase_order_item_id'] ?? null)->first();
                                 if ($existingItem) {
                                     $existingItem->update([
+                                        'brand_id' => $item['brand_id'] ?? $existingItem->brand_id,
+                                        'fabric_width_id' => $item['fabric_width_id'] ?? $existingItem->fabric_width_id,
                                         'hsn_code' => $item['hsn_code'] ?? $existingItem->hsn_code,
                                         'quantity' => $item['quantity'],
                                         'amount' => $item['quantity'] * $item['rate'],
@@ -383,6 +395,8 @@ class PurchaseInvoiceController extends Controller
                                 PurchaseInvoiceItem::create([
                                     'purchase_invoice_id' => $invoice->id,
                                     'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
+                                    'brand_id' => $item['brand_id'] ?? null,
+                                    'fabric_width_id' => $item['fabric_width_id'] ?? null,
                                     'raw_material_id' => $item['raw_material_id'],
                                     'hsn_code' => $item['hsn_code'],
                                     'quantity' => $item['quantity'],
@@ -452,12 +466,13 @@ class PurchaseInvoiceController extends Controller
                 }
             })
             ->get();
+        $brands = Brand::active()->orderBy('brand_name')->get();
+        $fabricSizes = FabricSize::active()->orderBy('width')->get();
         $suppliers = Supplier::where('status', 'Active')->get();
         $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
-
         $nextInvoiceNumber = '';
 
-        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber'));
+        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber', 'brands', 'fabricSizes'));
     }
 
 
@@ -466,7 +481,18 @@ class PurchaseInvoiceController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-invoice')) {
             return unauthorizedRedirect();
         }
-        $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom', 'charges', 'purchaseCommissionAgent'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with([
+            'supplier',
+            'items.rawMaterial',
+            'items.uom',
+            'items.brand',
+            'items.fabricWidth',
+            'items.purchaseOrderItem.brand',
+            'items.purchaseOrderItem.fabricWidth',
+            'items.purchaseOrderItem.storeCategory',
+            'charges',
+            'purchaseCommissionAgent'
+        ])->findOrFail($id);
         return view('purchase_invoice.view_details', compact('invoice'));
     }
 
@@ -512,10 +538,12 @@ class PurchaseInvoiceController extends Controller
             'supplier',
             'items.rawMaterial',
             'items.uom',
-            'items.storeCategory'
+            'items.storeCategory',
+            'items.brand',
+            'items.fabricWidth'
         ])->findOrFail($id);
 
-        $items = $purchaseOrder->items()->get()->map(function ($item) {
+        $items = $purchaseOrder->items->map(function ($item) {
             $alreadyInvoicedQty = PurchaseInvoiceItem::where(
                 'purchase_order_item_id',
                 $item->id
@@ -529,10 +557,15 @@ class PurchaseInvoiceController extends Controller
 
             return [
                 'id' => $item->id,
+                'store_category_name' => $item->storeCategory->category_name ?? '-',
                 'raw_material_id' => $item->raw_material_id,
                 'raw_material_name' => $item->rawMaterial->name,
                 'art_no' => $item->supplier_design_name,
                 'hsn_code' => $item->rawMaterial->hsn_code ?? '',
+                'brand_id' => $item->brand_id,
+                'brand_name' => $item->brand->brand_name ?? '-',
+                'fabric_width_id' => $item->fabric_width_id,
+                'fabric_width' => $item->fabricWidth->width ?? '-',
                 'quantity' => $balanceQty,
                 'qty_ordered' => $item->quantity,
                 'qty_invoiced' => $alreadyInvoicedQty,
@@ -559,13 +592,25 @@ class PurchaseInvoiceController extends Controller
             'igst_percent' => $purchaseOrder->igst_percent,
             'cgst_percent' => $purchaseOrder->cgst_percent,
             'sgst_percent' => $purchaseOrder->sgst_percent,
+            'all_brands' => Brand::orderBy('brand_name')->get()->map(function($b) {
+                return ['id' => $b->id, 'name' => $b->brand_name];
+            }),
+            'all_fabric_widths' => FabricSize::orderBy('width')->get()->map(function($f) {
+                return ['id' => $f->id, 'name' => $f->width];
+            }),
             'items' => $items,
         ]);
     }
 
     public function downloadPdf($id)
     {
-        $invoice = PurchaseInvoice::with(['supplier.state', 'supplier.city', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with([
+            'supplier.state',
+            'supplier.city',
+            'items.rawMaterial',
+            'items.uom',
+            'charges'
+        ])->findOrFail($id);
         $setting = Setting::with(['city', 'state'])->first();
         $totalInWords = numberToWords($invoice->grand_total);
         $pdf = Pdf::loadView('purchase_invoice.purchase_invoice_pdf', compact('invoice', 'setting', 'totalInWords'));
@@ -576,7 +621,13 @@ class PurchaseInvoiceController extends Controller
 
     public function print($id)
     {
-        $invoice = PurchaseInvoice::with(['supplier.state', 'supplier.city', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with([
+            'supplier.state',
+            'supplier.city',
+            'items.rawMaterial',
+            'items.uom',
+            'charges'
+        ])->findOrFail($id);
         $setting = Setting::with(['city', 'state'])->first();
         $totalInWords = numberToWords($invoice->grand_total);
         $is_print = true;
@@ -597,6 +648,7 @@ class PurchaseInvoiceController extends Controller
                 'success' => false,
                 'message' => 'Failed to delete charge: ' . $e->getMessage()
             ], 500);
+
         }
     }
 

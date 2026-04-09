@@ -138,7 +138,6 @@ class JobCardEntryController extends Controller
                 'production_stages.*.deadline_date' => 'required|date_format:d-m-Y',
                 'stages' => 'nullable|array|min:1',
                 'fabrics.*.mtr' => 'required|numeric|min:0.01',
-                // 'size_ratio_id' => 'required|exists:size_ratios,id',
             ];
 
             $messages = [
@@ -248,6 +247,7 @@ class JobCardEntryController extends Controller
                     'ex_1_label' => $request->ex_1_label,
                     'ex_2_label' => $request->ex_2_label,
                     'fabric_type_id' => $request->fabric_type_id,
+                    'sleeve_instances' => $request->sleeve_instances ? json_decode($request->sleeve_instances, true) : null,
                 ];
                 if ($request->season) {
                     $season = Season::where('name', $request->season)->first();
@@ -358,6 +358,29 @@ class JobCardEntryController extends Controller
                                     $fabricDetail->consumptions()->create(array_merge($cMatch, $cVal));
                                 }
                             }
+                        }
+
+                        if (isset($fabric['lay_marks']) && is_array($fabric['lay_marks'])) {
+                            $existingMarkNos = [];
+                            foreach ($fabric['lay_marks'] as $index => $layMark) {
+                                if (!empty($layMark['sizes'])) {
+                                    $markNo = $index + 1;
+                                    $existingMarkNos[] = $markNo;
+                                    $lmMatch = ['mark_no' => $markNo];
+                                    $lmVal = [
+                                        'sizes' => $layMark['sizes'],
+                                        'sleeve_type' => $layMark['sleeve'] ?? null,
+                                        'lay_mark_meter' => $layMark['meter'] ?? null,
+                                    ];
+                                    
+                                    if ($hasTasks) {
+                                        $fabricDetail->layMarks()->updateOrCreate($lmMatch, $lmVal);
+                                    } else {
+                                        $fabricDetail->layMarks()->updateOrCreate($lmMatch, $lmVal);
+                                    }
+                                }
+                            }
+                            $fabricDetail->layMarks()->whereNotIn('mark_no', $existingMarkNos)->delete();
                         }
 
                         $rowTotal = 0;
@@ -494,7 +517,7 @@ class JobCardEntryController extends Controller
             }
         }
 
-        $jobCard = $id ? JobCardEntry::with(['cuttingSizeRatios', 'images', 'sizeRatio', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'issueItems', 'sleeveMeters', 'operations'])->findOrFail($id) : null;
+        $jobCard = $id ? JobCardEntry::with(['cuttingSizeRatios', 'images', 'sizeRatio', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'fabricDetails.layMarks', 'issueItems', 'sleeveMeters', 'operations'])->findOrFail($id) : null;
         $allPurchaseOrders = PurchaseOrder::with(['items'])->orderBy('id', 'desc')->get();
         $purchaseOrders = $allPurchaseOrders->filter(function ($po) use ($jobCard) {
             if ($jobCard && $po->id == $jobCard->purchase_order_id) {
@@ -529,7 +552,7 @@ class JobCardEntryController extends Controller
         $bottomCuts = BottomCut::active()->orderBy('id', 'desc')->get();
         $cuttingMasters = User::active()->where('id', '!=', 1)->orderBy('id', 'desc')->get();
 
-        $plants = ServiceProvider::where('is_plant', 1)->where('status', 'Active')->orderBy('id', 'desc')->get();
+        $plants = ServiceProvider::active()->orderBy('id', 'desc')->get();
         $storeTypes = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
         $operationStages = OperationStage::active()->orderBy('id', 'desc')->get();
 
@@ -982,7 +1005,7 @@ class JobCardEntryController extends Controller
                     continue;
                 }
 
-                $groupKey = 'rm|' . $item->raw_material_id;
+                $groupKey = 'art|' . $item->art_no;
 
                 if (!isset($materialGroups[$groupKey])) {
                     $materialGroups[$groupKey] = [

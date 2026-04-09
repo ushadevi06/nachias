@@ -48,7 +48,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             ajax: "{{ url('fits') }}",
             columns: [
                 { data: 'DT_RowIndex' },

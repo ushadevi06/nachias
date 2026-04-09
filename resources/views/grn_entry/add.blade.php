@@ -45,10 +45,24 @@
                                 @enderror
                             </div>
                             <div id="show_item_det" class="{{ old('purchase_invoice_id', $grn->purchase_invoice_id ?? '') ? '' : 'd-none' }} col-lg-12">
+                                <style>
+                                    .split-row {
+                                        border-left: 4px solid #00cfe8 !important;
+                                    }
+                                    .item-row.split-row td {
+                                        padding-top: 10px;
+                                        padding-bottom: 10px;
+                                    }
+                                    .row-it-count {
+                                        font-weight: bold;
+                                        color: #5d596c;
+                                    }
+                                </style>
                                 <div class="row g-4">
                                     <div class="col-md-6 col-xl-4">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control" id="supplier_display" value="{{ $grn->supplier->name ?? '' }}" readonly>
+                                            <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', ($grn && $grn->supplier) ? ($grn->supplier->name . ($grn->supplier->code ? ' (' . $grn->supplier->code . ')' : '')) : '') }}">
+                                            <input type="text" class="form-control" id="supplier_display" value="{{ old('supplier_name', ($grn && $grn->supplier) ? ($grn->supplier->name . ($grn->supplier->code ? ' (' . $grn->supplier->code . ')' : '')) : '') }}" readonly>
                                             <label>Supplier</label>
                                         </div>
                                     </div>
@@ -88,6 +102,7 @@
                                                         <th rowspan="2">Supplier Design Name(Code)</th>
                                                         <th rowspan="2">Item Image</th>
                                                         <th rowspan="2">Art No. *</th>
+                                                        <th rowspan="2">Width</th>
                                                         <th rowspan="2">UOM</th>
                                                         <th rowspan="2">Fabric Type</th>
                                                         <th colspan="2">QUANTITY</th>
@@ -123,15 +138,26 @@
                                                                 $initialBalance = ($qtyOrdered - $alreadyReceived - ($item->qty_received ?? 0));
                                                             }
                                                         @endphp
-                                                        @php 
-                                                            if (($qtyOrdered - $alreadyReceived) <= 0) continue;
+
+                                                        @php
+                                                            $piItemId = is_array($item) ? ($item['purchase_invoice_item_id'] ?? 0) : ($item->purchase_invoice_item_id ?? 0);
+                                                            $isSplit = false;
+                                                            if ($piItemId > 0) {
+                                                                $isSplit = collect($itemsToLoop)->where(function($it) use ($piItemId) {
+                                                                    return (is_array($it) ? ($it['purchase_invoice_item_id'] ?? 0) : ($it->purchase_invoice_item_id ?? 0)) == $piItemId;
+                                                                })->count() > 1;
+                                                            }
                                                         @endphp
-                                                        <tr class="item-row" data-index="{{ $idx }}">
+                                                        <tr class="item-row {{ $isSplit ? 'split-row' : '' }}" data-index="{{ $idx }}">
                                                             <td>
                                                                 <input type="checkbox" class="row-select form-check-input" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? 'checked' : '' }}>
                                                                 <input type="hidden" name="items[{{$idx}}][row_selected]" value="{{ (is_array($item) ? ($item['row_selected'] ?? 0) : 1) }}" class="row-selected-input">
                                                             </td>
-                                                            <td>{{ $itCount++ }}</td>
+                                                            <td class="text-nowrap">
+                                                                <span class="row-it-count">{{ $itCount++ }}</span>
+                                                                <button type="button" class="btn btn-sm btn-outline-info ms-1 add-split-row" data-bs-toggle="tooltip" title="Add split row for this item"><i class="ri ri-add-line"></i></button>
+                                                                <input type="hidden" name="items[{{$idx}}][id]" value="{{ $itemObj->id ?? '' }}">
+                                                            </td>
                                                             <td>
                                                                 {{ $designName }}
                                                                 <button type="button" class="btn btn-warning btn-sm btn-variants" data-index="{{ $idx }}" data-ordered="{{ $itemObj->qty_ordered }}" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && ($itemObj->qty_received ?? 0) > 0) ? '' : 'disabled' }}>Add Variants</button>
@@ -155,10 +181,22 @@
                                                             </td>
                                                             <td>
                                                                 <input type="hidden" name="items[{{$idx}}][purchase_invoice_item_id]" value="{{ $itemObj->purchase_invoice_item_id }}">
+                                                                <input type="hidden" name="items[{{$idx}}][store_category_id]" value="{{ is_array($item) ? ($item['store_category_id'] ?? 0) : ($item->purchaseInvoiceItem->rawMaterial->store_category_id ?? 0) }}">
                                                                 <input type="text" name="items[{{$idx}}][art_no]" value="{{ $itemObj->art_no }}" 
                                                                     class="form-control art-no-input @error("items.$idx.art_no") is-invalid @enderror"
                                                                     {{ (isset($itemObj->purchaseInvoiceItem->rawMaterial->store_category_id) && $itemObj->purchaseInvoiceItem->rawMaterial->store_category_id == 2) ? 'readonly style=background-color:#e9ecef;' : '' }}>
                                                                 @error("items.$idx.art_no") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                            </td>
+                                                            <td>
+                                                                @php
+                                                                    $width = '-';
+                                                                    if (is_array($item)) {
+                                                                        $width = $dbItem->purchaseOrderItem->fabricWidth->width ?? '-';
+                                                                    } else {
+                                                                        $width = $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->width ?? '-';
+                                                                    }
+                                                                @endphp
+                                                                {{ $width }}
                                                             </td>
                                                             <td>{{ $uomName }}</td>
                                                             <td> 
@@ -172,8 +210,10 @@
                                                             </td>
                                                             <td>
                                                                  <div class="mb-2">
-                                                                    <label class="small d-block fw-bold">Ordered:</label>
+                                                                        <label class="small fw-bold">Ordered:</label>
+                                                                    </div>
                                                                     <input type="number" step="0.01" name="items[{{$idx}}][qty_ordered]" value="{{ $qtyOrdered }}" class="qty-ordered form-control" readonly>
+                                                                    <div class="split-summary-area" id="split-summary-{{$idx}}"></div>
                                                                 </div>
                                                                 <div class="mb-2">
                                                                     <label class="small d-block fw-bold">Invoiced:</label>
@@ -296,9 +336,129 @@
     </div>
 </div>
 
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 <script>
     $(document).ready(function() {
-        let activeRowIndex = null;
+        let maxIndex = 0;
+        $('.item-row').each(function() {
+            let idx = parseInt($(this).data('index'));
+            if (idx > maxIndex) maxIndex = idx;
+        });
+
+        $(document).on('click', '.add-split-row', function() {
+            let originalRow = $(this).closest('.item-row');
+            
+            $('.item-row').each(function() {
+                let idx = parseInt($(this).attr('data-index'));
+                if (idx > maxIndex) maxIndex = idx;
+            });
+
+            maxIndex++;
+            let newIndex = maxIndex;
+            
+            let newRow = originalRow.clone();
+            
+            newRow.attr('data-index', newIndex);
+            newRow.addClass('split-row');
+            
+            newRow.find('input, select').each(function() {
+                let name = $(this).attr('name');
+                if (name) {
+                    let newName = name.replace(/items\[\d+\]/, 'items[' + newIndex + ']');
+                    $(this).attr('name', newName);
+                }
+                
+                let id = $(this).attr('id');
+                if (id) {
+                    let newId = id.replace(/-\d+$/, '-' + newIndex);
+                    $(this).attr('id', newId);
+                }
+                
+                let nameAttr = $(this).attr('name') || '';
+                if ($(this).hasClass('row-select')) {
+                    $(this).prop('checked', true);
+                } else if ($(this).hasClass('row-selected-input')) {
+                    $(this).val(1);
+                } else if (nameAttr.includes('[id]')) {
+                    $(this).val(''); 
+                } else if ($(this).hasClass('qty-received') || $(this).hasClass('qty-accepted') || $(this).hasClass('qty-rejected') || $(this).hasClass('amount-input')) {
+                    $(this).val(0);
+                } else if ($(this).hasClass('art-no-input')) {
+                    if (!$(this).prop('readonly')) {
+                        $(this).val('');
+                    }
+                } else if ($(this).hasClass('form-control') && $(this).attr('type') === 'file') {
+                    $(this).val('');
+                }
+            });
+
+            newRow.find('.select2-container').remove();
+            newRow.find('.select2').removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
+            
+            newRow.find('.variants-data-container').empty();
+            newRow.find('.btn-variants').prop('disabled', true);
+            newRow.find('.split-summary-area').empty();
+
+            newRow.find('.add-split-row').removeClass('btn-outline-info add-split-row').addClass('btn-outline-danger remove-split-row').attr('title', 'Remove this split row').html('<i class="ri ri-subtract-line"></i>');
+            
+            let lastRowInGroup = originalRow;
+            let piId = originalRow.find('input[name*="[purchase_invoice_item_id]"]').val();
+            let storeCategoryId = originalRow.find('input[name*="[store_category_id]"]').val();
+            
+            let groupRows = [];
+            $('.item-row').each(function() {
+                if ($(this).find('input[name*="[purchase_invoice_item_id]"]').val() === piId) {
+                    lastRowInGroup = $(this);
+                    groupRows.push($(this));
+                }
+            });
+
+            if (storeCategoryId != 1) {
+                let currentArtNo = originalRow.find('.art-no-input').val();
+                let baseArtNo = currentArtNo.replace(/-[0-9]+$/, '');
+                
+                let maxSuffix = 0;
+                groupRows.forEach(row => {
+                    let rowArtNo = row.find('.art-no-input').val();
+                    let match = rowArtNo.match(/-([0-9]+)$/);
+                    if (match) {
+                        let suffix = parseInt(match[1]);
+                        if (suffix > maxSuffix) maxSuffix = suffix;
+                    }
+                });
+                
+                newRow.find('.art-no-input').val(baseArtNo + '-' + (maxSuffix + 1));
+            }
+
+            newRow.insertAfter(lastRowInGroup);
+            
+            initSelect2();
+            
+            updateGroupBalances(piId);
+            validateForm();
+            updateSerialNumbers();
+        });
+
+        $(document).on('click', '.remove-split-row', function() {
+            let row = $(this).closest('.item-row');
+            let piId = row.find('input[name*="[purchase_invoice_item_id]"]').val();
+            row.remove();
+            updateGroupBalances(piId);
+            validateForm();
+            updateSerialNumbers();
+        });
+
+        function updateSerialNumbers() {
+            $('.row-it-count').each(function(index) {
+                $(this).text(index + 1);
+            });
+        }
 
         function initSelect2() {
             $('.select2').each(function() {
@@ -327,6 +487,7 @@
 
                 $.get("{{ url('grn_entries/get-invoice-details') }}/" + po_id, function(res) {
                     $('#supplier_display').val(res.supplier_name);
+                    $('#supplier_name_hidden').val(res.supplier_name);
                     $('#sup_inv_date').val(res.invoice_date);
                     
                     let poNumber = res.po_number || '';
@@ -339,7 +500,10 @@
                                     <input type="checkbox" class="row-select form-check-input" checked>
                                     <input type="hidden" name="items[${idx}][row_selected]" value="1" class="row-selected-input">
                                 </td>
-                                <td>${idx + 1}</td>
+                                <td class="text-nowrap">
+                                    <span class="row-it-count">${idx + 1}</span>
+                                    <button type="button" class="btn btn-sm btn-outline-info ms-1 add-split-row" data-bs-toggle="tooltip" title="Add split row for this item"><i class="ri ri-add-line"></i></button>
+                                </td>
                                 <td>
                                     ${item.design_name}
                                     <button type="button" class="btn btn-warning btn-sm btn-variants" data-index="${idx}" data-ordered="${item.qty_ordered}" disabled>Add Variants</button>
@@ -350,15 +514,21 @@
                                 </td>
                                 <td>
                                     <input type="hidden" name="items[${idx}][purchase_invoice_item_id]" value="${item.id}">
+                                    <input type="hidden" name="items[${idx}][store_category_id]" value="${item.store_category_id}">
                                     <input type="text" name="items[${idx}][art_no]" value="${item.art_no}" 
                                         class="form-control art-no-input" ${item.store_category_id == 2 ? 'readonly style="background-color:#e9ecef;"' : ''}>
                                 </td>
+                                <td>${item.width}</td>
                                 <td>${item.uom}</td>
                                 <td><select class="form-control select2" name="items[${idx}][fabric_type_id]"><option value="">Select Fabric</option>${fabrics_options}</select></td>
                                  <td>
                                     <div class="mb-2">
-                                        <label class="small d-block fw-bold">Ordered:</label>
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <label class="small fw-bold">Ordered:</label>
+                                        </div>
                                         <input type="number" step="0.01" name="items[${idx}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered form-control" readonly>
+                                        <input type="hidden" name="items[${idx}][id]" value="">
+                                        <div class="split-summary-area" id="split-summary-${idx}"></div>
                                     </div>
                                     <div class="mb-2">
                                         <label class="small d-block fw-bold">Invoiced:</label>
@@ -409,6 +579,12 @@
                         `);
                     });
                     initSelect2();
+                    updateSerialNumbers();
+                    
+                    $('.item-row').each(function() {
+                        let idx = parseInt($(this).attr('data-index'));
+                        if (idx > maxIndex) maxIndex = idx;
+                    });
                 });
             } else {
                 $('#show_item_det').addClass('d-none');
@@ -536,24 +712,28 @@
 
         function validateForm() {
             let hasError = false;
+            let groupTotals = {};
+
             $('.item-row').each(function() {
                 let isChecked = $(this).find('.row-select').is(':checked');
                 if (!isChecked) return;
 
+                let piId = $(this).find('input[name*="[purchase_invoice_item_id]"]').val();
                 let ordered = parseFloat($(this).find('.qty-ordered').val()) || 0;
                 let received = parseFloat($(this).find('.qty-received').val()) || 0;
-                
                 let accepted = parseFloat($(this).find('.qty-accepted').val()) || 0;
-                
                 let alreadyReceived = parseFloat($(this).find('.qty-already-received').val()) || 0;
-                if (received > (ordered - alreadyReceived)) {
-                    $(this).find('.qty-received').addClass('is-invalid');
-                    $(this).find('.qty-error').show();
-                    hasError = true;
-                } else {
-                    $(this).find('.qty-received').removeClass('is-invalid');
-                    $(this).find('.qty-error').hide();
+
+                if (!groupTotals[piId]) {
+                    groupTotals[piId] = {
+                        totalReceived: 0,
+                        ordered: ordered,
+                        alreadyReceived: alreadyReceived,
+                        rows: []
+                    };
                 }
+                groupTotals[piId].totalReceived += received;
+                groupTotals[piId].rows.push($(this));
 
                 if (accepted > received) {
                     $(this).find('.qty-accepted').addClass('is-invalid');
@@ -564,20 +744,62 @@
                     $(this).find('.qty-acc-error').hide();
                 }
             });
+
+            // Validate group totals
+            for (let piId in groupTotals) {
+                let group = groupTotals[piId];
+                let balance = group.ordered - group.alreadyReceived;
+                let groupError = (group.totalReceived > balance);
+                
+                group.rows.forEach(row => {
+                    if (groupError) {
+                        row.find('.qty-received').addClass('is-invalid');
+                        row.find('.qty-error').text(`Group total (${group.totalReceived.toFixed(2)}) exceeds balance (${balance.toFixed(2)})`).show();
+                        hasError = true;
+                    } else {
+                        row.find('.qty-received').removeClass('is-invalid');
+                        row.find('.qty-error').hide();
+                    }
+                });
+            }
+
             $('button[type="submit"]').prop('disabled', hasError);
         }
 
+        function updateGroupBalances(piId) {
+            let groupRows = [];
+            let totalReceivedInGroup = 0;
+            let ordered = 0;
+            let alreadyReceived = 0;
+
+            $('.item-row').each(function() {
+                if ($(this).find('input[name*="[purchase_invoice_item_id]"]').val() === piId) {
+                    groupRows.push($(this));
+                    if ($(this).find('.row-select').is(':checked')) {
+                        totalReceivedInGroup += parseFloat($(this).find('.qty-received').val()) || 0;
+                    }
+                    ordered = parseFloat($(this).find('.qty-ordered').val()) || 0;
+                    alreadyReceived = parseFloat($(this).find('.qty-already-received').val()) || 0;
+                }
+            });
+
+            let currentBalance = ordered - alreadyReceived - totalReceivedInGroup;
+            groupRows.forEach(row => {
+                row.find('.qty-balanced').val(currentBalance.toFixed(2));
+            });
+        }
+
         function updateRowCalculations(row) {
-            let ordered = parseFloat(row.find('.qty-ordered').val()) || 0;
             let received = parseFloat(row.find('.qty-received').val()) || 0;
             let accepted = parseFloat(row.find('.qty-accepted').val()) || 0;
             let rejected = received - accepted;
             let rate = parseFloat(row.find('.rate-input').val()) || 0;
-            
-            let alreadyReceived = parseFloat(row.find('.qty-already-received').val()) || 0;
+            let piId = row.find('input[name*="[purchase_invoice_item_id]"]').val();
+
             row.find('.qty-rejected').val(rejected.toFixed(2));
-            row.find('.qty-balanced').val((ordered - alreadyReceived - received).toFixed(2));
             row.find('.amount-input').val((accepted * rate).toFixed(2));
+            
+            updateGroupBalances(piId);
         }
 
         $('.item-row').each(function() {
@@ -586,6 +808,7 @@
             let received = parseFloat(row.find('.qty-received').val()) || 0;
             row.find('.btn-variants').prop('disabled', received <= 0);
         });
+        updateSerialNumbers();
 
         $(document).on('change', '.row-select', function() {
             let row = $(this).closest('.item-row');

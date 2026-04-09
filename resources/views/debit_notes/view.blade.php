@@ -68,7 +68,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             processing: true,
             serverSide: false,
             ajax: {

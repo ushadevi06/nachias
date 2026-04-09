@@ -22,6 +22,8 @@ class PurchaseInvoiceItem extends Model
         'qty_ordered',
         'qty_received',
         'qty_invoiced',
+        'brand_id',
+        'fabric_width_id',
         'notes',
     ];
 
@@ -43,5 +45,15 @@ class PurchaseInvoiceItem extends Model
     public function uom()
     {
         return $this->belongsTo(Uom::class);
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    public function fabricWidth()
+    {
+        return $this->belongsTo(FabricSize::class, 'fabric_width_id');
     }
 }

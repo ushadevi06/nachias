@@ -205,6 +205,7 @@
                             @endif
                             <input type="hidden" name="purchase_order_id" value="{{ old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') }}">
                             <input type="hidden" name="fabric_type_id" id="fabric_type_id" value="{{ old('fabric_type_id', $jobCard ? $jobCard->fabric_type_id : '') }}">
+                            <input type="hidden" name="sleeve_instances" id="sleeve_instances_json" value="{{ old('sleeve_instances', ($jobCard && $jobCard->sleeve_instances) ? json_encode($jobCard->sleeve_instances) : '[]') }}">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="plant" name="service_provider_id" class="form-select select2" data-placeholder="Select Plant">
@@ -486,8 +487,11 @@
                                                     @error('production_stages.' . $index . '.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                                 </td>
                                                 <td>
-                                                    <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit" data-selected="{{ $stage['service_provider_id'] ?? '' }}">
+                                                    <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
                                                         <option value="">Select Unit</option>
+                                                        @foreach($plants as $p)
+                                                            <option value="{{ $p->id }}" {{ ($stage['service_provider_id'] ?? '') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                                                        @endforeach
                                                     </select>
                                                     @error('production_stages.' . $index . '.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                                 </td>
@@ -536,6 +540,9 @@
                                             <td>
                                                 <select name="production_stages[0][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
                                                     <option value="">Select Unit</option>
+                                                    @foreach($plants as $p)
+                                                        <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                                    @endforeach
                                                 </select>
                                                 @error('production_stages.0.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
                                             </td>
@@ -976,16 +983,37 @@
         }
 
         let sleeveInstances = []; 
-        if (matrixItems && matrixItems.length > 0) {
+        let rawSleeveJson = $('#sleeve_instances_json').val();
+        try {
+            if (rawSleeveJson && rawSleeveJson !== 'null') {
+                let parsedJson = JSON.parse(rawSleeveJson);
+                if (parsedJson && parsedJson.instances) {
+                    sleeveInstances = parsedJson.instances;
+                    sleeveValues = parsedJson.values || {};
+                }
+            }
+        } catch (e) {
+            console.error('Error parsing sleeve instances', e);
+        }
+
+        if (sleeveInstances.length === 0 && matrixItems && matrixItems.length > 0) {
             let hasFs = matrixItems.some(i => (parseFloat(i.qty_fs) || 0) > 0);
             let hasHs = matrixItems.some(i => (parseFloat(i.qty_hs) || 0) > 0);
             if (hasFs) {
                 const id = Date.now() + Math.random();
                 sleeveInstances.push({ id: id, type: 'fs' });
+                matrixItems.forEach(i => {
+                    if (!sleeveValues[id]) sleeveValues[id] = {};
+                    sleeveValues[id][i.size] = i.qty_fs;
+                });
             }
             if (hasHs) {
                 const id = Date.now() + Math.random();
                 sleeveInstances.push({ id: id, type: 'hs' });
+                matrixItems.forEach(i => {
+                    if (!sleeveValues[id]) sleeveValues[id] = {};
+                    sleeveValues[id][i.size] = i.qty_hs;
+                });
             }
         }
         
@@ -1221,8 +1249,8 @@
             } else {
                 if (isRecheck) {
                     const modalEl = document.getElementById('stockValidationErrorModal');
-                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                    if (modalInstance) modalInstance.hide();
+                    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modalInstance.hide();
                     
                     Swal.fire({
                         icon: 'success',
@@ -1232,7 +1260,8 @@
                         showConfirmButton: false,
                         toast: true
                     }).then(() => {
-                        $('form.common-form').attr('data-skip-validation', 'true').submit();
+                        $('form.common-form').attr('data-skip-validation', 'true');
+                        $('form.common-form')[0].submit();
                     });
                 }
                 return true;
@@ -1319,7 +1348,7 @@
                     
                     if (isValid) {
                         $form.attr('data-skip-validation', 'true');
-                        $form.off('submit').submit(); 
+                        $form[0].submit(); 
                     } else {
                         $btn.prop('disabled', false).html(originalHtml);
                     }
@@ -1645,7 +1674,7 @@
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
                     }
-                    rowHtml += `<td><input type="number" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" data-art="${art}" value="${fsVal}" ${readonlyAttr}></td>`;
+                    rowHtml += `<td><input type="number" name="article_matrix[${index}][fs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="fs-${s}" data-art="${art}" value="${fsVal}" ${readonlyAttr} placeholder="-"></td>`;
                 });
 
                 activeHsSizes.forEach(s => {
@@ -1655,7 +1684,7 @@
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
                     }
-                    rowHtml += `<td><input type="number" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" data-art="${art}" value="${hsVal}" ${readonlyAttr}></td>`;
+                    rowHtml += `<td><input type="number" name="article_matrix[${index}][hs_${s}]" class="form-control form-control-sm qty-input text-center" data-col="hs-${s}" data-art="${art}" value="${hsVal}" ${readonlyAttr} placeholder="-"></td>`;
                 });
 
                 rowHtml += `<td><input type="text" class="form-control form-control-sm row-total text-center fw-bold" readonly tabindex="-1"></td></tr>`;
@@ -1730,7 +1759,7 @@
                         else if (col.startsWith('hs')) rowHS += val;
                         rowTotal += val;
                     });
-                    $row.find('.row-total').val(rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(2)) : '');
+                    $row.find('.row-total').val(rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(2)) : '-');
                     
                     $(`input[name="fabrics[${index}][fs_qty]"]`).val(rowFS > 0 ? rowFS : '');
                     $(`input[name="fabrics[${index}][hs_qty]"]`).val(rowHS > 0 ? rowHS : '');
@@ -1754,12 +1783,12 @@
                             const cons = getConsumptionValue(art, type, size);
                             const calcVal = pieces * cons;
 
-                            $(this).val(calcVal > 0 ? (calcVal % 1 === 0 ? calcVal : calcVal.toFixed(2)) : '');
+                            $(this).val(calcVal > 0 ? (calcVal % 1 === 0 ? calcVal : calcVal.toFixed(2)) : '-');
                             rowTotal += (parseFloat($(this).val()) || 0);
                         }
                     }); 
                     
-                    const finalRowTotal = rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(2)) : '';
+                    const finalRowTotal = rowTotal > 0 ? (rowTotal % 1 === 0 ? rowTotal : rowTotal.toFixed(2)) : '-';
                     $row.find('.row-total').val(finalRowTotal);
                     
                     const $itemUsed = $(`.item-used-input[data-art="${art}"]`);
@@ -1778,14 +1807,14 @@
                     let sum = 0;
                     sum = cat1ColSums[col] || 0;
                     
-                    $(this).text(sum > 0 ? (sum % 1 === 0 ? sum : sum.toFixed(2)) : ''); 
+                    $(this).text(sum > 0 ? (sum % 1 === 0 ? sum : sum.toFixed(2)) : '-'); 
                     
                     if (col.startsWith('fs')) totalFS += sum;
                     else if (col.startsWith('hs')) totalHS += sum;
                     grandTotal += sum;
                 });
 
-                $('#article-qty-matrix-grand-total').text(grandTotal > 0 ? (grandTotal % 1 === 0 ? grandTotal : grandTotal.toFixed(2)) : '');
+                $('#article-qty-matrix-grand-total').text(grandTotal > 0 ? (grandTotal % 1 === 0 ? grandTotal : grandTotal.toFixed(2)) : '-');
 
                 $('#total_qty_fs').val(totalFS > 0 ? Math.round(totalFS) : '');
                 $('#total_qty_hs').val(totalHS > 0 ? Math.round(totalHS) : '');
@@ -1867,11 +1896,27 @@
         function addSleeveInstance(type) {
             captureSleeveValues();
             const id = Date.now() + Math.random();
+            
+            sleeveValues[id] = {};
+            currentSizes.forEach(size => {
+                sleeveValues[id][size] = '';
+            });
+
             sleeveInstances.push({ id, type });
+            updateSleeveJson();
             renderSleeveInstanceList();
             renderCuttingSizeTable(currentSizes, currentRatios);
             syncMatrixWithMasterTable(true);
             updateQuantityRowVisibility();
+        }
+
+        function updateSleeveJson() {
+            captureSleeveValues();
+            const payload = {
+                instances: sleeveInstances,
+                values: sleeveValues
+            };
+            $('#sleeve_instances_json').val(JSON.stringify(payload));
         }
 
         $(document).on('click', '.remove-sleeve-instance', function() {
@@ -1879,6 +1924,7 @@
             const id = $(this).data('instance-id');
             sleeveInstances = sleeveInstances.filter(i => i.id != id);
             if (sleeveValues[id]) delete sleeveValues[id];
+            updateSleeveJson();
             renderSleeveInstanceList();
             renderCuttingSizeTable(currentSizes, currentRatios);
             syncMatrixWithMasterTable(true);
@@ -2024,40 +2070,128 @@
                 
                 let sizeTableHtml = '';
                 if (sizes.length > 0) {
-                    sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1" style="font-size: 11px;">
-                        <thead class="bg-light"><tr><th>Size</th><th>F/S Cons</th><th>H/S Cons</th></tr></thead>
-                        <tbody>`;
-                    
-                    sizes.forEach(sz => {
-                        let vSzFs = '';
-                        let vSzHs = '';
-                        
-                        if (oldFabrics && oldFabrics[index] && oldFabrics[index]['consumptions'] && oldFabrics[index]['consumptions'][sz]) {
-                            vSzFs = oldFabrics[index]['consumptions'][sz]['fs_cons'] || '';
-                            vSzHs = oldFabrics[index]['consumptions'][sz]['hs_cons'] || '';
-                        }
-                        
-                        if (!vSzFs && isEditMode && existingMatrix && existingMatrix.length > 0) {
-                            const m = existingMatrix.find(m => m.art_no == art);
-                            if (m && m.consumptions) {
-                                const c = m.consumptions.find(c => String(c.size) === String(sz));
-                                if (c) {
-                                    vSzFs = c.fs_cons || '';
-                                    vSzHs = c.hs_cons || '';
+                    if (catId == 1) {
+                        sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1 lay-mark-table" id="lay-mark-table-art-${index}" style="font-size: 11px;">
+                            <thead class="bg-light">
+                                <tr class="text-center">
+                                    <th style="width: 10%;">MARK</th>
+                                    <th style="width: 40%;">SIZE</th>
+                                    <th style="width: 20%;">SLEEVE</th>
+                                    <th style="width: 20%;">LAY MARK METER</th>
+                                    <th style="width: 10%;"><i class="ri-settings-4-line"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                        let savedLayMarks = [];
+                        if (oldFabrics && oldFabrics[index] && oldFabrics[index].lay_marks) {
+                            const rawOld = oldFabrics[index].lay_marks;
+                            const oldEntries = Array.isArray(rawOld) ? rawOld : Object.values(rawOld);
+                            savedLayMarks = oldEntries.map(e => ({
+                                sizes: e.sizes || [],
+                                sleeve_type: e.sleeve || e.sleeve_type || 'F/S',
+                                lay_mark_meter: e.meter || e.lay_mark_meter || null
+                            }));
+                        } else if (isEditMode && existingMatrix.length > 0) {
+                            const m = existingMatrix.find(m => String(m.art_no).trim() == String(art).trim());
+                            if (m && m.lay_marks && m.lay_marks.length > 0) {
+                                savedLayMarks = m.lay_marks;
+                            } else if (m && m.consumptions && m.consumptions.length > 0) {
+                                const fsRows = m.consumptions.filter(c => parseFloat(c.fs_cons) > 0);
+                                const hsRows = m.consumptions.filter(c => parseFloat(c.hs_cons) > 0);
+                                
+                                if (fsRows.length > 0) {
+                                    savedLayMarks.push({
+                                        sizes: fsRows.map(c => String(c.size)),
+                                        sleeve_type: 'F/S',
+                                        lay_mark_meter: null
+                                    });
+                                }
+                                if (hsRows.length > 0) {
+                                    savedLayMarks.push({
+                                        sizes: hsRows.map(c => String(c.size)),
+                                        sleeve_type: 'H/S',
+                                        lay_mark_meter: null
+                                    });
                                 }
                             }
                         }
+                        
+                        const rowsToRender = savedLayMarks.length > 0 ? savedLayMarks : [{ sizes: [], sleeve_type: 'F/S', lay_mark_meter: null }];
+                        
+                        rowsToRender.forEach((lm, lmIndex) => {
+                            const savedSizes = lm.sizes ? (Array.isArray(lm.sizes) ? lm.sizes : JSON.parse(lm.sizes)) : [];
+                            const savedSleeve = lm.sleeve_type || 'F/S';
+                            const savedMeter = lm.lay_mark_meter || '';
+                            
+                            sizeTableHtml += `
+                                <tr class="lay-mark-row">
+                                    <td class="text-center align-middle fw-bold mark-no">${lmIndex + 1}</td>
+                                    <td>
+                                        <select class="form-select form-select-sm select2-size-multi" multiple="multiple" name="fabrics[${index}][lay_marks][${lmIndex}][sizes][]" style="width: 100%;">
+                                            ${sizes.map(sz => `<option value="${sz}" ${savedSizes.includes(String(sz)) ? 'selected' : ''}>${sz}</option>`).join('')}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" name="fabrics[${index}][lay_marks][${lmIndex}][sleeve]">
+                                            <option value="F/S" ${savedSleeve === 'F/S' ? 'selected' : ''}>F/S</option>
+                                            <option value="H/S" ${savedSleeve === 'H/S' ? 'selected' : ''}>H/S</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${lmIndex}][meter]" placeholder="0.00" value="${savedMeter}" ${isTaskReadOnly}>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <button type="button" class="btn btn-sm btn-icon btn-danger remove-lay-mark" ${isTaskReadOnly ? 'disabled' : ''}><i class="ri ri-delete-bin-line"></i></button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        sizeTableHtml += `</tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-center p-1">
+                                        <button type="button" class="btn btn-sm btn-primary add-lay-mark-btn" data-index="${index}" data-sizes='${JSON.stringify(sizes)}' ${isTaskReadOnly ? 'disabled' : ''}><i class="ri ri-add-line"></i> Add Row</button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>`;
+                    } else {
+                        sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1" style="font-size: 11px;">
+                            <thead class="bg-light"><tr><th>Size</th><th>F/S Cons</th><th>H/S Cons</th></tr></thead>
+                            <tbody>`;
+                        
+                        sizes.forEach(sz => {
+                            let vSzFs = '';
+                            let vSzHs = '';
+                            
+                            if (oldFabrics && oldFabrics[index] && oldFabrics[index]['consumptions'] && oldFabrics[index]['consumptions'][sz]) {
+                                vSzFs = oldFabrics[index]['consumptions'][sz]['fs_cons'] || '';
+                                vSzHs = oldFabrics[index]['consumptions'][sz]['hs_cons'] || '';
+                            }
+                            
+                            if (!vSzFs && isEditMode && existingMatrix && existingMatrix.length > 0) {
+                                const m = existingMatrix.find(m => m.art_no == art);
+                                if (m && m.consumptions) {
+                                    const c = m.consumptions.find(c => String(c.size) === String(sz));
+                                    if (c) {
+                                        vSzFs = c.fs_cons || '';
+                                        vSzHs = c.hs_cons || '';
+                                    }
+                                }
+                            }
 
-                        if (vSzFs !== '' && !isNaN(vSzFs)) vSzFs = parseFloat(vSzFs).toFixed(2);
-                        if (vSzHs !== '' && !isNaN(vSzHs)) vSzHs = parseFloat(vSzHs).toFixed(2);
+                            if (vSzFs !== '' && !isNaN(vSzFs)) vSzFs = parseFloat(vSzFs).toFixed(2);
+                            if (vSzHs !== '' && !isNaN(vSzHs)) vSzHs = parseFloat(vSzHs).toFixed(2);
 
-                        sizeTableHtml += `<tr>
-                            <td>${sz}</td>
-                            <td><input type="number" step="0.01" name="fabrics[${index}][consumptions][${sz}][fs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vSzFs}" ${isTaskReadOnly}></td>
-                            <td><input type="number" step="0.01" name="fabrics[${index}][consumptions][${sz}][hs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vSzHs}" ${isTaskReadOnly}></td>
-                        </tr>`;
-                    });
-                    sizeTableHtml += `</tbody></table>`;
+                            sizeTableHtml += `<tr>
+                                <td>${sz}</td>
+                                <td><input type="number" step="0.01" name="fabrics[${index}][consumptions][${sz}][fs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="fs" data-uom="${uom}" data-category="${catId}" value="${vSzFs}" ${isTaskReadOnly}></td>
+                                <td><input type="number" step="0.01" name="fabrics[${index}][consumptions][${sz}][hs_cons]" class="form-control form-control-sm text-center p-0 sleeve-qty-input size-cons-input" data-art="${art}" data-size="${sz}" data-type="hs" data-uom="${uom}" data-category="${catId}" value="${vSzHs}" ${isTaskReadOnly}></td>
+                            </tr>`;
+                        });
+                        sizeTableHtml += `</tbody></table>`;
+                    }
                 } else {
                     sizeTableHtml = `<div class="small text-muted p-1">Generate matrix first to see sizes</div>`;
                 }
@@ -2075,6 +2209,70 @@
             $tbody.append(inOutRow + '</tr>');
             $tbody.append(nPattiRow + '</tr>');
             $tbody.append(sleeveQtyRow + '</tr>');
+            $('.select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
+        }
+
+        $(document).on('click', '.add-lay-mark-btn', function() {
+            const index = $(this).data('index');
+            const sizes = $(this).data('sizes');
+            const $table = $('#lay-mark-table-art-' + index + ' tbody');
+            const rowCount = $table.find('tr.lay-mark-row').length;
+            const newIndex = rowCount;
+            
+            let rowHtml = `
+                <tr class="lay-mark-row">
+                    <td class="text-center align-middle fw-bold mark-no">${newIndex + 1}</td>
+                    <td>
+                        <select class="form-select form-select-sm select2-size-multi" multiple="multiple" name="fabrics[${index}][lay_marks][${newIndex}][sizes][]" style="width: 100%;">
+                            ${sizes.map(sz => `<option value="${sz}">${sz}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" name="fabrics[${index}][lay_marks][${newIndex}][sleeve]">
+                            <option value="F/S">F/S</option>
+                            <option value="H/S">H/S</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${newIndex}][meter]" placeholder="0.00">
+                    </td>
+                    <td class="text-center align-middle">
+                        <button type="button" class="btn btn-sm btn-icon btn-danger remove-lay-mark"><i class="ri ri-delete-bin-line"></i></button>
+                    </td>
+                </tr>
+            `;
+            $table.append(rowHtml);
+            $table.find('tr:last-child .select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
+            updateLayMarkRowNumbers($table);
+        });
+
+        $(document).on('click', '.remove-lay-mark', function() {
+            const $table = $(this).closest('tbody');
+            if ($table.find('tr.lay-mark-row').length > 1) {
+                $(this).closest('tr').remove();
+                updateLayMarkRowNumbers($table);
+            }
+        });
+
+        function updateLayMarkRowNumbers($table) {
+            $table.find('tr.lay-mark-row').each(function(i) {
+                $(this).find('.mark-no').text(i + 1);
+                
+                const selectAttr = $(this).find('.select2-size-multi').attr('name');
+                if (selectAttr) {
+                    $(this).find('.select2-size-multi').attr('name', selectAttr.replace(/\[lay_marks\]\[\d+\]/, `[lay_marks][${i}]`));
+                }
+                
+                const sleeveAttr = $(this).find('select[name$="[sleeve]"]').attr('name');
+                if (sleeveAttr) {
+                    $(this).find('select[name$="[sleeve]"]').attr('name', sleeveAttr.replace(/\[lay_marks\]\[\d+\]/, `[lay_marks][${i}]`));
+                }
+                
+                const meterAttr = $(this).find('input[name$="[meter]"]').attr('name');
+                if (meterAttr) {
+                    $(this).find('input[name$="[meter]"]').attr('name', meterAttr.replace(/\[lay_marks\]\[\d+\]/, `[lay_marks][${i}]`));
+                }
+            });
         }
 
         if (currentArtNumbers.length > 0) {
@@ -2128,8 +2326,7 @@
                     }
                     
                     vRow += `<td>
-                        <input type="number" name="matrix_items[${idx}][qty_${type}]" class="form-control form-control-sm text-center fw-bold qty-direct-input ${type}-summary-${s}" data-type="${type}" data-size="${s}" data-instance="${instanceId}" value="${finalVal}">
-                        <input type="hidden" name="matrix_items[${idx}][size]" value="${s}">
+                        <input type="number" class="form-control form-control-sm text-center fw-bold qty-direct-input dummy-input-${type}-summary-${s}" data-type="${type}" data-size="${s}" data-instance="${instanceId}" value="${finalVal}" placeholder="-">
                     </td>`;
                 });
                 
@@ -2221,6 +2418,7 @@
 
         $(document).on('input', '.qty-direct-input', function() {
             if (isSyncing) return;
+            updateSleeveJson();
             syncMatrixWithMasterTable(true);
         });
 
@@ -2235,6 +2433,30 @@
 
                 if (hasFS) activeFsSizes = [...currentSizes];
                 if (hasHS) activeHsSizes = [...currentSizes];
+
+                $('#hidden-matrix-items-container').remove();
+                let hiddenInputsHtml = `<div id="hidden-matrix-items-container" style="display:none;">`;
+                
+                currentSizes.forEach((size, idx) => {
+                    let totalFs = 0;
+                    let totalHs = 0;
+                    $(`.qty-direct-input[data-type="fs"][data-size="${size}"]`).each(function() {
+                        totalFs += parseFloat($(this).val()) || 0;
+                    });
+                    $(`.qty-direct-input[data-type="hs"][data-size="${size}"]`).each(function() {
+                        totalHs += parseFloat($(this).val()) || 0;
+                    });
+                    
+                    let ratioVal = currentRatios[idx] || '';
+
+                    hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][size]" value="${size}">`;
+                    hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][qty_fs]" value="${totalFs > 0 ? totalFs : ''}">`;
+                    hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][qty_hs]" value="${totalHs > 0 ? totalHs : ''}">`;
+                    hiddenInputsHtml += `<input type="hidden" name="matrix_items[${idx}][ratio]" value="${ratioVal}">`;
+                });
+                
+                hiddenInputsHtml += `</div>`;
+                $('#cutting-size-table').after(hiddenInputsHtml);
 
                 const sizesChanged = JSON.stringify(globalActiveSizes.fs) !== JSON.stringify(activeFsSizes) || JSON.stringify(globalActiveSizes.hs) !== JSON.stringify(activeHsSizes);
 
@@ -2431,6 +2653,9 @@
                 <td>
                     <select name="production_stages[${stageRowIndex}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
                         <option value="">Select Unit</option>
+                        @foreach($plants as $p)
+                            <option value="{{ $p->id }}">{{ $p->name }}</option>
+                        @endforeach
                     </select>
                 </td>
                 <td>
@@ -2473,34 +2698,12 @@
         $(document).on('change', '.stage-select', function() {
             let $row = $(this).closest('tr');
             let stageId = $(this).val();
-            let $providerSelect = $row.find('.provider-select');
             let $issueDate = $row.find('.issue-date');
 
-            $providerSelect.prop('disabled', true).html('<option value="">Loading...</option>').trigger('change.select2');
-
             if (stageId) {
-                $.ajax({
-                    url: `{{ url('get-service-providers-by-stage') }}/${stageId}`,
-                    type: 'GET',
-                    success: function(response) {
-                        $providerSelect.prop('disabled', false).html('<option value="">Select Unit</option>');
-                        if (response.success && response.providers) {
-                            response.providers.forEach(p => {
-                                let selected = ($providerSelect.data('selected') == p.id) ? 'selected' : '';
-                                $providerSelect.append(`<option value="${p.id}" ${selected}>${p.name}</option>`);
-                            });
-                        }
-                        $providerSelect.trigger('change.select2');
-                    },
-                    error: function() {
-                        $providerSelect.prop('disabled', false).html('<option value="">Error loading units</option>').trigger('change.select2');
-                    }
-                });
                 if ($issueDate.val()) {
                     $issueDate.trigger('change');
                 }
-            } else {
-                $providerSelect.prop('disabled', false).html('<option value="">Select Unit</option>').trigger('change.select2');
             }
         });
         
@@ -2543,9 +2746,6 @@
         $(document).on('click', '.assign-task-btn', function() {
             let $row = $(this).closest('tr');
             let stageId = $row.find('.stage-select').val();
-            let issueDate = $row.find('.issue-date').val();
-            let deadlineDate = $row.find('.deadline-date').val();
-            let remarks = $row.find('textarea').val();
             let jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
 
             if (!stageId) {
@@ -2556,10 +2756,7 @@
             let baseUrl = '{{ route("task_management.add") }}';
             let params = new URLSearchParams({
                 job_card_id: jobCardId,
-                stage_id: stageId,
-                issue_date: issueDate,
-                due_date: deadlineDate,
-                remarks: remarks
+                stage_id: stageId
             });
             window.open(baseUrl + '?' + params.toString(), '_blank');
         });
@@ -2590,9 +2787,17 @@
                 const total = parseFloat(item.mtr) || 0;
                 const artNo = item.art_no;
                 
+                let oldVal = '';
+                if (oldFabrics && oldFabrics.length > 0) {
+                    const oldF = Object.values(oldFabrics).find(f => String(f.art_no).trim() == String(artNo).trim());
+                    if (oldF && oldF.mtr !== undefined && oldF.mtr !== '') {
+                        oldVal = oldF.mtr;
+                    }
+                }
+
                 let usedStr = (currentManualUsed[artNo] !== undefined && currentManualUsed[artNo] !== '') 
                     ? currentManualUsed[artNo] 
-                    : (isEditMode && parseFloat(item.already_issued) > 0 ? parseFloat(item.already_issued).toFixed(2) : total.toFixed(2));
+                    : (oldVal !== '' ? oldVal : (isEditMode && parseFloat(item.already_issued) > 0 ? parseFloat(item.already_issued).toFixed(2) : total.toFixed(2)));
                 
                 const used = parseFloat(usedStr) || 0;
                 const remaining = total - used;
@@ -2608,8 +2813,7 @@
                         <td class="text-center item-total-qty">${total.toFixed(2)}</td>
                         <td>
                             <div class="input-group input-group-sm">
-                                <input type="number" step="0.01" class="form-control text-center fw-bold item-used-input" 
-                                       data-art="${artNo}" value="${usedStr}">
+                                <input type="number" step="0.01" class="form-control text-center fw-bold item-used-input" data-art="${artNo}" value="${usedStr}">
                                 <span class="input-group-text">${item.uom_code || 'MTR'}</span>
                             </div>
                             ${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}

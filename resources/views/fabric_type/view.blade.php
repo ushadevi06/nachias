@@ -50,7 +50,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             processing: true,
             ajax: {
                 url: "{{ url('fabric_type') }}"

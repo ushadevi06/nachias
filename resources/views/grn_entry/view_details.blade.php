@@ -90,6 +90,7 @@
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Brand/Style</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Image</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Art No</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Width</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Ordered</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Received</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Accepted</th>

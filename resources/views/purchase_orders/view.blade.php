@@ -81,7 +81,8 @@
                 ordering: true,
                 info: true,
                 lengthChange: true,
-                pageLength: 10,
+                processing: true,
+                serverSide: true,
                 ajax: {
                     url: "{{ url('purchase_orders') }}",
                     data: function (d) {

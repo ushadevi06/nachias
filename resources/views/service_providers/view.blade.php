@@ -83,7 +83,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             ajax: {
                 url: "{{ url('service_providers') }}",
                 type: "GET",

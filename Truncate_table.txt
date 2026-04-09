@@ -21,6 +21,7 @@ TRUNCATE `uoms`;
 TRUNCATE `zones`;
 TRUNCATE `operation_stages`;
 TRUNCATE `styles`;
+TRUNCATE `fabric_sizes`;
 
 
 TRUNCATE `logs`;
@@ -84,6 +85,9 @@ DELETE FROM job_card_entries;
 ALTER TABLE job_card_entries AUTO_INCREMENT = 1;
 DELETE FROM job_card_fabric_consumptions;
 ALTER TABLE job_card_fabric_consumptions AUTO_INCREMENT = 1;
+DELETE FROM job_card_lay_marks;
+ALTER TABLE job_card_lay_marks AUTO_INCREMENT = 1;
+
 -- =========================
 -- GRN / STOCK
 -- =========================

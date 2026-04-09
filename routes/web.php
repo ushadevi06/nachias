@@ -78,6 +78,7 @@ use App\Http\Controllers\ProductionReceiptController;
 use App\Http\Controllers\ProcessGroupController;
 use App\Http\Controllers\SeasonController;
 use App\Http\Controllers\TicketManagementController;
+use App\Http\Controllers\FabricSizeController;
 
 
 /* |-------------------------------------------------------------------------- | Web Routes |-------------------------------------------------------------------------- | | Here is where you can register web routes for your application. These | routes are loaded by the RouteServiceProvider and all of them will | be assigned to the "web" middleware group. Make something great! | */
@@ -186,6 +187,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], '/fabric_type/add/{id?}', [FabricTypeController::class, 'add']);
     Route::get('/fabric_type/delete/{id}', [FabricTypeController::class, 'destroy']);
     Route::post('/fabric_type/status/{id}', [FabricTypeController::class, 'updateStatus']);
+
+    /* Fabric Size (Width) */
+    Route::get('/fabric-sizes', [FabricSizeController::class, 'index']);
+    Route::match(['GET', 'POST'], '/fabric-sizes/add/{id?}', [FabricSizeController::class, 'add']);
+    Route::get('/fabric-sizes/delete/{id}', [FabricSizeController::class, 'destroy']);
+    Route::post('/fabric-sizes/status/{id}', [FabricSizeController::class, 'updateStatus']);
 
     /* Purchase Commission Agents */
     Route::get('purchase_commission_agent', [PurchaseCommissionAgentController::class, 'index']);

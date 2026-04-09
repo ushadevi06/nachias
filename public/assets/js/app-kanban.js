@@ -317,6 +317,20 @@
         });
     }
 
+    $(document).on('click', '.kanban-item', function (e) {
+        if ($(e.target).closest('.dropdown, .status-dropdown-toggle, button, a').length > 0) {
+            return;
+        }
+
+        const taskId = this.getAttribute('data-eid');
+        if (taskId) {
+            const viewUrl = window.kanbanListViewUrl ? `${window.kanbanListViewUrl}/view/${taskId}` : 'javascript:void(0)';
+            if (viewUrl && viewUrl !== 'javascript:void(0)') {
+                window.location.href = viewUrl;
+            }
+        }
+    });
+
     $(document).on('click', '.kanban-title-board', function () {
         this.contentEditable = 'true';
         this.focus();

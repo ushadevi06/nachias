@@ -73,7 +73,12 @@
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Agent</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->salesAgent->name ?? '-' }}</div>
+                            <div class="fw-bold text-dark">
+                                {{ $salesOrder->salesAgent->name ?? '-' }}
+                                @if($salesOrder->salesAgent && $salesOrder->salesAgent->code)
+                                    <span class="text-primary small">({{ $salesOrder->salesAgent->code }})</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Zone</div>

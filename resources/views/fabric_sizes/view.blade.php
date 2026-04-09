@@ -1,13 +1,13 @@
 @extends('layouts.common')
-@section('title', 'Services - ' . env('WEBSITE_NAME'))
+@section('title', 'Fabric Sizes - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Services</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create services'))
-                <a class="btn btn-primary" href="{{ url('production_services/add') }}">
+                <h4>Fabric Sizes</h4>
+                @if(auth()->id() == 1 || auth()->user()->can('create fabric-sizes'))
+                <a class="btn btn-primary" href="{{ url('fabric-sizes/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
                 @endif
@@ -18,14 +18,11 @@
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="table" id="serviceTable">
+                        <table class="table" id="fabricSizeTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Service Name</th>
-                                    <th>Service Code</th>
-                                    <th>Production Stage</th>
-                                    <th>Applies To</th>
+                                    <th>Fabric Width</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -43,7 +40,7 @@
 @section('scripts')
 <script>
     $(function() {
-        $('#serviceTable').DataTable({
+        $('#fabricSizeTable').DataTable({
             responsive: true,
             paging: true,
             autoWidth: false,
@@ -51,13 +48,10 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            ajax: "{{ url('production_services') }}",
+            ajax: "{{ url('fabric-sizes') }}",
             columns: [
                 { data: 'DT_RowIndex' },
-                { data: 'service_name' },
-                { data: 'service_code' },
-                { data: 'operation_stage' },
-                { data: 'applies_to' },
+                { data: 'width' },
                 {
                     data: 'status',
                     orderable: false,
@@ -71,12 +65,12 @@
             ]
         });
 
-        $(document).on('change', '.service-status-toggle', function() {
+        $(document).on('change', '.fabric-size-status-toggle', function() {
             let id = $(this).data('id');
             let status = $(this).is(':checked') ? 'Active' : 'Inactive';
 
             $.ajax({
-                url: "{{ url('production_services/status') }}/" + id,
+                url: "{{ url('fabric-sizes/status') }}/" + id,
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",

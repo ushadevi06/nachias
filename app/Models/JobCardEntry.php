@@ -30,11 +30,12 @@ class JobCardEntry extends Model
         'cuff_type_id', 'pocket_type_id', 'bottom_cut_id', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',
         'total_qty_fs', 'total_qty_hs', 'grand_total_qty', 'average', 'remarks', 'status',
-        'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label', 'fabric_type_id'
+        'created_by', 'updated_by', 'size_ratio_id', 'ex_1_label', 'ex_2_label', 'fabric_type_id', 'sleeve_instances'
     ];
 
     protected $casts = [
         'stock_entry_ids' => 'array',
+        'sleeve_instances' => 'array',
     ];
 
     public function cuttingMaster()

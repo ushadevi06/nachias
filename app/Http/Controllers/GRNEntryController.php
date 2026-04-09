@@ -151,24 +151,34 @@ class GrnEntryController extends Controller
                 'items' => 'required|array',
             ];
 
+            $groupTotals = [];
             foreach ($request->items as $index => $item) {
                 if (($item['row_selected'] ?? 0) == 1) {
+                    $piItemId = $item['purchase_invoice_item_id'];
+                    if (!isset($groupTotals[$piItemId])) {
+                        $pi_item = PurchaseInvoiceItem::find($piItemId);
+                        $alreadyReceived = GrnEntryItem::where('purchase_invoice_item_id', $piItemId)->where('grn_entry_id', '!=', $id ?? 0)->sum('qty_received');
+                        $groupTotals[$piItemId] = [
+                            'total_request' => 0,
+                            'balance' => ($pi_item->quantity ?? 0) - $alreadyReceived,
+                            'indices' => []
+                        ];
+                    }
+                    $groupTotals[$piItemId]['total_request'] += $item['qty_received'] ?? 0;
+                    $groupTotals[$piItemId]['indices'][] = $index;
+
                     $rules["items.$index.art_no"] = [
                         'required',
                         function ($attribute, $value, $fail) use ($request) {
-                            $allArtNos = collect($request->items)->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']) && (is_string($item['art_no']) || is_numeric($item['art_no'])))->pluck('art_no')->map(fn($art) => (string) $art)->toArray();
-
+                            $allArtNos = collect($request->items)
+                                ->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']))
+                                ->pluck('art_no')
+                                ->map(fn($art) => (string) $art)
+                                ->toArray();
+                                
                             $counts = array_count_values($allArtNos);
-
                             if (isset($counts[$value]) && $counts[$value] > 1) {
                                 $fail('This article number is duplicated within this entry.');
-                            }
-
-                            $id = $request->route('id');
-                            $exists = GrnEntryItem::where('art_no', $value)->whereNull('deleted_at')->where('grn_entry_id', '!=', $id ?? 0)->exists();
-
-                            if ($exists) {
-                                $fail('This article number already exists in another GRN entry.');
                             }
                         }
                     ];
@@ -178,14 +188,14 @@ class GrnEntryController extends Controller
                     $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     $rules["items.$index.fabric_type_id"] = 'nullable|exists:fabric_types,id';
                     $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048';
+                }
+            }
 
-                    $pi_item = PurchaseInvoiceItem::find($item['purchase_invoice_item_id']);
-                    if ($pi_item) {
-                        $alreadyReceived = GrnEntryItem::where('purchase_invoice_item_id', $pi_item->id)->where('grn_entry_id', '!=', $id ?? 0)->sum('qty_received');
-                        $balance = $pi_item->quantity - $alreadyReceived;
-                        if ($item['qty_received'] > $balance) {
-                            return back()->withInput()->withErrors(["items.$index.qty_received" => "Received quantity cannot exceed balance quantity ($balance)."]);
-                        }
+            foreach ($groupTotals as $piId => $data) {
+                if ($data['total_request'] > $data['balance']) {
+                    $bal = $data['balance'];
+                    foreach ($data['indices'] as $idx) {
+                        $rules["items.$idx.qty_received"] = "required|numeric|lte:$bal";
                     }
                 }
             }
@@ -250,10 +260,11 @@ class GrnEntryController extends Controller
                     }
 
                     $piItemId = $itemData['purchase_invoice_item_id'] ?? null;
+                    $rowId = $itemData['id'] ?? null;
 
                     $item = null;
-                    if ($id) {
-                        $item = GrnEntryItem::where('grn_entry_id', $grn->id)->where('purchase_invoice_item_id', $piItemId)->first();
+                    if ($rowId) {
+                        $item = GrnEntryItem::where('grn_entry_id', $grn->id)->where('id', $rowId)->first();
                     }
 
                     if ($item) {
@@ -385,6 +396,7 @@ class GrnEntryController extends Controller
                 'id' => $item->id,
                 'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
                 'art_no' => $art_no,
+                'width' => $item->purchaseOrderItem->fabricWidth->width ?? '-',
                 'uom' => $item->uom->uom_code ?? 'MTR',
                 'qty_ordered' => $item->quantity,
                 'qty_already_received' => $already_received,
@@ -399,7 +411,7 @@ class GrnEntryController extends Controller
         return response()->json([
             'success' => true,
             'supplier_id' => $invoice->supplier_id,
-            'supplier_name' => $invoice->supplier->name ?? 'N/A',
+            'supplier_name' => ($invoice->supplier->name ?? 'N/A') . ($invoice->supplier->code ? ' (' . $invoice->supplier->code . ')' : ''),
             'invoice_date' => $invoice->invoice_date->format('d-m-Y'),
             'store_type_name' => $invoice->purchaseOrder->storeType->store_type_name ?? '',
             'po_number' => $invoice->purchaseOrder->po_number ?? '',

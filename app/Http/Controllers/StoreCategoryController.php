@@ -40,15 +40,15 @@ class StoreCategoryController extends Controller
                     </label>
                     <div class="status_msg_' . $category->id . ' mt-1"></div>';
                 $action = '<div class="button-box">';
-                if ($category->id != 1) {
-                    if (auth()->id() == 1 || auth()->user()->can('edit store-categories')) {
-                        $action .= '
-                    <a href="' . url('store_categories/add/' . $category->id) . '" 
-                       class="btn btn-edit">
-                        <i class="icon-base ri ri-edit-box-line"></i>
-                    </a>';
-                    }
+                if (auth()->id() == 1 || auth()->user()->can('edit store-categories')) {
+                    $action .= '
+                <a href="' . url('store_categories/add/' . $category->id) . '" 
+                   class="btn btn-edit">
+                    <i class="icon-base ri ri-edit-box-line"></i>
+                </a>';
+                }
 
+                if ($category->id != 1) {
                     if (auth()->id() == 1 || auth()->user()->can('delete store-categories')) {
                         $action .= '
                         <button class="btn btn-delete"

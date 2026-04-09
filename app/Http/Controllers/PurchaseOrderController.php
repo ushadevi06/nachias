@@ -13,7 +13,7 @@ use App\Models\Uom;
 use App\Models\Color;
 use App\Models\Style;
 use App\Models\Brand;
-use App\Models\SizeRatio;
+use App\Models\FabricSize;
 use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -28,8 +28,7 @@ class PurchaseOrderController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType'])
-                ->orderBy('id', 'desc');
+            $query = PurchaseOrder::with(['purchaseCommissionAgent', 'supplier', 'storeType'])->orderBy('id', 'desc');
 
             if (!empty($request->status)) {
                 $query->where('status', $request->status);
@@ -47,9 +46,32 @@ class PurchaseOrderController extends Controller
                 }
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('po_number', 'like', "%{$search}%")
+                        ->orWhere('reference_no', 'like', "%{$search}%")
+                        ->orWhereHas('supplier', function ($q2) use ($search) {
+                            $q2->where('name', 'like', "%{$search}%")
+                               ->orWhere('code', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $purchaseOrders = $query->get();
             $data = [];
-            $count = 1;
+            $count = $start + 1;
 
             foreach ($purchaseOrders as $po) {
                 $statusOptions = '';
@@ -124,7 +146,12 @@ class PurchaseOrderController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         return view('purchase_orders.view');
@@ -177,7 +204,7 @@ class PurchaseOrderController extends Controller
                 'items.*.attached_file' => 'nullable|mimes:jpg,jpeg,png,webp|max:2048',
                 'items.*.color_id' => 'nullable|exists:colors,id',
                 'items.*.brand_id' => 'required|exists:brands,id',
-                'items.*.fabric_width_id' => 'nullable|exists:size_ratios,id',
+                'items.*.fabric_width_id' => 'nullable|exists:fabric_sizes,id',
                 'items.*.style_id' => 'required_if:items.*.store_category_id,1|nullable|exists:styles,id',
                 'discount_percent' => 'nullable',
                 'additional_attachments' => 'nullable|array|max:5',
@@ -359,7 +386,7 @@ class PurchaseOrderController extends Controller
         $colors = Color::active()->get();
         $styles = Style::active()->get();
         $brands = Brand::active()->get();
-        $sizeRatios = SizeRatio::active()->get();
+        $fabricSizes = FabricSize::active()->get();
 
         $nextPoNumber = '';
         if (!$id) {
@@ -378,7 +405,7 @@ class PurchaseOrderController extends Controller
                 $nextPoNumber = $prefix . $nextNumber;
             }
         }
-        return view('purchase_orders.add', compact('purchaseOrder', 'purchaseCommissionAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'brands', 'sizeRatios', 'nextPoNumber'));
+        return view('purchase_orders.add', compact('purchaseOrder', 'purchaseCommissionAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'brands', 'fabricSizes', 'nextPoNumber'));
     }
 
     public function view($id)

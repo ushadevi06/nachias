@@ -275,7 +275,7 @@
                         <td><strong>{{ $item->rawMaterial->name ?? '' }}</strong></td>
                         <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
-                        <td class="text-center">{{ $item->fabricWidth->size ?? '-' }}</td>
+                        <td class="text-center">{{ $item->fabricWidth->width ?? '-' }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
                         <td class="text-center">{{ $item->supplier_design_name ?? '-' }}</td>

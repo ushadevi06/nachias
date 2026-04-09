@@ -52,7 +52,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             ajax: "{{ url('credit_notes') }}",
             columns: [
                 { data: 'DT_RowIndex' },

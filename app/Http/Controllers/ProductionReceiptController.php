@@ -352,13 +352,7 @@ class ProductionReceiptController extends Controller
             $artNo = trim($fabricDetail->art_no);
             $avgPrice = 0;
 
-            $stockItems = \DB::table('stock_entry_items')
-                ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
-                ->where('grn_entry_items.art_no', $artNo)
-                ->whereNull('stock_entry_items.deleted_at')
-                ->whereRaw('(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0')
-                ->select('stock_entry_items.price', \DB::raw('(stock_entry_items.qty_in - stock_entry_items.qty_out) as available_qty'))
-                ->get();
+            $stockItems = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('grn_entry_items.art_no', $artNo)->whereNull('stock_entry_items.deleted_at')->whereRaw('(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0')->select('stock_entry_items.price', \DB::raw('(stock_entry_items.qty_in - stock_entry_items.qty_out) as available_qty'))->get();
 
             if ($stockItems->count() == 0) {
                 $rawMaterial = \App\Models\RawMaterial::where('name', $artNo)->orWhere('code', $artNo)->first();
@@ -409,7 +403,6 @@ class ProductionReceiptController extends Controller
             return $group->sum('qty_to_receive');
         });
 
-        // Resolve PO and Style if direct link is missing (Consistency with PDF report)
         $allPOItems = $jobCard->purchaseOrder?->items;
         if (!$allPOItems) {
             $firstArtNo = $jobCard->fabricDetails->first()?->art_no;
@@ -439,26 +432,46 @@ class ProductionReceiptController extends Controller
                 $avgPrice = $articlePrices[$fd->id] ?? 0;
 
                 $consumption = \App\Models\JobCardFabricConsumption::where('job_card_fabric_detail_id', $fd->id)->where('size', $size)->first();
+                $formula = '';
+                $source = 'Manual Entry';
+                $layMarks = $fd->layMarks; 
+                $marksForThisSize = [];
+                $consInMarks = [];
 
-                if ($consumption && (($sleeve == 'F/S' && $consumption->fs_cons > 0) || ($sleeve == 'H/S' && $consumption->hs_cons > 0))) {
+                if ($layMarks && $layMarks->count() > 0) {
+                    foreach ($layMarks as $lm) {
+                        $lmSizes = is_array($lm->sizes) ? $lm->sizes : json_decode($lm->sizes, true);
+                        $lmSleeve = ($lm->sleeve_type == 'H/S') ? 'H/S' : 'F/S';
+                        
+                        if ($lmSizes && in_array($size, $lmSizes) && $lmSleeve == $sleeve) {
+                            $n = count($lmSizes);
+                            if ($n > 0) {
+                                $ci = floatval($lm->lay_mark_meter) / $n;
+                                $marksForThisSize[] = $lm->lay_mark_meter . "m/" . $n;
+                                $consInMarks[] = $ci;
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($consInMarks)) {
+                    $rate = array_sum($consInMarks) / count($consInMarks);
+                    $formula = (count($consInMarks) > 1) ? "(" . implode(" + ", $marksForThisSize) . ") / " . count($consInMarks) : $marksForThisSize[0];
+                    $source = "Lay Marks";
+                } elseif ($consumption && (($sleeve == 'F/S' && $consumption->fs_cons > 0) || ($sleeve == 'H/S' && $consumption->hs_cons > 0))) {
                     $rate = ($sleeve == 'F/S') ? $consumption->fs_cons : $consumption->hs_cons;
+                    $formula = $rate . "m";
                 }
                 elseif ($fd->fs_qty > 0 || $fd->hs_qty > 0) {
                     $rate = ($sleeve == 'F/S') ? $fd->fs_qty : $fd->hs_qty;
                 }
                 else {
-                    $globalSleeve = $jobCard->sleeveMeters
-                        ->where('sleeve_type', ($sleeve == 'F/S' ? 'Full Sleeve' : 'Half Sleeve'))
-                        ->first();
+                    $globalSleeve = $jobCard->sleeveMeters->where('sleeve_type', ($sleeve == 'F/S' ? 'Full Sleeve' : 'Half Sleeve'))->first();
                     $rate = $globalSleeve ? $globalSleeve->meter : 0;
                 }
 
                 $rawMaterial = null;
-                $stockItem = \DB::table('stock_entry_items')
-                    ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
-                    ->where('grn_entry_items.art_no', $fd->art_no)
-                    ->select('stock_entry_items.raw_material_id')
-                    ->first();
+                $stockItem = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('grn_entry_items.art_no', $fd->art_no)->select('stock_entry_items.raw_material_id')->first();
 
                 if ($stockItem) {
                     $rawMaterial = \App\Models\RawMaterial::with(['storeCategory', 'uom'])->find($stockItem->raw_material_id);
@@ -484,7 +497,9 @@ class ProductionReceiptController extends Controller
                     'uom' => $uomName,
                     'rate' => floatval($rate),
                     'price' => floatval($avgPrice),
-                    'total_cost' => floatval($cost)
+                    'total_cost' => floatval($cost),
+                    'formula' => $formula,
+                    'source' => $source
                 ];
             }
             $issueItems = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->get();
@@ -503,11 +518,7 @@ class ProductionReceiptController extends Controller
                 $materialName = 'Consumable';
                 $uomName = 'PCS';
 
-                $stockItem = \DB::table('stock_entry_items')
-                    ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
-                    ->where('stock_entry_items.id', $issueItem->stock_entry_item_id)
-                    ->select('grn_entry_items.art_no', 'stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')
-                    ->first();
+                $stockItem = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('stock_entry_items.id', $issueItem->stock_entry_item_id)->select('grn_entry_items.art_no', 'stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')->first();
 
                 if ($stockItem) {
                     $artNo = $stockItem->art_no;

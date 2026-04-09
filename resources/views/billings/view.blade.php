@@ -66,74 +66,72 @@
 @endsection
 
 @section('scripts')
-<script>
-    $(function() {
-        var table = $('#billingTable').DataTable({
-            responsive: true,
-            paging: true,
-            autoWidth: false,
-            searching: true,
-            ordering: true,
-            info: true,
-            lengthChange: true,
-            pageLength: 10,
-            ajax: {
-                url: "{{ url('billing') }}",
-                data: function(d) {
-                    d.bill_type = $('#bill_type').val();
-                }
-            },
-            columns: [
-                { data: 'DT_RowIndex' },
-                { data: 'bill_no' },
-                { data: 'billing_type' },
-                { data: 'bill_date' },
-                { data: 'amount' },
-                {
-                    data: 'status',
-                    orderable: false,
-                    searchable: false
+    <script>
+        $(function() {
+            var table = $('#billingTable').DataTable({
+                responsive: true,
+                paging: true,
+                autoWidth: false,
+                searching: true,
+                ordering: true,
+                info: true,
+                lengthChange: true,
+                ajax: {
+                    url: "{{ url('billing') }}",
+                    data: function(d) {
+                        d.bill_type = $('#bill_type').val();
+                    }
                 },
-                {
-                    data: 'action',
-                    orderable: false,
-                    searchable: false
-                },
-            ]
-        });
+                columns: [
+                    { data: 'DT_RowIndex' },
+                    { data: 'bill_no' },
+                    { data: 'billing_type' },
+                    { data: 'bill_date' },
+                    { data: 'amount' },
+                    {
+                        data: 'status',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'action',
+                        orderable: false,
+                        searchable: false
+                    },
+                ]
+            });
 
-        // Trigger reload on filter click
-        $('#filterBtn').click(function() {
-            console.log("Filter button clicked. Value:", $('#bill_type').val());
-            table.ajax.reload();
-        });
+            // Trigger reload on filter click
+            $('#filterBtn').click(function() {
+                console.log("Filter button clicked. Value:", $('#bill_type').val());
+                table.ajax.reload();
+            });
 
-        // Trigger reload on reset click
-        $('#resetBtn').click(function() {
-            $('#bill_type').val('').trigger('change');
-            table.ajax.reload();
-        });
+            $('#resetBtn').click(function() {
+                $('#bill_type').val('').trigger('change');
+                table.ajax.reload();
+            });
 
-        $(document).on('change', '.status-dropdown', function() {
-            var id = $(this).data('id');
-            var status = $(this).val();
-            var $msg = $('.status-msg-' + id);
+            $(document).on('change', '.status-dropdown', function() {
+                var id = $(this).data('id');
+                var status = $(this).val();
+                var $msg = $('.status-msg-' + id);
 
-            $.ajax({
-                url: "{{ url('billing/update-status') }}/" + id,
-                type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    status: status
-                },
-                success: function(response) {
-                    $msg.html('<span class="text-success">Updated!</span>').fadeIn().delay(1000).fadeOut();
-                },
-                error: function() {
-                    $msg.html('<span class="text-danger">Error!</span>').fadeIn().delay(1000).fadeOut();
-                }
+                $.ajax({
+                    url: "{{ url('billing/update-status') }}/" + id,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        status: status
+                    },
+                    success: function(response) {
+                        $msg.html('<span class="text-success">Status Changed!</span>').fadeIn().delay(3000).fadeOut();
+                    },
+                    error: function() {
+                        $msg.html('<span class="text-danger">Error!</span>').fadeIn().delay(3000).fadeOut();
+                    }
+                });
             });
         });
-    });
-</script>
+    </script>
 @endsection

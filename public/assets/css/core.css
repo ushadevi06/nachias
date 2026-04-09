@@ -35458,14 +35458,121 @@ Responsive
         width: min(320px, calc(100vw - 32px));
     }
 }
- .table td select.form-select[class*="status-change"] {
-    min-width: 145px !important;
-    padding-right: 2.3rem !important;
-    height: 38px !important;
-    font-size: 0.925rem !important;
-    white-space: nowrap !important;
- }
+.table td select.form-select[class*="status-change"] {
+min-width: 145px !important;
+padding-right: 2.3rem !important;
+height: 38px !important;
+font-size: 0.925rem !important;
+white-space: nowrap !important;
+}
 
- .table td .form-floating-outline {
-    margin-bottom: 0 !important;
- }
+.table td .form-floating-outline {
+margin-bottom: 0 !important;
+}
+
+/* Premium Split Modal Styles */
+.split-modal .modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+.split-modal .modal-header {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: white;
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.split-modal .modal-title {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+.split-modal .btn-close-custom {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.split-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.split-card:hover {
+    border-color: #6366f1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.split-row-anim {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.total-badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+}
+
+.badge-match {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.badge-mismatch {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+/* Split Button Styling */
+.btn-split {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 8px;
+    transition: all 0.2s;
+}
+
+.btn-split:hover {
+    background: #6366f1;
+    color: white;
+    border-color: #4f46e5;
+}
+
+.split-applied-badge {
+    display: inline-block;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+    cursor: pointer;
+}
+.remove-lay-mark {
+    color: #fff;
+}

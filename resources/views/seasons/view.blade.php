@@ -49,7 +49,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             ajax: "{{ url('seasons') }}",
             columns: [
                 { data: 'DT_RowIndex' },

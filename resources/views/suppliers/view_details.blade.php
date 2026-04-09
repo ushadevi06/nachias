@@ -137,6 +137,26 @@
                                 <span class="fw-bold d-block text-muted small text-uppercase mb-1">GST Number</span>
                                 <span class="text-dark fw-bold h6">{{ $supplier->gst_no ?? '-' }}</span>
                             </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <div class="p-2 border rounded bg-light bg-opacity-50 text-center">
+                                        <small class="fw-bold d-block text-muted text-uppercase mb-0" style="font-size: 0.6rem;">IGST %</small>
+                                        <span class="text-dark fw-bold small">{{ $supplier->igst_percent ?? '0' }}%</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded bg-light bg-opacity-50 text-center">
+                                        <small class="fw-bold d-block text-muted text-uppercase mb-0" style="font-size: 0.6rem;">CGST %</small>
+                                        <span class="text-dark fw-bold small">{{ $supplier->cgst_percent ?? '0' }}%</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded bg-light bg-opacity-50 text-center">
+                                        <small class="fw-bold d-block text-muted text-uppercase mb-0" style="font-size: 0.6rem;">SGST %</small>
+                                        <span class="text-dark fw-bold small">{{ $supplier->sgst_percent ?? '0' }}%</span>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="p-3 border rounded bg-light bg-opacity-50">
                                 <span class="fw-bold d-block text-muted small text-uppercase mb-1">PAN Number</span>
                                 <span class="text-dark fw-bold h6">{{ $supplier->pan_no ?? '-' }}</span>

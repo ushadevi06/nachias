@@ -87,7 +87,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             ajax: {
                 url: "{{ url('suppliers') }}",
                 type: "GET",

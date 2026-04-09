@@ -87,7 +87,7 @@
     border: 1px solid rgba(0, 0, 0, 0.04);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    cursor: grab;
+    cursor: pointer;
 }
 
 .app-kanban .kanban-wrapper .kanban-container .kanban-board .kanban-item:hover {
@@ -196,14 +196,11 @@
     opacity: 1;
 }
 
-/* === NEUTRAL + NEW LIST FEATURE === */
 .kanban-add-new-board-column {
     width: 19rem !important;
-    /* Match board width */
     flex-shrink: 0;
     padding-top: 10px;
     margin-right: 2rem;
-    /* Match board margin */
 }
 
 .kanban-add-board-trigger {
@@ -239,4 +236,26 @@
     padding: 1.5rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Empty State Placeholder */
+.kanban-drag:empty {
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kanban-drag:empty::after {
+    content: "No tasks assigned";
+    display: block;
+    text-align: center;
+    color: #a1acb8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: rgba(0, 0, 0, 0.02);
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    border: 1px dashed rgba(0, 0, 0, 0.1);
 }

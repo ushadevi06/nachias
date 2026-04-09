@@ -238,7 +238,7 @@
                     $brandName = $item->purchaseInvoiceItem->purchaseOrderItem->brand->brand_name ?? '-';
                     $styleName = $item->purchaseInvoiceItem->purchaseOrderItem->style->style_name ?? '-';
                     $colorName = $item->purchaseInvoiceItem->purchaseOrderItem->color->color_name ?? '-';
-                    $widthVal = $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->size ?? '-';
+                    $widthVal = $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->width ?? '-';
                     $supplierArtNo = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name ?? '-';
                 @endphp
                 <tr class="{{ ($index % 2 != 0) ? 'alt-row' : '' }}">

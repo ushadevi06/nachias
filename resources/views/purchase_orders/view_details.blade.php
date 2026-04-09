@@ -1,10 +1,9 @@
 @extends('layouts.common')
-@section('title', 'View Purchase Order - ' . env('WEBSITE_NAME'))
+@section('title', 'View Purchase Order: ' . $purchaseOrder->po_number . ' - ' . env('WEBSITE_NAME'))
 @section('content')
     <div class="container-xxl section-padding">
         <div class="row">
             <div class="col-lg-12">
-                <!-- Header Section -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h3 class="fw-bold text-primary mb-1">Purchase Order Details</h3>
@@ -34,6 +33,10 @@
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-4 text-break">
+                            <div class="col-md-3">
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">PO Number</div>
+                                <div class="fw-bold text-primary">{{ $purchaseOrder->po_number }}</div>
+                            </div>
                             <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
                                 <div class="fw-bold text-dark">
@@ -68,7 +71,11 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Agent</div>
-                                <div class="fw-bold text-dark">{{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}
+                                <div class="fw-bold text-dark">
+                                    {{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}
+                                    @if($purchaseOrder->purchaseCommissionAgent && $purchaseOrder->purchaseCommissionAgent->code)
+                                        <span class="text-primary small">({{ $purchaseOrder->purchaseCommissionAgent->code }})</span>
+                                    @endif
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -142,7 +149,7 @@
                                             <td class="small text-dark">{{ $item->color->color_name ?? '-' }}</td>
                                             <td class="small text-dark">{{ $item->style->style_name ?? '-' }}</td>
                                             <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
-                                            <td class="small text-dark">{{ $item->fabricWidth->size ?? '-' }}</td>
+                                            <td class="small text-dark">{{ $item->fabricWidth->width ?? '-' }}</td>
                                             <td class="text-center">
                                                 <span class="badge bg-light text-dark">{{ $item->uom->uom_code ?? '-' }}</span>
                                             </td>

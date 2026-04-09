@@ -70,6 +70,6 @@ class PurchaseOrderItem extends Model
 
     public function fabricWidth()
     {
-        return $this->belongsTo(SizeRatio::class, 'fabric_width_id');
+        return $this->belongsTo(FabricSize::class, 'fabric_width_id');
     }
 }

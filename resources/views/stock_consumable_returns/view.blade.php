@@ -72,7 +72,6 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            pageLength: 10,
             processing: true,
             ajax: "{{ url('stock_consumables_returns') }}",
             columns: [

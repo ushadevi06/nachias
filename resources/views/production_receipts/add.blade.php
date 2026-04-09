@@ -229,7 +229,12 @@
                     '</td>' +
                     '<td>' + (item.color || '-') + '<input type="hidden" name="items[' + index + '][color_id]" value="' + (item.color_id || '') + '"></td>' +
                     '<td>' + (item.size || '') + '<input type="hidden" name="items[' + index + '][size]" value="' + (item.size || '') + '"></td>' +
-                    '<td class="text-end">' + parseFloat(item.unit_price || 0).toFixed(2) + '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '"></td>' +
+                    '<td class="text-end">' + 
+                        '<button type="button" class="btn btn-sm btn-label-primary p-1 btn-show-consumption" data-index="' + index + '">' +
+                            parseFloat(item.unit_price || 0).toFixed(2) + 
+                        '</button>' +
+                        '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '">' +
+                    '</td>' +
                     '<td class="text-end">' + orderedQty.toFixed(2) + '<input type="hidden" class="ordered-qty" name="items[' + index + '][ordered_qty]" value="' + orderedQty.toFixed(2) + '"></td>' +
                     '<td class="text-end"><span class="qty-received-text">' + (alreadyRec + scanQty).toFixed(2) + '</span><input type="hidden" class="qty-already-received" name="items[' + index + '][qty_already_received]" value="' + alreadyRec.toFixed(2) + '"></td>' +
                     '<td class="text-end"><span class="qty-balance-text">' + currentBalance.toFixed(2) + '</span><input type="hidden" class="balance-qty" name="items[' + index + '][balance_qty]" value="' + currentBalance.toFixed(2) + '"></td>' +
@@ -280,6 +285,10 @@
                 if (rate <= 0) return;
                 grandTotalCost += perShirtCost;
 
+                var formulaHtml = detail.formula ? 
+                    '<div class="text-muted small mt-1" style="font-size: 0.75rem;"><i class="ri-calculator-line me-1"></i>' + detail.formula + '</div>' : 
+                    '<div class="text-muted small mt-1" style="font-size: 0.75rem;">' + (detail.source || 'Standard') + '</div>';
+
                 tbody.append('<tr>' +
                     '<td class="ps-3"><span class="badge bg-label-success">' + batchUsage.toFixed(2) + '</span></td>' +
                     '<td>' +
@@ -292,7 +301,10 @@
                         '</div>' +
                     '</td>' +
                     '<td><span class="badge bg-label-secondary">' + (detail.uom || 'MTR') + '</span></td>' +
-                    '<td class="text-end"><span class="fw-bold">' + rate.toFixed(2) + '</span></td>' +
+                    '<td class="text-end">' +
+                        '<div class="fw-bold">' + rate.toFixed(4) + '</div>' + 
+                        formulaHtml +
+                    '</td>' +
                     '<td class="text-end">₹' + materialPrice.toFixed(2) + '</td>' +
                     '<td class="text-end pe-3 fw-bold text-dark">₹' + perShirtCost.toFixed(2) + '</td>' +
                     '</tr>');
