@@ -245,11 +245,22 @@ class DebitNoteController extends Controller
             }
         }
 
-        $purchaseInvoices = PurchaseInvoice::with('supplier')
+        $purchaseInvoices = PurchaseInvoice::with(['supplier', 'items'])
             ->whereHas('grnEntries.grnEntryItems', function ($q) {
                 $q->where('qty_rejected', '>', 0);
             })
             ->orderBy('id', 'desc')->get();
+
+        $purchaseInvoices = $purchaseInvoices->filter(function ($invoice) {
+            foreach ($invoice->items as $item) {
+                $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
+                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)->sum('quantity');
+                if ($rejectedQty > $alreadyDebited) {
+                    return true;
+                }
+            }
+            return false;
+        })->values();
 
         $nextDebitNoteNo = '';
         if (!$id) {
@@ -325,11 +336,22 @@ class DebitNoteController extends Controller
     }
     public function getSupplierInvoices($supplierId)
     {
-        $invoices = PurchaseInvoice::where('supplier_id', $supplierId)
+        $invoices = PurchaseInvoice::with('items')->where('supplier_id', $supplierId)
             ->whereHas('grnEntries.grnEntryItems', function ($q) {
                 $q->where('qty_rejected', '>', 0);
             })
-            ->orderBy('id', 'desc')->get(['id', 'invoice_no']);
+            ->orderBy('id', 'desc')->get();
+
+        $invoices = $invoices->filter(function ($invoice) {
+            foreach ($invoice->items as $item) {
+                $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
+                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)->sum('quantity');
+                if ($rejectedQty > $alreadyDebited) {
+                    return true;
+                }
+            }
+            return false;
+        })->values();
         return response()->json([
             'success' => true,
             'invoices' => $invoices
