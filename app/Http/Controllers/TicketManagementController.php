@@ -21,10 +21,40 @@ class TicketManagementController extends Controller
         }
 
         if ($request->ajax()) {
-            $tickets = Ticket::with(['category', 'requester', 'assignedTo'])->latest()->get();
+            $query = Ticket::with(['category', 'requester', 'assignedTo'])->latest();
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('ticket_no', 'like', "%{$search}%")
+                        ->orWhere('subject', 'like', "%{$search}%")
+                        ->orWhere('priority', 'like', "%{$search}%")
+                        ->orWhereHas('category', function ($q2) use ($search) {
+                            $q2->where('category_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('requester', function ($q3) use ($search) {
+                            $q3->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('assignedTo', function ($q4) use ($search) {
+                            $q4->where('name', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
+            $tickets = $query->get();
             $data = [];
-            $i = 1;
+            $i = $start + 1;
 
             foreach ($tickets as $row) {
                 $status = '
@@ -67,7 +97,12 @@ class TicketManagementController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         return view('ticket_management.index');

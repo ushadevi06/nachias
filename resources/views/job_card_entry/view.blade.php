@@ -25,6 +25,7 @@
                                         <th>Brand</th>
                                         <th>Season</th>
                                         <th>Process Group</th>
+                                        <th>Job Card Type</th>
                                         <th>Total QTY</th>
                                         <th>Status</th>
                                         <th>Actions</th>
@@ -48,6 +49,8 @@
                 ordering: true,
                 info: true,
                 lengthChange: true,
+                processing: true,
+                serverSide: true,
                 ajax: "{{ url('job_card_entries') }}",
                 columns: [
                     { data: 'DT_RowIndex' },
@@ -57,6 +60,7 @@
                     { data: 'brand' },
                     { data: 'season' },
                     { data: 'process_group' },
+                    { data: 'job_card_type' },
                     { data: 'total_qty' },
                     {
                         data: 'status',

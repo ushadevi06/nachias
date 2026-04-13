@@ -54,6 +54,7 @@
             info: true,
             lengthChange: true,
             processing: true,
+            serverSide: true,
             ajax: {
                 url: "{{ url('document_repository') }}"
             },

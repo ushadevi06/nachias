@@ -165,14 +165,17 @@
                             <div id="item-rows" class="table-responsive">
                                 <table class="table table-bordered align-middle">
                                     <thead>
+                                        <tr>
                                             <th width="50px">
                                                 <input type="checkbox" id="select_all_items" class="form-check-input">
                                             </th>
                                             <th>Store Category</th>
                                             <th>Raw Material</th>
+                                            <th>Supplier Design Name</th>
                                             <th>Brand</th>
                                             <th>HSN Code</th>
                                             <th>Fabric Width</th>
+                                            <th>Fabric Type</th>
                                             <th>Ordered Qty</th>
                                             <th>Balanced Qty</th>
                                             <th>Invoiced Qty <span class="text-danger">*</span></th>
@@ -196,9 +199,11 @@
                                                         <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="item-rate">
                                                         <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $item['qty_ordered'] ?? 0 }}" class="qty-ordered-val">
                                                         <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $item['qty_invoiced'] ?? 0 }}" class="qty-invoiced-val">
+                                                        <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $item['fabric_type_name'] ?? '-' }}">
                                                     </td>
                                                     <td>{{ $item['store_category_name'] ?? '-' }}</td>
                                                     <td>{{ $item['raw_material_name'] ?? '-' }}</td>
+                                                    <td>{{ $item['art_no'] ?? '-' }}</td>
                                                     <td>
                                                         <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
                                                             <option value="">Select Brand</option>
@@ -225,6 +230,7 @@
                                                             @endforeach
                                                         </select>
                                                     </td>
+                                                    <td>{{ $item['fabric_type_name'] ?? '-' }}</td>
                                                     <td class="qty-ordered-display">{{ $item['qty_ordered'] ?? 0 }}</td>
                                                     <td class="balanced-qty-display">
                                                         {{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}
@@ -269,10 +275,12 @@
                                                         <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}">
                                                         <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $invItem->brand->brand_name ?? $invItem->purchaseOrderItem->brand->brand_name ?? '-' }}">
                                                         <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $invItem->fabricWidth->width ?? $invItem->purchaseOrderItem->fabricWidth->width ?? '-' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}">
                                                     </td>
 
                                                     <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}</td>
                                                     <td>{{ $invItem->rawMaterial->name ?? '-' }}</td>
+                                                    <td>{{ $invItem->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
                                                     <td>
                                                         <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
                                                             <option value="">Select Brand</option>
@@ -307,6 +315,8 @@
                                                             @endforeach
                                                         </select>
                                                     </td>
+                                                    
+                                                    <td>{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
 
                                                     <td class="qty-ordered-display">{{ $invItem->qty_ordered }}</td>
                                                     <td class="balanced-qty-display">{{ $balancedQty }}</td>
@@ -331,7 +341,7 @@
                                             @endforeach
                                         @else
                                             <tr>
-                                                <td colspan="12" class="text-center text-muted">
+                                                <td colspan="13" class="text-center text-muted">
                                                     Please select a Purchase Order to load items
                                                 </td>
                                             </tr>
@@ -976,9 +986,11 @@
                                                 <input type="hidden" name="items[${index}][store_category_name]" value="${item.store_category_name}">
                                                 <input type="hidden" name="items[${index}][brand_name]" value="${item.brand_name}">
                                                 <input type="hidden" name="items[${index}][fabric_width]" value="${item.fabric_width}">
+                                                <input type="hidden" name="items[${index}][fabric_type_name]" value="${item.fabric_type_name || '-'}">
                                             </td>
                                             <td>${item.store_category_name}</td>
                                             <td>${item.raw_material_name}</td>
+                                            <td>${item.art_no || '-'}</td>
                                             <td>${itemBrandSelect}</td>
                                             <td>
                                                 <input type="text" 
@@ -989,6 +1001,7 @@
                                                     readonly>
                                             </td>
                                             <td>${itemWidthSelect}</td>
+                                            <td>${item.fabric_type_name || '-'}</td>
 
                                             <!-- Ordered Qty -->
                                             <td class="qty-ordered-display">${item.qty_ordered}</td>
@@ -1072,7 +1085,7 @@
                         }
                     });
                 } else {
-                    $('#items_tbody').html('<tr><td colspan="12" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
+                    $('#items_tbody').html('<tr><td colspan="13" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
                     $('#purchase_order_no').val('');
                     $('#supplier_id').val('');
                     $('#purchase_commission_agent_id').val('');

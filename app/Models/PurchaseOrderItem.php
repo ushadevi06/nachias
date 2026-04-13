@@ -25,6 +25,7 @@ class PurchaseOrderItem extends Model
         'remarks',
         'attached_file',
         'fabric_width_id',
+        'fabric_type_id',
     ];
 
     protected $casts = [
@@ -71,5 +72,10 @@ class PurchaseOrderItem extends Model
     public function fabricWidth()
     {
         return $this->belongsTo(FabricSize::class, 'fabric_width_id');
+    }
+
+    public function fabricType()
+    {
+        return $this->belongsTo(FabricType::class, 'fabric_type_id');
     }
 }

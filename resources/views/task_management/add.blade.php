@@ -14,6 +14,9 @@
                                 <span class="badge bg-label-secondary px-2 py-1 me-2">Task Execution</span>
                                 <i class="ri ri-arrow-right-s-line"></i>
                                 <span class="ms-2">Job Card: <span class="fw-bold text-dark">{{ $jobCard->job_card_no ?? ($task->job_card_no ?? 'N/A') }}</span></span>
+                                @if(isset($jobCard->job_card_type))
+                                    <span class="ms-2">| Type: <span class="badge bg-label-warning fw-bold">{{ strtoupper($jobCard->job_card_type) }}</span></span>
+                                @endif
                                 @if(isset($jobCard->grand_total_qty))
                                     <span class="ms-2">| Total Qty: <span class="badge bg-label-primary fs-6 fw-bold">{{ (int)$jobCard->grand_total_qty }} PCS</span></span>
                                 @endif
@@ -178,6 +181,14 @@
                                                         $assignmentsArr = old('assignments');
                                                     } elseif(isset($task) && $task->assignments->count() > 0) {
                                                         $assignmentsArr = $task->assignments;
+                                                    } elseif(!isset($task) && isset($services) && count($services) > 0) {
+                                                        foreach($services as $svc) {
+                                                            $assignmentsArr[] = [
+                                                                'service_id' => $svc['id'],
+                                                                'issue_qty' => $svc['qty'],
+                                                                'status' => 'Open'
+                                                            ];
+                                                        }
                                                     } elseif(!isset($task)) {
                                                         $assignmentsArr = [[]]; 
                                                     }

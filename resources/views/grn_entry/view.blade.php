@@ -80,6 +80,8 @@
             ordering: true,
             info: true,
             lengthChange: true,
+            processing: true,
+            serverSide: true,
             ajax: {
                 url: "{{ url('grn_entries') }}",
                 data: function(d) {

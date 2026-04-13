@@ -75,7 +75,7 @@
         $(function () {
             let table = $('#backups-table').DataTable({
                 processing: true,
-                serverSide: false,
+                serverSide: true,
                 ajax: "{{ url('backup_restore') }}",
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex' },

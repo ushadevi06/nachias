@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>Production Receipt - {{ $receipt->receipt_no }}</title>
+    <title>Production Receipt</title>
     <style>
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
@@ -92,7 +92,6 @@
         <tr>
             <td style="width: 50%;">
                 <table>
-                    <tr><td class="label">Receipt No:</td><td>{{ $receipt->receipt_no }}</td></tr>
                     <tr><td class="label">Receipt Date:</td><td>{{ date('d-m-Y', strtotime($receipt->receipt_date)) }}</td></tr>
                     <tr><td class="label">Job Card No:</td><td>{{ $receipt->jobCard->job_card_no ?? '-' }}</td></tr>
                 </table>

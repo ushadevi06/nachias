@@ -51,6 +51,8 @@
             ordering: true,
             info: true,
             lengthChange: true,
+            processing: true,
+            serverSide: true,
             ajax: "{{ url('ticket_management') }}",
             columns: [
                 { data: 'DT_RowIndex' },

@@ -120,9 +120,11 @@
                                         <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="60">S.No</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Store Category</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold">Supplier Design Name</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold">Brand</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">HSN</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">Fabric Width</th>
+                                        <th class="py-3 text-muted text-uppercase small fw-bold text-center">Fabric Type</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">Ordered Qty</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">Balanced Qty</th>
                                         <th class="py-3 text-muted text-uppercase small fw-bold text-center">Invoiced Qty</th>
@@ -151,9 +153,11 @@
                                                         <small class="text-primary fw-medium">({{ $item->rawMaterial->code }})</small>
                                                     @endif
                                                 </td>
+                                                <td>{{ $item->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
                                                 <td>{{ $item->brand->brand_name ?? $item->purchaseOrderItem->brand->brand_name ?? '-' }}</td>
                                                 <td class="text-center">{{ $item->hsn_code ?? '-' }}</td>
                                                 <td class="text-center">{{ $item->fabricWidth->width ?? $item->purchaseOrderItem->fabricWidth->width ?? '-' }}</td>
+                                                <td class="text-center">{{ $item->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
                                                 <td class="text-center">
                                                     <span class="badge bg-light text-dark px-2 py-1 fw-medium">
                                                         {{ number_format($orderedQty, 2) }}
@@ -177,16 +181,14 @@
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="12" class="text-center py-5 text-muted">No items found</td>
+                                            <td colspan="13" class="text-center py-5 text-muted">No items found</td>
                                         </tr>
                                     @endif
                                 </tbody>
                                 <tfoot class="bg-light fw-bold border-top">
                                     <tr>
-                                    <tr>
-                                        <td colspan="11" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
+                                        <td colspan="12" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
                                         <td class="text-end pe-4 py-3">₹{{ number_format($invoice->sub_total, 2) }}</td>
-                                    </tr>
                                     </tr>
                                 </tfoot>
                             </table>

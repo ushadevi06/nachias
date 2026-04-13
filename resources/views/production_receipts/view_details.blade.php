@@ -4,7 +4,7 @@
 <div class="container-xxl section-padding">
     <div class="row g-4">
         <div class="col-lg-12 d-flex justify-content-between align-items-center">
-            <h4>Production Receipt: {{ $receipt->receipt_no }}</h4>
+            <h4>Production Receipt</h4>
             <div class="d-flex gap-2">
                 <a href="{{ route('production_receipts.download_pdf', $receipt->id) }}" class="btn btn-primary" target="_blank">
                     <i class="ri ri-download-line me-1"></i> Download
@@ -22,10 +22,6 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Receipt No</label>
-                            <p>{{ $receipt->receipt_no }}</p>
-                        </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Receipt Date</label>
                             <p>{{ date('d-m-Y', strtotime($receipt->receipt_date)) }}</p>

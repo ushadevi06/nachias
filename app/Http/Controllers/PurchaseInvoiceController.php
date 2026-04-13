@@ -35,9 +35,33 @@ class PurchaseInvoiceController extends Controller
                 $query->where('invoice_status', $request->invoice_status);
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('invoice_no', 'like', "%{$search}%")
+                        ->orWhere('po_reference', 'like', "%{$search}%")
+                        ->orWhere('destination', 'like', "%{$search}%")
+                        ->orWhereHas('supplier', function ($q2) use ($search) {
+                            $q2->where('name', 'like', "%{$search}%")
+                               ->orWhere('code', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $invoices = $query->get();
             $data = [];
-            $count = 1;
+            $count = $start + 1;
 
             foreach ($invoices as $invoice) {
                 $statusOptions = '';
@@ -94,7 +118,12 @@ class PurchaseInvoiceController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         $suppliers = Supplier::where('status', 'Active')->get();
@@ -475,7 +504,6 @@ class PurchaseInvoiceController extends Controller
         return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber', 'brands', 'fabricSizes'));
     }
 
-
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-invoice')) {
@@ -540,7 +568,8 @@ class PurchaseInvoiceController extends Controller
             'items.uom',
             'items.storeCategory',
             'items.brand',
-            'items.fabricWidth'
+            'items.fabricWidth',
+            'items.fabricType'
         ])->findOrFail($id);
 
         $items = $purchaseOrder->items->map(function ($item) {
@@ -566,6 +595,8 @@ class PurchaseInvoiceController extends Controller
                 'brand_name' => $item->brand->brand_name ?? '-',
                 'fabric_width_id' => $item->fabric_width_id,
                 'fabric_width' => $item->fabricWidth->width ?? '-',
+                'fabric_type_id' => $item->fabric_type_id,
+                'fabric_type_name' => $item->fabricType->fabric_type ?? '-',
                 'quantity' => $balanceQty,
                 'qty_ordered' => $item->quantity,
                 'qty_invoiced' => $alreadyInvoicedQty,

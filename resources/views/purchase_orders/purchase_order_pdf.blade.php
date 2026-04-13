@@ -254,15 +254,16 @@
                 <tr>
                     <th width="3%">S.No</th>
                     <th width="10%">Store Category</th>
-                    <th width="8%">Brand</th>
-                    <th width="15%">Raw Material</th>
+                    <th width="7%">Brand</th>
+                    <th width="12%">Raw Material</th>
                     <th width="7%">Style</th>
-                    <th width="8%">Color</th>
+                    <th width="7%">Color</th>
                     <th width="7%">Width</th>
-                    <th width="6%">UOM</th>
-                    <th width="8%">Quantity</th>
+                    <th width="8%">Fabric Type</th>
+                    <th width="5%">UOM</th>
+                    <th width="7%">Quantity</th>
                     <th width="10%">Supplier Design</th>
-                    <th width="8%">Rate</th>
+                    <th width="7%">Rate</th>
                     <th width="10%">Amount</th>
                 </tr>
             </thead>
@@ -276,6 +277,7 @@
                         <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->fabricWidth->width ?? '-' }}</td>
+                        <td class="text-center">{{ $item->fabricType->fabric_type ?? '-' }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
                         <td class="text-center">{{ $item->supplier_design_name ?? '-' }}</td>
@@ -297,12 +299,13 @@
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
+                        <td>&nbsp;</td>
                     </tr>
                 @endfor
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="9" class="text-right bold">Total</td>
+                    <td colspan="10" class="text-right bold">Total</td>
                     <td class="text-center bold">{{ number_format($purchaseOrder->total_qty, 2) }}</td>
                     <td></td>
                     <td class="text-right bold">{{ number_format($purchaseOrder->taxable_amount, 2) }}</td>

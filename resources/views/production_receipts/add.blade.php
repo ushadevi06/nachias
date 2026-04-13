@@ -27,13 +27,7 @@
                                 </div>
                                 @error('job_card_id') <span class="text-danger">{{ $message }}</span> @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" name="receipt_no" id="receipt_no" class="form-control" placeholder="Enter Receipt No" value="{{ old('receipt_no', $receipt->receipt_no ?? '') }}">
-                                    <label for="receipt_no">Receipt No *</label>
-                                </div>
-                                @error('receipt_no') <span class="text-danger">{{ $message }}</span> @enderror
-                            </div>
+
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" name="receipt_date" id="receipt_date" class="form-control receipt-date" placeholder="Select Receipt Date" value="{{ old('receipt_date', $receipt && $receipt->receipt_date ? date('d-m-Y', strtotime($receipt->receipt_date)) : date('d-m-Y')) }}">

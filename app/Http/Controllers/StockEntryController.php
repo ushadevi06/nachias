@@ -56,9 +56,36 @@ class StockEntryController extends Controller
                     $q->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
                 });
             }
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('stock_entry_no', 'like', "%{$search}%")
+                        ->orWhereHas('grnEntry', function ($q2) use ($search) {
+                            $q2->where('grn_number', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('stockEntryItems', function ($q3) use ($search) {
+                            $q3->where('art_no', 'like', "%{$search}%")
+                               ->orWhereHas('rawMaterial', function ($q4) use ($search) {
+                                   $q4->where('name', 'like', "%{$search}%");
+                               });
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $stockEntries = $query->with('productionReceipt.jobCard.fabricType', 'productionReceipt.jobCard.purchaseOrder')->orderBy('id', 'desc')->get();
             $data = [];
-            $count = 1;
+            $count = $start + 1;
 
             foreach ($stockEntries as $entry) {
                 $itemsToShow = $entry->stockEntryItems;
@@ -154,7 +181,12 @@ class StockEntryController extends Controller
                     ];
                 }
             }
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         return view('stock_entry.view');

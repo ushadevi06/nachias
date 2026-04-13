@@ -100,7 +100,7 @@
         let table = $('.logs-table').DataTable({
             processing: true,
             responsive: true,
-            serverSide: false,
+            serverSide: true,
             ajax: {
                 url: "{{ url('logs') }}",
                 data: function(d) {

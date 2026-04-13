@@ -26,9 +26,38 @@ class ProductionReceiptController extends Controller
         }
 
         if ($request->ajax()) {
-            $receipts = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation'])->orderBy('id', 'desc')->get();
+            $query = ProductionReceipt::with(['jobCard', 'storeType', 'storeLocation'])->orderBy('id', 'desc');
+
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('receipt_no', 'like', "%{$search}%")
+                        ->orWhereHas('jobCard', function ($q2) use ($search) {
+                            $q2->where('job_card_no', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('storeType', function ($q3) use ($search) {
+                            $q3->where('store_type_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('storeLocation', function ($q4) use ($search) {
+                            $q4->where('store_location', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
+            $receipts = $query->get();
             $data = [];
-            $i = 1;
+            $i = $start + 1;
 
             foreach ($receipts as $row) {
                 $action = '<div class="button-box">';
@@ -57,7 +86,12 @@ class ProductionReceiptController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         return view('production_receipts.view');
@@ -100,7 +134,6 @@ class ProductionReceiptController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'job_card_id' => 'required|exists:job_card_entries,id',
-                'receipt_no' => 'required|min:3|max:50|unique:production_receipts,receipt_no,' . ($id ?? 'NULL'),
                 'receipt_date' => 'required|date_format:d-m-Y',
                 'doc_date' => 'required|date_format:d-m-Y',
                 'store_type_id' => 'required|exists:store_types,id',
@@ -250,12 +283,11 @@ class ProductionReceiptController extends Controller
             'price' => $receipt->items->sum('total_value'),
         ]);
 
-        // Resolve color if needed (Already handled by receipt items)
 
         foreach ($receipt->items as $item) {
             if ($item->qty_to_receive > 0) {
                 $itemCode = $item->item_code;
-                $sleeve = 'Full'; // Default
+                $sleeve = 'Full';
                 if (str_contains($item->size_variant, ' - ')) {
                     $parts = explode(' - ', $item->size_variant);
                     $sleevePart = trim($parts[1]);
@@ -265,7 +297,6 @@ class ProductionReceiptController extends Controller
                     }
                 }
 
-                // Generate SKU: BC + YY + Sequential
                 $year = date('y');
                 $prefix = 'BC' . $year;
                 $lastSku = StockEntryItem::where('sku', 'like', $prefix . '%')->orderBy('sku', 'desc')->first();
@@ -560,7 +591,6 @@ class ProductionReceiptController extends Controller
                     $brandCode = ($jobCard->brand ? $jobCard->brand->code : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->code : ''));
                     $brandName = ($jobCard->brand ? $jobCard->brand->brand_name : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->brand_name : ''));
                     
-                    // Style logic similar to PDF report
                     $styleName = ($jobCard->item && $jobCard->item->style ? $jobCard->item->style->style_name : $fallbackStyleName);
 
                     $tempGrouped[$key] = [

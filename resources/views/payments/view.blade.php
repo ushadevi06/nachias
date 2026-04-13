@@ -69,7 +69,7 @@
     $(function() {
         var table = $('#payments_table').DataTable({
             processing: true,
-            serverSide: false, 
+            serverSide: true, 
             ajax: {
                 url: "{{ url('payments') }}",
                 data: function(d) {

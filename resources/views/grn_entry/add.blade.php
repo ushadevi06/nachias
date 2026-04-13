@@ -124,14 +124,22 @@
                                                         @php 
                                                             $itemObj = is_array($item) ? (object)$item : $item; 
                                                             if (is_array($item)) {
-                                                                $dbItem = \App\Models\PurchaseInvoiceItem::with('uom')->find($item['purchase_invoice_item_id'] ?? 0);
-                                                                $designName = ($dbItem && $dbItem->rawMaterial) ? ($dbItem->rawMaterial->name . ' (' . $dbItem->rawMaterial->code . ')') : 'Item ' . ($idx + 1);
+                                                                $dbItem = \App\Models\PurchaseInvoiceItem::with(['uom', 'rawMaterial', 'purchaseOrderItem'])->find($item['purchase_invoice_item_id'] ?? 0);
+                                                                if ($dbItem && $dbItem->rawMaterial && $dbItem->rawMaterial->store_category_id == 1 && $dbItem->purchaseOrderItem && strval($dbItem->purchaseOrderItem->supplier_design_name) !== '') {
+                                                                    $designName = $dbItem->purchaseOrderItem->supplier_design_name;
+                                                                } else {
+                                                                    $designName = ($dbItem && $dbItem->rawMaterial) ? ($dbItem->rawMaterial->name . ' (' . $dbItem->rawMaterial->code . ')') : 'Item ' . ($idx + 1);
+                                                                }
                                                                 $uomName = ($dbItem && $dbItem->uom) ? $dbItem->uom->uom_code : 'MTR';
                                                                 $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'] ?? 0)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
                                                                 $qtyOrdered = ($dbItem->quantity ?? 0);
                                                                 $initialBalance = ($qtyOrdered - $alreadyReceived - ($item['qty_received'] ?? 0));
                                                             } else {
-                                                                $designName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial) ? ($item->purchaseInvoiceItem->rawMaterial->name . ' (' . $item->purchaseInvoiceItem->rawMaterial->code . ')') : 'Unknown';
+                                                                if ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial && $item->purchaseInvoiceItem->rawMaterial->store_category_id == 1 && $item->purchaseInvoiceItem->purchaseOrderItem && strval($item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name) !== '') {
+                                                                    $designName = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name;
+                                                                } else {
+                                                                    $designName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial) ? ($item->purchaseInvoiceItem->rawMaterial->name . ' (' . $item->purchaseInvoiceItem->rawMaterial->code . ')') : 'Unknown';
+                                                                }
                                                                 $uomName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->uom) ? $item->purchaseInvoiceItem->uom->uom_code : 'MTR';
                                                                 $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
                                                                 $qtyOrdered = ($item->purchaseInvoiceItem->quantity ?? 0);
@@ -200,7 +208,8 @@
                                                             </td>
                                                             <td>{{ $uomName }}</td>
                                                             <td> 
-                                                                <select class="form-control select2 @error("items.$idx.fabric_type_id") is-invalid @enderror" name="items[{{$idx}}][fabric_type_id]" data-placeholder="Select Fabric Type" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                                <input type="hidden" name="items[{{$idx}}][fabric_type_id]" value="{{ $itemObj->fabric_type_id ?? '' }}">
+                                                                <select class="form-control select2" disabled>
                                                                     <option value="">Select Fabric Type</option>
                                                                     @foreach($fabricTypes as $ft)
                                                                         <option value="{{ $ft->id }}" {{ ($itemObj->fabric_type_id ?? '') == $ft->id ? 'selected' : '' }}>{{ $ft->fabric_type }}</option>
@@ -520,7 +529,10 @@
                                 </td>
                                 <td>${item.width}</td>
                                 <td>${item.uom}</td>
-                                <td><select class="form-control select2" name="items[${idx}][fabric_type_id]"><option value="">Select Fabric</option>${fabrics_options}</select></td>
+                                <td>
+                                                                    <input type="hidden" name="items[${idx}][fabric_type_id]" value="${item.fabric_type_id || ''}">
+                                                                    <select class="form-control select2" data-val="${item.fabric_type_id || ''}" disabled><option value="">Select Fabric</option>${fabrics_options}</select>
+                                                                </td>
                                  <td>
                                     <div class="mb-2">
                                         <div class="d-flex align-items-center justify-content-between">
@@ -578,6 +590,12 @@
                             </tr>
                         `);
                     });
+                    
+                    $('#grn-items-table tbody select[data-val]').each(function() {
+                        let v = $(this).data('val');
+                        if (v) $(this).val(v);
+                    });
+
                     initSelect2();
                     updateSerialNumbers();
                     

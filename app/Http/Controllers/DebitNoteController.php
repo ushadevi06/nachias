@@ -31,9 +31,34 @@ class DebitNoteController extends Controller
                 $query->where('supplier_id', $request->supplier_id);
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('debit_note_no', 'like', "%{$search}%")
+                        ->orWhereHas('purchaseInvoice', function ($q2) use ($search) {
+                            $q2->where('invoice_no', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('supplier', function ($q4) use ($search) {
+                            $q4->where('name', 'like', "%{$search}%")
+                               ->orWhere('code', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $debitNotes = $query->get();
             $data = [];
-            $count = 1;
+            $count = $start + 1;
 
             foreach ($debitNotes as $note) {
                 $status_options = ['Draft', 'Approved', 'Cancelled'];
@@ -70,7 +95,12 @@ class DebitNoteController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         $suppliers = Supplier::where('status', 'Active')->get();

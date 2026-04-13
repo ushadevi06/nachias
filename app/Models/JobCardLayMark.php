@@ -14,7 +14,8 @@ class JobCardLayMark extends Model
         'mark_no',
         'sizes',
         'sleeve_type',
-        'lay_mark_meter'
+        'lay_mark_meter',
+        'no_of_lay'
     ];
 
     protected $casts = [

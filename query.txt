@@ -1,12 +1,4 @@
-ALTER TABLE `suppliers`
-ADD COLUMN `igst_percent` DECIMAL(8,2) NULL AFTER `tax_id`,
-ADD COLUMN `cgst_percent` DECIMAL(8,2) NULL AFTER `igst_percent`,
-ADD COLUMN `sgst_percent` DECIMAL(8,2) NULL AFTER `cgst_percent`;
-
-
-ALTER TABLE `purchase_invoice_items`
-ADD COLUMN `brand_id` BIGINT UNSIGNED NULL AFTER `raw_material_id`,
-ADD COLUMN `fabric_width_id` BIGINT UNSIGNED NULL AFTER `hsn_code`;
-
-ALTER TABLE `job_card_entries`
-ADD COLUMN `sleeve_instances` LONGTEXT NULL;
+ALTER TABLE purchase_order_items
+ADD COLUMN fabric_type_id BIGINT UNSIGNED NULL AFTER brand_id;
+ALTER TABLE job_card_entries
+ADD COLUMN job_card_type VARCHAR(255) NULL DEFAULT 'Regular' AFTER job_card_no;

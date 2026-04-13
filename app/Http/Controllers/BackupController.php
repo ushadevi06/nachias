@@ -16,9 +16,32 @@ class BackupController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $backups = Backup::with('creator')->orderBy('id', 'desc')->get();
+            $query = Backup::with('creator')->orderBy('id', 'desc');
+
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('backup_no', 'like', "%{$search}%")
+                        ->orWhere('backup_type', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
+            $backups = $query->get();
             $data = [];
-            $i = 1;
+            $i = $start + 1;
             foreach ($backups as $row) {
                 $statusBadge = match ($row->status) {
                     'Success' => '<span class="badge bg-success">Success</span>',
@@ -30,7 +53,6 @@ class BackupController extends Controller
                 $action = '<div class="button-box">';
                 if ($row->status == 'Success' && file_exists(public_path('uploads/backup/' . $row->filename))) {
                     $action .= '<a href="' . url('backup_restore/download/' . $row->id) . '" class="btn btn-view" title="Download"><i class="icon-base ri ri-download-line"></i></a>';
-                    // $action .= '<a href="javascript:void(0)" onclick="confirmRestore(' . $row->id . ')" class="btn btn-view" title="Restore"><i class="icon-base ri ri-refresh-line"></i></a>';
                 }
                 $action .= '<a href="javascript:void(0)" onclick="delete_data(\'' . url('backup_restore/delete/' . $row->id) . '\')" class="btn btn-delete" title="Delete"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 $action .= '</div>';
@@ -47,7 +69,12 @@ class BackupController extends Controller
                     'action' => $action,
                 ];
             }
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
         return view('backups/view');
     }

@@ -270,14 +270,15 @@
     <table width="100%" cellpadding="0" cellspacing="0" class="content-table" style="border-collapse:collapse; table-layout:fixed; width:100%;">
       <tr style="height:0; visibility:hidden; line-height:0;">
         <td style="width:4%;"></td>
-        <td style="width:25%;"></td>
+        <td style="width:20%;"></td>
         <td style="width:9%;"></td>
-        <td style="width:9%;"></td>
-        <td style="width:9%;"></td>
+        <td style="width:8%;"></td>
+        <td style="width:8%;"></td>
         <td style="width:10%;"></td>
-        <td style="width:6%;"></td>
         <td style="width:10%;"></td>
-        <td style="width:18%;"></td>
+        <td style="width:5%;"></td>
+        <td style="width:10%;"></td>
+        <td style="width:16%;"></td>
       </tr>
       <tbody>
         <tr style="background-color:#f2f2f2;">
@@ -287,6 +288,7 @@
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">RECEIVED QTY</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">BALANCED QTY</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">BALE No.</th>
+          <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">FAB. TYPE</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">UOM</th>
           <th style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">RATE</th>
           <th style="border-bottom:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">AMOUNT(Rs.)</th>
@@ -307,6 +309,7 @@
           <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ number_format($receivedQty, 2) }}</td>
           <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ number_format($balancedQtyAfterThis, 2) }}</td>
           <td class="no-wrap" style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $item->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
+          <td class="no-wrap" style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $item->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
           <td class="no-wrap" style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $item->uom->uom_code ?? '-' }}</td>
           <td class="no-wrap" style="padding:5px; text-align:right; font-size:11px; border-right:1px solid #000;">{{ number_format($item->rate, 2) }}</td>
           <td class="no-wrap" style="padding:5px; text-align:right; font-size:11px;">{{ number_format($item->amount, 2) }}</td>
@@ -322,6 +325,7 @@
           <td style="border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
           <td style="border-right:1px solid #000;"></td>
+          <td style="border-right:1px solid #000;"></td>
           <td></td>
         </tr>
 
@@ -329,6 +333,7 @@
           <td colspan="2" style="border-right:1px solid #000; border-left:1px solid #000;padding:6px; text-align:right; vertical-align:middle;">Gross Total</td>
           <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;">{{ number_format($invoice->items->sum('qty_ordered'), 2) }}</td>
           <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
+          <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;"></td>
           <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;"></td>
           <td style="border-right:1px solid #000; text-align:center; vertical-align:middle;"></td>
           <td style="border-right:1px solid #000; vertical-align:middle;"></td>

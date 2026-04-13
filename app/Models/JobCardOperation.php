@@ -23,6 +23,16 @@ class JobCardOperation extends Model
         return $this->belongsTo(OperationStage::class);
     }
 
+    public function stage()
+    {
+        return $this->belongsTo(OperationStage::class, 'operation_stage_id');
+    }
+
+    public function serviceProvider()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'service_provider_id');
+    }
+
     public function employee()
     {
         return $this->belongsTo(User::class, 'employee_id');

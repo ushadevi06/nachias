@@ -234,7 +234,12 @@
             @foreach($grn->grnEntryItems as $index => $item)
                 @php 
                     $totalQty += $item->qty_received;
-                    $rawMaterialName = $item->purchaseInvoiceItem->rawMaterial->name ?? '-';
+                    $catId = $item->purchaseInvoiceItem?->rawMaterial?->store_category_id ?? 0;
+                    if ($catId == 1 && $item->purchaseInvoiceItem?->purchaseOrderItem?->supplier_design_name) {
+                        $rawMaterialName = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name;
+                    } else {
+                        $rawMaterialName = $item->purchaseInvoiceItem->rawMaterial->name ?? '-';
+                    }
                     $brandName = $item->purchaseInvoiceItem->purchaseOrderItem->brand->brand_name ?? '-';
                     $styleName = $item->purchaseInvoiceItem->purchaseOrderItem->style->style_name ?? '-';
                     $colorName = $item->purchaseInvoiceItem->purchaseOrderItem->color->color_name ?? '-';

@@ -73,6 +73,7 @@
             info: true,
             lengthChange: true,
             processing: true,
+            serverSide: true,
             ajax: "{{ url('stock_consumables_returns') }}",
             columns: [
                 { data: 'DT_RowIndex', name: 'DT_RowIndex' },

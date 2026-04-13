@@ -20,7 +20,6 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Receipt No</th>
                                     <th>Job Card No</th>
                                     <th>Receipt Date</th>
                                     <th>Store</th>
@@ -52,10 +51,10 @@
             info: true,
             lengthChange: true,
             processing: true,
+            serverSide: true,
             ajax: '{{ url('production_receipts') }}',
             columns: [
                 { data: 'DT_RowIndex', name: 'DT_RowIndex' },
-                { data: 'receipt_no', name: 'receipt_no' },
                 { data: 'job_card_no', name: 'job_card_no' },
                 { data: 'receipt_date', name: 'receipt_date' },
                 { data: 'store', name: 'store' },

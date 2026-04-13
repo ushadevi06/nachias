@@ -28,9 +28,31 @@ class PaymentController extends Controller
                 $query->where('payment_type', $request->payment_type);
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('payment_no', 'like', "%{$search}%")
+                        ->orWhere('payment_type', 'like', "%{$search}%")
+                        ->orWhere('reference_type', 'like', "%{$search}%")
+                        ->orWhere('reference_no', 'like', "%{$search}%")
+                        ->orWhere('payment_mode', 'like', "%{$search}%");
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $payments = $query->get();
             $data = [];
-            $i = 1;
+            $i = $start + 1;
 
             foreach ($payments as $row) {
                 $payment_no = '<a href="' . url('payments/view/' . $row->id) . '">' . $row->payment_no . '</a>';
@@ -56,7 +78,12 @@ class PaymentController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         return view('payments.view');

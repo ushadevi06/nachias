@@ -14,7 +14,6 @@ $(document).ready(function () {
                 dataType: 'json',
                 success: function (data) {
                     $('#city_id').empty().append('<option value="">-- Select City --</option>');
-
                     $.each(data, function (key, city) {
                         $('#city_id').append(
                             '<option value="' + city.id + '">' + city.city_name + '</option>'

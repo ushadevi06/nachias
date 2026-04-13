@@ -148,6 +148,7 @@
                                             <th style="min-width: 240px;">Raw Material *</th>
                                             <th style="min-width: 150px;">Style</th>
                                             <th style="min-width: 150px;">Fabric Width</th>
+                                            <th style="min-width: 150px;">Fabric Type</th>
                                             <th style="min-width: 100px;">UOM *</th>
                                             <th style="min-width: 150px;">Qty *</th>
                                             <th style="min-width: 180px;">Supplier Design Name</th>
@@ -239,6 +240,20 @@
                                                             @endforeach
                                                         </select>
                                                         @error('items.' . $index . '.fabric_width_id')
+                                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                                        @enderror
+                                                    </td>
+                                                    <td>
+                                                        <select
+                                                            class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
+                                                            name="items[{{ $index }}][fabric_type_id]"
+                                                            data-placeholder="Select Fabric Type">
+                                                            <option value="">Select Fabric Type</option>
+                                                            @foreach($fabricTypes as $fabricType)
+                                                                <option value="{{ $fabricType->id }}" {{ ($item['fabric_type_id'] ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        @error('items.' . $index . '.fabric_type_id')
                                                             <div class="text-danger small mt-1">{{ $message }}</div>
                                                         @enderror
                                                     </td>
@@ -410,6 +425,20 @@
                                                     </td>
                                                     <td>
                                                         <select
+                                                            class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
+                                                            name="items[{{ $index }}][fabric_type_id]"
+                                                            data-placeholder="Select Fabric Type">
+                                                            <option value="">Select Fabric Type</option>
+                                                            @foreach($fabricTypes as $fabricType)
+                                                                <option value="{{ $fabricType->id }}" {{ ($item->fabric_type_id ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        @error('items.' . $index . '.fabric_type_id')
+                                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                                        @enderror
+                                                    </td>
+                                                    <td>
+                                                        <select
                                                             class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror"
                                                             disabled data-placeholder="Select UOM">
                                                             @foreach($uoms as $uom)
@@ -567,6 +596,15 @@
                                                         <option value="">Select Width</option>
                                                         @foreach($fabricSizes as $fabricSize)
                                                             <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <select class="select2 form-select fabric_type"
+                                                        name="items[0][fabric_type_id]" data-placeholder="Select Fabric Type">
+                                                        <option value="">Select Fabric Type</option>
+                                                        @foreach($fabricTypes as $fabricType)
+                                                            <option value="{{ $fabricType->id }}">{{ $fabricType->fabric_type }}</option>
                                                         @endforeach
                                                     </select>
                                                 </td>
@@ -908,6 +946,14 @@
                             <option value="">Select Width</option>
                             @foreach($fabricSizes as $fabricSize)
                                 <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td>
+                        <select class="select2 form-select fabric_type" name="items[${itemIndex}][fabric_type_id]" data-placeholder="Select Fabric Type">
+                            <option value="">Select Fabric Type</option>
+                            @foreach($fabricTypes as $fabricType)
+                                <option value="{{ $fabricType->id }}">{{ $fabricType->fabric_type }}</option>
                             @endforeach
                         </select>
                     </td>

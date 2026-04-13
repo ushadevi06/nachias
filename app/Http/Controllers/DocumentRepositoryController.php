@@ -15,9 +15,33 @@ class DocumentRepositoryController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $documents = DocumentRepository::with('department')->orderBy('id', 'desc')->get();
+            $query = DocumentRepository::with('department')->orderBy('id', 'desc');
+
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('document_name', 'like', "%{$search}%")
+                        ->orWhere('document_type', 'like', "%{$search}%")
+                        ->orWhereHas('department', function ($q2) use ($search) {
+                            $q2->where('department', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
+            $documents = $query->get();
             $data = [];
-            $i = 1;
+            $i = $start + 1;
             foreach ($documents as $row) {
                 $file = '-';
                 if ($row->file) {
@@ -48,7 +72,7 @@ class DocumentRepositoryController extends Controller
                     if (Carbon::parse($row->validity_date)->isPast() && !Carbon::parse($row->validity_date)->isToday()) {
                         $status = '<span class="badge bg-danger">Expired</span>';
                     }
-                } 
+                }
 
                 $data[] = [
                     'DT_RowIndex' => $i++,
@@ -61,7 +85,12 @@ class DocumentRepositoryController extends Controller
                     'action' => $action,
                 ];
             }
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
         return view('document_repository/view');
     }

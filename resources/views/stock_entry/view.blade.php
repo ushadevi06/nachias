@@ -130,7 +130,7 @@
             info: true,
             lengthChange: true,
             processing: true,
-            serverSide: false,
+            serverSide: true,
             ajax: {
                 url: "{{ url('stock_entries') }}",
                 data: function(d) {
@@ -162,10 +162,10 @@
                 $('#add-stock-entry-btn').hide();
                 table.column(1).visible(false);
                 $(table.column(3).header()).text('Job Card No.');
-                table.column(4).visible(true); // Fabric Type
-                table.column(5).visible(true); // Sleeve Type
-                table.column(6).visible(true); // Size
-                table.column(7).visible(true); // SKU
+                table.column(4).visible(true);
+                table.column(5).visible(true);
+                table.column(6).visible(true);
+                table.column(7).visible(true);
             } else {
                 $('.filter-box').show();
                 $('#add-stock-entry-btn').show();

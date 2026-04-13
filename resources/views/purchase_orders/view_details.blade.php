@@ -115,6 +115,7 @@
                                         <th class="text-uppercase small fw-bold">Style</th>
                                         <th class="text-uppercase small fw-bold">Supplier Design</th>
                                         <th class="text-uppercase small fw-bold">Width</th>
+                                        <th class="text-uppercase small fw-bold">Fabric Type</th>
                                         <th class="text-center text-uppercase small fw-bold">UOM</th>
                                         <th class="text-center text-uppercase small fw-bold">Qty</th>
                                         <th class="text-end text-uppercase small fw-bold">Rate</th>
@@ -150,6 +151,7 @@
                                             <td class="small text-dark">{{ $item->style->style_name ?? '-' }}</td>
                                             <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
                                             <td class="small text-dark">{{ $item->fabricWidth->width ?? '-' }}</td>
+                                            <td class="small text-dark">{{ $item->fabricType->fabric_type ?? '-' }}</td>
                                             <td class="text-center">
                                                 <span class="badge bg-light text-dark">{{ $item->uom->uom_code ?? '-' }}</span>
                                             </td>

@@ -14,6 +14,7 @@ use App\Models\Color;
 use App\Models\Style;
 use App\Models\Brand;
 use App\Models\FabricSize;
+use App\Models\FabricType;
 use App\Models\Setting;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -205,6 +206,7 @@ class PurchaseOrderController extends Controller
                 'items.*.color_id' => 'nullable|exists:colors,id',
                 'items.*.brand_id' => 'required|exists:brands,id',
                 'items.*.fabric_width_id' => 'nullable|exists:fabric_sizes,id',
+                'items.*.fabric_type_id' => 'nullable|exists:fabric_types,id',
                 'items.*.style_id' => 'required_if:items.*.store_category_id,1|nullable|exists:styles,id',
                 'discount_percent' => 'nullable',
                 'additional_attachments' => 'nullable|array|max:5',
@@ -345,6 +347,7 @@ class PurchaseOrderController extends Controller
                         'style_id' => $item['style_id'] ?? null,
                         'brand_id' => $item['brand_id'] ?? null,
                         'fabric_width_id' => $item['fabric_width_id'] ?? null,
+                        'fabric_type_id' => $item['fabric_type_id'] ?? null,
                         'attached_file' => $item['existing_file'] ?? null,
                     ];
 
@@ -387,6 +390,7 @@ class PurchaseOrderController extends Controller
         $styles = Style::active()->get();
         $brands = Brand::active()->get();
         $fabricSizes = FabricSize::active()->get();
+        $fabricTypes = FabricType::active()->get();
 
         $nextPoNumber = '';
         if (!$id) {
@@ -405,7 +409,7 @@ class PurchaseOrderController extends Controller
                 $nextPoNumber = $prefix . $nextNumber;
             }
         }
-        return view('purchase_orders.add', compact('purchaseOrder', 'purchaseCommissionAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'brands', 'fabricSizes', 'nextPoNumber'));
+        return view('purchase_orders.add', compact('purchaseOrder', 'purchaseCommissionAgents', 'suppliers', 'storeTypes', 'storeCategories', 'uoms', 'colors', 'styles', 'brands', 'fabricSizes', 'fabricTypes', 'nextPoNumber'));
     }
 
     public function view($id)
@@ -423,7 +427,8 @@ class PurchaseOrderController extends Controller
             'items.style',
             'items.color',
             'items.brand',
-            'items.fabricWidth'
+            'items.fabricWidth',
+            'items.fabricType'
         ])->findOrFail($id);
         return view('purchase_orders.view_details', compact('purchaseOrder'));
     }
@@ -444,7 +449,8 @@ class PurchaseOrderController extends Controller
             'items.style',
             'items.color',
             'items.brand',
-            'items.fabricWidth'
+            'items.fabricWidth',
+            'items.fabricType'
         ])->findOrFail($id);
 
         $setting = Setting::first();
@@ -470,7 +476,8 @@ class PurchaseOrderController extends Controller
             'items.style',
             'items.color',
             'items.brand',
-            'items.fabricWidth'
+            'items.fabricWidth',
+            'items.fabricType'
         ])->findOrFail($id);
 
         $setting = Setting::first();

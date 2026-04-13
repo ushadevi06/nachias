@@ -18,9 +18,29 @@ class BillingController extends Controller
                 $query->where('billing_type', $request->bill_type);
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('bill_no', 'like', "%{$search}%")
+                        ->orWhere('billing_type', 'like', "%{$search}%")
+                        ->orWhere('reason', 'like', "%{$search}%");
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $billings = $query->get();
             $data = [];
-            $i = 1;
+            $i = $start + 1;
 
             foreach ($billings as $row) {
                 $statusOptions = ['Pending', 'Partially Paid', 'Paid', 'Cancelled'];
@@ -57,7 +77,12 @@ class BillingController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
 
         return view('billings/view');

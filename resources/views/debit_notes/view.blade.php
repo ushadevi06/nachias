@@ -69,7 +69,7 @@
             info: true,
             lengthChange: true,
             processing: true,
-            serverSide: false,
+            serverSide: true,
             ajax: {
                 url: "{{ url('debit_notes') }}",
                 data: function(d) {

@@ -23,9 +23,31 @@ class LogController extends Controller
                 }
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('module', 'like', "%{$search}%")
+                        ->orWhere('action_type', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($q2) use ($search) {
+                            $q2->where('name', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $logs = $query->get();
             $data = [];
-            $count = 1;
+            $count = $start + 1;
 
             foreach ($logs as $log) {
                 $badgeClass = match ($log->action_type) {
@@ -47,7 +69,12 @@ class LogController extends Controller
                 ];
             }
 
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
         return view('logs.view');
     }

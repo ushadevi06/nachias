@@ -109,7 +109,16 @@
                                     <tr>
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
                                         <td>
-                                            @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
+                                            @php
+                                                $catId = $item->purchaseInvoiceItem?->rawMaterial?->store_category_id ?? 0;
+                                                $designName = null;
+                                                if ($catId == 1 && $item->purchaseInvoiceItem?->purchaseOrderItem?->supplier_design_name) {
+                                                    $designName = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name;
+                                                }
+                                            @endphp
+                                            @if($designName)
+                                                <div class="fw-bold text-dark">{{ $designName }}</div>
+                                            @elseif($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
                                                 <div class="fw-bold text-dark">{{ $item->purchaseInvoiceItem->rawMaterial->name }}</div>
                                                 <small class="text-primary fw-medium">({{ $item->purchaseInvoiceItem->rawMaterial->code }})</small>
                                             @else
@@ -213,7 +222,16 @@
                         <div class="modal-header bg-primary">
                             <h5 class="modal-title text-white" id="variantModalLabel{{ $item->id }}">
                                 Variants for 
-                                @if($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
+                                @php
+                                    $vCatId = $item->purchaseInvoiceItem?->rawMaterial?->store_category_id ?? 0;
+                                    $vDesignName = null;
+                                    if ($vCatId == 1 && $item->purchaseInvoiceItem?->purchaseOrderItem?->supplier_design_name) {
+                                        $vDesignName = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name;
+                                    }
+                                @endphp
+                                @if($vDesignName)
+                                    {{ $vDesignName }}
+                                @elseif($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial)
                                     {{ $item->purchaseInvoiceItem->rawMaterial->name }}
                                 @else
                                     Item {{ $loop->iteration }}

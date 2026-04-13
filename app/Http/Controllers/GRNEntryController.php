@@ -34,9 +34,38 @@ class GrnEntryController extends Controller
                 });
             }
 
+            $totalRecords = $query->count();
+
+            if ($request->has('search') && !empty($request->input('search')['value'])) {
+                $search = $request->input('search')['value'];
+                $query->where(function ($q) use ($search) {
+                    $q->where('grn_number', 'like', "%{$search}%")
+                        ->orWhereHas('purchaseInvoice', function ($q2) use ($search) {
+                            $q2->where('invoice_no', 'like', "%{$search}%")
+                               ->orWhere('po_reference', 'like', "%{$search}%")
+                               ->orWhereHas('purchaseOrder', function ($q3) use ($search) {
+                                   $q3->where('po_number', 'like', "%{$search}%");
+                               });
+                        })
+                        ->orWhereHas('supplier', function ($q4) use ($search) {
+                            $q4->where('name', 'like', "%{$search}%")
+                               ->orWhere('code', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $filteredRecords = $query->count();
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
             $grnEntries = $query->with(['purchaseInvoice.purchaseOrder', 'supplier', 'grnEntryItems'])->latest()->get();
             $data = [];
-            $count = 1;
+            $count = $start + 1;
 
             foreach ($grnEntries as $grn) {
                 $statusLabel = $grn->status ?? 'Draft';
@@ -88,7 +117,12 @@ class GrnEntryController extends Controller
                     'action' => $action,
                 ];
             }
-            return response()->json(['data' => $data]);
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
         }
         $suppliers = \App\Models\Supplier::where('status', 'Active')->orderBy('name')->get();
         return view('grn_entry.view', compact('suppliers'));
@@ -392,9 +426,15 @@ class GrnEntryController extends Controller
                 }
             }
 
+            if ($store_category_id == 1 && $item->purchaseOrderItem && strval($item->purchaseOrderItem->supplier_design_name) !== '') {
+                $design_name = $item->purchaseOrderItem->supplier_design_name;
+            } else {
+                $design_name = ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')';
+            }
+
             return [
                 'id' => $item->id,
-                'design_name' => ($item->rawMaterial->name ?? '') . '(' . ($item->rawMaterial->code ?? '') . ')',
+                'design_name' => $design_name,
                 'art_no' => $art_no,
                 'width' => $item->purchaseOrderItem->fabricWidth->width ?? '-',
                 'uom' => $item->uom->uom_code ?? 'MTR',
@@ -403,6 +443,7 @@ class GrnEntryController extends Controller
                 'rate' => $item->rate,
                 'amount' => $item->amount,
                 'store_category_id' => $store_category_id,
+                'fabric_type_id' => $item->purchaseOrderItem->fabric_type_id ?? '',
             ];
         })->filter(function ($item) {
             return ($item['qty_ordered'] - $item['qty_already_received']) > 0;
