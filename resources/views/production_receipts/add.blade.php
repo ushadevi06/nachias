@@ -131,6 +131,7 @@
                                 <thead class="bg-primary text-white">
                                     <tr>
                                         <th>Item</th>
+                                        <th>Art No</th>
                                         <th>Description</th>
                                         <th>Color</th>
                                         <th>Size</th>
@@ -203,7 +204,7 @@
             tbody.empty();
             
             if (!items || items.length === 0) {
-                tbody.append('<tr><td colspan="9" class="text-center">No items found</td></tr>');
+                tbody.append('<tr><td colspan="10" class="text-center">No items found</td></tr>');
                 $('#items-section').hide();
                 return;
             }
@@ -216,6 +217,7 @@
 
                 var row = '<tr data-index="' + index + '">' +
                     '<td>' + (item.item_code || '') + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || '') + '"></td>' +
+                    '<td>' + (item.art_no || '-') + '</td>' +
                     '<td>' + 
                         (item.description || '') + ' (' + (item.sleeve || '') + ') ' +
                         '<button type="button" class="btn btn-sm btn-link p-0 ms-1 btn-show-consumption" data-index="' + index + '" title="View Consumption Details">' +
@@ -235,6 +237,7 @@
                     '<td><input type="number" step="0.01" class="form-control form-control-sm text-end scan-qty" name="items[' + index + '][scan_qty]" value="' + scanQty.toFixed(2) + '" min="0" data-max="' + (item.balance_qty || 0).toFixed(2) + '"></td>' +
                     '<input type="hidden" name="items[' + index + '][item_id]" value="' + (item.item_id || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][item_code]" value="' + (item.item_code || '') + '">' +
+                    '<input type="hidden" name="items[' + index + '][art_no]" value="' + (item.art_no || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][size_variant]" value="' + (item.size_variant || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][uom_id]" value="' + (item.uom_id || '') + '">' +
                     '<input type="hidden" name="items[' + index + '][uom_code]" value="' + (item.uom_code || '') + '">' +
@@ -374,7 +377,10 @@
                             if (oldItems && Object.keys(oldItems).length > 0) {
                                 responseItems.forEach(function(item) {
                                     var match = Object.values(oldItems).find(function(oi) {
-                                        return oi.item_id == item.item_id && oi.size_variant == item.size_variant && (oi.color_id == item.color_id || oi.color == item.color);
+                                        return oi.item_id == item.item_id &&
+                                            oi.art_no == item.art_no &&
+                                            oi.size_variant == item.size_variant &&
+                                            (oi.color_id == item.color_id || oi.color == item.color);
                                     });
                                     if (match) {
                                         item.scan_qty = match.scan_qty;

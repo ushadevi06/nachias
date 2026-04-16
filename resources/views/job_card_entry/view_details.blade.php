@@ -37,11 +37,6 @@
         <div class="col-lg-12 text-end">
             <a href="{{ route('job_card_entries.download', $jobCard->id) }}" class="btn btn-primary"  target="_blank"><i class="ri ri-download-line me-1"></i> Download</a>
             <a href="{{ route('job_card_entries.print', $jobCard->id) }}" class="btn btn-primary" target="_blank"><i class="ri ri-printer-line me-1"></i> Print</a>
-            @if(auth()->id() == 1 || auth()->user()->can('work-order-pdf job-card'))
-            <a href="{{ route('job_card_entries.work_order_pdf', $jobCard->id) }}" target="_blank" class="btn btn-primary">
-                <i class="ri ri-file-list-3-line me-1"></i> Work Order
-            </a>
-            @endif
             <a href="{{ url('job_card_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line me-1"></i> Back to List</a>
         </div>
         <div class="col-lg-12 mt-4">

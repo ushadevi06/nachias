@@ -83,10 +83,7 @@
 <body>
     <div class="header">
         <h1 class="company-name">{{ $web_settings->company_name }}</h1>
-        <div class="company-address">
-            272/2, Muthupandi Nagar (Sarathambal Kovil Backside),<br>
-            Byepass Road, Madurai - 625016
-        </div>
+        <div class="company-address">{{ $web_settings->address }}</div>
     </div>
 
     <div class="title">Fabric Consumption</div>
@@ -116,18 +113,18 @@
         <thead>
             <tr>
                 <th>S.No</th>
+                <th>Size</th>
                 <th>Art No</th>
                 <th>Qty Produced</th>
                 <th>Qty Issued</th>
                 <th>Qty Wastage</th>
                 <th>Qty Used</th>
                 <th>Qty Adjusted</th>
-                <th>Qty Consumed</th>
-                <th>Qty Balance</th>
-                {{-- <th>Qty/PC</th>
+                <th>Qty Balanced</th>
+                <th>Qty/PC</th>
                 <th>Unit Price</th>
                 <th>Cost</th>
-                <th>Cost/PC</th> --}}
+                <th>Cost/PC</th>
             </tr>
         </thead>
         <tbody>
@@ -145,8 +142,9 @@
                 @php
                     $artNo = $item->art_no;
                     $qtyConsumed = $item->qty_used + $item->qty_adjusted + $item->qty_wastage;
-                    $qtyPerPc = $item->produced_qty > 0 ? $qtyConsumed / $item->produced_qty : 0;
-                    $costPerPc = $item->produced_qty > 0 ? $item->total_cost / $item->produced_qty : 0;
+                    $qtyPerPc = $item->produced_qty > 0 ? $item->qty_used / $item->produced_qty : 0;
+                    $costPerPc = $qtyPerPc * $item->unit_price;
+                    $lineCost = $costPerPc * $item->produced_qty;
                     
                     $totalQtyProduced += $item->produced_qty;
                     $totalQtyIssued += $item->qty_issue;
@@ -155,39 +153,38 @@
                     $totalQtyAdjusted += $item->qty_adjusted;
                     $totalQtyConsumed += $qtyConsumed;
                     $totalQtyBalance += $item->balance;
-                    $totalCost += $item->total_cost;
+                    $totalCost += $lineCost;
                 @endphp
                 <tr>
                     <td>{{ $index + 1 }}</td>
+                    <td>{{ $item->size_label ?? '-' }}</td>
                     <td>{{ $artNo }}</td>
                     <td>{{ number_format($item->produced_qty, 0) }}</td>
                     <td class="text-end">{{ number_format($item->qty_issue, 2) }}</td>
                     <td class="text-end">{{ number_format($item->qty_wastage, 2) }}</td>
                     <td class="text-end">{{ number_format($item->qty_used, 2) }}</td>
                     <td class="text-end">{{ number_format($item->qty_adjusted, 2) }}</td>
-                    <td class="text-end">{{ number_format($qtyConsumed, 2) }}</td>
                     <td class="text-end">{{ number_format($item->balance, 2) }}</td>
-                    {{-- <td class="text-end">{{ number_format($qtyPerPc, 2) }}</td>
+                    <td class="text-end">{{ number_format($qtyPerPc, 4) }}</td>
                     <td class="text-end">{{ number_format($item->unit_price, 2) }}</td>
-                    <td class="text-end">{{ number_format($item->total_cost, 2) }}</td>
-                    <td class="text-end">{{ number_format($costPerPc, 2) }}</td> --}}
+                    <td class="text-end">{{ number_format($lineCost, 2) }}</td>
+                    <td class="text-end">{{ number_format($costPerPc, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
         <tfoot>
             <tr class="footer-row">
-                <td colspan="2" class="text-end">Total</td>
+                <td colspan="3" class="text-end">Total</td>
                 <td>{{ number_format($totalQtyProduced, 0) }}</td>
                 <td class="text-end">{{ number_format($totalQtyIssued, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyWastage, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyUsed, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyAdjusted, 2) }}</td>
-                <td class="text-end">{{ number_format($totalQtyConsumed, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyBalance, 2) }}</td>
-                {{-- <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalQtyConsumed / $totalQtyProduced, 2) : '-' }}</td>
+                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalQtyUsed / $totalQtyProduced, 4) : '-' }}</td>
                 <td class="text-end">-</td>
                 <td class="text-end">{{ number_format($totalCost, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td> --}}
+                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td>
             </tr>
         </tfoot>
     </table>

@@ -15,6 +15,7 @@ class GrnEntryItem extends Model
         'purchase_invoice_item_id',
         'art_no',
         'fabric_type_id',
+        'color_id',
         'qty_ordered',
         'qty_received',
         'qty_accepted',
@@ -46,6 +47,11 @@ class GrnEntryItem extends Model
     public function storeLocation()
     {
         return $this->belongsTo(StoreLocation::class);
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(Color::class);
     }
 
     public function variants()

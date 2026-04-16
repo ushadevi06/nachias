@@ -13,6 +13,7 @@ use App\Models\Task;
 use App\Models\StoreLocation;
 use App\Models\Item;
 use App\Models\User;
+use App\Models\JobCardMatrixQuantity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -180,6 +181,11 @@ class ProductionReceiptController extends Controller
                     $receipt = ProductionReceipt::create($data);
                 }
 
+                $jobCardForArtResolution = null;
+                if ($request->job_card_id) {
+                    $jobCardForArtResolution = JobCardEntry::with(['fabricDetails.quantities'])->find($request->job_card_id);
+                }
+
                 if ($request->has('items') && is_array($request->items)) {
                     foreach ($request->items as $itemData) {
                         $scanQty = floatval($itemData['scan_qty'] ?? 0);
@@ -196,13 +202,14 @@ class ProductionReceiptController extends Controller
 
                             $balanceQty = $maxAllowed - $qtyToReceive;
                             $unitPrice = floatval($itemData['unit_price'] ?? 0);
+                            $resolvedArtNo = $this->resolveReceiptItemArtNo($jobCardForArtResolution, $itemData);
 
                             ProductionReceiptItem::create([
                                 'production_receipt_id' => $receipt->id,
                                 'item_id' => $itemData['item_id'] ?? null,
                                 'item_code' => $itemData['item_code'] ?? '',
                                 'item_name' => $itemData['item_name'] ?? '',
-                                'art_no' => $itemData['art_no'] ?? null,
+                                'art_no' => $resolvedArtNo,
                                 'size' => $itemData['size'] ?? null,
                                 'color_id' => $itemData['color_id'] ?? null,
                                 'description' => $itemData['description'] ?? '',
@@ -262,6 +269,69 @@ class ProductionReceiptController extends Controller
         }
 
         return view('production_receipts.add', compact('receipt', 'jobCards', 'storeTypes', 'storeLocations', 'employees'));
+    }
+
+    private function resolveReceiptItemArtNo($jobCard, array $itemData): ?string
+    {
+        $existingArtNo = trim((string) ($itemData['art_no'] ?? ''));
+        if ($existingArtNo !== '') {
+            return $existingArtNo;
+        }
+
+        if (!$jobCard) {
+            return null;
+        }
+
+        $size = trim((string) ($itemData['size'] ?? ''));
+        $sizeVariant = trim((string) ($itemData['size_variant'] ?? ''));
+        $colorId = $itemData['color_id'] ?? null;
+        $sleeveCode = null;
+
+        if ($sizeVariant !== '') {
+            $parts = array_map('trim', explode(' - ', $sizeVariant));
+            if ($size === '' && isset($parts[0])) {
+                $size = $parts[0];
+            }
+            if (isset($parts[1])) {
+                $sleeveCode = strtoupper($parts[1]);
+            }
+        }
+
+        $matches = collect();
+
+        foreach ($jobCard->fabricDetails as $fabricDetail) {
+            foreach ($fabricDetail->quantities as $quantity) {
+                if ($size !== '' && trim((string) $quantity->size) !== $size) {
+                    continue;
+                }
+
+                if (!is_null($colorId) && !is_null($quantity->color_id) && (string) $quantity->color_id !== (string) $colorId) {
+                    continue;
+                }
+
+                if ($sleeveCode === 'F/S' && floatval($quantity->qty_fs) <= 0) {
+                    continue;
+                }
+
+                if ($sleeveCode === 'H/S' && floatval($quantity->qty_hs) <= 0) {
+                    continue;
+                }
+
+                $matches->push(trim((string) $fabricDetail->art_no));
+            }
+        }
+
+        $matches = $matches->filter()->unique()->values();
+
+        if ($matches->count() === 1) {
+            return $matches->first();
+        }
+
+        if ($jobCard->fabricDetails->count() === 1) {
+            return trim((string) $jobCard->fabricDetails->first()->art_no) ?: null;
+        }
+
+        return null;
     }
 
     private function createStockEntry($receipt, $storeLocationId)
@@ -378,8 +448,39 @@ class ProductionReceiptController extends Controller
             return response()->json(['success' => false, 'message' => 'Job Card not found'], 404);
         }
 
+        $getStoreCategoryIdForArtNo = function ($artNo) {
+            $normalizedArtNo = trim($artNo ?? '');
+            if ($normalizedArtNo === '') {
+                return null;
+            }
+
+            $rawMaterial = \App\Models\RawMaterial::where('code', $normalizedArtNo)
+                ->orWhere('name', $normalizedArtNo)
+                ->first();
+            if ($rawMaterial) {
+                return $rawMaterial->store_category_id;
+            }
+
+            $row = \DB::table('grn_entry_items')
+                ->join('purchase_invoice_items', 'grn_entry_items.purchase_invoice_item_id', '=', 'purchase_invoice_items.id')
+                ->join('raw_materials', 'purchase_invoice_items.raw_material_id', '=', 'raw_materials.id')
+                ->where('grn_entry_items.art_no', $normalizedArtNo)
+                ->orderByDesc('grn_entry_items.id')
+                ->select('raw_materials.store_category_id')
+                ->first();
+
+            return $row?->store_category_id ?? null;
+        };
+
+        // Production receipts should only be generated against Fabric (store_category_id = 1)
+        $fabricDetails = $jobCard->fabricDetails
+            ->filter(function ($fd) use ($getStoreCategoryIdForArtNo) {
+                return $getStoreCategoryIdForArtNo($fd->art_no) === 1;
+            })
+            ->values();
+
         $articlePrices = [];
-        foreach ($jobCard->fabricDetails as $fabricDetail) {
+        foreach ($fabricDetails as $fabricDetail) {
             $artNo = trim($fabricDetail->art_no);
             $avgPrice = 0;
 
@@ -429,14 +530,14 @@ class ProductionReceiptController extends Controller
         $existingReceiptsItems = ProductionReceiptItem::whereIn('production_receipt_id', $existingReceiptIds)
             ->get()
             ->groupBy(function ($item) {
-            return ($item->item_id ?? '0') . '|' . ($item->size_variant ?? '') . '|' . ($item->color ?? '');
+            return ($item->item_id ?? '0') . '|' . trim($item->art_no ?? '') . '|' . ($item->size_variant ?? '') . '|' . ($item->color_id ?? $item->color ?? '');
         })->map(function ($group) {
             return $group->sum('qty_to_receive');
         });
 
         $allPOItems = $jobCard->purchaseOrder?->items;
         if (!$allPOItems) {
-            $firstArtNo = $jobCard->fabricDetails->first()?->art_no;
+            $firstArtNo = $fabricDetails->first()?->art_no;
             if ($firstArtNo) {
                 $grnItem = \App\Models\GrnEntryItem::where('art_no', $firstArtNo)->whereHas('purchaseInvoiceItem.purchaseOrderItem')->first();
                 $allPOItems = $grnItem?->purchaseInvoiceItem?->purchaseOrderItem?->purchaseOrder?->items ?? null;
@@ -453,12 +554,51 @@ class ProductionReceiptController extends Controller
         $items = [];
         $tempGrouped = [];
         $serviceName = $jobCard->processGroup ? $jobCard->processGroup->name : 'Production Service';
+        $artColorMap = [];
 
-        $calculateItemUnitPrice = function ($size, $sleeve) use ($jobCard, $articlePrices) {
+        foreach ($fabricDetails as $fabDetail) {
+            $normalizedArtNo = trim($fabDetail->art_no ?? '');
+            if ($normalizedArtNo === '' || isset($artColorMap[$normalizedArtNo])) {
+                continue;
+            }
+
+            $grnColor = DB::table('grn_entry_items')
+                ->leftJoin('colors', 'grn_entry_items.color_id', '=', 'colors.id')
+                ->where('grn_entry_items.art_no', $normalizedArtNo)
+                ->whereNotNull('grn_entry_items.color_id')
+                ->orderByDesc('grn_entry_items.id')
+                ->select('grn_entry_items.color_id', 'colors.color_name')
+                ->first();
+
+            if (!$grnColor) {
+                $grnColor = DB::table('grn_entry_items')
+                    ->join('purchase_invoice_items', 'grn_entry_items.purchase_invoice_item_id', '=', 'purchase_invoice_items.id')
+                    ->join('purchase_order_items', 'purchase_invoice_items.purchase_order_item_id', '=', 'purchase_order_items.id')
+                    ->leftJoin('colors', 'purchase_order_items.color_id', '=', 'colors.id')
+                    ->where('grn_entry_items.art_no', $normalizedArtNo)
+                    ->whereNotNull('purchase_order_items.color_id')
+                    ->orderByDesc('grn_entry_items.id')
+                    ->select('purchase_order_items.color_id', 'colors.color_name')
+                    ->first();
+            }
+ 
+            if ($grnColor) {
+                $artColorMap[$normalizedArtNo] = [
+                    'color_id' => $grnColor->color_id,
+                    'color' => $grnColor->color_name,
+                ];
+            }
+        }
+
+        $calculateItemUnitPrice = function ($artNo, $size, $sleeve) use ($fabricDetails, $articlePrices) {
             $totalCost = 0;
             $consumptionDetails = [];
+            $normalizedArtNo = trim($artNo ?? '');
 
-            foreach ($jobCard->fabricDetails as $fd) {
+            foreach ($fabricDetails as $fd) {
+                if ($normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
+                    continue;
+                }
                 $rate = 0;
                 $avgPrice = $articlePrices[$fd->id] ?? 0;
 
@@ -533,44 +673,6 @@ class ProductionReceiptController extends Controller
                     'source' => $source
                 ];
             }
-            $issueItems = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->get();
-            foreach ($issueItems as $issueItem) {
-                $rate = floatval($issueItem->average ?? 0);
-                if ($rate <= 0)
-                    continue;
-
-                $avgPrice = 0;
-                if ($issueItem->stock_entry_item_id) {
-                    $stockInfo = \DB::table('stock_entry_items')->where('id', $issueItem->stock_entry_item_id)->first();
-                    $avgPrice = $stockInfo ? $stockInfo->price : 0;
-                }
-
-                $artNo = '';
-                $materialName = 'Consumable';
-                $uomName = 'PCS';
-
-                $stockItem = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('stock_entry_items.id', $issueItem->stock_entry_item_id)->select('grn_entry_items.art_no', 'stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')->first();
-
-                if ($stockItem) {
-                    $artNo = $stockItem->art_no;
-                    $rm = \App\Models\RawMaterial::with(['uom', 'storeCategory'])->find($stockItem->raw_material_id);
-                    if ($rm) {
-                        $materialName = ($rm->storeCategory ? $rm->storeCategory->category_name . ' - ' : '') . $rm->name;
-                        $uomName = $rm->uom ? $rm->uom->uom_code : 'PCS';
-                    }
-                }
-
-                $cost = ($rate * $avgPrice);
-                $totalCost += $cost;
-                $consumptionDetails[] = [
-                    'art_no' => $artNo,
-                    'material_name' => $materialName,
-                    'uom' => $uomName,
-                    'rate' => $rate,
-                    'price' => floatval($avgPrice),
-                    'total_cost' => floatval($cost)
-                ];
-            }
 
             return [
             'total_cost' => $totalCost,
@@ -578,14 +680,17 @@ class ProductionReceiptController extends Controller
             ];
         };
 
-        $processQty = function ($sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleName) {
+        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleName, $artColorMap) {
             if ($qty > 0) {
                 $sizeVariant = $size . ' - ' . $sleeve;
                 $itemKey = $jobCard->item_id ?? '0';
-                $key = $itemKey . '|' . $sizeVariant . '|' . ($colorId ?? $color ?? '');
+                $normalizedArtNo = trim($artNo ?? '');
+                $resolvedColorId = $artColorMap[$normalizedArtNo]['color_id'] ?? $colorId;
+                $resolvedColor = $artColorMap[$normalizedArtNo]['color'] ?? $color;
+                $key = $itemKey . '|' . $normalizedArtNo . '|' . $sizeVariant . '|' . ($resolvedColorId ?? $resolvedColor ?? '');
 
                 if (!isset($tempGrouped[$key])) {
-                    $pricing = $calculateItemUnitPrice($size, $sleeve);
+                    $pricing = $calculateItemUnitPrice($normalizedArtNo, $size, $sleeve);
                     $unitPrice = $pricing['total_cost'];
                     
                     $brandCode = ($jobCard->brand ? $jobCard->brand->code : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->code : ''));
@@ -600,7 +705,7 @@ class ProductionReceiptController extends Controller
                         'sleeve' => $sleeve,
                         'size' => $size,
                         'item_name' => $serviceName,
-                        'art_no' => null,
+                        'art_no' => $normalizedArtNo ?: null,
                         'description' => trim($brandName . ' ' . $styleName . ' ' . $sleeve),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
@@ -608,8 +713,8 @@ class ProductionReceiptController extends Controller
                         'uom_code' => 'PCS',
                         'ordered_qty' => 0,
                         'completed_qty' => 0,
-                        'color' => $color,
-                        'color_id' => $colorId,
+                        'color' => $resolvedColor,
+                        'color_id' => $resolvedColorId,
                         'consumption_details' => $pricing['consumption_details'],
                     ];
                 }
@@ -618,13 +723,12 @@ class ProductionReceiptController extends Controller
             }
         };
 
-        $fabDetail = $jobCard->fabricDetails->first();
-        if ($fabDetail) {
+        foreach ($fabricDetails as $fabDetail) {
             $matrixQtys = \App\Models\JobCardMatrixQuantity::with('colorRel')->where('job_card_fabric_detail_id', $fabDetail->id)->get();
             foreach ($matrixQtys as $mq) {
                 $colorToUse = $mq->color ?: ($mq->colorRel ? $mq->colorRel->color_name : null);
-                $processQty('F/S', $mq->size, $mq->qty_fs, $colorToUse, $mq->color_id);
-                $processQty('H/S', $mq->size, $mq->qty_hs, $colorToUse, $mq->color_id);
+                $processQty($fabDetail->art_no, 'F/S', $mq->size, $mq->qty_fs, $colorToUse, $mq->color_id);
+                $processQty($fabDetail->art_no, 'H/S', $mq->size, $mq->qty_hs, $colorToUse, $mq->color_id);
             }
         }
 
@@ -632,15 +736,32 @@ class ProductionReceiptController extends Controller
             $alreadyRec = $existingReceiptsItems->get($key) ?? 0;
             $balance = $itemData['completed_qty'] - $alreadyRec;
 
-            if ($balance > 0 || ($excludeReceiptId && ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)->where('item_id', $itemData['item_id'])->where('size_variant', $itemData['size_variant'])->where('color_id', $itemData['color_id'])->exists())) {
+            $currentReceiptItemExistsQuery = ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)
+                ->where('item_id', $itemData['item_id'])
+                ->where('size_variant', $itemData['size_variant'])
+                ->where('art_no', $itemData['art_no']);
+
+            if (!is_null($itemData['color_id'])) {
+                $currentReceiptItemExistsQuery->where('color_id', $itemData['color_id']);
+            } else {
+                $currentReceiptItemExistsQuery->whereNull('color_id');
+            }
+
+            if ($balance > 0 || ($excludeReceiptId && $currentReceiptItemExistsQuery->exists())) {
+                $currentReceiptItemQuery = ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)
+                    ->where('item_id', $itemData['item_id'])
+                    ->where('size_variant', $itemData['size_variant'])
+                    ->where('art_no', $itemData['art_no']);
+
+                if (!is_null($itemData['color_id'])) {
+                    $currentReceiptItemQuery->where('color_id', $itemData['color_id']);
+                } else {
+                    $currentReceiptItemQuery->whereNull('color_id');
+                }
 
                 $scanQty = 0;
                 if ($excludeReceiptId) {
-                    $currentReceiptItem = ProductionReceiptItem::where('production_receipt_id', $excludeReceiptId)
-                        ->where('item_id', $itemData['item_id'])
-                        ->where('size_variant', $itemData['size_variant'])
-                        ->where('color_id', $itemData['color_id'])
-                        ->first();
+                    $currentReceiptItem = $currentReceiptItemQuery->first();
                     if ($currentReceiptItem) {
                         $scanQty = $currentReceiptItem->qty_to_receive;
                     }
@@ -744,6 +865,7 @@ class ProductionReceiptController extends Controller
 
         $receipt = ProductionReceipt::with([
             'jobCard.brand',
+            'jobCard.fabricDetails.quantities',
             'jobCard.season',
             'jobCard.serviceProvider',
             'storeType',
@@ -751,6 +873,10 @@ class ProductionReceiptController extends Controller
             'employee',
             'items.uom'
         ])->findOrFail($id);
+
+        foreach ($receipt->items as $item) {
+            $item->resolved_art_no = $this->resolveReceiptItemArtNo($receipt->jobCard, $item->toArray());
+        }
 
         return view('production_receipts.view_details', compact('receipt'));
     }
@@ -763,6 +889,7 @@ class ProductionReceiptController extends Controller
 
         $receipt = ProductionReceipt::with([
             'jobCard.brand',
+            'jobCard.fabricDetails.quantities',
             'jobCard.season',
             'jobCard.serviceProvider',
             'storeType',
@@ -770,6 +897,10 @@ class ProductionReceiptController extends Controller
             'employee',
             'items.uom'
         ])->findOrFail($id);
+
+        foreach ($receipt->items as $item) {
+            $item->resolved_art_no = $this->resolveReceiptItemArtNo($receipt->jobCard, $item->toArray());
+        }
 
         $is_print = true;
         return view('production_receipts.pdf', compact('receipt', 'is_print'));
@@ -783,6 +914,7 @@ class ProductionReceiptController extends Controller
 
         $receipt = ProductionReceipt::with([
             'jobCard.brand',
+            'jobCard.fabricDetails.quantities',
             'jobCard.season',
             'jobCard.serviceProvider',
             'storeType',
@@ -790,6 +922,10 @@ class ProductionReceiptController extends Controller
             'employee',
             'items.uom'
         ])->findOrFail($id);
+
+        foreach ($receipt->items as $item) {
+            $item->resolved_art_no = $this->resolveReceiptItemArtNo($receipt->jobCard, $item->toArray());
+        }
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('production_receipts.pdf', compact('receipt'));
         $pdf->setPaper('A4', 'portrait');

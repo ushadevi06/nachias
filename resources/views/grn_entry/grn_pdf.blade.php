@@ -242,7 +242,19 @@
                     }
                     $brandName = $item->purchaseInvoiceItem->purchaseOrderItem->brand->brand_name ?? '-';
                     $styleName = $item->purchaseInvoiceItem->purchaseOrderItem->style->style_name ?? '-';
-                    $colorName = $item->purchaseInvoiceItem->purchaseOrderItem->color->color_name ?? '-';
+                    if (!empty($item->color?->color_name)) {
+                        $colorName = $item->color->color_name;
+                    } elseif (($item->variants->count() ?? 0) === 1) {
+                        $colorName = $item->variants->first()->color->color_name ?? '-';
+                    } elseif (($item->variants->count() ?? 0) > 1) {
+                        $colorName = $item->variants
+                            ->map(fn($variant) => $variant->color->color_name ?? null)
+                            ->filter()
+                            ->implode(', ');
+                        $colorName = $colorName !== '' ? $colorName : '-';
+                    } else {
+                        $colorName = $item->purchaseInvoiceItem->purchaseOrderItem->color->color_name ?? '-';
+                    }
                     $widthVal = $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->width ?? '-';
                     $supplierArtNo = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name ?? '-';
                 @endphp

@@ -1189,7 +1189,8 @@
                         matrixTotal = parseFloat($matrixRow.find('.row-total').val()) || 0;
 
                         if (data.cat_id == 1) { 
-                            calcDetails = `Calculated Fabrication Consumption (Meters): ${enteredUsed}`;
+                            matrixTotal = enteredUsed; 
+                            calcDetails = `Manual Entry (Quantity Used - Fabric): ${enteredUsed}`;
                         } else { 
                             calcDetails = `Matrix Auto-Calculated Total (Accessories): ${matrixTotal}`;
                         }
@@ -1732,10 +1733,6 @@
                                         <div class="border rounded p-1 mb-1 text-center fw-bold small" style="background: #f8f9fa;">${art}</div>
                                         <input type="hidden" name="article_matrix[${index}][art_no]" value="${art}">
                                         <div class="small text-muted text-center" style="font-size: 10px; line-height: 1.1;">${artName}</div>
-                                        <div class="text-center small mt-1" style="font-size: 10px;">
-                                            <span class="text-secondary">Width:</span>
-                                            <span class="fw-bold">${widthDisplay}</span>
-                                        </div>
                                     </td>`;
 
                     activeFsSizes.forEach(s => {
@@ -2118,7 +2115,7 @@
 
                     const isTaskReadOnly = hasTasks ? 'readonly' : '';
                     widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center" value="${vWidth}" ${isTaskReadOnly}></td>`;
-                    mtrRow += `<td class="fw-bold">ISSUED METERS</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" readonly tabindex="-1"></td>`;
+                    mtrRow += `<td class="fw-bold">ISSUED METERS</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}>${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}</td>`;
                     inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center" value="${vInOut}" ${isTaskReadOnly}></td>`;
                     nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center" value="${vNPatti}" ${isTaskReadOnly}></td>`;
 
@@ -2669,28 +2666,18 @@
 
             function calculateMatrixFromLayMarks() {
                 const matrixData = {};
-                const fabricMeters = {};
                 $('table[id^="article-qty-matrix"] tbody tr.cat1-row .qty-input').val('');
 
                 $('.lay-mark-table').each(function() {
                     const fabricIndex = $(this).find('.add-lay-mark-btn').data('index');
                     if (fabricIndex === undefined) return;
 
-                    const $fabricInput = $(`input[name="fabrics[${fabricIndex}][art_no]"]`);
-                    const artNo = $fabricInput.val();
-
                     if (!matrixData[fabricIndex]) matrixData[fabricIndex] = { fs: {}, hs: {} };
-                    if (artNo && !fabricMeters[artNo]) fabricMeters[artNo] = 0;
 
                     $(this).find('tbody tr.lay-mark-row').each(function() {
                         const sizes = $(this).find('.select2-size-multi').val() || [];
                         const sleeve = $(this).find('select[name$="[sleeve]"]').val();
-                        const meter = parseFloat($(this).find('input[name$="[meter]"]').val()) || 0;
                         const noOfLay = parseFloat($(this).find('input[name$="[no_of_lay]"]').val()) || 0;
-
-                        if (artNo) {
-                            fabricMeters[artNo] += (meter * noOfLay);
-                        }
 
                         if (sleeve && noOfLay > 0) {
                             const type = sleeve.toLowerCase().replace('/', '');
@@ -2699,19 +2686,6 @@
                             });
                         }
                     });
-
-                    // Update Item Details for this fabric
-                    if (artNo) {
-                        const totalMeters = fabricMeters[artNo];
-                        const $itemUsed = $(`.item-used-input[data-art="${artNo}"]`);
-                        if ($itemUsed.length) {
-                             $itemUsed.val(totalMeters > 0 ? (totalMeters % 1 === 0 ? totalMeters : totalMeters.toFixed(2)) : '0').trigger('input');
-                        }
-                        const $hiddenUsed = $(`.used-qty-hidden[data-art="${artNo}"]`);
-                        if ($hiddenUsed.length) {
-                             $hiddenUsed.val(totalMeters > 0 ? (totalMeters % 1 === 0 ? totalMeters : totalMeters.toFixed(2)) : '0');
-                        }
-                    }
                 });
 
                 for (const fIndex in matrixData) {
@@ -2743,7 +2717,7 @@
                 calculateMatrixTotals();
             }
 
-            $(document).on('input', 'input[name$="[no_of_lay]"], input[name$="[meter]"]', function() {
+            $(document).on('input', 'input[name$="[no_of_lay]"]', function() {
                 calculateMatrixFromLayMarks();
             });
 
@@ -2843,9 +2817,9 @@
                                 existingImages.splice(index, 1);
                             }
                             renderFabricDetails();
-                        if (typeof renderItemDetailsTable === "function") {
-                            renderItemDetailsTable(currentArtData);
-                        }
+                            if (typeof renderItemDetailsTable === "function") {
+                                renderItemDetailsTable(currentArtData);
+                            }
                         }
                     },
                     error: function(xhr) {
@@ -3044,9 +3018,6 @@
                     $(`.total-qty-hidden[data-art="${artNo}"]`).val(total.toFixed(2));
                     $(`.used-qty-hidden[data-art="${artNo}"]`).val(used.toFixed(2));
                     $(`.remaining-qty-hidden[data-art="${artNo}"]`).val(remaining.toFixed(2));
-
-                    const isMtr = (item.uom_code || "").toUpperCase() === 'MTR';
-                    const isMtrReadOnly = isMtr ? 'readonly tabindex="-1"' : '';
 
                     const row = `
                         <tr data-art="${artNo}">

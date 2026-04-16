@@ -100,7 +100,7 @@ class JobCardEntryController extends Controller
                     $action .= '<a href="' . url('job_card_entries/view/' . $jc->id) . '" class="dropdown-item"><i class="icon-base ri ri-eye-line me-2"></i>View</a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('issue-item job-card')) {
-                    // $action .= '<a href="' . url('job_card_entries/view-item/' . $jc->id) . '" class="dropdown-item"><i class="icon-base ri ri-list-check-2 me-2"></i>Issue Item</a>';
+                    $action .= '<a href="' . url('job_card_entries/view-item/' . $jc->id) . '" class="dropdown-item"><i class="icon-base ri ri-list-check-2 me-2"></i>Issue Item</a>';
                 }
 
                 $action .= '</div></div>';
@@ -214,8 +214,6 @@ class JobCardEntryController extends Controller
                                 }
                             }
                             $used = (float) ($fabric['mtr'] ?? 0);
-                            
-                            // Check for Shortage only: Need > Used
                             if ($totalNeeded > $used) {
                                 $validator->errors()->add("fabrics.$index.mtr", "Shortage for $artNo! Matrix Needs: $totalNeeded, but only $used was entered.");
                             }
@@ -440,10 +438,10 @@ class JobCardEntryController extends Controller
                                     ->whereHas('rawMaterial', function ($q) {
                                         $q->where('store_category_id', 1);
                                     })
-                                    ->with('grnEntryItem.purchaseInvoiceItem.purchaseOrderItem')
+                                    ->with('grnEntryItem')
                                     ->first();
-                                if ($stockItem && $stockItem->grnEntryItem && $stockItem->grnEntryItem->purchaseInvoiceItem && $stockItem->grnEntryItem->purchaseInvoiceItem->purchaseOrderItem) {
-                                    $rowColorId = $stockItem->grnEntryItem->purchaseInvoiceItem->purchaseOrderItem->color_id;
+                                if ($stockItem && $stockItem->grnEntryItem) {
+                                    $rowColorId = $stockItem->grnEntryItem->color_id;
                                 }
                             }
 
@@ -547,7 +545,7 @@ class JobCardEntryController extends Controller
                 $grandTotalQty = $jobCard->grand_total_qty ?? 0;
                 $overallAverage = ($grandTotalQty > 0) ? ($totalFabricMtr / $grandTotalQty) : 0;
                 $jobCard->update(['average' => $overallAverage]);
-                $this->syncStockDeduction($jobCard, $request->fabrics ?? []);
+                // $this->syncStockDeduction($jobCard, $request->fabrics ?? []);
 
                 $this->generateProductionConsumables($jobCard);
 
@@ -733,7 +731,7 @@ class JobCardEntryController extends Controller
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
         $grnItems = GrnEntryItem::whereIn('grn_entry_id', function ($query) use ($invoiceIds) {
             $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
-        })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'fabricType', 'storeLocation'])->get();
+        })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'purchaseInvoiceItem.purchaseOrderItem.fabricWidth', 'fabricType', 'storeLocation'])->get();
 
         $seIds = [];
         if ($jobCard->stock_entry_ids) {
@@ -1568,54 +1566,71 @@ class JobCardEntryController extends Controller
             'purchaseOrder.supplier',
             'purchaseOrder.items.uom',
             'purchaseOrder.items.brand',
-            'issueItems.fabricDetail'
+            'issueItems.fabricDetail.quantities',
+            'issueItems.stockEntryItem.grnEntryItem.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
         ])->findOrFail($id);
 
         $artTotalMap = [];
         foreach ($jobCard->fabricDetails as $detail) {
             $total = $detail->quantities->sum('total_qty');
+            $trimmedArtNo = trim($detail->art_no ?? '');
 
-            if (!isset($artTotalMap[$detail->art_no])) {
-                $artTotalMap[$detail->art_no] = 0;
+            if (!isset($artTotalMap[$trimmedArtNo])) {
+                $artTotalMap[$trimmedArtNo] = 0;
             }
-            $artTotalMap[$detail->art_no] += $total;
+            $artTotalMap[$trimmedArtNo] += $total;
         }
 
         $issueItems = $jobCard->issueItems->groupBy(function ($item) {
-            return $item->fabricDetail->art_no ?? 'N/A';
+            return trim($item->fabricDetail->art_no ?? 'N/A');
         })->map(function ($items, $artNo) use ($artTotalMap) {
+            $stockUnitPrice = $items->map(function ($item) {
+                return $item->stockEntryItem->price ?? null;
+            })->filter(function ($price) {
+                return $price !== null && $price > 0;
+            })->avg();
+
+            $sizeLabel = $items->map(function ($item) {
+                return $item->stockEntryItem?->grnEntryItem?->purchaseInvoiceItem?->purchaseOrderItem?->fabricWidth?->width;
+            })->filter(function ($width) {
+                return !is_null($width) && $width !== '';
+            })->first();
+
             return (object) [
                 'art_no' => $artNo,
-                'produced_qty' => $artTotalMap[$artNo] ?? $items->max('produced_qty'),
+                'raw_material_id' => $items->pluck('raw_material_id')->filter()->first(),
+                'produced_qty' => $artTotalMap[trim($artNo)] ?? $items->max('produced_qty'),
                 'qty_issue' => $items->sum('qty_issue'),
                 'qty_wastage' => $items->sum('qty_wastage'),
                 'qty_used' => $items->sum('qty_used'),
                 'qty_adjusted' => $items->sum('qty_adjusted'),
                 'balance' => $items->sum('balance'),
-                'unit_price' => $items->average('unit_price'),
-                'total_cost' => $items->sum('total_cost'),
+                'unit_price' => $stockUnitPrice > 0 ? $stockUnitPrice : $items->average('unit_price'),
+                'size_label' => $sizeLabel,
             ];
         })->values();
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
         $grnItems = GrnEntryItem::whereIn('grn_entry_id', function ($query) use ($invoiceIds) {
             $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
-        })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'fabricType', 'storeLocation'])->get();
+        })->with(['purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.uom', 'purchaseInvoiceItem.fabricWidth', 'purchaseInvoiceItem.purchaseOrderItem.fabricWidth', 'fabricType', 'storeLocation'])->get();
 
         $artMaterialMap = [];
         $artUomMap = [];
         $artLocationMap = [];
 
         foreach ($grnItems as $item) {
+            $trimmedArtNo = trim($item->art_no ?? '');
+            $purchaseOrderItem = $item->purchaseInvoiceItem->purchaseOrderItem ?? null;
             $name = $item->purchaseInvoiceItem->rawMaterial->name ?? ($item->fabricType->name ?? null);
-            if ($name && !isset($artMaterialMap[$item->art_no])) {
-                $artMaterialMap[$item->art_no] = $name;
+            if ($name && !isset($artMaterialMap[$trimmedArtNo])) {
+                $artMaterialMap[$trimmedArtNo] = $name;
             }
-            if ($item->storeLocation && !isset($artLocationMap[$item->art_no])) {
-                $artLocationMap[$item->art_no] = $item->storeLocation->store_location;
+            if ($item->storeLocation && !isset($artLocationMap[$trimmedArtNo])) {
+                $artLocationMap[$trimmedArtNo] = $item->storeLocation->store_location;
             }
             $uom = $item->purchaseInvoiceItem->uom->uom_code ?? ($item->purchaseInvoiceItem->rawMaterial->uom->uom_code ?? null);
-            if ($uom && !isset($artUomMap[$item->art_no])) {
-                $artUomMap[$item->art_no] = $uom;
+            if ($uom && !isset($artUomMap[$trimmedArtNo])) {
+                $artUomMap[$trimmedArtNo] = $uom;
             }
         }
 
