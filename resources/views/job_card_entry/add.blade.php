@@ -62,15 +62,6 @@
             <div class="col-lg-12">
                 <form action="{{ url('job_card_entries/add/' . ($jobCard ? $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                     @csrf
-                    @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
                     <div class="col-lg-12">
                         @include('flash_messages')
                     </div>
@@ -1189,8 +1180,23 @@
                         matrixTotal = parseFloat($matrixRow.find('.row-total').val()) || 0;
 
                         if (data.cat_id == 1) { 
-                            matrixTotal = enteredUsed; 
-                            calcDetails = `Manual Entry (Quantity Used - Fabric): ${enteredUsed}`;
+                            let lmRequired = 0;
+                            const $lmTable = $(`.lay-mark-table[data-art="${art}"]`);
+                            if ($lmTable.length) {
+                                $lmTable.find('tbody tr.lay-mark-row').each(function() {
+                                    const mkMeter = parseFloat($(this).find('input[name$="[meter]"]').val()) || 0;
+                                    const mkLay = parseFloat($(this).find('input[name$="[no_of_lay]"]').val()) || 0;
+                                    lmRequired += (mkMeter * mkLay);
+                                });
+                            }
+
+                            if (lmRequired > 0) {
+                                matrixTotal = lmRequired;
+                                calcDetails = `Calculated from Lay Marks: ${lmRequired.toFixed(2)}`;
+                            } else {
+                                matrixTotal = enteredUsed; 
+                                calcDetails = `Manual Entry (Quantity Used - Fabric): ${enteredUsed}`;
+                            }
                         } else { 
                             calcDetails = `Matrix Auto-Calculated Total (Accessories): ${matrixTotal}`;
                         }
@@ -1586,8 +1592,7 @@
                                         ${item.qty}
                                     </div>
                                 </div>
-                            `)
-                            .appendTo(ul);
+                            `).appendTo(ul);
                     };
                 }
 
@@ -1676,6 +1681,20 @@
                 const $tbody = $('#article-qty-matrix-body');
                 const $tfoot = $table.find('tfoot');
 
+                const capturedMatrix = {};
+                $tbody.find('tr').each(function() {
+                    const art = String($(this).data('art') || "").trim();
+                    if (art) {
+                        capturedMatrix[art] = {};
+                        $(this).find('.qty-input').each(function() {
+                            const col = $(this).data('col');
+                            if (col) {
+                                capturedMatrix[art][col.replace('-', '_')] = $(this).val();
+                            }
+                        });
+                    }
+                });
+
                 $thead.empty();
                 $tbody.empty();
                 $tfoot.empty();
@@ -1728,7 +1747,7 @@
                     const rowClass = (catId != 1) ? 'cat2-row' : 'cat1-row';
                     const styleAttr = (catId != 1) ? 'style="display: none;"' : '';
 
-                    let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" ${styleAttr}>
+                    let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" data-index="${index}" ${styleAttr}>
                                     <td>
                                         <div class="border rounded p-1 mb-1 text-center fw-bold small" style="background: #f8f9fa;">${art}</div>
                                         <input type="hidden" name="article_matrix[${index}][art_no]" value="${art}">
@@ -1737,8 +1756,12 @@
 
                     activeFsSizes.forEach(s => {
                         let fsVal = '';
-                        if (oldRow && oldRow[`fs_${s}`] !== undefined) fsVal = oldRow[`fs_${s}`];
-                        else if (existingRow && existingRow.quantities) {
+                        const key = `fs_${s}`;
+                        if (capturedMatrix[art] && capturedMatrix[art][key] !== undefined) {
+                            fsVal = capturedMatrix[art][key];
+                        } else if (oldRow && oldRow[key] !== undefined) {
+                            fsVal = oldRow[key];
+                        } else if (existingRow && existingRow.quantities) {
                             const q = existingRow.quantities.find(q => String(q.size) === String(s));
                             fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
                         }
@@ -1747,8 +1770,12 @@
 
                     activeHsSizes.forEach(s => {
                         let hsVal = '';
-                        if (oldRow && oldRow[`hs_${s}`] !== undefined) hsVal = oldRow[`hs_${s}`];
-                        else if (existingRow && existingRow.quantities) {
+                        const key = `hs_${s}`;
+                        if (capturedMatrix[art] && capturedMatrix[art][key] !== undefined) {
+                            hsVal = capturedMatrix[art][key];
+                        } else if (oldRow && oldRow[key] !== undefined) {
+                            hsVal = oldRow[key];
+                        } else if (existingRow && existingRow.quantities) {
                             const q = existingRow.quantities.find(q => String(q.size) === String(s));
                             hsVal = (q && q.qty_hs != null) ? parseFloat(q.qty_hs) : '';
                         }
@@ -2036,10 +2063,50 @@
                 const $tbody = $('#fabric-details-body');
                 const $thead = $('#fabric-details-head');
 
-                const currentManualMtr = {};
+                const captured = { mtr: {}, width: {}, in_out: {}, n_patti: {}, consumptions: {}, layMarks: {} };
                 $tbody.find('.mtr-input').each(function() {
                     const art = $(this).data('art');
-                    if (art) currentManualMtr[art] = $(this).val();
+                    if (art) captured.mtr[art] = $(this).val();
+                });
+                $tbody.find('.width-input').each(function() {
+                    const art = $(this).data('art');
+                    if (art) captured.width[art] = $(this).val();
+                });
+                $tbody.find('.in-out-input').each(function() {
+                    const art = $(this).data('art');
+                    if (art) captured.in_out[art] = $(this).val();
+                });
+                $tbody.find('.n-patti-input').each(function() {
+                    const art = $(this).data('art');
+                    if (art) captured.n_patti[art] = $(this).val();
+                });
+
+                $tbody.find('.size-cons-input').each(function() {
+                    const art = $(this).data('art');
+                    const size = String($(this).data('size'));
+                    const type = $(this).data('type'); 
+                    if (art && size) {
+                        if (!captured.consumptions[art]) captured.consumptions[art] = {};
+                        if (!captured.consumptions[art][size]) captured.consumptions[art][size] = {};
+                        captured.consumptions[art][size][type] = $(this).val();
+                    }
+                });
+
+                // Capture Fabric Lay Marks
+                $tbody.find('.lay-mark-table').each(function() {
+                    const art = $(this).data('art');
+                    if (art) {
+                        const marks = [];
+                        $(this).find('tbody tr.lay-mark-row').each(function() {
+                            marks.push({
+                                sizes: $(this).find('.select2-size-multi').val() || [],
+                                sleeve_type: $(this).find('select[name*="[sleeve]"]').val(),
+                                lay_mark_meter: $(this).find('input[name*="[meter]"]').val(),
+                                no_of_lay: $(this).find('input[name*="[no_of_lay]"]').val()
+                            });
+                        });
+                        if (marks.length > 0) captured.layMarks[art] = marks;
+                    }
                 });
 
                 $thead.empty();
@@ -2086,10 +2153,10 @@
                     </th>`;
                     artRow += `<td class="fw-bold">ART NO</td><td><input type="text" name="fabrics[${index}][art_no]" class="form-control form-control-sm text-center art-no-input" value="${art}" readonly></td>`;
 
-                    let vWidth = (oldFabrics && oldFabrics[index] && oldFabrics[index]['width']) ? oldFabrics[index]['width'] : '';
-                    let vMtr = (oldFabrics && oldFabrics[index] && oldFabrics[index]['mtr']) ? oldFabrics[index]['mtr'] : '';
-                    let vInOut = (oldFabrics && oldFabrics[index] && oldFabrics[index]['in_out']) ? oldFabrics[index]['in_out'] : '';
-                    let vNPatti = (oldFabrics && oldFabrics[index] && oldFabrics[index]['n_patti']) ? oldFabrics[index]['n_patti'] : '';
+                    let vWidth = captured.width[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['width']) || '';
+                    let vMtr = captured.mtr[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['mtr']) || '';
+                    let vInOut = captured.in_out[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['in_out']) || '';
+                    let vNPatti = captured.n_patti[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['n_patti']) || '';
 
                     if (!vWidth && existingMatrix.length > 0) {
                         const m = existingMatrix.find(m => m.art_no == art);
@@ -2104,9 +2171,9 @@
                     if (!vInOut) vInOut = 'NO';
                     if (!vNPatti) vNPatti = 'WHITE';
 
-                    if (currentManualMtr[art] !== undefined && currentManualMtr[art] !== '') {
-                        vMtr = currentManualMtr[art];
-                    } else if (!vMtr && currentArtData && currentArtData.length > 0) {
+                    if (vMtr !== '' && vMtr !== undefined) {
+                        // Keep preserved value
+                    } else if (currentArtData && currentArtData.length > 0) {
                         const d = currentArtData.find(d => d.art_no == art);
                         if (d) {
                             vMtr = d.mtr || '';
@@ -2114,10 +2181,10 @@
                     }
 
                     const isTaskReadOnly = hasTasks ? 'readonly' : '';
-                    widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center" value="${vWidth}" ${isTaskReadOnly}></td>`;
+                    widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center width-input" data-art="${art}" value="${vWidth}" ${isTaskReadOnly}></td>`;
                     mtrRow += `<td class="fw-bold">ISSUED METERS</td><td><input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}>${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}</td>`;
-                    inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center" value="${vInOut}" ${isTaskReadOnly}></td>`;
-                    nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center" value="${vNPatti}" ${isTaskReadOnly}></td>`;
+                    inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center in-out-input" data-art="${art}" value="${vInOut}" ${isTaskReadOnly}></td>`;
+                    nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center n-patti-input" data-art="${art}" value="${vNPatti}" ${isTaskReadOnly}></td>`;
 
                     let uom = '';
                     let catId = 0;
@@ -2139,7 +2206,7 @@
                     let sizeTableHtml = '';
                     if (sizes.length > 0) {
                         if (catId == 1) {
-                            sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1 lay-mark-table" id="lay-mark-table-art-${index}" style="font-size: 11px;">
+                            sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1 lay-mark-table" id="lay-mark-table-art-${index}" data-art="${art}" style="font-size: 11px;">
                                 <thead class="bg-light">
                                     <tr class="text-center">
                                         <th style="width: 8%;">MARK</th>
@@ -2151,8 +2218,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>`;
-                            let savedLayMarks = [];
-                            if (oldFabrics && oldFabrics[index] && oldFabrics[index].lay_marks) {
+                            let savedLayMarks = captured.layMarks[art] || [];
+
+                            if (savedLayMarks.length === 0 && oldFabrics && oldFabrics[index] && oldFabrics[index].lay_marks) {
                                 const rawOld = oldFabrics[index].lay_marks;
                                 const oldEntries = Array.isArray(rawOld) ? rawOld : Object.values(rawOld);
                                 savedLayMarks = oldEntries.map(e => ({
@@ -2233,15 +2301,18 @@
                                 </tfoot>
                             </table>`;
                         } else {
-                            sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1" style="font-size: 11px;">
+                                sizeTableHtml = `<table class="table table-bordered table-sm mb-0 mt-1 accessory-cons-table" data-art="${art}" style="font-size: 11px;">
                                 <thead class="bg-light"><tr><th>Size</th><th>F/S Cons</th><th>H/S Cons</th></tr></thead>
                                 <tbody>`;
-
+                            
                             sizes.forEach(sz => {
                                 let vSzFs = '';
                                 let vSzHs = '';
 
-                                if (oldFabrics && oldFabrics[index] && oldFabrics[index]['consumptions'] && oldFabrics[index]['consumptions'][sz]) {
+                                if (captured.consumptions[art] && captured.consumptions[art][sz]) {
+                                    vSzFs = captured.consumptions[art][sz]['fs'] || '';
+                                    vSzHs = captured.consumptions[art][sz]['hs'] || '';
+                                } else if (oldFabrics && oldFabrics[index] && oldFabrics[index]['consumptions'] && oldFabrics[index]['consumptions'][sz]) {
                                     vSzFs = oldFabrics[index]['consumptions'][sz]['fs_cons'] || '';
                                     vSzHs = oldFabrics[index]['consumptions'][sz]['hs_cons'] || '';
                                 }
@@ -2666,29 +2737,37 @@
 
             function calculateMatrixFromLayMarks() {
                 const matrixData = {};
-                $('table[id^="article-qty-matrix"] tbody tr.cat1-row .qty-input').val('');
 
                 $('.lay-mark-table').each(function() {
                     const fabricIndex = $(this).find('.add-lay-mark-btn').data('index');
                     if (fabricIndex === undefined) return;
 
-                    if (!matrixData[fabricIndex]) matrixData[fabricIndex] = { fs: {}, hs: {} };
-
+                    let hasValidMarks = false;
                     $(this).find('tbody tr.lay-mark-row').each(function() {
                         const sizes = $(this).find('.select2-size-multi').val() || [];
-                        const sleeve = $(this).find('select[name$="[sleeve]"]').val();
-                        const noOfLay = parseFloat($(this).find('input[name$="[no_of_lay]"]').val()) || 0;
-
-                        if (sleeve && noOfLay > 0) {
-                            const type = sleeve.toLowerCase().replace('/', '');
-                            sizes.forEach(sz => {
-                                matrixData[fabricIndex][type][sz] = (matrixData[fabricIndex][type][sz] || 0) + noOfLay;
-                            });
-                        }
+                        const noOfLay = parseFloat($(this).find('input[name*="[no_of_lay]"]').val()) || 0;
+                        if (sizes.length > 0 && noOfLay > 0) hasValidMarks = true;
                     });
+
+                    if (hasValidMarks) {
+                        if (!matrixData[fabricIndex]) matrixData[fabricIndex] = { fs: {}, hs: {} };
+                        $(this).find('tbody tr.lay-mark-row').each(function() {
+                            const sizes = $(this).find('.select2-size-multi').val() || [];
+                            const sleeve = $(this).find('select[name$="[sleeve]"]').val();
+                            const noOfLay = parseFloat($(this).find('input[name$="[no_of_lay]"]').val()) || 0;
+
+                            if (sleeve && noOfLay > 0) {
+                                const type = sleeve.toLowerCase().replace('/', '');
+                                sizes.forEach(sz => {
+                                    matrixData[fabricIndex][type][sz] = (matrixData[fabricIndex][type][sz] || 0) + noOfLay;
+                                });
+                            }
+                        });
+                    }
                 });
 
                 for (const fIndex in matrixData) {
+                    $(`tr.cat1-row[data-index="${fIndex}"] .qty-input`).val('');
                     for (const type in matrixData[fIndex]) {
                         for (const size in matrixData[fIndex][type]) {
                             const val = matrixData[fIndex][type][size];

@@ -1567,22 +1567,34 @@ class JobCardEntryController extends Controller
             'purchaseOrder.items.uom',
             'purchaseOrder.items.brand',
             'issueItems.fabricDetail.quantities',
+            'issueItems.rawMaterial',
             'issueItems.stockEntryItem.grnEntryItem.purchaseInvoiceItem.purchaseOrderItem.fabricWidth'
         ])->findOrFail($id);
 
+        $maps = $this->getJobCardMaps($jobCard);
+        $artCategoryMap = $maps['artCategoryMap'];
+
         $artTotalMap = [];
         foreach ($jobCard->fabricDetails as $detail) {
-            $total = $detail->quantities->sum('total_qty');
             $trimmedArtNo = trim($detail->art_no ?? '');
+            
+            if (($artCategoryMap[$trimmedArtNo] ?? 1) != 1) {
+                continue;
+            }
 
+            $total = $detail->quantities->sum('total_qty');
             if (!isset($artTotalMap[$trimmedArtNo])) {
                 $artTotalMap[$trimmedArtNo] = 0;
             }
             $artTotalMap[$trimmedArtNo] += $total;
         }
 
-        $issueItems = $jobCard->issueItems->groupBy(function ($item) {
-            return trim($item->fabricDetail->art_no ?? 'N/A');
+        $issueItems = $jobCard->issueItems->filter(function ($item) use ($artCategoryMap) {
+            $artNo = trim($item->fabricDetail->art_no ?? '');
+            // Check via relationship or via map
+            return ($item->rawMaterial?->store_category_id == 1) || (($artCategoryMap[$artNo] ?? 1) == 1);
+        })->groupBy(function ($item) {
+            return trim($item->fabricDetail->art_no ?? ($item->rawMaterial?->code ?? 'N/A'));
         })->map(function ($items, $artNo) use ($artTotalMap) {
             $stockUnitPrice = $items->map(function ($item) {
                 return $item->stockEntryItem->price ?? null;
@@ -1668,7 +1680,10 @@ class JobCardEntryController extends Controller
             }
         }
 
-        $pdf = Pdf::loadView('job_card_entry.work_order_pdf', compact('jobCard', 'artUomMap'));
+        $maps = $this->getJobCardMaps($jobCard);
+        $artCategoryMap = $maps['artCategoryMap'];
+
+        $pdf = Pdf::loadView('job_card_entry.work_order_pdf', compact('jobCard', 'artUomMap', 'artCategoryMap'));
         $pdf->setPaper('A4', 'landscape');
 
         $filename = 'Work_Order_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';

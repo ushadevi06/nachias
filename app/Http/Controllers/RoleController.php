@@ -35,12 +35,9 @@ class RoleController extends Controller
                     $actionBtn .= '<a href="' . url('roles/add/' . $role->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
-                if($role->id != 4) {
-                    if (auth()->id() == 1 || auth()->user()->can('delete roles')) {
-                        $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('roles/delete/' . $role->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                    }
+                if (auth()->id() == 1 || auth()->user()->can('delete roles')) {
+                    $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('roles/delete/' . $role->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
-
                 $actionBtn .= '</div>'; 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -110,6 +107,9 @@ class RoleController extends Controller
         $rolePermissions = $id ? $role->permissions->pluck('name')->toArray() : [];
         $permissions = Permission::all()->groupBy(function ($perm) {
             return explode(' ', $perm->name, 2)[1] ?? $perm->name;
+        })->sortBy(function ($group, $key) {
+            if ($key === 'dashboard') return -1;
+            return $group->min('id');
         });
 
         return view('roles.add', compact('role', 'permissions', 'rolePermissions'));

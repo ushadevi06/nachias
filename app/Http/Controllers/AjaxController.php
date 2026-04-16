@@ -77,7 +77,10 @@ class AjaxController extends Controller
         }
 
         if ($stageId && $stageId != 'null' && $stageId != 'undefined') {
-            $query->where('operation_stage_id', $stageId);
+            $query->where(function($q) use ($stageId) {
+                $q->where('operation_stage_id', $stageId)
+                  ->orWhereNull('operation_stage_id');
+            });
         }
         
         if (request()->has('department_id')) {

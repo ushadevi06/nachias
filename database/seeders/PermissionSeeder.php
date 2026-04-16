@@ -16,9 +16,11 @@ class PermissionSeeder extends Seeder
 
         $modules = [
 
+            /* Employee Module */
             'roles' => ['create', 'edit', 'delete', 'view'],
-            'employee' => ['create', 'edit', 'delete', 'view'],
-
+            'employees' => ['create', 'edit', 'delete', 'view'],
+            
+            /* Master */
             'states' => ['create', 'edit', 'delete', 'view'],
             'cities' => ['create', 'edit', 'delete', 'view'],
             'service-points' => ['create', 'edit', 'delete', 'view'],
@@ -31,11 +33,16 @@ class PermissionSeeder extends Seeder
             'fabric-sizes' => ['create', 'edit', 'delete', 'view'],
             'charges' => ['create', 'edit', 'delete', 'view'],
             'store-location' => ['create', 'edit', 'delete', 'view'],
-
             'departments' => ['create', 'edit', 'delete', 'view'],
             'taxes' => ['create', 'edit', 'delete', 'view'],
             'styles' => ['create', 'edit', 'delete', 'view'],
             'stores' => ['create', 'edit', 'delete', 'view'],
+
+            /* Logistics Master */
+            'shipping-methods' => ['create', 'edit', 'delete', 'view'],
+            'transport-mode' => ['create', 'edit', 'delete', 'view'],
+
+            /* Tailoring Specification Master */
             'fits'  => ['create','edit','delete','view'],
             'patti-types'  => ['create','edit','delete','view'],
             'collar-types'  => ['create','edit','delete','view'],
@@ -44,39 +51,50 @@ class PermissionSeeder extends Seeder
             'bottom-cuts'  => ['create','edit','delete','view'],
             'process-groups'  => ['create','edit','delete','view'],
             'seasons'  => ['create','edit','delete','view'],
+
+            /* Production Master */
             'shifts'  => ['create','edit','delete','view'],
             'production-services'  => ['create','edit','delete','view'],
+
+            /* Parties */
             'customers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'suppliers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'service-providers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'sales-agents' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'purchase-commission-agent' => ['create', 'edit', 'delete', 'view', 'view_details'],
 
+            /* Item Setup */
             'store-categories' => ['create', 'edit', 'delete', 'view'],
             'raw-materials' => ['create', 'edit', 'delete', 'view'],
             'brand-categories' => ['create', 'edit', 'delete', 'view'],
             'brands' => ['create', 'edit', 'delete', 'view'],
             'items' => ['create', 'edit', 'delete', 'view'],
 
+            /* Purchase */
             'purchase-order' => ['create', 'edit', 'view', 'view_details'],
             'purchase-invoice' => ['create', 'edit', 'view','view_details'],
-            'debit-notes' => ['create', 'edit', 'view','view_details'],
+
+            /* Store */
             'grn-entry' => ['create', 'edit', 'view','view_details'],
             'stock-entry' => ['create', 'edit', 'view', 'stock_adjustment','stock_adjustment_logs'],
+            'debit-notes' => ['create', 'edit', 'view','view_details'],
             'stock-consumable-return' => ['view', 'view_details'],
 
+            /* Production */
+            'job-card' => ['create', 'edit', 'view', 'view_details', 'fabric-consumption-pdf', 'work-order-pdf', 'issue-item'],
+            'task-management' => ['edit', 'view', 'view_details'],
+            'production-receipts' => ['create', 'edit', 'view'],
+
+            /* Sales */
             'sales-order' => ['create', 'edit', 'delete', 'view'],
             'sales-invoice' => ['create', 'edit', 'delete', 'view'],
             'credit-notes' => ['create', 'edit', 'delete', 'view'],
 
-            'job-card' => ['create', 'edit', 'view', 'view_details', 'fabric-consumption-pdf', 'work-order-pdf', 'issue-item'],
-            'production' => ['create', 'edit', 'view', 'view_details', 'assign_task'],
-            'task-management' => ['edit', 'view', 'view_details'],
-            'production-receipts' => ['create', 'edit', 'view'],
-
+            /* Accounts */
             'billing' => ['create', 'edit', 'view'],
             'manage-payments' => ['create', 'edit', 'delete', 'view'],
 
+            /* Payroll */
             'attendance' => ['create', 'edit', 'delete', 'view'],
             'manage-leaves' => ['create', 'edit', 'delete', 'view'],
             'overtime-bonus' => ['create', 'edit', 'delete', 'view'],
@@ -84,20 +102,20 @@ class PermissionSeeder extends Seeder
             'payslip-generation' => ['create', 'edit', 'delete', 'view'],
             'payroll-reports' => ['create', 'edit', 'delete', 'view'],
 
+            /* System  Utilities */
             'document-repository' => ['create', 'edit', 'delete', 'view'],
-
             'log' => ['view'],
             'backup-restore' => ['view'],
 
-            'customer-report' => ['view'],
-            'sale-report' => ['view'],
-            'stock-report' => ['view'],
-            'daily-production-report' => ['view'],
-            'order-report' => ['view'],
-            'employee-report' => ['view'],
-            
+            /* Reports */
+            'sales-marketing-report' => ['view'],
+            'warehouse-report' => ['view'],
+            'production-report' => ['view'],
+
+            /* Ticket Management */
             'ticket-management' => ['create', 'edit', 'delete', 'view'],
 
+            /* Settings */
             'settings' => ['edit','view'],
 
             'dashboard' => [],
@@ -118,8 +136,6 @@ class PermissionSeeder extends Seeder
                 );
             }
         }
-
-        // Dashboard permissions with custom labels
         $dashboardPerms = [ 
             ['action' => 'view-sales-order',       'label' => 'Sales & Order Dashboard'],
             ['action' => 'view-accounts-financial', 'label' => 'Accounts & Financial Dashboard'],

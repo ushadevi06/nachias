@@ -14,7 +14,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" placeholder="Enter Role Name" value="{{ old('name', $role->name) }}" {{ $role->id == 4 ? 'readonly' : '' }}>
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name" placeholder="Enter Role Name" value="{{ old('name', $role->name) }}">
                                     <label for="name">Role Name <span class="text-danger">*</span> </label>
                                     @error('name')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                                 </div>
@@ -45,7 +45,7 @@
                                                 $grouped = $submodules->groupBy('action');
                                                 $availablePermissions = $submodules->pluck('name')->toArray();
                                                 $checkedPermissions = array_intersect($availablePermissions, $rolePermissions ?? []);
-                                                $allChecked = count($availablePermissions) > 0 && count($availablePermissions) === count($checkedPermissions);
+                                                $allChecked = count($checkedPermissions) > 0;
                                             @endphp
                                             <tr>
                                                 <td class="text-center">
@@ -141,9 +141,9 @@
             perm.addEventListener('change', function() {
                 const sub = this.getAttribute('data-sub');
                 const all = document.querySelectorAll(`.permission[data-sub="${sub}"]`);
-                const allChecked = Array.from(all).every(cb => cb.checked);
+                const anyChecked = Array.from(all).some(cb => cb.checked);
                 const allowAll = document.querySelector(`.allow-all-sub[data-sub="${sub}"]`);
-                if (allowAll) allowAll.checked = allChecked;
+                if (allowAll) allowAll.checked = anyChecked;
             });
         });
     });

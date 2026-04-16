@@ -453,7 +453,6 @@ class ProductionReceiptController extends Controller
             if ($normalizedArtNo === '') {
                 return null;
             }
-
             $rawMaterial = \App\Models\RawMaterial::where('code', $normalizedArtNo)
                 ->orWhere('name', $normalizedArtNo)
                 ->first();
@@ -472,14 +471,13 @@ class ProductionReceiptController extends Controller
             return $row?->store_category_id ?? null;
         };
 
-        $fabricDetails = $jobCard->fabricDetails
-            ->filter(function ($fd) use ($getStoreCategoryIdForArtNo) {
-                return $getStoreCategoryIdForArtNo($fd->art_no) === 1;
-            })
-            ->values();
-
+        $allMaterials = $jobCard->fabricDetails->values();
+        $fabricDetails = $allMaterials->filter(function ($fd) use ($getStoreCategoryIdForArtNo) {
+            return $getStoreCategoryIdForArtNo($fd->art_no) === 1;
+        })->values();
+        
         $articlePrices = [];
-        foreach ($fabricDetails as $fabricDetail) {
+        foreach ($allMaterials as $fabricDetail) {
             $artNo = trim($fabricDetail->art_no);
             $avgPrice = 0;
 
@@ -588,13 +586,16 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        $calculateItemUnitPrice = function ($artNo, $size, $sleeve) use ($fabricDetails, $articlePrices) {
+        $calculateItemUnitPrice = function ($artNo, $size, $sleeve) use ($allMaterials, $articlePrices, $getStoreCategoryIdForArtNo) {
             $totalCost = 0;
             $consumptionDetails = [];
             $normalizedArtNo = trim($artNo ?? '');
 
-            foreach ($fabricDetails as $fd) {
-                if ($normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
+            foreach ($allMaterials as $fd) {
+                $fdCategoryId = $getStoreCategoryIdForArtNo($fd->art_no);
+                // If it is a primary material (Fabric, Cat 1), it must match the current item's Art No.
+                // If it is an accessory or other category, include it in the cost for all items in the job card.
+                if ($fdCategoryId === 1 && $normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
                     continue;
                 }
                 $rate = 0;

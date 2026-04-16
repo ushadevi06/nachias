@@ -109,17 +109,19 @@
                                 <thead class="bg-light">
                                     <tr>
                                         <th class="ps-4 text-uppercase small fw-bold">Sr.#</th>
-                                        <th class="text-uppercase small fw-bold" style="min-width: 150px;">Material</th>
+                                        <th class="text-uppercase small fw-bold">Store Category</th>
                                         <th class="text-uppercase small fw-bold">Brand</th>
-                                        <th class="text-uppercase small fw-bold">Color</th>
+                                        <th class="text-uppercase small fw-bold" style="min-width: 150px;">Raw Material</th>
                                         <th class="text-uppercase small fw-bold">Style</th>
-                                        <th class="text-uppercase small fw-bold">Supplier Design</th>
                                         <th class="text-uppercase small fw-bold">Width</th>
                                         <th class="text-uppercase small fw-bold">Fabric Type</th>
                                         <th class="text-center text-uppercase small fw-bold">UOM</th>
                                         <th class="text-center text-uppercase small fw-bold">Qty</th>
+                                        <th class="text-uppercase small fw-bold">Supplier Design</th>
+                                        <th class="text-uppercase small fw-bold">Color</th>
                                         <th class="text-end text-uppercase small fw-bold">Rate</th>
                                         <th class="text-end text-uppercase small fw-bold">Amount</th>
+                                        <th class="text-uppercase small fw-bold">Remarks</th>
                                         <th class="text-center text-uppercase small fw-bold pe-4">Action</th>
                                     </tr>
                                 </thead>
@@ -127,19 +129,11 @@
                                     @foreach($purchaseOrder->items as $index => $item)
                                         <tr>
                                             <td class="ps-4 fw-bold text-muted small">{{ $index + 1 }}</td>
-                                            <td>
-                                                <div class="fw-bold text-dark">
-                                                    {{ $item->rawMaterial->name ?? '-' }}
-                                                    @if($item->rawMaterial && $item->rawMaterial->code)
-                                                        <span class="text-primary small">({{ $item->rawMaterial->code }})</span>
-                                                    @endif
-                                                </div>
-                                                <div class="small text-muted">
-                                                    {{ $item->storeCategory->category_name ?? '-' }}
-                                                    @if($item->storeCategory && $item->storeCategory->code)
-                                                        <span class="text-primary small">({{ $item->storeCategory->code }})</span>
-                                                    @endif
-                                                </div>
+                                            <td class="small fw-bold text-dark">
+                                                {{ $item->storeCategory->category_name ?? '-' }}
+                                                @if($item->storeCategory && $item->storeCategory->code)
+                                                    <span class="text-primary small">({{ $item->storeCategory->code }})</span>
+                                                @endif
                                             </td>
                                             <td class="small fw-bold text-dark">
                                                 {{ $item->brand->brand_name ?? '-' }}
@@ -147,18 +141,26 @@
                                                     <span class="text-primary small">({{ $item->brand->code }})</span>
                                                 @endif
                                             </td>
-                                            <td class="small text-dark">{{ $item->color->color_name ?? '-' }}</td>
+                                            <td>
+                                                <div class="fw-bold text-dark">
+                                                    {{ $item->rawMaterial->name ?? '-' }}
+                                                    @if($item->rawMaterial && $item->rawMaterial->code)
+                                                        <span class="text-primary small">({{ $item->rawMaterial->code }})</span>
+                                                    @endif
+                                                </div>
+                                            </td>
                                             <td class="small text-dark">{{ $item->style->style_name ?? '-' }}</td>
-                                            <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
                                             <td class="small text-dark">{{ $item->fabricWidth->width ?? '-' }}</td>
                                             <td class="small text-dark">{{ $item->fabricType->fabric_type ?? '-' }}</td>
                                             <td class="text-center">
                                                 <span class="badge bg-light text-dark">{{ $item->uom->uom_code ?? '-' }}</span>
                                             </td>
                                             <td class="text-center fw-bold">{{ number_format($item->quantity, 2) }}</td>
+                                            <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
+                                            <td class="small text-dark">{{ $item->color->color_name ?? '-' }}</td>
                                             <td class="text-end fw-semibold text-dark">₹{{ number_format($item->rate, 2) }}</td>
-                                            <td class="text-end fw-bold text-primary">₹{{ number_format($item->amount, 2) }}
-                                            </td>
+                                            <td class="text-end fw-bold text-primary">₹{{ number_format($item->amount, 2) }}</td>
+                                            <td class="small text-dark">{{ $item->remarks ?? '-' }}</td>
                                             <td class="text-center pe-4">
                                                 @if($item->attached_file)
                                                     <a href="{{ url('uploads/purchase_orders/' . $item->attached_file) }}"

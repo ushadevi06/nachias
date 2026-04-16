@@ -1208,7 +1208,6 @@
             }
         });
 
-        // Auto-fill art_no and grn_no hidden fields when a material is selected
         $(document).on('change', '.material-select', function() {
             var selectedId = $(this).val();
             var $row = $(this).closest('tr');
@@ -1407,7 +1406,6 @@
             </div>
             <div class="modal-body p-4">
                 <div class="activity-timeline">
-                    <!-- Logs will be loaded here -->
                     <div class="text-center py-4" id="history-loading">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>

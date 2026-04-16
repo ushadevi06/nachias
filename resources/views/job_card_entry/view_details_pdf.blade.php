@@ -22,12 +22,12 @@
         }
         .table-bordered th, .table-bordered td {
             border: 0.2pt solid #eee;
-            padding: 3px 5px;
+            padding: 4px 6px;
             vertical-align: middle;
         }
         .fw-bold {
             font-weight: bold;
-            padding: 4px 4px;
+            padding: 5px 5px;
         }
         .text-center {
             text-align: center;
@@ -549,7 +549,7 @@
             <td style="width: 14%; background-color: #fcfcfc;">TRIMMING & CHECKING</td>
             <td rowspan="8" style="vertical-align: top; text-align: left; padding: 5px;"></td>
         </tr>
-        <tr style="height: 45pt;">
+        <tr style="height: 70pt;">
             <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>
         <tr class="text-center">
@@ -562,7 +562,7 @@
             <td class="bg-light fw-bold">DATE</td>
             <td style="background-color: #fcfcfc;">IRONING</td>
         </tr>
-        <tr style="height: 45pt;">
+        <tr style="height: 70pt;">
             <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>
         <tr class="text-center">
@@ -575,7 +575,7 @@
             <td class="bg-light fw-bold">DATE</td>
             <td style="background-color: #fcfcfc;">PACKING & DELIVERY</td>
         </tr>
-        <tr style="height: 45pt;">
+        <tr style="height: 70pt;">
             <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>
         <tr class="text-center">
@@ -588,7 +588,7 @@
             <td class="bg-light fw-bold">DATE</td>
             <td style="background-color: #fcfcfc;">F.G STORE</td>
         </tr>
-        <tr style="height: 45pt;">
+        <tr style="height: 70pt;">
             <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
         </tr>
     </table>

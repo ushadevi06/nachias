@@ -125,6 +125,7 @@
                 <th rowspan="2">UOM</th>
                 <th rowspan="2">Art</th>
                 <th colspan="{{ count($sizes) }}">Size</th>
+                <th rowspan="2">Total</th>
             </tr>
             <tr>
                 @foreach($sizes as $size)
@@ -141,6 +142,11 @@
                 $halfSleeveRows = [];
 
                 foreach($jobCard->fabricDetails as $detail) {
+                    $trimmedArt = trim($detail->art_no ?? '');
+                    if (($artCategoryMap[$trimmedArt] ?? 1) != 1) {
+                        continue;
+                    }
+
                     $allPOItems = $jobCard->purchaseOrder?->items;
                     
                     if (!$allPOItems && $detail->art_no) {
@@ -198,6 +204,13 @@
                 $allRows = array_merge($fullSleeveRows, $halfSleeveRows);
             @endphp
             @foreach($allRows as $row)
+                @php
+                    $rowTotal = array_sum($row['sizes']);
+                    $grandTotal += $rowTotal;
+                    foreach($sizes as $sizeKey) {
+                        $sizeTotals[$sizeKey] += $row['sizes'][$sizeKey];
+                    }
+                @endphp
                 <tr>
                     <td>{{ $row['item_no'] }}</td>
                     <td>{{ $row['description'] }}</td>
@@ -207,9 +220,19 @@
                     @foreach($sizes as $sizeKey)
                         <td>{{ $row['sizes'][$sizeKey] > 0 ? (int)$row['sizes'][$sizeKey] : '' }}</td>
                     @endforeach
+                    <td style="background-color: #d9e9ff; font-weight: bold;">{{ $rowTotal > 0 ? (int)$rowTotal : '' }}</td>
                 </tr>
             @endforeach
         </tbody>
+        <tfoot>
+            <tr class="footer-row" style="background-color: #d9e9ff;">
+                <td colspan="5" style="text-align: center;">TOTAL</td>
+                @foreach($sizes as $sizeKey)
+                    <td>{{ $sizeTotals[$sizeKey] > 0 ? (int)$sizeTotals[$sizeKey] : '' }}</td>
+                @endforeach
+                <td style="font-weight: bold; font-size: 11px;">{{ $grandTotal > 0 ? (int)$grandTotal : '' }}</td>
+            </tr>
+        </tfoot>
     </table>
 </body>
 </html>

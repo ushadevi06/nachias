@@ -322,7 +322,6 @@ class TaskManagementController extends Controller
             }
         }
 
-        // Re-calculate stages if not already loaded (fallback)
         if ($stages->isEmpty() && (request()->has('job_card_id') || (isset($jobCard) && $jobCard))) {
             $jcId = request('job_card_id') ?: ($jobCard ? $jobCard->id : null);
             if ($jcId) {
