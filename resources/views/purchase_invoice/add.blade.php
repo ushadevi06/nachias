@@ -665,20 +665,6 @@
                                             <input type="hidden" name="sub_total" id="sub_total_input" value="{{ $subTotal }}">
                                         </div>
                                         <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
-                                            <span>Discount:</span>
-                                            <div class="d-flex gap-2 align-items-center">
-                                                <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
-                                                    <span class="input-group-text">%</span>
-                                                </div>
-                                                <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
-                                                <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
-                                            </div>
-                                        </div>
-                                        @error('discount_percent')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                        @enderror
-                                        <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
                                             <span>Commission:</span>
                                             <div class="d-flex gap-2 align-items-center">
                                                 <div class="d-flex align-items-center gap-1">
@@ -691,6 +677,20 @@
                                             </div>
                                         </div>
                                         @error('commission')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+                                        <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                                            <span>Discount:</span>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
+                                                    <span class="input-group-text">%</span>
+                                                </div>
+                                                <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
+                                                <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
+                                            </div>
+                                        </div>
+                                        @error('discount_percent')
                                             <div class="text-danger mt-1">{{ $message }}</div>
                                         @enderror
                                         <div class="d-flex justify-content-between py-2 border-bottom">
@@ -1302,7 +1302,7 @@
                 $('#commission_value').text(commissionAmount.toFixed(2));
                 $('#commission_amount_input').val(commissionAmount.toFixed(2));
 
-                let itemTotal = subTotal - discountAmount;
+                let itemTotal = subTotal - discountAmount - commissionAmount;
 
                 let preGstCharges = 0;
                 let postGstCharges = 0;
@@ -1718,7 +1718,7 @@
                 $('#commission_value').text(commissionAmount.toFixed(2));
                 $('#commission_amount_input').val(commissionAmount.toFixed(2));
 
-                let itemTotal = subTotal - discountAmount;
+                let itemTotal = subTotal - discountAmount - commissionAmount;
 
                 let preGstCharges = 0;
                 let postGstCharges = 0;

@@ -41,7 +41,7 @@ class StoreController extends Controller
                                 </a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete stores')) {
+                if ((auth()->id() == 1 || auth()->user()->can('delete stores')) && !in_array($row->id, [1, 2])) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('stores/delete/' . $row->id) . '\')">
                             <i class="icon-base ri ri-delete-bin-line"></i>
                         </a>';
@@ -128,6 +128,11 @@ class StoreController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete stores')) {
             return unauthorizedRedirect();
         }
+
+        if (in_array($id, [1, 2])) {
+            return redirect('stores')->with('danger', 'This store type is a core record and cannot be deleted.');
+        }
+
         $storeType = StoreType::findOrFail($id);
         
         if (JobCardEntry::where('issue_store_id', $id)->exists()) {

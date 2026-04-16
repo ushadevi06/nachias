@@ -134,7 +134,7 @@ class GrnEntryController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit grn-entry')) {
                 return unauthorizedRedirect();
             }
-            $grn = GrnEntry::with(['grnEntryItems.purchaseInvoiceItem.rawMaterial', 'grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'purchaseInvoice.purchaseOrder'])->findOrFail($id);
+            $grn = GrnEntry::with(['grnEntryItems.purchaseInvoiceItem.rawMaterial', 'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.color', 'grnEntryItems.variants.color', 'grnEntryItems.fabricType', 'grnEntryItems.storeLocation', 'grnEntryItems.color', 'purchaseInvoice.purchaseOrder'])->findOrFail($id);
             $purchaseInvoices = PurchaseInvoice::with('purchaseOrder')->whereHas('items', function ($query) use ($id) {
                 $query->whereRaw('quantity > (SELECT IFNULL(SUM(qty_received), 0) FROM grn_entry_items WHERE grn_entry_items.purchase_invoice_item_id = purchase_invoice_items.id AND grn_entry_items.grn_entry_id != ? AND grn_entry_items.deleted_at IS NULL)', [$id]);
             })->orWhere('id', $grn->purchase_invoice_id)->orderBy('invoice_no')->get();
@@ -150,9 +150,22 @@ class GrnEntryController extends Controller
 
         $fabricTypes = FabricType::where('status', 'Active')->orderBy('fabric_type')->get();
         $storeLocations = StoreLocation::where('status', 'Active')->orderBy('store_location')->get();
-        $colors = Color::orderBy('color_name')->get();
+        $colors = Color::where('status', 'Active')->orderBy('color_name')->get();
 
         if ($request->isMethod('post')) {
+            if ($request->has('items')) {
+                $items = $request->input('items');
+                foreach ($items as $idx => $item) {
+                    if (isset($item['color_id']) && $item['color_id'] === '') {
+                        $items[$idx]['color_id'] = null;
+                    }
+                    if (isset($item['fabric_type_id']) && $item['fabric_type_id'] === '') {
+                        $items[$idx]['fabric_type_id'] = null;
+                    }
+                }
+                $request->merge(['items' => $items]);
+            }
+
             $headerRules = [
                 'grn_date' => 'required|date_format:d-m-Y',
                 'purchase_invoice_id' => 'required|exists:purchase_invoices,id',
@@ -221,6 +234,7 @@ class GrnEntryController extends Controller
                     $rules["items.$index.quality_check_status"] = 'required|in:Pass,Fail,Hold';
                     $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     $rules["items.$index.fabric_type_id"] = 'nullable|exists:fabric_types,id';
+                    $rules["items.$index.color_id"] = 'nullable|exists:colors,id';
                     $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048';
                 }
             }
@@ -304,7 +318,8 @@ class GrnEntryController extends Controller
                     if ($item) {
                         $updateData = [
                             'art_no' => $itemData['art_no'] ?? null,
-                            'fabric_type_id' => $itemData['fabric_type_id'] ?? null,
+                            'fabric_type_id' => !empty($itemData['fabric_type_id']) ? $itemData['fabric_type_id'] : null,
+                            'color_id' => !empty($itemData['color_id']) ? $itemData['color_id'] : null,
                             'qty_ordered' => $itemData['qty_ordered'] ?? 0,
                             'qty_received' => $itemData['qty_received'] ?? 0,
                             'qty_accepted' => $itemData['qty_accepted'] ?? 0,
@@ -324,7 +339,8 @@ class GrnEntryController extends Controller
                             'grn_entry_id' => $grn->id,
                             'purchase_invoice_item_id' => $piItemId,
                             'art_no' => $itemData['art_no'] ?? null,
-                            'fabric_type_id' => $itemData['fabric_type_id'] ?? null,
+                            'fabric_type_id' => !empty($itemData['fabric_type_id']) ? $itemData['fabric_type_id'] : null,
+                            'color_id' => !empty($itemData['color_id']) ? $itemData['color_id'] : null,
                             'qty_ordered' => $itemData['qty_ordered'] ?? 0,
                             'qty_received' => $itemData['qty_received'] ?? 0,
                             'qty_accepted' => $itemData['qty_accepted'] ?? 0,
@@ -340,8 +356,8 @@ class GrnEntryController extends Controller
 
                     $processedItemIds[] = $item->id;
 
-                    $item->variants()->delete();
                     if (isset($itemData['variants']) && is_array($itemData['variants'])) {
+                        $item->variants()->delete();
                         foreach ($itemData['variants'] as $v) {
                             if (($v['qty'] ?? 0) > 0) {
                                 GrnEntryItemVariant::create([
@@ -398,7 +414,7 @@ class GrnEntryController extends Controller
 
     public function getInvoiceDetails($id)
     {
-        $invoice = PurchaseInvoice::with(['purchaseOrder.storeType', 'supplier', 'items.rawMaterial', 'items.uom', 'items.purchaseOrderItem.brand'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with(['purchaseOrder.storeType', 'supplier', 'items.rawMaterial', 'items.uom', 'items.purchaseOrderItem.brand', 'items.purchaseOrderItem.color'])->findOrFail($id);
 
         $brandSequences = [];
 
@@ -444,6 +460,8 @@ class GrnEntryController extends Controller
                 'amount' => $item->amount,
                 'store_category_id' => $store_category_id,
                 'fabric_type_id' => $item->purchaseOrderItem->fabric_type_id ?? '',
+                'color_id' => $item->purchaseOrderItem->color_id ?? null,
+                'color_name' => $item->purchaseOrderItem->color->color_name ?? '',
             ];
         })->filter(function ($item) {
             return ($item['qty_ordered'] - $item['qty_already_received']) > 0;
@@ -472,6 +490,7 @@ class GrnEntryController extends Controller
             'grnEntryItems.purchaseInvoiceItem.uom',
             'grnEntryItems.fabricType',
             'grnEntryItems.storeLocation',
+            'grnEntryItems.color',
             'grnEntryItems.variants.color'
         ])->findOrFail($id);
 
@@ -504,6 +523,7 @@ class GrnEntryController extends Controller
             'grnEntryItems.purchaseInvoiceItem.uom',
             'grnEntryItems.fabricType',
             'grnEntryItems.storeLocation',
+            'grnEntryItems.color',
             'grnEntryItems.variants.color',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.brand',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.style',
@@ -527,6 +547,7 @@ class GrnEntryController extends Controller
             'grnEntryItems.purchaseInvoiceItem.uom',
             'grnEntryItems.fabricType',
             'grnEntryItems.storeLocation',
+            'grnEntryItems.color',
             'grnEntryItems.variants.color',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.brand',
             'grnEntryItems.purchaseInvoiceItem.purchaseOrderItem.style',

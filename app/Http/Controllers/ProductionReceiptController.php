@@ -472,7 +472,6 @@ class ProductionReceiptController extends Controller
             return $row?->store_category_id ?? null;
         };
 
-        // Production receipts should only be generated against Fabric (store_category_id = 1)
         $fabricDetails = $jobCard->fabricDetails
             ->filter(function ($fd) use ($getStoreCategoryIdForArtNo) {
                 return $getStoreCategoryIdForArtNo($fd->art_no) === 1;
@@ -546,8 +545,7 @@ class ProductionReceiptController extends Controller
         
         $fallbackStyleName = '';
         if ($allPOItems) {
-            $fabricPoItem = $allPOItems->where('store_category_id', 1)->whereNotNull('style_id')->first() 
-                            ?: $allPOItems->whereNotNull('style_id')->first();
+            $fabricPoItem = $allPOItems->where('store_category_id', 1)->whereNotNull('style_id')->first() ?: $allPOItems->whereNotNull('style_id')->first();
             $fallbackStyleName = $fabricPoItem && $fabricPoItem->style ? $fabricPoItem->style->style_name : '';
         }
 

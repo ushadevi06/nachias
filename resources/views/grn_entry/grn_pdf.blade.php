@@ -31,6 +31,7 @@
     .company-address {
         font-size: 10pt;
         line-height: 1.3;
+        max-width: 250px;
     }
     .title {
         text-align: center;
@@ -158,30 +159,23 @@
                 <td class="meta-left">
                     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
                         <tr>
-                            <td width="35%" style="border:none; padding:0;">Received From</td>
-                            <td width="65%" style="border:none; padding:0;">: <strong>{{ $grn->supplier->name ?? 'N/A' }}</strong></td>
-                        </tr>
-                        <tr>
-                            <td style="border:none;"></td>
-                            <td style="border:none; font-size: 8pt; line-height: 1.2; padding-top: 2px;">
-                                @if($grn->supplier)
+                            <td width="35%" style="border:none; padding:0; vertical-align: top;">Received From</td>
+                            <td width="65%" style="border:none; padding:0;">
+                                : <strong>{{ $grn->supplier->name ?? 'N/A' }}</strong>
+                                <div style="font-size: 8pt; line-height: 1.2; padding-top: 2px; padding-left: 8px;">
                                     @php
-                                        $addressLines = array_filter([
-                                            $grn->supplier->address_line_1,
-                                            $grn->supplier->address_line_2,
-                                            $grn->supplier->address_line_3
-                                        ]);
-                                        $address = implode(', ', $addressLines);
-                                        $city = $grn->supplier->city->city_name ?? '';
-                                        $zip = $grn->supplier->zip_code ?? '';
-                                        
-                                        $mainAddress = implode(', ', array_filter([$address, $city]));
-                                        echo $mainAddress;
-                                        if ($zip) {
-                                            echo ' - ' . $zip;
+                                        $address = implode(', ', array_filter([
+                                            $grn->supplier->address_line_1 ?? '',
+                                            $grn->supplier->address_line_2 ?? '',
+                                            $grn->supplier->address_line_3 ?? '',
+                                            $grn->supplier->city->city_name ?? ''
+                                        ]));
+                                        echo $address;
+                                        if (!empty($grn->supplier->zip_code)) {
+                                            echo ' - ' . $grn->supplier->zip_code;
                                         }
                                     @endphp
-                                @endif
+                                </div>
                             </td>
                         </tr>
                     </table>
@@ -206,7 +200,7 @@
                         </tr>
                         <tr>
                             <td class="meta-label">Store</td>
-                            <td class="meta-value">: {{ $grn->grnEntryItems->first()->storeLocation->store_location ?? '-' }}</td>
+                            <td class="meta-value">: {{ $grn->purchaseInvoice->purchaseOrder->storeType->store_type_name ?? '-' }}</td>
                         </tr>
                     </table>
                 </td>
@@ -234,12 +228,8 @@
             @foreach($grn->grnEntryItems as $index => $item)
                 @php 
                     $totalQty += $item->qty_received;
-                    $catId = $item->purchaseInvoiceItem?->rawMaterial?->store_category_id ?? 0;
-                    if ($catId == 1 && $item->purchaseInvoiceItem?->purchaseOrderItem?->supplier_design_name) {
-                        $rawMaterialName = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name;
-                    } else {
-                        $rawMaterialName = $item->purchaseInvoiceItem->rawMaterial->name ?? '-';
-                    }
+                    $rawMaterialName = $item->purchaseInvoiceItem->rawMaterial->name ?? '-';
+                    $rawMaterialCode = $item->purchaseInvoiceItem->rawMaterial->code ?? '';
                     $brandName = $item->purchaseInvoiceItem->purchaseOrderItem->brand->brand_name ?? '-';
                     $styleName = $item->purchaseInvoiceItem->purchaseOrderItem->style->style_name ?? '-';
                     if (!empty($item->color?->color_name)) {
@@ -260,7 +250,13 @@
                 @endphp
                 <tr class="{{ ($index % 2 != 0) ? 'alt-row' : '' }}">
                     <td class="text-center">{{ $index + 1 }}</td>
-                    <td class="text-left">{{ $rawMaterialName }} <br> [{{ $brandName }}]</td>
+                    <td class="text-left">
+                        {{ $rawMaterialName }}
+                        @if(!empty($rawMaterialCode))
+                            <br><small>({{ $rawMaterialCode }})</small>
+                        @endif
+                        <br> [{{ $brandName }}]
+                    </td>
                     <td class="text-center">{{ $styleName }}</td>
                     <td class="text-center">{{ $colorName }}</td>
                     <td class="text-center">{{ $widthVal }}</td>

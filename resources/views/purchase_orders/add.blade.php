@@ -67,6 +67,7 @@
                                                 <option value="{{ $supplier->id }}" 
                                                     data-state-id="{{ $supplier->state_id }}" 
                                                     data-payment-terms="{{ $supplier->payment_terms ?? '' }}" 
+                                                    data-store-id="{{ $supplier->store_id ?? '' }}"
                                                     data-igst="{{ $supplier->igst_percent ?? 0 }}"
                                                     data-cgst="{{ $supplier->cgst_percent ?? 0 }}"
                                                     data-sgst="{{ $supplier->sgst_percent ?? 0 }}"
@@ -542,11 +543,9 @@
                                                     </td>
                                                     <td>
                                                         @if($loop->first)
-                                                            <button type="button" class="btn btn-primary add_item"><i
-                                                                    class="ri ri-add-line"></i></button>
+                                                            <button type="button" class="btn btn-primary add_item"><i class="ri ri-add-line"></i></button>
                                                         @else
-                                                            <button type="button" class="btn btn-danger delete_item"><i
-                                                                    class="ri ri-delete-bin-line"></i></button>
+                                                            <button type="button" class="btn btn-danger delete_item"><i class="ri ri-delete-bin-line"></i></button>
                                                         @endif
                                                     </td>
                                                 </tr>
@@ -619,13 +618,10 @@
                                                     <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control quantity" name="items[0][quantity]"
-                                                        step="0.01" min="0.01" placeholder="Enter Quantity">
+                                                    <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control supplier_design_name"
-                                                        name="items[0][supplier_design_name]"
-                                                        placeholder="Enter Supplier Design Name">
+                                                    <input type="text" class="form-control supplier_design_name" name="items[0][supplier_design_name]" placeholder="Enter Supplier Design Name">
                                                 </td>
                                                 <td>
                                                     <select class="select2 form-select color" name="items[0][color_id]"
@@ -644,12 +640,10 @@
                                                     <input type="text" class="form-control amount" readonly>
                                                 </td>
                                                 <td>
-                                                    <textarea class="form-control remarks" name="items[0][remarks]"
-                                                        style="height: 58px;" placeholder="Enter Remarks"></textarea>
+                                                    <textarea class="form-control remarks" name="items[0][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
                                                 </td>
                                                 <td>
-                                                    <input type="file" class="form-control file-input"
-                                                        name="items[0][attached_file]" accept="*">
+                                                    <input type="file" class="form-control file-input" name="items[0][attached_file]" accept="*">
                                                     <input type="hidden" name="items[0][existing_file]" value="">
                                                     <div class="mt-2 preview-container"></div>
                                                 </td>
@@ -1003,6 +997,12 @@
 
                 $('#item-rows tbody').append(rowHtml);
                 initSelect2Fields();
+                
+                let storeTypeId = $('#store_type_id').val();
+                if (storeTypeId) {
+                    $('#item-rows tbody tr:last').find('.po_store_category').val(storeTypeId).trigger('change.select2').trigger('change');
+                }
+
                 itemIndex++;
             });
 
@@ -1023,6 +1023,7 @@
                 let category_id = $(this).val();
                 let row = $(this).closest('tr');
                 let materialSelect = row.find('.material');
+                let currentMaterialId = materialSelect.val(); // Capture current selection
 
                 if (materialSelect.hasClass("select2-hidden-accessible")) {
                     materialSelect.select2('destroy');
@@ -1050,8 +1051,9 @@
                                 if (typeof materialName === 'object' && materialName !== null) {
                                     materialName = materialName.en || materialName.value || Object.values(materialName)[0] || JSON.stringify(materialName);
                                 }
+                                let isSelected = (currentMaterialId == material.id) ? 'selected' : '';
                                 materialsHtml += `
-                                                <option value="${material.id}" data-uom-id="${material.uom_id}">${materialName} (${material.code})</option>`;
+                                                <option value="${material.id}" data-uom-id="${material.uom_id}" ${isSelected}>${materialName} (${material.code})</option>`;
                             });
                         } else {
                             materialsHtml += '<option value="">No materials found</option>';
@@ -1063,6 +1065,11 @@
                             placeholder: materialSelect.data('placeholder'),
                             width: '100%'
                         });
+                        
+                        // If we restored a selection, trigger change to update UOM and other fields
+                        if (currentMaterialId && materialSelect.val() == currentMaterialId) {
+                            materialSelect.trigger('change');
+                        }
 
                     },
                     error: function () {
@@ -1141,8 +1148,9 @@
                 $('#sub_total').val(subTotal.toFixed(2));
 
                 let commissionPercent = parseFloat($('input[name="commission"]').val()) || 0;
+                let commissionAmount = 0;
                 if (commissionPercent > 0) {
-                    let commissionAmount = (subTotal * commissionPercent) / 100;
+                    commissionAmount = (subTotal * commissionPercent) / 100;
                     $('#commission_amount_display').text(commissionAmount.toFixed(2));
                     $('#commission_row').removeClass('d-none');
                 } else {
@@ -1154,7 +1162,7 @@
                 let discountAmount = (subTotal * discountPercent) / 100;
                 $('#discount_amount').val(discountAmount.toFixed(2));
 
-                let taxableAmount = subTotal - discountAmount;
+                let taxableAmount = subTotal - discountAmount - commissionAmount;
 
                 $('#taxable_amount').val(taxableAmount.toFixed(2));
 
@@ -1210,6 +1218,13 @@
 
                 if (paymentTerms !== undefined) {
                     $('#payment_terms').val(paymentTerms);
+                }
+
+                let storeTypeId = selected.data('store-id');
+                if (storeTypeId) {
+                    $('#store_type_id').val(storeTypeId).trigger('change.select2').trigger('change');
+                } else {
+                    $('#store_type_id').val('').trigger('change.select2').trigger('change');
                 }
 
                 if (supplierStateId && companyStateId) {
@@ -1339,6 +1354,15 @@
                         `);
                     }
                 });
+            });
+
+            $(document).on('change', '#store_type_id', function() {
+                let storeTypeId = $(this).val();
+                if (storeTypeId) {
+                    $('.po_store_category').val(storeTypeId).trigger('change.select2').trigger('change');
+                } else {
+                    $('.po_store_category').val('').trigger('change.select2').trigger('change');
+                }
             });
 
             initSelect2Fields();

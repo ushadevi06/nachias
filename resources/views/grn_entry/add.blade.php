@@ -11,7 +11,10 @@
                     </div>
                     <form action="{{ url('grn_entries/add' . ($grn ? '/' . $grn->id : '')) }}" method="POST" id="grn-form" class="common-form" enctype="multipart/form-data" autocomplete="off">
                         @csrf
-                        
+                        <div class="col-lg-12">
+                            @include('flash_messages')
+                        </div>
+
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
@@ -25,7 +28,7 @@
                                     <label>GRN Date * </label>
                                 </div>
                                 @error('grn_date')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="col-md-6 col-xl-4">
@@ -33,15 +36,15 @@
                                     <select name="purchase_invoice_id" id="po_no" class="select2 form-select @error('purchase_invoice_id') is-invalid @enderror" data-placeholder="Select PO Invoice Number">
                                         <option value="">Select PO Invoice Number</option>
                                         @foreach($purchaseInvoices as $inv)
-                                            <option value="{{ $inv->id }}" {{ old('purchase_invoice_id', $grn->purchase_invoice_id ?? '') == $inv->id ? 'selected' : '' }}>
-                                                {{ $inv->invoice_no }} {{ isset($inv->purchaseOrder) ? '(PO: ' . $inv->purchaseOrder->po_number . ')' : '' }}
-                                            </option>
+                                        <option value="{{ $inv->id }}" {{ old('purchase_invoice_id', $grn->purchase_invoice_id ?? '') == $inv->id ? 'selected' : '' }}>
+                                            {{ $inv->invoice_no }} {{ isset($inv->purchaseOrder) ? '(PO: ' . $inv->purchaseOrder->po_number . ')' : '' }}
+                                        </option>
                                         @endforeach
                                     </select>
                                     <label>PO Invoice Number *</label>
                                 </div>
                                 @error('purchase_invoice_id')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div id="show_item_det" class="{{ old('purchase_invoice_id', $grn->purchase_invoice_id ?? '') ? '' : 'd-none' }} col-lg-12">
@@ -49,10 +52,12 @@
                                     .split-row {
                                         border-left: 4px solid #00cfe8 !important;
                                     }
+
                                     .item-row.split-row td {
                                         padding-top: 10px;
                                         padding-bottom: 10px;
                                     }
+
                                     .row-it-count {
                                         font-weight: bold;
                                         color: #5d596c;
@@ -72,7 +77,7 @@
                                             <label>Supplier Invoice Date * </label>
                                         </div>
                                         @error('supplier_invoice_date')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        <div class="text-danger mt-1">{{ $message }}</div>
                                         @enderror
                                     </div>
                                     <div class="col-md-6 col-xl-4">
@@ -88,10 +93,10 @@
                                             <label>Status *</label>
                                         </div>
                                         @error('status')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        <div class="text-danger mt-1">{{ $message }}</div>
                                         @enderror
                                     </div>
-                                    
+
                                     <div class="col-lg-12 mt-5">
                                         <div class="table-responsive grn_table" style="overflow-x: auto; white-space: nowrap;">
                                             <table class="table table-bordered align-middle text-center" id="grn-items-table">
@@ -115,192 +120,207 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    @php 
-                                                        $oldItems = old('items');
-                                                        $itemsToLoop = $oldItems ?: ($grn ? $grn->grnEntryItems : []);
-                                                        $itCount = 1; 
+                                                    @php
+                                                    $oldItems = old('items');
+                                                    $itemsToLoop = $oldItems ?: ($grn ? $grn->grnEntryItems : []);
+                                                    $itCount = 1;
                                                     @endphp
                                                     @foreach($itemsToLoop as $idx => $item)
-                                                        @php 
-                                                            $itemObj = is_array($item) ? (object)$item : $item; 
-                                                            if (is_array($item)) {
-                                                                $dbItem = \App\Models\PurchaseInvoiceItem::with(['uom', 'rawMaterial', 'purchaseOrderItem'])->find($item['purchase_invoice_item_id'] ?? 0);
-                                                                if ($dbItem && $dbItem->rawMaterial && $dbItem->rawMaterial->store_category_id == 1 && $dbItem->purchaseOrderItem && strval($dbItem->purchaseOrderItem->supplier_design_name) !== '') {
-                                                                    $designName = $dbItem->purchaseOrderItem->supplier_design_name;
-                                                                } else {
-                                                                    $designName = ($dbItem && $dbItem->rawMaterial) ? ($dbItem->rawMaterial->name . ' (' . $dbItem->rawMaterial->code . ')') : 'Item ' . ($idx + 1);
-                                                                }
-                                                                $uomName = ($dbItem && $dbItem->uom) ? $dbItem->uom->uom_code : 'MTR';
-                                                                $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'] ?? 0)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
-                                                                $qtyOrdered = ($dbItem->quantity ?? 0);
-                                                                $initialBalance = ($qtyOrdered - $alreadyReceived - ($item['qty_received'] ?? 0));
-                                                            } else {
-                                                                if ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial && $item->purchaseInvoiceItem->rawMaterial->store_category_id == 1 && $item->purchaseInvoiceItem->purchaseOrderItem && strval($item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name) !== '') {
-                                                                    $designName = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name;
-                                                                } else {
-                                                                    $designName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial) ? ($item->purchaseInvoiceItem->rawMaterial->name . ' (' . $item->purchaseInvoiceItem->rawMaterial->code . ')') : 'Unknown';
-                                                                }
-                                                                $uomName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->uom) ? $item->purchaseInvoiceItem->uom->uom_code : 'MTR';
-                                                                $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
-                                                                $qtyOrdered = ($item->purchaseInvoiceItem->quantity ?? 0);
-                                                                $initialBalance = ($qtyOrdered - $alreadyReceived - ($item->qty_received ?? 0));
-                                                            }
-                                                        @endphp
+                                                    @php
+                                                    $itemObj = is_array($item) ? (object)$item : $item;
+                                                    if (is_array($item)) {
+                                                    $dbItem = \App\Models\PurchaseInvoiceItem::with(['uom', 'rawMaterial', 'purchaseOrderItem'])->find($item['purchase_invoice_item_id'] ?? 0);
+                                                    if ($dbItem && $dbItem->rawMaterial && $dbItem->rawMaterial->store_category_id == 1 && $dbItem->purchaseOrderItem && strval($dbItem->purchaseOrderItem->supplier_design_name) !== '') {
+                                                    $designName = $dbItem->purchaseOrderItem->supplier_design_name;
+                                                    } else {
+                                                    $designName = ($dbItem && $dbItem->rawMaterial) ? ($dbItem->rawMaterial->name . ' (' . $dbItem->rawMaterial->code . ')') : 'Item ' . ($idx + 1);
+                                                    }
+                                                    $uomName = ($dbItem && $dbItem->uom) ? $dbItem->uom->uom_code : 'MTR';
+                                                    $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item['purchase_invoice_item_id'] ?? 0)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
+                                                    $qtyOrdered = ($dbItem->quantity ?? 0);
+                                                    $initialBalance = ($qtyOrdered - $alreadyReceived - ($item['qty_received'] ?? 0));
+                                                    } else {
+                                                    if ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial && $item->purchaseInvoiceItem->rawMaterial->store_category_id == 1 && $item->purchaseInvoiceItem->purchaseOrderItem && strval($item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name) !== '') {
+                                                    $designName = $item->purchaseInvoiceItem->purchaseOrderItem->supplier_design_name;
+                                                    } else {
+                                                    $designName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->rawMaterial) ? ($item->purchaseInvoiceItem->rawMaterial->name . ' (' . $item->purchaseInvoiceItem->rawMaterial->code . ')') : 'Unknown';
+                                                    }
+                                                    $uomName = ($item->purchaseInvoiceItem && $item->purchaseInvoiceItem->uom) ? $item->purchaseInvoiceItem->uom->uom_code : 'MTR';
+                                                    $alreadyReceived = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('grn_entry_id', '!=', $grn->id ?? 0)->sum('qty_received');
+                                                    $qtyOrdered = ($item->purchaseInvoiceItem->quantity ?? 0);
+                                                    $initialBalance = ($qtyOrdered - $alreadyReceived - ($item->qty_received ?? 0));
+                                                    }
+                                                    @endphp
 
-                                                        @php
-                                                            $piItemId = is_array($item) ? ($item['purchase_invoice_item_id'] ?? 0) : ($item->purchase_invoice_item_id ?? 0);
-                                                            $isSplit = false;
-                                                            if ($piItemId > 0) {
-                                                                $isSplit = collect($itemsToLoop)->where(function($it) use ($piItemId) {
-                                                                    return (is_array($it) ? ($it['purchase_invoice_item_id'] ?? 0) : ($it->purchase_invoice_item_id ?? 0)) == $piItemId;
-                                                                })->count() > 1;
+                                                    @php
+                                                    $selectedColorId = is_array($item)
+                                                    ? ($item['color_id'] ?? null)
+                                                    : ($item->color_id
+                                                        ?? $item->purchaseInvoiceItem?->purchaseOrderItem?->color_id
+                                                        ?? null);
+                                                    $selectedColorName = '-';
+                                                    if (!empty($selectedColorId)) {
+                                                    $selectedColor = $colors->firstWhere('id', (int) $selectedColorId);
+                                                    $selectedColorName = $selectedColor->color_name ?? 'N/A';
+                                                    } elseif (!is_array($item) && ($item->variants->count() ?? 0) === 1) {
+                                                    $selectedColorName = $item->variants->first()->color->color_name ?? '-';
+                                                    }
+
+                                                    $piItemId = is_array($item) ? ($item['purchase_invoice_item_id'] ?? 0) : ($item->purchase_invoice_item_id ?? 0);
+                                                    $isSplit = false;
+                                                    if ($piItemId > 0) {
+                                                    $isSplit = collect($itemsToLoop)->where(function($it) use ($piItemId) {
+                                                    return (is_array($it) ? ($it['purchase_invoice_item_id'] ?? 0) : ($it->purchase_invoice_item_id ?? 0)) == $piItemId;
+                                                    })->count() > 1;
+                                                    }
+                                                    @endphp
+                                                    <tr class="item-row {{ $isSplit ? 'split-row' : '' }}" data-index="{{ $idx }}">
+                                                        <td>
+                                                            <input type="checkbox" class="row-select form-check-input" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? 'checked' : '' }}>
+                                                            <input type="hidden" name="items[{{$idx}}][row_selected]" value="{{ (is_array($item) ? ($item['row_selected'] ?? 0) : 1) }}" class="row-selected-input">
+                                                        </td>
+                                                        <td class="text-nowrap">
+                                                            <span class="row-it-count">{{ $itCount++ }}</span>
+                                                            <button type="button" class="btn btn-sm btn-outline-info ms-1 add-split-row" data-bs-toggle="tooltip" title="Add split row for this item"><i class="ri ri-add-line"></i></button>
+                                                            <input type="hidden" name="items[{{$idx}}][id]" value="{{ $itemObj->id ?? '' }}">
+                                                        </td>
+                                                        <td>
+                                                            {{ $designName }}
+                                                            <button type="button" class="btn btn-warning btn-sm btn-variants" data-index="{{ $idx }}" data-ordered="{{ $itemObj->qty_ordered }}" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && ($itemObj->qty_received ?? 0) > 0) ? '' : 'disabled' }}>Add Variants</button>
+                                                            <div class="variants-data-container">
+                                                                @php $variants = is_array($item) ? ($item['variants'] ?? []) : $item->variants; @endphp
+                                                                @foreach($variants as $vIdx => $v)
+                                                                @php $vObj = is_array($v) ? (object)$v : $v; @endphp
+                                                                <input type="hidden" name="items[{{$idx}}][variants][{{$vIdx}}][color_id]" value="{{ $vObj->color_id }}">
+                                                                <input type="hidden" name="items[{{$idx}}][variants][{{$vIdx}}][qty]" value="{{ $vObj->qty ?? ($vObj->qty_received ?? 0) }}">
+                                                                @endforeach
+                                                            </div>
+                                                            @error("items.$idx.variants") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </td>
+                                                        <td>
+                                                            <input type="file" name="items[{{$idx}}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/webp" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                            @if(isset($itemObj->image) && $itemObj->image)
+                                                            <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
+                                                            <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded cursor-pointer view-image" data-image="{{ url('uploads/grn_items/' . $itemObj->image) }}" alt="Item">
+                                                            @endif
+                                                            @error("items.$idx.item_image") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </td>
+                                                        <td>
+                                                            <input type="hidden" name="items[{{$idx}}][purchase_invoice_item_id]" value="{{ $itemObj->purchase_invoice_item_id }}">
+                                                            <input type="hidden" name="items[{{$idx}}][store_category_id]" value="{{ is_array($item) ? ($item['store_category_id'] ?? 0) : ($item->purchaseInvoiceItem->rawMaterial->store_category_id ?? 0) }}">
+                                                            <input type="text" name="items[{{$idx}}][art_no]" value="{{ $itemObj->art_no }}"
+                                                                class="form-control art-no-input @error(" items.$idx.art_no") is-invalid @enderror"
+                                                                {{ (isset($itemObj->purchaseInvoiceItem->rawMaterial->store_category_id) && $itemObj->purchaseInvoiceItem->rawMaterial->store_category_id == 2) ? 'readonly style=background-color:#e9ecef;' : '' }}>
+                                                            @error("items.$idx.art_no") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </td>
+                                                        <td>
+                                                            @php
+                                                            $width = '-';
+                                                            if (is_array($item)) {
+                                                            $width = $dbItem->purchaseOrderItem->fabricWidth->width ?? '-';
+                                                            } else {
+                                                            $width = $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->width ?? '-';
                                                             }
-                                                        @endphp
-                                                        <tr class="item-row {{ $isSplit ? 'split-row' : '' }}" data-index="{{ $idx }}">
-                                                            <td>
-                                                                <input type="checkbox" class="row-select form-check-input" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? 'checked' : '' }}>
-                                                                <input type="hidden" name="items[{{$idx}}][row_selected]" value="{{ (is_array($item) ? ($item['row_selected'] ?? 0) : 1) }}" class="row-selected-input">
-                                                            </td>
-                                                            <td class="text-nowrap">
-                                                                <span class="row-it-count">{{ $itCount++ }}</span>
-                                                                <button type="button" class="btn btn-sm btn-outline-info ms-1 add-split-row" data-bs-toggle="tooltip" title="Add split row for this item"><i class="ri ri-add-line"></i></button>
-                                                                <input type="hidden" name="items[{{$idx}}][id]" value="{{ $itemObj->id ?? '' }}">
-                                                            </td>
-                                                            <td>
-                                                                {{ $designName }}
-                                                                <button type="button" class="btn btn-warning btn-sm btn-variants" data-index="{{ $idx }}" data-ordered="{{ $itemObj->qty_ordered }}" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && ($itemObj->qty_received ?? 0) > 0) ? '' : 'disabled' }}>Add Variants</button>
-                                                                <div class="variants-data-container">
-                                                                    @php $variants = is_array($item) ? ($item['variants'] ?? []) : $item->variants; @endphp
-                                                                    @foreach($variants as $vIdx => $v)
-                                                                        @php $vObj = is_array($v) ? (object)$v : $v; @endphp
-                                                                        <input type="hidden" name="items[{{$idx}}][variants][{{$vIdx}}][color_id]" value="{{ $vObj->color_id }}">
-                                                                        <input type="hidden" name="items[{{$idx}}][variants][{{$vIdx}}][qty]" value="{{ $vObj->qty ?? ($vObj->qty_received ?? 0) }}">
-                                                                    @endforeach
-                                                                </div>
-                                                                @error("items.$idx.variants") <div class="text-danger small">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
-                                                                 <input type="file" name="items[{{$idx}}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/webp" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
-                                                                @if(isset($itemObj->image) && $itemObj->image)
-                                                                    <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
-                                                                    <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded cursor-pointer view-image" data-image="{{ url('uploads/grn_items/' . $itemObj->image) }}" alt="Item">
-                                                                @endif
-                                                                @error("items.$idx.item_image") <div class="text-danger small">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="hidden" name="items[{{$idx}}][purchase_invoice_item_id]" value="{{ $itemObj->purchase_invoice_item_id }}">
-                                                                <input type="hidden" name="items[{{$idx}}][store_category_id]" value="{{ is_array($item) ? ($item['store_category_id'] ?? 0) : ($item->purchaseInvoiceItem->rawMaterial->store_category_id ?? 0) }}">
-                                                                <input type="text" name="items[{{$idx}}][art_no]" value="{{ $itemObj->art_no }}" 
-                                                                    class="form-control art-no-input @error("items.$idx.art_no") is-invalid @enderror"
-                                                                    {{ (isset($itemObj->purchaseInvoiceItem->rawMaterial->store_category_id) && $itemObj->purchaseInvoiceItem->rawMaterial->store_category_id == 2) ? 'readonly style=background-color:#e9ecef;' : '' }}>
-                                                                @error("items.$idx.art_no") <div class="text-danger small">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
-                                                                @php
-                                                                    $width = '-';
-                                                                    if (is_array($item)) {
-                                                                        $width = $dbItem->purchaseOrderItem->fabricWidth->width ?? '-';
-                                                                    } else {
-                                                                        $width = $item->purchaseInvoiceItem->purchaseOrderItem->fabricWidth->width ?? '-';
-                                                                    }
-                                                                @endphp
-                                                                {{ $width }}
-                                                            </td>
-                                                            <td>{{ $uomName }}</td>
-                                                            <td> 
-                                                                <input type="hidden" name="items[{{$idx}}][fabric_type_id]" value="{{ $itemObj->fabric_type_id ?? '' }}">
-                                                                <select class="form-control select2" disabled>
-                                                                    <option value="">Select Fabric Type</option>
-                                                                    @foreach($fabricTypes as $ft)
-                                                                        <option value="{{ $ft->id }}" {{ ($itemObj->fabric_type_id ?? '') == $ft->id ? 'selected' : '' }}>{{ $ft->fabric_type }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                                @error("items.$idx.fabric_type_id") <div class="text-danger small">{{ $message }}</div> @enderror
-                                                            </td>
-                                                            <td>
-                                                                 <div class="mb-2">
-                                                                        <label class="small fw-bold">Ordered:</label>
-                                                                    </div>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_ordered]" value="{{ $qtyOrdered }}" class="qty-ordered form-control" readonly>
-                                                                    <div class="split-summary-area" id="split-summary-{{$idx}}"></div>
-                                                                </div>
-                                                                <div class="mb-2">
-                                                                    <label class="small d-block fw-bold">Invoiced:</label>
-                                                                    <input type="number" step="0.01" value="{{ $alreadyReceived }}" class="qty-already-received form-control" readonly disabled>
-                                                                </div>
-                                                                <div>
-                                                                    <label class="small d-block fw-bold">Received *:</label>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error("items.$idx.qty_received") is-invalid @enderror" {{ ((is_array($item) ? ($item['row_selected'] ?? false) : true) && count($variants) == 0) ? '' : 'readonly' }}>
-                                                                    <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
-                                                                    @error("items.$idx.qty_received") <div class="text-danger small">{{ $message }}</div> @enderror
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                 <div class="mb-2">
-                                                                    <label class="small d-block fw-bold">Accepted *:</label>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_accepted]" value="{{ $itemObj->qty_accepted }}" class="qty-accepted form-control @error("items.$idx.qty_accepted") is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
-                                                                    <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
-                                                                    @error("items.$idx.qty_accepted") <div class="text-danger small">{{ $message }}</div> @enderror
-                                                                </div>
-                                                                <div class="mb-2">
-                                                                    <label class="small d-block fw-bold">Rejected:</label>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control">
-                                                                </div>
-                                                                <div>
-                                                                    <label class="small d-block fw-bold">Balanced:</label>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][qty_balanced]" value="{{ $initialBalance }}" class="qty-balanced form-control" readonly>
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="mb-2">
-                                                                    <label class="small d-block fw-bold">Rate:</label>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][rate]" value="{{ $itemObj->rate }}" class="rate-input form-control @error("items.$idx.rate") is-invalid @enderror" readonly>
-                                                                </div>
-                                                                <div>
-                                                                    <label class="small d-block fw-bold">Amount:</label>
-                                                                    <input type="number" step="0.01" name="items[{{$idx}}][amount]" value="{{ $itemObj->amount }}" class="amount-input form-control" readonly>
-                                                                </div>
-                                                            </td>
-                                                            <td>
-                                                                <div class="mb-3 text-start">
-                                                                    <label class="form-label small fw-bold d-block mb-1">QC Status:</label>
-                                                                    <select class="form-control select2 @error("items.$idx.quality_check_status") is-invalid @enderror" name="items[{{$idx}}][quality_check_status]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
-                                                                        <option value="">Select Status</option>
-                                                                        <option value="Pass" {{ ($itemObj->quality_check_status ?? '') == 'Pass' ? 'selected' : '' }}>Pass</option>
-                                                                        <option value="Fail" {{ ($itemObj->quality_check_status ?? '') == 'Fail' ? 'selected' : '' }}>Fail</option>
-                                                                        <option value="Hold" {{ ($itemObj->quality_check_status ?? '') == 'Hold' ? 'selected' : '' }}>Hold</option>
-                                                                    </select>
-                                                                    @error("items.$idx.quality_check_status") <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                                                                </div>
-                                                                <div class="text-start">
-                                                                    <label class="form-label small fw-bold d-block mb-1">Store Location:</label>
-                                                                    <select class="form-control select2 @error("items.$idx.store_location_id") is-invalid @enderror" name="items[{{$idx}}][store_location_id]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
-                                                                        <option value="">Select Store Location</option>
-                                                                        @foreach($storeLocations as $loc)
-                                                                            <option value="{{ $loc->id }}" {{ ($itemObj->store_location_id ?? '') == $loc->id ? 'selected' : '' }}>{{ $loc->store_location }}</option>
-                                                                        @endforeach
-                                                                    </select>
-                                                                    @error("items.$idx.store_location_id") <div class="text-danger small mt-1">{{ $message }}</div> @enderror
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                            @endphp
+                                                            {{ $width }}
+                                                        </td>
+                                                        <td>{{ $uomName }}</td>
+                                                        <td>
+                                                            <input type="hidden" name="items[{{$idx}}][fabric_type_id]" value="{{ $itemObj->fabric_type_id ?? '' }}">
+                                                            <input type="hidden" name="items[{{$idx}}][color_id]" value="{{ $selectedColorId }}" class="row-color-id">
+                                                            <span class="d-none row-color-name">{{ $selectedColorName }}</span>
+                                                            <select class="form-control select2" disabled>
+                                                                <option value="">Select Fabric Type</option>
+                                                                @foreach($fabricTypes as $ft)
+                                                                <option value="{{ $ft->id }}" {{ ($itemObj->fabric_type_id ?? '') == $ft->id ? 'selected' : '' }}>{{ $ft->fabric_type }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                            @error("items.$idx.fabric_type_id") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </td>
+                                                        <td>
+                                                            <div class="mb-2">
+                                                                <label class="small fw-bold">Ordered:</label>
+                                                            </div>
+                                                            <input type="number" step="0.01" name="items[{{$idx}}][qty_ordered]" value="{{ $qtyOrdered }}" class="qty-ordered form-control" readonly>
+                                                            <div class="split-summary-area" id="split-summary-{{$idx}}"></div>
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label class="small d-block fw-bold">Invoiced:</label>
+                                                            <input type="number" step="0.01" value="{{ $alreadyReceived }}" class="qty-already-received form-control" readonly disabled>
+                                                        </div>
+                                                        <div>
+                                                            <label class="small d-block fw-bold">Received *:</label>
+                                                            <input type="number" step="0.01" name="items[{{$idx}}][qty_received]" value="{{ $itemObj->qty_received }}" class="qty-received form-control @error(" items.$idx.qty_received") is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
+                                                            <div class="qty-error text-danger small" style="display:none;">Cannot exceed ordered qty</div>
+                                                            @error("items.$idx.qty_received") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="mb-2">
+                                                            <label class="small d-block fw-bold">Accepted *:</label>
+                                                            <input type="number" step="0.01" name="items[{{$idx}}][qty_accepted]" value="{{ $itemObj->qty_accepted }}" class="qty-accepted form-control @error(" items.$idx.qty_accepted") is-invalid @enderror" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'readonly' }}>
+                                                            <div class="qty-acc-error text-danger small" style="display:none;">Cannot exceed received qty</div>
+                                                            @error("items.$idx.qty_accepted") <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label class="small d-block fw-bold">Rejected:</label>
+                                                            <input type="number" step="0.01" name="items[{{$idx}}][qty_rejected]" value="{{ $itemObj->qty_rejected }}" class="qty-rejected form-control">
+                                                        </div>
+                                                        <div>
+                                                            <label class="small d-block fw-bold">Balanced:</label>
+                                                            <input type="number" step="0.01" name="items[{{$idx}}][qty_balanced]" value="{{ $initialBalance }}" class="qty-balanced form-control" readonly>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="mb-2">
+                                                            <label class="small d-block fw-bold">Rate:</label>
+                                                            <input type="number" step="0.01" name="items[{{$idx}}][rate]" value="{{ $itemObj->rate }}" class="rate-input form-control @error(" items.$idx.rate") is-invalid @enderror" readonly>
+                                                        </div>
+                                                        <div>
+                                                            <label class="small d-block fw-bold">Amount:</label>
+                                                            <input type="number" step="0.01" name="items[{{$idx}}][amount]" value="{{ $itemObj->amount }}" class="amount-input form-control" readonly>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="mb-3 text-start">
+                                                            <label class="form-label small fw-bold d-block mb-1">QC Status:</label>
+                                                            <select class="form-control select2 @error(" items.$idx.quality_check_status") is-invalid @enderror" name="items[{{$idx}}][quality_check_status]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                                <option value="">Select Status</option>
+                                                                <option value="Pass" {{ ($itemObj->quality_check_status ?? '') == 'Pass' ? 'selected' : '' }}>Pass</option>
+                                                                <option value="Fail" {{ ($itemObj->quality_check_status ?? '') == 'Fail' ? 'selected' : '' }}>Fail</option>
+                                                                <option value="Hold" {{ ($itemObj->quality_check_status ?? '') == 'Hold' ? 'selected' : '' }}>Hold</option>
+                                                            </select>
+                                                            @error("items.$idx.quality_check_status") <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                                        </div>
+                                                        <div class="text-start">
+                                                            <label class="form-label small fw-bold d-block mb-1">Store Location:</label>
+                                                            <select class="form-control select2 @error(" items.$idx.store_location_id") is-invalid @enderror" name="items[{{$idx}}][store_location_id]" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                                <option value="">Select Store Location</option>
+                                                                @foreach($storeLocations as $loc)
+                                                                <option value="{{ $loc->id }}" {{ ($itemObj->store_location_id ?? '') == $loc->id ? 'selected' : '' }}>{{ $loc->store_location }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                            @error("items.$idx.store_location_id") <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
-                            <div class="text-end col-lg-12">
-                                <button type="submit" class="btn btn-primary">Submit</button>
-                                <a href="{{ url('grn_entries') }}" class="btn btn-secondary">Cancel</a>
-                            </div>
                         </div>
-                    </form>
-                </div>
+                        <div class="text-end col-lg-12">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <a href="{{ url('grn_entries') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <!-- Modal -->
@@ -309,60 +329,83 @@
         <div class="modal-content">
             <div class="modal-header bg-primary d-flex justify-content-between align-items-center">
                 <h5 class="modal-title mb-0 text-white" id="variantModalLabel">
-                    Add Variants (Specify Quantity per Color)
+                    Add Variants by Color
                 </h5>
                 <h5 class="mb-0 text-white" id="modal-qty-summary">Ordered: 0.00 | Received: 0.00</h5>
                 <button type="button" class="btn-close ms-2 btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-4">
+                <div class="mb-4" id="variant-color-picker-wrap">
                     <label class="form-label fw-semibold">Select Colors</label>
-                    <select id="variantColors" class="form-control select2" multiple="multiple" data-placeholder="Select Colors">
+                    <select id="variantColors" class="form-control select2" data-placeholder="Select Color">
+                        <option value="">Select Color</option>
                         @foreach($colors as $col)
-                            <option value="{{ $col->id }}" data-name="{{ $col->color_name }}">{{ $col->color_name }}</option>
+                        <option value="{{ $col->id }}" data-name="{{ $col->color_name }}">{{ $col->color_name }}</option>
                         @endforeach
                     </select>
                 </div>
 
                 <div class="table-responsive">
                     <table class="table table-bordered text-center align-middle" id="variantQtyTable">
-                    <thead class="table-light">
-                        <tr>
-                        <th>Color</th>
-                        <th>Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
+                        <thead class="table-light">
+                            <tr>
+                                <th>Color</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
                     </table>
                 </div>
                 <div id="variant-error" class="text-danger mt-2 fw-bold" style="display:none;"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="save-variants">Save Variants</button>
+                <button type="button" class="btn btn-primary" id="save-variants">Apply</button>
             </div>
         </div>
     </div>
 </div>
 
-            </div>
-        </div>
-    </div>
 </div>
-
-
-
+</div>
+</div>
+</div>
 <script>
     $(document).ready(function() {
         let maxIndex = 0;
+        let lockedVariantColor = false;
         $('.item-row').each(function() {
             let idx = parseInt($(this).data('index'));
             if (idx > maxIndex) maxIndex = idx;
         });
 
+        function renderVariantRows(colors, existingData = {}) {
+            let tbody = $('#variantQtyTable tbody');
+            tbody.empty();
+
+            colors.forEach(function(color) {
+                let colorId = String(color.id);
+                let existingQty = existingData[colorId] || existingData[color.id] || '';
+                tbody.append(`<tr data-color-id="${colorId}"><td>${color.name}</td><td><input type="number" step="0.01" class="form-control var-qty" value="${existingQty}" min="0"></td></tr>`);
+            });
+        }
+
+        function setVariantModalMode(selectedColor, existingData = {}, isLocked = false) {
+            lockedVariantColor = isLocked;
+            $('#variantColors').prop('disabled', isLocked);
+
+            if (selectedColor && selectedColor.id) {
+                $('#variantColors').val(String(selectedColor.id)).trigger('change.select2');
+                renderVariantRows([selectedColor], existingData);
+            } else {
+                $('#variantColors').val('').trigger('change.select2');
+                renderVariantRows([], existingData);
+            }
+        }
+
         $(document).on('click', '.add-split-row', function() {
             let originalRow = $(this).closest('.item-row');
-            
+
             $('.item-row').each(function() {
                 let idx = parseInt($(this).attr('data-index'));
                 if (idx > maxIndex) maxIndex = idx;
@@ -370,32 +413,32 @@
 
             maxIndex++;
             let newIndex = maxIndex;
-            
+
             let newRow = originalRow.clone();
-            
+
             newRow.attr('data-index', newIndex);
             newRow.addClass('split-row');
-            
+
             newRow.find('input, select').each(function() {
                 let name = $(this).attr('name');
                 if (name) {
                     let newName = name.replace(/items\[\d+\]/, 'items[' + newIndex + ']');
                     $(this).attr('name', newName);
                 }
-                
+
                 let id = $(this).attr('id');
                 if (id) {
                     let newId = id.replace(/-\d+$/, '-' + newIndex);
                     $(this).attr('id', newId);
                 }
-                
+
                 let nameAttr = $(this).attr('name') || '';
                 if ($(this).hasClass('row-select')) {
                     $(this).prop('checked', true);
                 } else if ($(this).hasClass('row-selected-input')) {
                     $(this).val(1);
                 } else if (nameAttr.includes('[id]')) {
-                    $(this).val(''); 
+                    $(this).val('');
                 } else if ($(this).hasClass('qty-received') || $(this).hasClass('qty-accepted') || $(this).hasClass('qty-rejected') || $(this).hasClass('amount-input')) {
                     $(this).val(0);
                 } else if ($(this).hasClass('art-no-input')) {
@@ -409,17 +452,17 @@
 
             newRow.find('.select2-container').remove();
             newRow.find('.select2').removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
-            
+
             newRow.find('.variants-data-container').empty();
             newRow.find('.btn-variants').prop('disabled', true);
             newRow.find('.split-summary-area').empty();
 
             newRow.find('.add-split-row').removeClass('btn-outline-info add-split-row').addClass('btn-outline-danger remove-split-row').attr('title', 'Remove this split row').html('<i class="ri ri-subtract-line"></i>');
-            
+
             let lastRowInGroup = originalRow;
             let piId = originalRow.find('input[name*="[purchase_invoice_item_id]"]').val();
             let storeCategoryId = originalRow.find('input[name*="[store_category_id]"]').val();
-            
+
             let groupRows = [];
             $('.item-row').each(function() {
                 if ($(this).find('input[name*="[purchase_invoice_item_id]"]').val() === piId) {
@@ -431,7 +474,7 @@
             if (storeCategoryId != 1) {
                 let currentArtNo = originalRow.find('.art-no-input').val();
                 let baseArtNo = currentArtNo.replace(/-[0-9]+$/, '');
-                
+
                 let maxSuffix = 0;
                 groupRows.forEach(row => {
                     let rowArtNo = row.find('.art-no-input').val();
@@ -441,14 +484,14 @@
                         if (suffix > maxSuffix) maxSuffix = suffix;
                     }
                 });
-                
+
                 newRow.find('.art-no-input').val(baseArtNo + '-' + (maxSuffix + 1));
             }
 
             newRow.insertAfter(lastRowInGroup);
-            
+
             initSelect2();
-            
+
             updateGroupBalances(piId);
             validateForm();
             updateSerialNumbers();
@@ -472,12 +515,14 @@
         function initSelect2() {
             $('.select2').each(function() {
                 let parent = $(this).closest('.modal-content').length ? $(this).closest('.modal-content') : null;
-                $(this).select2({ dropdownParent: parent });
+                $(this).select2({
+                    dropdownParent: parent
+                });
             });
         }
         initSelect2();
-		
-		let fabrics_options = '';
+
+        let fabrics_options = '';
         @foreach($fabricTypes as $ft)
         fabrics_options += `<option value="{{ $ft->id }}">{{ addslashes($ft->fabric_type) }}</option>`;
         @endforeach
@@ -498,9 +543,9 @@
                     $('#supplier_display').val(res.supplier_name);
                     $('#supplier_name_hidden').val(res.supplier_name);
                     $('#sup_inv_date').val(res.invoice_date);
-                    
+
                     let poNumber = res.po_number || '';
-                    
+
                     let tbody = $('#grn-items-table tbody').empty();
                     res.items.forEach((item, idx) => {
                         tbody.append(`
@@ -530,10 +575,12 @@
                                 <td>${item.width}</td>
                                 <td>${item.uom}</td>
                                 <td>
-                                                                    <input type="hidden" name="items[${idx}][fabric_type_id]" value="${item.fabric_type_id || ''}">
-                                                                    <select class="form-control select2" data-val="${item.fabric_type_id || ''}" disabled><option value="">Select Fabric</option>${fabrics_options}</select>
-                                                                </td>
-                                 <td>
+                                    <input type="hidden" name="items[${idx}][fabric_type_id]" value="${item.fabric_type_id || ''}">
+                                    <input type="hidden" name="items[${idx}][color_id]" value="${item.color_id || ''}" class="row-color-id">
+                                    <span class="d-none row-color-name">${item.color_name || '-'}</span>
+                                    <select class="form-control select2" data-val="${item.fabric_type_id || ''}" disabled><option value="">Select Fabric</option>${fabrics_options}</select>
+                                </td>
+                                <td>
                                     <div class="mb-2">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <label class="small fw-bold">Ordered:</label>
@@ -590,7 +637,7 @@
                             </tr>
                         `);
                     });
-                    
+
                     $('#grn-items-table tbody select[data-val]').each(function() {
                         let v = $(this).data('val');
                         if (v) $(this).val(v);
@@ -598,7 +645,7 @@
 
                     initSelect2();
                     updateSerialNumbers();
-                    
+
                     $('.item-row').each(function() {
                         let idx = parseInt($(this).attr('data-index'));
                         if (idx > maxIndex) maxIndex = idx;
@@ -617,44 +664,73 @@
             activeRowIndex = row.data('index');
             let ordered = parseFloat($(this).data('ordered')) || 0;
             let currentReceived = parseFloat(row.find('.qty-received').val()) || 0;
-            
+
             $('#modal-qty-summary').data('ordered', ordered);
             updateModalSummary(currentReceived, ordered);
             $('#variant-error').hide();
-            
+
             let container = $(this).closest('td').find('.variants-data-container');
-            let selectedColors = [];
-            let tbody = $('#variantQtyTable tbody').empty();
-            
+            let existingData = {};
+            let fixedColorId = row.find('.row-color-id').val();
+            let fixedColorName = $.trim(row.find('.row-color-name').text());
+            let selectedColorId = '';
+
             container.find('input[name$="[color_id]"]').each(function() {
                 let color_id = $(this).val();
                 let qty = $(this).next().val();
-                selectedColors.push(color_id);
-
-                let colorName = $(`#variantColors option[value="${color_id}"]`).data('name') || 'Unknown';
-                tbody.append(`<tr data-color-id="${color_id}"><td>${colorName}</td><td><input type="number" step="0.01" class="form-control var-qty" value="${qty}" min="0"></td></tr>`);
+                existingData[String(color_id)] = qty;
+                if (!selectedColorId) {
+                    selectedColorId = String(color_id);
+                }
             });
-            
-            $('#variantColors').val(selectedColors).trigger('change');
+
+            if (fixedColorId && fixedColorName && fixedColorName !== '-') {
+                let presetQty = existingData[String(fixedColorId)] || currentReceived || '';
+                setVariantModalMode({
+                    id: String(fixedColorId),
+                    name: fixedColorName
+                }, {
+                    [String(fixedColorId)]: presetQty
+                }, false);
+            } else {
+                let colorIdToUse = selectedColorId || '';
+                let colorNameToUse = colorIdToUse ? ($(`#variantColors option[value="${colorIdToUse}"]`).data('name') || 'Unknown') : '';
+
+                setVariantModalMode(colorIdToUse ? {
+                    id: colorIdToUse,
+                    name: colorNameToUse
+                } : null, existingData, false);
+
+                if (!colorIdToUse && currentReceived > 0) {
+                    $('#variantQtyTable tbody').empty();
+                }
+            }
+
+            validateVariantTotal();
             $('#variantModal').modal('show');
         });
 
-        $('#variantColors').on('change', function () {
-            let data = $(this).select2('data') || [];
-            let tbody = $('#variantQtyTable tbody');
+        $('#variantColors').on('change', function() {
+            if (lockedVariantColor) {
+                return;
+            }
+
+            let colorId = $(this).val();
             let existingData = {};
 
-            tbody.find('tr').each(function () {
+            $('#variantQtyTable tbody').find('tr').each(function() {
                 existingData[$(this).data('color-id')] = $(this).find('input').val();
             });
 
-            tbody.empty();
-            data.forEach(function (item) {
-                let color_id = item.id;
-                let colorName = item.text;
-                let existingQty = existingData[color_id] || '';
-                tbody.append(`<tr data-color-id="${color_id}"><td>${colorName}</td><td><input type="number" step="0.01" class="form-control var-qty" value="${existingQty}" min="0"></td></tr>`);
-            });
+            if (!colorId) {
+                renderVariantRows([], existingData);
+                return;
+            }
+
+            renderVariantRows([{
+                id: String(colorId),
+                name: $(`#variantColors option[value="${colorId}"]`).data('name') || 'Unknown'
+            }], existingData);
         });
 
         $(document).on('input', '.var-qty', function() {
@@ -669,9 +745,9 @@
             let row = $(`.item-row[data-index="${activeRowIndex}"]`);
             let received = parseFloat(row.find('.qty-received').val()) || 0;
             let ordered = parseFloat($('#modal-qty-summary').data('ordered')) || 0;
-            
+
             updateModalSummary(total, received);
-            
+
             if (total > received) {
                 $('#variant-error').text(`Total variant quantity (${total.toFixed(2)}) cannot exceed received quantity (${received.toFixed(2)})`).show();
                 $('#save-variants').prop('disabled', true);
@@ -694,20 +770,32 @@
             let row = $(`.item-row[data-index="${activeRowIndex}"]`);
             let receivedLimit = parseFloat(row.find('.qty-received').val()) || 0;
             let totalVariants = validateVariantTotal();
-            
+
             if (totalVariants > receivedLimit) return;
 
             let container = row.find('.variants-data-container').empty();
-            
+            let firstColorId = '';
+            let firstColorName = '';
+
             $('#variantQtyTable tbody tr').each(function(i) {
                 let color_id = $(this).data('color-id');
+                let color_name = $(this).find('td:first').text();
                 let qty = $(this).find('.var-qty').val() || 0;
                 if (parseFloat(qty) > 0) {
+                    if (!firstColorId) {
+                        firstColorId = color_id;
+                        firstColorName = color_name;
+                    }
                     container.append(`<input type="hidden" name="items[${activeRowIndex}][variants][${i}][color_id]" value="${color_id}">`);
                     container.append(`<input type="hidden" name="items[${activeRowIndex}][variants][${i}][qty]" value="${qty}">`);
                 }
             });
-            
+
+            if (firstColorId) {
+                row.find('.row-color-id').val(firstColorId);
+                row.find('.row-color-name').text(firstColorName);
+            }
+
             row.find('.qty-received').prop('readonly', totalVariants > 0);
             updateRowCalculations(row);
             $('#variantModal').modal('hide');
@@ -715,7 +803,7 @@
 
         $(document).on('input', '.qty-received, .qty-accepted, .qty-rejected, .rate-input', function() {
             let row = $(this).closest('.item-row');
-            
+
             if ($(this).hasClass('qty-received')) {
                 let received = parseFloat($(this).val()) || 0;
                 row.find('.qty-accepted').val(received);
@@ -763,12 +851,11 @@
                 }
             });
 
-            // Validate group totals
             for (let piId in groupTotals) {
                 let group = groupTotals[piId];
                 let balance = group.ordered - group.alreadyReceived;
                 let groupError = (group.totalReceived > balance);
-                
+
                 group.rows.forEach(row => {
                     if (groupError) {
                         row.find('.qty-received').addClass('is-invalid');
@@ -816,7 +903,7 @@
 
             row.find('.qty-rejected').val(rejected.toFixed(2));
             row.find('.amount-input').val((accepted * rate).toFixed(2));
-            
+
             updateGroupBalances(piId);
         }
 
@@ -832,15 +919,15 @@
             let row = $(this).closest('.item-row');
             let isChecked = $(this).is(':checked');
             row.find('.row-selected-input').val(isChecked ? 1 : 0);
-            
+
             row.find('.qty-received').prop('readonly', !isChecked || row.find('.variants-data-container input').length > 0);
             row.find('.qty-accepted').prop('readonly', !isChecked);
             row.find('select').prop('disabled', !isChecked);
             row.find('input[type="file"]').prop('disabled', !isChecked);
-            
+
             let received = parseFloat(row.find('.qty-received').val()) || 0;
             row.find('.btn-variants').prop('disabled', !isChecked || received <= 0);
-            
+
             if (isChecked) {
                 row.find('input, select').removeClass('is-invalid');
                 row.find('.text-danger').hide();
@@ -850,9 +937,9 @@
                 row.find('.qty-rejected').val(0);
                 row.find('.qty-balanced').val((parseFloat(row.find('.qty-ordered').val()) - parseFloat(row.find('.qty-already-received').val())).toFixed(2));
                 row.find('.amount-input').val(0);
-                row.find('select').val('').trigger('change').prop('disabled', true); 
-                row.find('input[type="file"]').val('').prop('disabled', true); 
-                row.find('.variants-data-container').empty(); 
+                row.find('select').val('').trigger('change').prop('disabled', true);
+                row.find('input[type="file"]').val('').prop('disabled', true);
+                row.find('.variants-data-container').empty();
                 row.find('.btn-variants').prop('disabled', true);
                 row.find('input, select').removeClass('is-invalid');
                 row.find('.text-danger').hide();
@@ -864,12 +951,12 @@
         $('.row-select').each(function() {
             let row = $(this).closest('.item-row');
             let isChecked = $(this).is(':checked');
-            
+
             row.find('.qty-received').prop('readonly', !isChecked || row.find('.variants-data-container input').length > 0);
             row.find('.qty-accepted').prop('readonly', !isChecked);
             row.find('select').prop('disabled', !isChecked);
             row.find('input[type="file"]').prop('disabled', !isChecked);
-            
+
             let received = parseFloat(row.find('.qty-received').val()) || 0;
             row.find('.btn-variants').prop('disabled', !isChecked || received <= 0);
         });

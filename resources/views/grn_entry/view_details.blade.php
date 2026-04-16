@@ -94,13 +94,15 @@
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Art No</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Location</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">UOM</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Quantity</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Quantity</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Total Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @if($grn->grnEntryItems->isEmpty())
                                     <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">No items found</td>
+                                        <td colspan="12" class="text-center py-5 text-muted">No items found</td>
                                     </tr>
                                 @else
                                     @foreach($grn->grnEntryItems as $index => $item)
