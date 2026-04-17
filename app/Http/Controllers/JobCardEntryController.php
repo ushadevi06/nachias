@@ -1334,7 +1334,7 @@ class JobCardEntryController extends Controller
 
         $stockEntryIds = array_unique($stockEntryIds);
 
-        $stockItems = StockEntryItem::whereIn('stock_entry_id', $stockEntryIds)->with(['rawMaterial.uom', 'storeCategory', 'uom', 'grnEntryItem'])->get();
+        $stockItems = StockEntryItem::whereIn('stock_entry_id', $stockEntryIds)->with(['rawMaterial.uom', 'storeCategory', 'uom', 'grnEntryItem.purchaseInvoiceItem.fabricWidth'])->get();
 
         $filteredItems = $stockItems->filter(function ($item) use ($filters) {
             $seId = $item->stock_entry_id;
@@ -1405,6 +1405,7 @@ class JobCardEntryController extends Controller
                 'store_category_id' => $rawMaterial ? $rawMaterial->store_category_id : 1,
                 'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                 'fabric_type_id' => $firstItem ? ($firstItem->fabric_type_id ?? ($firstItem->grnEntryItem->fabric_type_id ?? null)) : null,
+                'width' => $firstItem && $firstItem->grnEntryItem && $firstItem->grnEntryItem->purchaseInvoiceItem && $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth ? $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth->width : null,
             ];
         })->values();
 
@@ -1422,13 +1423,13 @@ class JobCardEntryController extends Controller
 
     public function getPoDetails($id)
     {
-        $po = PurchaseOrder::with(['items'])->find($id);
+        $po = PurchaseOrder::with(['items.fabricWidth'])->find($id);
         if (!$po)
             return response()->json(['error' => 'PO not found'], 404);
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $po->id)->pluck('id');
         $grns = GrnEntry::whereIn('purchase_invoice_id', $invoiceIds)->get();
         $grnIds = $grns->pluck('id');
-        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)->with(['purchaseInvoiceItem.uom', 'purchaseInvoiceItem.rawMaterial.uom', 'grnEntry', 'stockEntryItems'])
+        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)->with(['purchaseInvoiceItem.uom', 'purchaseInvoiceItem.rawMaterial.uom', 'purchaseInvoiceItem.fabricWidth', 'grnEntry', 'stockEntryItems'])
             ->get()->groupBy('art_no')
             ->map(function ($items, $artNo) {
                 $firstItem = $items->first();
@@ -1451,13 +1452,15 @@ class JobCardEntryController extends Controller
                     'uom_code' => $uom,
                     'store_category_id' => $catId,
                     'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
-                    'grn_no' => $firstItem->grnEntry->grn_number ?? null
+                    'grn_no' => $firstItem->grnEntry->grn_number ?? null,
+                    'width' => $firstItem->purchaseInvoiceItem->fabricWidth->width ?? null
                 ];
             })->values();
 
         if ($artData->isEmpty()) {
             $po->load(['items.uom', 'items.rawMaterial.uom']);
             $artData = collect($po->items)->map(function ($item) use ($grnIds) {
+                $item->load('fabricWidth');
                 $uom = null;
                 if ($item->uom) {
                     $uom = $item->uom->uom_code;
@@ -1481,7 +1484,8 @@ class JobCardEntryController extends Controller
                     'uom_code' => $uom,
                     'store_category_id' => $catId,
                     'raw_material_id' => $item->raw_material_id,
-                    'grn_no' => $item->grn_no
+                    'grn_no' => $item->grn_no,
+                    'width' => $item->fabricWidth->width ?? null
                 ];
             })->unique('art_no')->values();
         }
@@ -1517,7 +1521,7 @@ class JobCardEntryController extends Controller
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $po->id)->pluck('id');
         $grnIds = GrnEntry::whereIn('purchase_invoice_id', $invoiceIds)->pluck('id');
 
-        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)->with(['purchaseInvoiceItem.rawMaterial', 'grnEntry', 'stockEntryItems'])->get()->groupBy('art_no')->map(function ($items, $artNo) use ($issuedQtys) {
+        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)->with(['purchaseInvoiceItem.rawMaterial', 'purchaseInvoiceItem.fabricWidth', 'grnEntry', 'stockEntryItems'])->get()->groupBy('art_no')->map(function ($items, $artNo) use ($issuedQtys) {
             $firstItem = $items->first();
             $rawMaterial = $firstItem->purchaseInvoiceItem->rawMaterial ?? null;
             $catId = $rawMaterial ? $rawMaterial->store_category_id : 1;
@@ -1538,7 +1542,8 @@ class JobCardEntryController extends Controller
                 'store_category_id' => $catId,
                 'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                 'grn_no' => $firstItem->grnEntry->grn_number ?? null,
-                'uom_code' => $rawMaterial->uom->uom_code ?? null
+                'uom_code' => $rawMaterial->uom->uom_code ?? null,
+                'width' => $firstItem->purchaseInvoiceItem->fabricWidth->width ?? null
             ];
         })->values();
 
@@ -1574,7 +1579,8 @@ class JobCardEntryController extends Controller
                     'store_category_id' => $item->rawMaterial ? $item->rawMaterial->store_category_id : 1,
                     'raw_material_id' => $item->raw_material_id,
                     'grn_no' => $item->grn_no,
-                    'uom_code' => $item->rawMaterial->uom->uom_code ?? null
+                    'uom_code' => $item->rawMaterial->uom->uom_code ?? null,
+                    'width' => $item->fabricWidth->width ?? null
                 ];
             })->unique('art_no')->values();
         }

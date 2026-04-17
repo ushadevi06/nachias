@@ -2169,6 +2169,11 @@
                     let vInOut = captured.in_out[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['in_out']) || '';
                     let vNPatti = captured.n_patti[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['n_patti']) || '';
 
+                    if (!vWidth && currentArtData && currentArtData.length > 0) {
+                        const d = currentArtData.find(d => d.art_no == art);
+                        if (d && d.width) vWidth = d.width;
+                    }
+
                     if (!vWidth && existingMatrix.length > 0) {
                         const m = existingMatrix.find(m => m.art_no == art);
                         if (m) {
