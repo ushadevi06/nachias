@@ -2122,6 +2122,16 @@
                 let sleeveQtyRow = '<tr>';
 
                 currentArtNumbers.forEach((art, index) => {
+                    let uom = '';
+                    let catId = 0;
+                    if (currentArtData && currentArtData.length > 0) {
+                        const d = currentArtData.find(d => d.art_no == art);
+                        if (d) {
+                            uom = d.uom_code || '';
+                            catId = d.store_category_id || 0;
+                        }
+                    }
+
                     let existingImagesHtml = '';
                     if (isEditMode && existingImages.length > 0) {
                         existingImagesHtml = '<div class="d-flex flex-wrap gap-2 mb-2">';
@@ -2144,6 +2154,7 @@
                             <label class="small text-primary fw-bold">Image</label>
                             ${existingImagesHtml}
                             <input type="file" class="form-control form-control-sm" name="fabric_images[${index}][]" multiple accept="image/*">
+                            <input type="hidden" name="fabrics[${index}][store_category_id]" value="${catId}">
                             <input type="hidden" name="fabrics[${index}][fs_qty]" value="">
                             <input type="hidden" name="fabrics[${index}][hs_qty]" value="">
                             <input type="hidden" name="fabrics[${index}][total_qty]" class="total-qty-hidden" data-art="${art}" value="">
@@ -2186,15 +2197,6 @@
                     inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center in-out-input" data-art="${art}" value="${vInOut}" ${isTaskReadOnly}></td>`;
                     nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center n-patti-input" data-art="${art}" value="${vNPatti}" ${isTaskReadOnly}></td>`;
 
-                    let uom = '';
-                    let catId = 0;
-                    if (currentArtData && currentArtData.length > 0) {
-                        const d = currentArtData.find(d => d.art_no == art);
-                        if (d) {
-                            uom = d.uom_code || '';
-                            catId = d.store_category_id || 0;
-                        }
-                    }
 
                     let sizes = [];
                     if (typeof globalActiveSizes !== 'undefined') {
@@ -3092,7 +3094,8 @@
                         : (oldVal !== '' ? oldVal : (isEditMode && parseFloat(item.already_issued) > 0 ? parseFloat(item.already_issued).toFixed(2) : total.toFixed(2)));
 
                     const used = parseFloat(usedStr) || 0;
-                    const remaining = total - used;
+                    let remaining = total - used;
+                    if (Math.abs(remaining) < 0.001) remaining = 0;
 
                     $(`.total-qty-hidden[data-art="${artNo}"]`).val(total.toFixed(2));
                     $(`.used-qty-hidden[data-art="${artNo}"]`).val(used.toFixed(2));
@@ -3110,7 +3113,7 @@
                                 </div>
                                 ${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}
                             </td>
-                            <td class="text-center item-remaining-qty fw-bold ${remaining < 0 ? 'text-danger' : 'text-success'}">${remaining.toFixed(2)}</td>
+                            <td class="text-center item-remaining-qty fw-bold ${remaining < -0.001 ? 'text-danger' : 'text-success'}">${remaining.toFixed(2)}</td>
                         </tr>
                     `;
                     $tbody.append(row);
@@ -3123,12 +3126,13 @@
                 const artNo = $input.data('art');
                 const total = parseFloat($row.find('.item-total-qty').text()) || 0;
                 const used = parseFloat($input.val()) || 0;
-                const remaining = total - used;
+                let remaining = total - used;
+                if (Math.abs(remaining) < 0.001) remaining = 0;
 
                 const $remainingCell = $row.find('.item-remaining-qty');
                 $remainingCell.text(remaining.toFixed(2));
 
-                if (remaining < 0) {
+                if (remaining < -0.001) {
                     $remainingCell.removeClass('text-success').addClass('text-danger');
                     $input.addClass('border-danger');
                     if (!$row.find('.qty-error-msg').length) {

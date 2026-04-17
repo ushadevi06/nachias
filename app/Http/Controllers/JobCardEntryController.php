@@ -203,19 +203,61 @@ class JobCardEntryController extends Controller
                 $articleMatrix = collect($request->input('article_matrix', []));
 
                 foreach ($fabrics as $index => $fabric) {
-                    $artNo = $fabric['art_no'] ?? null;
+                    $artNo = isset($fabric['art_no']) ? trim($fabric['art_no']) : null;
                     if ($artNo) {
                         $matrixRow = $articleMatrix->where('art_no', $artNo)->first();
                         if ($matrixRow) {
                             $totalNeeded = 0;
-                            foreach ($matrixRow as $key => $val) {
-                                if (str_starts_with($key, 'fs_') || str_starts_with($key, 'hs_')) {
-                                    $totalNeeded += (float) ($val ?? 0);
+                            $catId = $fabric['store_category_id'] ?? null;
+                            if (!$catId) {
+                                $rm = \App\Models\RawMaterial::where('code', $artNo)->orWhere('name', $artNo)->first();
+                                $catId = $rm->store_category_id ?? ($rm->category_id ?? null);
+                            }
+                            $isFabric = ($catId == 1);
+
+                            if ($isFabric) {
+                                $layMarks = $fabric['lay_marks'] ?? [];
+                                if (count($layMarks) > 0) {
+                                    foreach ($layMarks as $lm) {
+                                        $mkMeter = (float)($lm['meter'] ?? 0);
+                                        $mkLay = (float)($lm['no_of_lay'] ?? 0);
+                                        $totalNeeded += ($mkMeter * $mkLay);
+                                    }
+                                } else {
+                                    $consumptions = $fabric['consumptions'] ?? [];
+                                    foreach ($matrixRow as $key => $val) {
+                                        if (str_starts_with($key, 'fs_')) {
+                                            $size = substr($key, 3);
+                                            $cons = (float)($consumptions[$size]['fs_cons'] ?? 0);
+                                            $totalNeeded += (float)($val ?? 0) * $cons;
+                                        } elseif (str_starts_with($key, 'hs_')) {
+                                            $size = substr($key, 3);
+                                            $cons = (float)($consumptions[$size]['hs_cons'] ?? 0);
+                                            $totalNeeded += (float)($val ?? 0) * $cons;
+                                        }
+                                    }
+                                }
+                            } else {
+                                foreach ($matrixRow as $key => $val) {
+                                    if (str_starts_with($key, 'fs_') || str_starts_with($key, 'hs_')) {
+                                        $totalNeeded += (float) ($val ?? 0);
+                                    }
                                 }
                             }
-                            $used = (float) ($fabric['mtr'] ?? 0);
-                            if ($totalNeeded > $used) {
-                                $validator->errors()->add("fabrics.$index.mtr", "Shortage for $artNo! Matrix Needs: $totalNeeded, but only $used was entered.");
+
+                             $used = (float) ($fabric['mtr'] ?? 0);
+                            $plannedQty = (float) ($fabric['total_qty'] ?? 0);
+                            
+                            // Use the higher of the Matrix requirement or the Planned Total quantity
+                            if ($plannedQty > $totalNeeded) {
+                                $totalNeeded = $plannedQty;
+                            }
+
+                            // Add a small epsilon to avoid float precision issues during comparison
+                            if (($totalNeeded - $used) > 0.001) {
+                                $unit = $isFabric ? ' MTR' : '';
+                                $totalNeededFormatted = (fmod($totalNeeded, 1) == 0) ? (int)$totalNeeded : number_format($totalNeeded, 2, '.', '');
+                                $validator->errors()->add("fabrics.$index.mtr", "Shortage for $artNo! Matrix Needs: $totalNeededFormatted$unit, but only $used was entered.");
                             }
                         }
                     }
@@ -1235,7 +1277,6 @@ class JobCardEntryController extends Controller
             }
         }
 
-        // Recalculate Job Card pricing based on auto-issued costs
         $this->updateJobCardOverallPricing($jobCard);
     }
 
@@ -1591,7 +1632,6 @@ class JobCardEntryController extends Controller
 
         $issueItems = $jobCard->issueItems->filter(function ($item) use ($artCategoryMap) {
             $artNo = trim($item->fabricDetail->art_no ?? '');
-            // Check via relationship or via map
             return ($item->rawMaterial?->store_category_id == 1) || (($artCategoryMap[$artNo] ?? 1) == 1);
         })->groupBy(function ($item) {
             return trim($item->fabricDetail->art_no ?? ($item->rawMaterial?->code ?? 'N/A'));

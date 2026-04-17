@@ -179,4 +179,14 @@ DELETE FROM tickets;
 ALTER TABLE tickets AUTO_INCREMENT = 1;
 DELETE FROM transport_modes;
 ALTER TABLE transport_modes AUTO_INCREMENT = 1;
+DELETE FROM production_movements;
+ALTER TABLE production_movements AUTO_INCREMENT = 1;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE `model_has_permissions`;
+TRUNCATE `model_has_roles`;
+TRUNCATE `role_has_permissions`;
 SET FOREIGN_KEY_CHECKS = 1;

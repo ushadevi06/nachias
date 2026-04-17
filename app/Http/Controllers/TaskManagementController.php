@@ -453,6 +453,10 @@ class TaskManagementController extends Controller
             TaskStatus::firstOrCreate(['name' => $request->status], ['color' => 'info', 'progress_percent' => 10]);
             $task->save();
             $this->logActivity($task->id, 'Status Change', 'Status changed to ' . $request->status);
+
+            // Sync movements when status is changed (especially to Completed)
+            $this->syncProductionMovements($task);
+
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -954,10 +958,11 @@ class TaskManagementController extends Controller
         if (!$jobCardId)
             return;
 
-        $jc = JobCardEntry::with(['tasks.assignments'])->find($jobCardId);
+        $jc = JobCardEntry::with(['tasks.assignments', 'tasks.stage'])->find($jobCardId);
         if (!$jc)
             return;
 
+        $task->loadMissing('stage');
         $stageId = $task->stage->operation_stage_id ?? null;
         if (!$stageId)
             return;
@@ -965,24 +970,21 @@ class TaskManagementController extends Controller
         $processScheduleId = $task->stage_id;
 
         $stageTasks = $jc->tasks->filter(function ($t) use ($stageId) {
-            if ($t->stage_id == $stageId && !$t->stage)
-                return true;
-            if ($t->stage && $t->stage->operation_stage_id == $stageId)
-                return true;
-            return false;
+            return ($t->stage && $t->stage->operation_stage_id == $stageId);
         });
 
         $assignments = $stageTasks->flatMap->assignments;
 
         $actualOutward = 0;
+        $actualWastage = 0;
+
         if ($assignments->isNotEmpty()) {
             $assignedServiceIds = $assignments->pluck('service_id')->unique()->filter()->toArray();
+            $actualWastage = (float) $assignments->sum('wastage_qty');
             
             if (empty($assignedServiceIds)) {
-                // If no specific services are linked, use the total completed qty of assignments
                 $actualOutward = (float) $assignments->sum('completed_qty');
             } else {
-                // Only consider services that were actually assigned to this stage/task
                 $relevantServices = ProductionService::whereIn('id', $assignedServiceIds)->active()->get();
                 
                 if ($relevantServices->isNotEmpty()) {
@@ -1000,44 +1002,47 @@ class TaskManagementController extends Controller
             }
         }
 
-        // If the entire task is marked as Completed, ensure actualOutward is at least the issue_qty
         if ($task->status == 'Completed' && $actualOutward < (float)$task->issue_qty) {
             $actualOutward = (float)$task->issue_qty;
         }
 
-        if ($actualOutward <= 0)
+        if ($actualOutward <= 0 && $actualWastage <= 0)
             return;
 
-
         $recordedOutward = \App\Models\ProductionMovement::where('job_card_id', $jobCardId)->where('process_schedule_id', $processScheduleId)->sum('outward_qty');
+        $recordedWastage = \App\Models\ProductionMovement::where('job_card_id', $jobCardId)->where('process_schedule_id', $processScheduleId)->sum('wastage_qty');
 
-        $delta = $actualOutward - $recordedOutward;
+        $outwardDelta = $actualOutward - $recordedOutward;
+        $wastageDelta = $actualWastage - $recordedWastage;
 
-        if ($delta > 0) {
+        if ($outwardDelta > 0 || $wastageDelta > 0) {
             \App\Models\ProductionMovement::create([
                 'job_card_id' => $jobCardId,
                 'process_schedule_id' => $processScheduleId,
                 'operation_stage_id' => $stageId,
                 'production_service_id' => null,
                 'task_id' => $task->id,
-                'outward_qty' => $delta,
-                'remarks' => 'Automated chain delta',
+                'outward_qty' => max(0, $outwardDelta),
+                'wastage_qty' => max(0, $wastageDelta),
+                'remarks' => 'Automated progress sync',
                 'created_by' => auth()->id()
             ]);
 
-            $nextSchedule = ProcessSchedule::where('job_card_entry_id', $jobCardId)->where('id', '>', $processScheduleId)->orderBy('id', 'asc')->first();
+            if ($outwardDelta > 0) {
+                $nextSchedule = ProcessSchedule::where('job_card_entry_id', $jobCardId)->where('id', '>', $processScheduleId)->orderBy('id', 'asc')->first();
 
-            if ($nextSchedule) {
-                \App\Models\ProductionMovement::create([
-                    'job_card_id' => $jobCardId,
-                    'process_schedule_id' => $nextSchedule->id,
-                    'operation_stage_id' => $nextSchedule->operation_stage_id,
-                    'production_service_id' => null,
-                    'task_id' => null,
-                    'inward_qty' => $delta,
-                    'remarks' => 'Automated chain inward from Previous Stage',
-                    'created_by' => auth()->id()
-                ]);
+                if ($nextSchedule) {
+                    \App\Models\ProductionMovement::create([
+                        'job_card_id' => $jobCardId,
+                        'process_schedule_id' => $nextSchedule->id,
+                        'operation_stage_id' => $nextSchedule->operation_stage_id,
+                        'production_service_id' => null,
+                        'task_id' => null,
+                        'inward_qty' => $outwardDelta,
+                        'remarks' => 'Automated inward from Previous Stage',
+                        'created_by' => auth()->id()
+                    ]);
+                }
             }
         }
     }

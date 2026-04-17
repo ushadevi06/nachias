@@ -74,8 +74,10 @@ class WipLedgerSync extends Command
                     continue;
 
                 $actualOutward = 0;
+                $actualWastage = 0;
                 if ($assignments->isNotEmpty()) {
                     $assignedServiceIds = $assignments->pluck('service_id')->unique()->filter()->toArray();
+                    $actualWastage = (float) $assignments->sum('wastage_qty');
                     
                     if (empty($assignedServiceIds)) {
                         $actualOutward = (float) $assignments->sum('completed_qty');
@@ -103,11 +105,9 @@ class WipLedgerSync extends Command
                     $actualOutward = (float)$task->issue_qty;
                 }
 
-                if ($actualOutward <= 0)
+                if ($actualOutward <= 0 && $actualWastage <= 0)
                     continue;
 
-
-                $task = $stageTasks->first();
 
                 ProductionMovement::updateOrCreate(
                     [
@@ -118,7 +118,8 @@ class WipLedgerSync extends Command
                     ],
                     [
                         'outward_qty' => $actualOutward,
-                        'remarks'     => '[WipSync] Outward from task progress',
+                        'wastage_qty' => $actualWastage,
+                        'remarks'     => '[WipSync] Progress sync',
                         'created_by'  => 1,
                         'updated_by'  => 1,
                     ]
@@ -126,23 +127,25 @@ class WipLedgerSync extends Command
                 $synced++;
 
                 // Inward for next stage
-                $nextSchedule = $schedules->where('id', '>', $schedule->id)->sortBy('id')->first();
-                if ($nextSchedule) {
-                    ProductionMovement::updateOrCreate(
-                        [
-                            'job_card_id'         => $jc->id,
-                            'process_schedule_id' => $nextSchedule->id,
-                            'operation_stage_id'  => $nextSchedule->operation_stage_id,
-                            'task_id'             => null,
-                        ],
-                        [
-                            'inward_qty' => $actualOutward,
-                            'remarks'    => '[WipSync] Inward from previous stage outward',
-                            'created_by' => 1,
-                            'updated_by' => 1,
-                        ]
-                    );
-                    $synced++;
+                if ($actualOutward > 0) {
+                    $nextSchedule = $schedules->where('id', '>', $schedule->id)->sortBy('id')->first();
+                    if ($nextSchedule) {
+                        ProductionMovement::updateOrCreate(
+                            [
+                                'job_card_id'         => $jc->id,
+                                'process_schedule_id' => $nextSchedule->id,
+                                'operation_stage_id'  => $nextSchedule->operation_stage_id,
+                                'task_id'             => null,
+                            ],
+                            [
+                                'inward_qty' => $actualOutward,
+                                'remarks'    => '[WipSync] Inward from previous stage',
+                                'created_by' => 1,
+                                'updated_by' => 1,
+                            ]
+                        );
+                        $synced++;
+                    }
                 }
             }
 
