@@ -378,33 +378,48 @@ class SalesOrderController extends Controller
         $customers = Customer::where('status', 'Active')->orderBy('id', 'desc')->get();
         $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
-        $brandCategories = BrandCategory::where('status', 'Active')
-            ->whereHas('items', function ($q) {
-            $q->where('status', 'Active')->whereExists(function ($query) {
-                    $query->select(DB::raw(1))
-                        ->from('stock_entry_items')
-                        ->whereColumn('stock_entry_items.finished_item_code', 'like', DB::raw("CONCAT(items.code, '%')"))
-                        ->whereNull('deleted_at')
-                        ->groupBy('finished_item_code')
-                        ->havingRaw('SUM(qty_in) - SUM(qty_out) > 0');
-                }
-                );
-            })
-            ->orderBy('id', 'desc')->get();
-        $itemsQuery = Item::where('status', 'Active')
-            ->whereExists(function ($query) {
-            $query->select(DB::raw(1))
-                ->from('stock_entry_items')
-                ->whereColumn('stock_entry_items.finished_item_code', 'like', DB::raw("CONCAT(items.code, '%')"))
-                ->whereNull('deleted_at')
-                ->groupBy('finished_item_code')
-                ->havingRaw('SUM(qty_in) - SUM(qty_out) > 0');
-        });
-        if ($id && $salesOrder) {
-            $existingItemIds = collect($salesOrder->items)->pluck('item_id')->toArray();
-            $itemsQuery->orWhereIn('id', $existingItemIds);
+
+        $availableStockItems = DB::table('stock_entry_items')
+            ->where('stock_type', 'finished_goods')
+            ->whereNull('deleted_at')
+            ->select('finished_item_code', 'color_id', DB::raw('SUM(qty_in - qty_out) as balance'))
+            ->groupBy('finished_item_code', 'color_id')
+            ->having('balance', '>', 0)
+            ->get();
+
+        $stockItems = [];
+        foreach ($availableStockItems as $si) {
+            $color = Color::find($si->color_id);
+            $stockItems[] = [
+                'finished_item_code' => $si->finished_item_code,
+                'color_id' => $si->color_id,
+                'color_name' => $color ? $color->color_name : 'No Color',
+                'balance' => $si->balance
+            ];
         }
-        $items = $itemsQuery->orderBy('id', 'desc')->get();
+
+        if ($id && $salesOrder) {
+            foreach ($salesOrder->items as $soItem) {
+                $finishedCode = $soItem->stockEntryItem ? $soItem->stockEntryItem->finished_item_code : ($soItem->item->code ?? '');
+                $found = false;
+                foreach ($stockItems as $si) {
+                    if ($si['finished_item_code'] == $finishedCode && $si['color_id'] == $soItem->color_id) {
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    $color = Color::find($soItem->color_id);
+                    $stockItems[] = [
+                        'finished_item_code' => $finishedCode,
+                        'color_id' => $soItem->color_id,
+                        'color_name' => $color ? $color->color_name : 'No Color',
+                        'balance' => 0
+                    ];
+                }
+            }
+        }
+
         $colors = Color::where('status', 'Active')->orderBy('id', 'desc')->get();
         $uoms = Uom::where('status', 'Active')->orderBy('id', 'desc')->get();
         $sizes = SizeRatio::where('status', 'Active')->orderBy('id', 'desc')->get();
@@ -431,7 +446,8 @@ class SalesOrderController extends Controller
         $transportModes = TransportMode::where('status', 'Active')->get();
         $serviceProviders = ServiceProvider::where('status', 'Active')->get();
 
-        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'brandCategories', 'items', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders'));
+        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders'));
+
     }
 
     public function view($id)
@@ -561,4 +577,38 @@ class SalesOrderController extends Controller
         $is_print = true;
         return view('sales_order.pdf', compact('salesOrder', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print'));
     }
+
+    public function getFinishedItemDetails($code, $color_id)
+    {
+        $stockItem = DB::table('stock_entry_items')
+            ->where('finished_item_code', $code)
+            ->where('color_id', $color_id)
+            ->where('stock_type', 'finished_goods')
+            ->whereNull('deleted_at')
+            ->select('item_id', 'art_no', 'size', 'price', 'uom_id', DB::raw('SUM(qty_in - qty_out) as balance'))
+            ->groupBy('item_id', 'art_no', 'size', 'price', 'uom_id')
+            ->first();
+
+        if ($stockItem) {
+            $item = Item::find($stockItem->item_id);
+            $color = Color::find($color_id);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'item_id' => $stockItem->item_id,
+                    'brand_cat_id' => $item ? $item->brand_category_id : null,
+                    'art_no' => $stockItem->art_no,
+                    'size' => $stockItem->size,
+                    'mrp' => $stockItem->price,
+                    'uom_id' => $stockItem->uom_id,
+                    'balance' => $stockItem->balance,
+                    'color_name' => $color ? $color->color_name : 'No Color',
+                    'sleeve' => str_contains($code, 'F/S') || str_contains($code, 'Full') ? 'Full' : (str_contains($code, 'H/S') || str_contains($code, 'Half') ? 'Half' : 'Full')
+                ]
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Item not found in stock']);
+    }
 }
+

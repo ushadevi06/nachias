@@ -246,8 +246,7 @@
                             <table class="table table-bordered align-middle" id="item-rows">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="min-width: 180px;">Brand Category *</th>
-                                        <th style="min-width: 220px;">Item *</th>
+                                        <th style="min-width: 250px;">Stock Item *</th>
                                         <th style="min-width: 150px;">Color</th>
                                         <th style="min-width: 150px;">Art No *</th>
                                         <th style="min-width: 100px;">UOM *</th>
@@ -266,27 +265,17 @@
                                     <tr class="item-row">
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][brand_cat_id]" class="select2 form-select brand-select @error("items.$index.brand_cat_id") is-invalid @enderror" data-placeholder="Brand Category">
+                                                <select name="items[{{ $index }}][stock_item_key]" class="select2 form-select stock-item-select @error("items.$index.stock_item_key") is-invalid @enderror" data-placeholder="Select Stock Item">
                                                     <option value="">Select</option>
-                                                    @foreach($brandCategories as $bc)
-                                                        <option value="{{ $bc->id }}" {{ ($item['brand_cat_id'] ?? '') == $bc->id ? 'selected' : '' }}>{{ $bc->name }} - {{ $bc->code }}</option>
+                                                    @foreach($stockItems as $si)
+                                                        @php $key = $si['finished_item_code'] . '|' . $si['color_id']; @endphp
+                                                        <option value="{{ $key }}" {{ ($item['stock_item_key'] ?? ($si['finished_item_code'] . '|' . $si['color_id'])) == $key ? 'selected' : '' }}>{{ $si['finished_item_code'] }} ({{ $si['color_name'] }})</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            @error("items.$index.brand_cat_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][item_id]" class="select2 form-select item-select @error("items.$index.item_id") is-invalid @enderror" data-placeholder="Item">
-                                                    <option value="">Select Item</option>
-                                                    @if(isset($item['brand_cat_id']) && $item['brand_cat_id'])
-                                                        @foreach($items->where('brand_category_id', $item['brand_cat_id']) as $it)
-                                                            <option value="{{ $it->id }}" {{ ($item['item_id'] ?? '') == $it->id ? 'selected' : '' }}>{{ $it->name }} - {{ $it->code }}</option>
-                                                        @endforeach
-                                                    @endif
-                                                </select>
-                                            </div>
-                                            @error("items.$index.item_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                            @error("items.$index.stock_item_key")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                            <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $item['item_id'] ?? '' }}">
+                                            <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $item['brand_cat_id'] ?? '' }}">
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
@@ -373,23 +362,19 @@
                                     <tr class="item-row">
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">
+                                                <select name="items[{{ $index }}][stock_item_key]" class="select2 form-select stock-item-select" data-placeholder="Select Stock Item">
                                                     <option value="">Select</option>
-                                                    @foreach($brandCategories as $bc)
-                                                        <option value="{{ $bc->id }}" {{ $item->brand_cat_id == $bc->id ? 'selected' : '' }}>{{ $bc->name }} - {{ $bc->code }}</option>
+                                                    @foreach($stockItems as $si)
+                                                        @php 
+                                                            $key = $si['finished_item_code'] . '|' . $si['color_id']; 
+                                                            $itemFinishedCode = $item->stockEntryItem ? $item->stockEntryItem->finished_item_code : ($item->item->code ?? '');
+                                                        @endphp
+                                                        <option value="{{ $key }}" {{ ($itemFinishedCode == $si['finished_item_code'] && $item->color_id == $si['color_id']) ? 'selected' : '' }}>{{ $si['finished_item_code'] }} ({{ $si['color_name'] }})</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][item_id]" class="select2 form-select item-select" data-placeholder="Item">
-                                                    <option value="">Select Item</option>
-                                                    @foreach($items->where('brand_category_id', $item->brand_cat_id) as $it)
-                                                        <option value="{{ $it->id }}" {{ $item->item_id == $it->id ? 'selected' : '' }}>{{ $it->name }} - {{ $it->code }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                            <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $item->item_id }}">
+                                            <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $item->brand_cat_id }}">
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
@@ -467,20 +452,16 @@
                                 <tr class="item-row">
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <select name="items[0][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">
+                                            <select name="items[0][stock_item_key]" class="select2 form-select stock-item-select" data-placeholder="Select Stock Item">
                                                 <option value="">Select</option>
-                                                @foreach($brandCategories as $bc)
-                                                    <option value="{{ $bc->id }}">{{ $bc->name }} - {{ $bc->code }}</option>
+                                                @foreach($stockItems as $si)
+                                                    @php $key = $si['finished_item_code'] . '|' . $si['color_id']; @endphp
+                                                    <option value="{{ $key }}">{{ $si['finished_item_code'] }} ({{ $si['color_name'] }})</option>
                                                 @endforeach
                                             </select>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select name="items[0][item_id]" class="select2 form-select item-select" data-placeholder="Item">
-                                                <option value="">Select Item</option>
-                                            </select>
-                                        </div>
+                                        <input type="hidden" name="items[0][item_id]" value="">
+                                        <input type="hidden" name="items[0][brand_cat_id]" value="">
                                     </td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
@@ -812,9 +793,9 @@ $(document).ready(function () {
     $('.request_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
     function createRow() {
-        let brandOpts = `<option value="">Select</option>`;
-        @foreach($brandCategories as $bc)
-        brandOpts += `<option value="{{ $bc->id }}">{{ addslashes($bc->name) }} - {{ addslashes($bc->code) }}</option>`;
+        let stockOpts = `<option value="">Select</option>`;
+        @foreach($stockItems as $si)
+        stockOpts += `<option value="{{ $si['finished_item_code'] }}|{{ $si['color_id'] }}">{{ addslashes($si['finished_item_code']) }} ({{ addslashes($si['color_name']) }})</option>`;
         @endforeach
 
         let colorOpts = `<option value="">Select Color</option>`;
@@ -831,17 +812,14 @@ $(document).ready(function () {
             <tr class="item-row">
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][brand_cat_id]" class="select2 form-select brand-select" data-placeholder="Brand Category">${brandOpts}</select>
+                        <select name="items[${itemIndex}][stock_item_key]" class="select2 form-select stock-item-select" data-placeholder="Select Stock Item">${stockOpts}</select>
                     </div>
+                    <input type="hidden" name="items[${itemIndex}][item_id]" value="">
+                    <input type="hidden" name="items[${itemIndex}][brand_cat_id]" value="">
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][item_id]" class="select2 form-select item-select" data-placeholder="Item"><option value="">Select Item</option></select>
-                    </div>
-                </td>
-                <td>
-                    <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][color_id]" class="select2 form-select" data-placeholder="Color">${colorOpts}</select>
+                        <select name="items[${itemIndex}][color_id]" class="select2 form-select color-select" data-placeholder="Color">${colorOpts}</select>
                     </div>
                 </td>
                 <td>
@@ -870,11 +848,6 @@ $(document).ready(function () {
                         </div>
                     </div>
                 </td>
-                {{-- <td>
-                    <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
-                    </div>
-                </td> --}}
                 <td>
                     <div class="form-floating form-floating-outline">
                         <input type="number" name="items[${itemIndex}][mrp]" class="form-control mrp-input" min="0" step="0.01" placeholder="0.00">
@@ -980,148 +953,55 @@ $(document).ready(function () {
         // Not strictly needed for table display but good to keep if logic depends on counting
     }
 
-    $(document).on('change', '.brand-select', function() {
-        let brandId = $(this).val();
+    $(document).on('change', '.stock-item-select', function() {
+        let key = $(this).val();
         let $row = $(this).closest('.item-row');
-        let $itemSelect = $row.find('.item-select');
         
-        $itemSelect.html('<option value="">Loading...</option>').trigger('change');
-        
-        if (brandId) {
+        if (key) {
+            let parts = key.split('|');
+            let code = parts[0];
+            let colorId = parts[1];
+            
             $.ajax({
-                url: `{{ url('get-items-by-brand-category') }}/${brandId}`,
+                url: `{{ url('get-finished-item-details') }}/${encodeURIComponent(code)}/${colorId}`,
                 type: 'GET',
                 success: function(res) {
                     if (res.success) {
-                        let opts = '<option value="">Select Item</option>';
-                        res.items.forEach(it => {
-                            opts += `<option value="${it.id}">${it.name} - ${it.code}</option>`;
-                        });
-                        $itemSelect.html(opts).trigger('change');
+                        let d = res.data;
+                        $row.find('input[name*="[item_id]"]').val(d.item_id);
+                        $row.find('input[name*="[brand_cat_id]"]').val(d.brand_cat_id);
+                        $row.find('select[name*="[color_id]"]').val(colorId).trigger('change');
+                        $row.find('input[name*="[art_no]"]').val(d.art_no);
+                        $row.find('select[name*="[uom_id]"]').val(d.uom_id).trigger('change');
+                        $row.find('.available-stock-display').text(parseFloat(d.balance).toFixed(2));
+                        $row.find('input[name*="[mrp]"]').val(parseFloat(d.mrp).toFixed(2));
+                        
+                        if (d.sleeve) {
+                            $row.find(`input[name*="[sleeve]"][value="${d.sleeve}"]`).prop('checked', true).trigger('change');
+                        }
+                        
+                        let sizeOpts = `<option value="">Select Size</option><option value="${d.size}" selected>${d.size}</option>`;
+                        $row.find('.size-select').html(sizeOpts).trigger('change');
+                        
+                        $row.find('.qty-input').trigger('input');
                     }
                 }
             });
         } else {
-            $itemSelect.html('<option value="">Select Item</option>').trigger('change');
-        }
-    });
-
-    $(document).on('change', '.item-select', function() {
-        let itemId = $(this).val();
-        let $row = $(this).closest('.item-row');
-        
-        if (itemId) {
-            $.ajax({
-                url: `{{ url('get-item-details') }}/${itemId}`,
-                type: 'GET',
-                success: function(res) {
-                    if (res.success) {
-                        $row.data('stock-breakdown', res.stock_breakdown);
-                        
-                        let $uomSelect = $row.find('select[name*="[uom_id]"]');
-                        if (!$uomSelect.val()) {
-                            $uomSelect.val(res.uom_id).trigger('change');
-                        }
-                        
-                        let $colorSelect = $row.find('select[name*="[color_id]"]');
-                        let selectedColor = $colorSelect.data('selected') || $colorSelect.val() || res.color_id;
-                        let uniqueColors = [];
-                        let colorMap = new Map();
-                        
-                        res.stock_breakdown.forEach(s => {
-                            if (s.color_id && !colorMap.has(s.color_id)) {
-                                colorMap.set(s.color_id, true);
-                                uniqueColors.push({id: s.color_id, name: s.color_name});
-                            }
-                        });
-                        
-                        let colorOpts = '<option value="">Select Color</option>';
-                        uniqueColors.forEach(c => {
-                            colorOpts += `<option value="${c.id}" ${c.id == selectedColor ? 'selected' : ''}>${c.name}</option>`;
-                        });
-                        
-                        if (uniqueColors.length === 0) {
-                            colorOpts = '<option value="">No colors in stock</option>';
-                        }
-                        
-                        $colorSelect.html(colorOpts).trigger('change');
-                        $colorSelect.data('selected', '');
-
-                        if (!$row.find('input[name*="[mrp]"]').val()) {
-                             $row.find('input[name*="[mrp]"]').val(res.mrp);
-                        }
-                        
-                        let $sizeSelect = $row.find('.size-select');
-                        let selectedSize = $sizeSelect.data('selected') || $sizeSelect.val();
-                        let sizes = [...new Set(res.stock_breakdown.map(s => s.size))];
-                        let sizeOpts = '<option value="">Select Size</option>';
-                        sizes.forEach(sz => {
-                            sizeOpts += `<option value="${sz}" ${sz == selectedSize ? 'selected' : ''}>${sz}</option>`;
-                        });
-                        $sizeSelect.html(sizeOpts).trigger('change');
-                        $sizeSelect.data('selected', ''); 
-
-                        updateStockAndRate($row);
-                    }
-                }
-            });
-        } else {
-            $row.data('stock-breakdown', null);
+            $row.find('input[name*="[item_id]"]').val('');
+            $row.find('input[name*="[brand_cat_id]"]').val('');
+            $row.find('select[name*="[color_id]"]').val('').trigger('change');
+            $row.find('input[name*="[art_no]"]').val('');
             $row.find('.available-stock-display').text('0.00');
-            $row.find('.rate-input').val('0.00');
-            $row.find('.qty-input').val('1');
-            $row.find('.amount-input').val('0.00');
-            $row.find('select[name*="[color_id]"]').html('<option value="">Select Color</option>').trigger('change');
+            $row.find('input[name*="[mrp]"]').val('');
             $row.find('.size-select').html('<option value="">Select Size</option>').trigger('change');
             calculateTotals();
         }
     });
 
     function updateStockAndRate($row) {
-        let size = $row.find('.size-select').val();
-        let sleeve = $row.find('input[type="radio"][name*="[sleeve]"]:checked').val();
-        let colorId = $row.find('select[name*="[color_id]"]').val();
-        let breakdown = $row.data('stock-breakdown') || [];
-        
-        let available = 0;
-        let rate = 0;
-        let stockEntryItemId = '';
-        
-        let matches = breakdown;
-        if (colorId) {
-            matches = matches.filter(s => s.color_id == colorId);
-        }
-        
-        if (size && sleeve) {
-            let match = matches.find(s => s.size == size && s.sleeve == sleeve);
-            if (match) {
-                available = match.balance || 0;
-                rate = match.rate || 0;
-                stockEntryItemId = match.stock_entry_item_id || '';
-            } else {
-                let sizeMatch = matches.find(s => s.size == size);
-                if (sizeMatch) {
-                    rate = sizeMatch.rate || 0;
-                    stockEntryItemId = sizeMatch.stock_entry_item_id || '';
-                }
-            }
-        } else if (size) {
-            let sizeMatch = matches.find(s => s.size == size);
-            if (sizeMatch) {
-                rate = sizeMatch.rate || 0;
-                stockEntryItemId = sizeMatch.stock_entry_item_id || '';
-            }
-        }
-
-        $row.find('.available-stock-display').text(available.toFixed(2));
-        $row.find('.stock-entry-item-id').val(stockEntryItemId);
-        
-        let currentRate = parseFloat($row.find('.rate-input').val()) || 0;
-        if (currentRate === 0 && rate > 0) {
-            $row.find('.rate-input').val(rate.toFixed(2)).trigger('input');
-        } else {
-            $row.find('.qty-input').trigger('input');
-        }
+        // This function might need to be adjusted or kept if it handles other things like sleeve change
+        // But for now, the stock item selection already fetches the balance.
     }
 
     $(document).on('change', '.size-select, select[name*="[color_id]"]', function() {

@@ -118,6 +118,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('get-items-by-brand-category/{brandCategoryId}', [AjaxController::class, 'getItemsByBrandCategory']);
     Route::get('get-customer-details/{id}', [AjaxController::class, 'getCustomerDetails']);
     Route::get('get-agents-by-zone/{zone_id}', [AjaxController::class, 'fetchAgentsByZone']);
+    Route::get('get-finished-item-details/{code}/{color_id}', [SalesOrderController::class, 'getFinishedItemDetails']);
 
     /* Employees */
     Route::get('employees', [EmployeeController::class, 'index']);

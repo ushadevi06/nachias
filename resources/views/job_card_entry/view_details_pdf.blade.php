@@ -64,141 +64,161 @@
             margin: 2px auto;
         }
         .signature-section td {
-            height: 14pt;
+            height: 12pt;
             font-size: 6pt;
+            padding: 2px 4px !important;
+        }
+        .page-break-avoid {
+            page-break-inside: avoid;
         }
     </style>
 </head>
 <body>
     @php
-        $allSizes = [];
-        if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
-            $allSizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
-        }
+$allSizes = [];
+if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
+    $allSizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
+}
 
-        if (empty($allSizes)) {
-            $allSizes = $jobCard->cuttingSizeRatios->pluck('size')->unique()->toArray();
-            sort($allSizes, SORT_NUMERIC);
-        }
+if (empty($allSizes)) {
+    $allSizes = $jobCard->cuttingSizeRatios->pluck('size')->unique()->toArray();
+    sort($allSizes, SORT_NUMERIC);
+}
 
-        $activeFs = [];
-        $activeHs = [];
-        foreach ($jobCard->cuttingSizeRatios as $ratio) {
-            if ($ratio->qty_fs > 0)
-                $activeFs[] = $ratio->size;
-            if ($ratio->qty_hs > 0)
-                $activeHs[] = $ratio->size;
-        }
-        $activeFs = array_values(array_unique($activeFs));
-        sort($activeFs, SORT_NUMERIC);
-        $activeHs = array_values(array_unique($activeHs));
-        sort($activeHs, SORT_NUMERIC);
+$activeFs = [];
+$activeHs = [];
+foreach ($jobCard->cuttingSizeRatios as $ratio) {
+    if ($ratio->qty_fs > 0)
+        $activeFs[] = $ratio->size;
+    if ($ratio->qty_hs > 0)
+        $activeHs[] = $ratio->size;
+}
+$activeFs = array_values(array_unique($activeFs));
+sort($activeFs, SORT_NUMERIC);
+$activeHs = array_values(array_unique($activeHs));
+sort($activeHs, SORT_NUMERIC);
 
-        if (empty($activeFs) && empty($activeHs)) {
-            $activeFs = $allSizes;
-        }
+if (empty($activeFs) && empty($activeHs)) {
+    $activeFs = $allSizes;
+}
 
-        $sleeveInstances = $jobCard->sleeve_instances;
-        if (is_string($sleeveInstances)) {
-            $sleeveInstances = json_decode($sleeveInstances, true);
-        }
+$sleeveInstances = $jobCard->sleeve_instances;
+if (is_string($sleeveInstances)) {
+    $sleeveInstances = json_decode($sleeveInstances, true);
+}
 
-        $fsRows = [];
-        $hsRows = [];
+$fsRows = [];
+$hsRows = [];
 
-        if ($sleeveInstances && is_array($sleeveInstances)) {
-            if (isset($sleeveInstances['instances']) && is_array($sleeveInstances['instances'])) {
-                $valArr = $sleeveInstances['values'] ?? [];
-                foreach ($sleeveInstances['instances'] as $inst) {
-                    $id = $inst['id'] ?? null;
-                    $type = $inst['type'] ?? '';
+if ($sleeveInstances && is_array($sleeveInstances)) {
+    if (isset($sleeveInstances['instances']) && is_array($sleeveInstances['instances'])) {
+        $valArr = $sleeveInstances['values'] ?? [];
+        foreach ($sleeveInstances['instances'] as $inst) {
+            $id = $inst['id'] ?? null;
+            $type = $inst['type'] ?? '';
 
-                    if ($id === null)
-                        continue;
+            if ($id === null)
+                continue;
 
-                    $vals = null;
-                    foreach ($valArr as $vk => $vv) {
-                        if (abs((float) $vk - (float) $id) < 0.01) {
-                            $vals = $vv;
-                            break;
-                        }
-                    }
-
-                    if ($vals) {
-                        $hasValue = false;
-                        foreach ($vals as $v)
-                            if ($v != '' && $v != '-')
-                                $hasValue = true;
-                        if ($hasValue) {
-                            if ($type === 'fs')
-                                $fsRows[] = ['id' => $id, 'values' => $vals];
-                            elseif ($type === 'hs')
-                                $hsRows[] = ['id' => $id, 'values' => $vals];
-                        }
-                    }
+            $vals = null;
+            foreach ($valArr as $vk => $vv) {
+                if (abs((float) $vk - (float) $id) < 0.01) {
+                    $vals = $vv;
+                    break;
                 }
-            } elseif (isset($sleeveInstances['configs']) && is_array($sleeveInstances['configs'])) {
-                $valArr = $sleeveInstances['values'] ?? [];
-                foreach ($sleeveInstances['configs'] as $id => $config) {
-                    $type = $config['type'] ?? '';
-                    $vals = $valArr[$id] ?? [];
+            }
 
-                    $hasValue = false;
-                    foreach ($vals as $v)
-                        if ($v != '' && $v != '-')
-                            $hasValue = true;
-                    if ($hasValue) {
-                        if ($type === 'fs')
-                            $fsRows[] = ['id' => $id, 'values' => $vals];
-                        elseif ($type === 'hs')
-                            $hsRows[] = ['id' => $id, 'values' => $vals];
-                    }
-                }
-            } elseif (isset($sleeveInstances['fs']) || isset($sleeveInstances['hs'])) {
-                $rawFs = $sleeveInstances['fs'] ?? [];
-                $rawHs = $sleeveInstances['hs'] ?? [];
-                foreach ($rawFs as $id => $vals) {
-                    $hasValue = false;
-                    foreach ($vals as $v)
-                        if ($v != '' && $v != '-')
-                            $hasValue = true;
-                    if ($hasValue)
+            if ($vals) {
+                $hasValue = false;
+                foreach ($vals as $v)
+                    if ($v != '' && $v != '-')
+                        $hasValue = true;
+                if ($hasValue) {
+                    if ($type === 'fs')
                         $fsRows[] = ['id' => $id, 'values' => $vals];
-                }
-                foreach ($rawHs as $id => $vals) {
-                    $hasValue = false;
-                    foreach ($vals as $v)
-                        if ($v != '' && $v != '-')
-                            $hasValue = true;
-                    if ($hasValue)
+                    elseif ($type === 'hs')
                         $hsRows[] = ['id' => $id, 'values' => $vals];
                 }
             }
         }
+    } elseif (isset($sleeveInstances['configs']) && is_array($sleeveInstances['configs'])) {
+        $valArr = $sleeveInstances['values'] ?? [];
+        foreach ($sleeveInstances['configs'] as $id => $config) {
+            $type = $config['type'] ?? '';
+            $vals = $valArr[$id] ?? [];
 
-        $fabricDetails = $jobCard->fabricDetails->filter(function ($detail) use ($artCategoryMap) {
-            $trimmedArt = trim($detail->art_no);
-            return ($artCategoryMap[$trimmedArt] ?? 1) == 1;
-        });
-
-        $allLayMarks = [];
-        $firstFabric = $fabricDetails->first();
-        if ($firstFabric) {
-            $allLayMarks = $firstFabric->layMarks;
+            $hasValue = false;
+            foreach ($vals as $v)
+                if ($v != '' && $v != '-')
+                    $hasValue = true;
+            if ($hasValue) {
+                if ($type === 'fs')
+                    $fsRows[] = ['id' => $id, 'values' => $vals];
+                elseif ($type === 'hs')
+                    $hsRows[] = ['id' => $id, 'values' => $vals];
+            }
         }
+    } elseif (isset($sleeveInstances['fs']) || isset($sleeveInstances['hs'])) {
+        $rawFs = $sleeveInstances['fs'] ?? [];
+        $rawHs = $sleeveInstances['hs'] ?? [];
+        foreach ($rawFs as $id => $vals) {
+            $hasValue = false;
+            foreach ($vals as $v)
+                if ($v != '' && $v != '-')
+                    $hasValue = true;
+            if ($hasValue)
+                $fsRows[] = ['id' => $id, 'values' => $vals];
+        }
+        foreach ($rawHs as $id => $vals) {
+            $hasValue = false;
+            foreach ($vals as $v)
+                if ($v != '' && $v != '-')
+                    $hasValue = true;
+            if ($hasValue)
+                $hsRows[] = ['id' => $id, 'values' => $vals];
+        }
+    }
+}
 
-        $fabricCount = $fabricDetails->count();
-        $swatchWidth = $fabricCount > 0 ? (100 / $fabricCount) : 25;
-        if ($swatchWidth > 33.3)
-            $swatchWidth = 33.3;
-        if ($swatchWidth < 14.2)
-            $swatchWidth = 14.2;
+$fabricDetails = $jobCard->fabricDetails->filter(function ($detail) use ($artCategoryMap) {
+    $trimmedArt = trim($detail->art_no);
+    return ($artCategoryMap[$trimmedArt] ?? 1) == 1;
+});
 
-        $logoPath = public_path('assets/images/jc_logo.png');
-        $logoSrc = file_exists($logoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) : '';
+$allLayMarks = [];
+$firstFabric = $fabricDetails->first();
+if ($firstFabric) {
+    $allLayMarks = $firstFabric->layMarks;
+}
 
-        $favPath = public_path('assets/images/fav.jpeg');
-        $favSrc = file_exists($favPath) ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($favPath)) : '';
+$fabricCount = $fabricDetails->count();
+$swatchWidth = $fabricCount > 0 ? (100 / $fabricCount) : 25;
+if ($swatchWidth > 33.3)
+    $swatchWidth = 33.3;
+if ($swatchWidth < 14.2)
+    $swatchWidth = 14.2;
+
+$logoPath = public_path('assets/images/jc_logo.png');
+$logoSrc = file_exists($logoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) : '';
+
+$favPath = public_path('assets/images/fav.jpeg');
+$favSrc = file_exists($favPath) ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($favPath)) : '';
+
+$issueDate = $jobCard->job_card_date ? \Carbon\Carbon::parse($jobCard->job_card_date) : null;
+$deliveryDate = $jobCard->delivery_date ? \Carbon\Carbon::parse($jobCard->delivery_date) : null;
+
+$pDates = ['d1' => '', 'd2' => '', 'd3' => '', 'd4' => '', 'd5' => '', 'd6' => ''];
+
+if ($issueDate && $deliveryDate) {
+    $totalDays = max(1, $issueDate->diffInDays($deliveryDate));
+
+    $pDates['d1'] = $issueDate->format('d-m-Y');
+    $pDates['d2'] = $issueDate->copy()->addDays(round($totalDays * 0.28))->format('d-m-Y');
+    $pDates['d3'] = $issueDate->copy()->addDays(round($totalDays * 0.50))->format('d-m-Y');
+    $pDates['d4'] = $issueDate->copy()->addDays(round($totalDays * 0.71))->format('d-m-Y');
+    $pDates['d5'] = $issueDate->copy()->addDays(round($totalDays * 0.85))->format('d-m-Y');
+    $pDates['d6'] = $deliveryDate->format('d-m-Y');
+}
     @endphp
 
     <table class="table table-bordered">
@@ -245,7 +265,7 @@
             <td class="bg-light fw-bold" style="font-size: 7px;">POCKET</td>
             <td class="text-center fw-bold" style="font-size: 7px;">{{ strtoupper($jobCard->pocketType->pocket_type_name ?? 'CROSS') }}</td>
             <td class="fw-bold" style="font-size: 7px;">CUTTING DATE</td>
-            <td class="fw-bold text-end" style="font-size: 7px;">H.O/D.C/NO</td>
+            <td class="fw-bold text-end" style="font-size: 7px;">H.O / D.C /NO</td>
         </tr>
         <tr>
             <td class="fw-bold" style="font-size: 7px;">DELIVERY DATE</td>
@@ -261,36 +281,50 @@
 
     {{-- Matrix Header --}}
     <table class="table table-bordered" style="margin-top: 1pt;">
+        <colgroup>
+            <col style="width: 8%;">
+            <col style="width: 12%;">
+            <col style="width: 8%;">
+            @foreach($allSizes as $s)
+                <col style="width: {{ 32 / (count($allSizes) ?: 1) }}%;">
+            @endforeach
+            <col style="width: 10%;">
+            <col style="width: 8%;">
+            <col style="width: 10%;">
+            <col style="width: 12%;">
+        </colgroup>
         <tr>
             <td class="fw-bold" style="width: 8%;">WITHIN DAYS</td>
             <td style="width: 12%;">14</td>
-            <td colspan="4" class="text-center fw-bold bg-light" style="width: 40%;">CUTTING SIZE RATIO</td>
+            <td colspan="{{ count($allSizes) + 1 }}" class="text-center fw-bold bg-light" style="width: 40%;">CUTTING SIZE RATIO</td>
             <td colspan="3" class="text-center fw-bold bg-light" style="width: 28%;">CUTTING MARK</td>
-            <td class="fw-bold" style="width: 12%;">H.O.D.C DATE</td>
+            <td class="fw-bold text-end" style="width: 12%;">H.O / D.C /DATE</td>
         </tr>
         @php 
-            $totalRatioRows = (count($fsRows) ?: 1) + (count($hsRows) ?: 1);
+            $totalRatioRows = max(4, (count($fsRows) ?: 1) + (count($hsRows) ?: 1)) + 1;
             $sidebarRowspan = $totalRatioRows + 2;
+            $currentRow = 0;
         @endphp
         <tr>
-            <td class="fw-bold">CAD MARK WITDTH</td>
+            <td class="fw-bold"></td>
             <td class="text-center">{{ $jobCard->width ?: '-' }}</td>
             <td class="text-center fw-bold bg-light" style="width: 8%;">SIZE</td>
             @foreach($allSizes as $s)
-                <td class="text-center fw-bold" style="width: {{ 40 / (count($allSizes) ?: 1) }}%;">{{ $s }}</td>
+                <td class="text-center fw-bold" style="width: {{ 32 / (count($allSizes) ?: 1) }}%;">{{ $s }}</td>
             @endforeach
             <td class="text-center fw-bold bg-light" style="width: 10%;">SIZE</td>
             <td class="text-center fw-bold bg-light" style="width: 8%;">S.TYPE</td>
             <td class="text-center fw-bold bg-light" style="width: 10%;">MARK</td>
-            <td rowspan="{{ $sidebarRowspan }}"></td>
+            @php $currentRow++; @endphp
+            <td class="text-center">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
         </tr>
 
         @if(count($fsRows) > 0)
             @foreach($fsRows as $index => $row)
             <tr>
                 @if($index === 0)
-                    <td class="fw-bold" rowspan="{{ count($fsRows) }}">MRP</td>
-                    <td rowspan="{{ count($fsRows) }}" class="text-center">{{ (int) $jobCard->mrp ?: '' }}</td>
+                    <td class="fw-bold" rowspan="{{ count($fsRows) }}"></td>
+                    <td rowspan="{{ count($fsRows) }}" class="text-center">&nbsp;</td>
                 @endif
                 <td class="text-center fw-bold bg-light">QTY - F/S</td>
                 @foreach($allSizes as $s)
@@ -320,12 +354,14 @@
                         </table>
                     </td>
                 @endif
+                @php $currentRow++; @endphp
+                <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
             </tr>
             @endforeach
         @else
             <tr>
-                <td class="fw-bold">MRP</td>
-                <td class="text-center">{{ (int) $jobCard->mrp ?: '' }}</td>
+                <td class="fw-bold"></td>
+                <td class="text-center">&nbsp;</td>
                 <td class="text-center fw-bold bg-light">QTY - F/S</td>
                 @foreach($allSizes as $s)
                     @php $ratio = $jobCard->cuttingSizeRatios->where('size', $s)->first(); @endphp
@@ -351,6 +387,8 @@
                         @endfor
                     </table>
                 </td>
+                @php $currentRow++; @endphp
+                <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
             </tr>
         @endif
 
@@ -358,8 +396,8 @@
             @foreach($hsRows as $index => $row)
             <tr>
                 @if($index === 0)
-                    <td class="fw-bold" rowspan="{{ count($hsRows) }}">F/S</td>
-                    <td rowspan="{{ count($hsRows) }}" class="text-center">{{ $jobCard->price_fs ? number_format($jobCard->price_fs, 2) : '' }}</td>
+                    <td class="fw-bold" rowspan="{{ count($hsRows) }}"></td>
+                    <td rowspan="{{ count($hsRows) }}" class="text-center">&nbsp;</td>
                 @endif
                 <td class="text-center fw-bold bg-light">QTY - H/S</td>
                 @foreach($allSizes as $s)
@@ -367,35 +405,57 @@
                         {{ (isset($row['values'][$s]) && $row['values'][$s] != '' && $row['values'][$s] != '-') ? (int) $row['values'][$s] : '-' }}
                     </td>
                 @endforeach
+                @php $currentRow++; @endphp
+                <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
             </tr>
             @endforeach
         @else
             <tr>
-                <td class="fw-bold">F/S</td>
-                <td class="text-center">{{ $jobCard->price_fs ? number_format($jobCard->price_fs, 2) : '' }}</td>
+                <td class="fw-bold"></td>
+                <td class="text-center">&nbsp;</td>
                 <td class="text-center fw-bold bg-light">QTY - H/S</td>
                 @foreach($allSizes as $s)
                     @php $ratio = $jobCard->cuttingSizeRatios->where('size', $s)->first(); @endphp
                     <td class="text-center">{{ $ratio ? (int) $ratio->qty_hs : '-' }}</td>
                 @endforeach
+                @php $currentRow++; @endphp
+                <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
             </tr>
         @endif
 
+        @php 
+            $rowsRendered = (count($fsRows) ?: 1) + (count($hsRows) ?: 1);
+        @endphp
+        @for($i = $rowsRendered; $i < 4; $i++)
+            <tr style="height: 18pt;">
+                <td class="fw-bold">&nbsp;</td>
+                <td class="text-center">&nbsp;</td>
+                <td class="text-center fw-bold bg-light">&nbsp;</td>
+                @foreach($allSizes as $s)
+                    <td>&nbsp;</td>
+                @endforeach
+                @php $currentRow++; @endphp
+                <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
+            </tr>
+        @endfor
+
         <tr>
-            <td class="fw-bold">H/S</td>
-            <td class="text-center">{{ $jobCard->price_hs ? number_format($jobCard->price_hs, 2) : '' }}</td>
+            <td class="fw-bold"></td>
+            <td class="text-center">&nbsp;</td>
             <td colspan="{{ count($allSizes) + 1 }}"></td>
+            @php $currentRow++; @endphp
+            <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
         </tr>
     </table>
 
     {{-- Fabric Details (Horizontal Format) --}}
     <table class="table table-bordered" style="margin-top: 3pt;">
-        <tr>
-            <td class="bg-light fw-bold" style="width: 15%;">FABRIC TYPE</td>
+        {{--  <tr>
+            <td class="bg-light fw-bold" style="width: 15%;">FABRIC TYPE</td> 
             <td colspan="{{ count($fabricDetails) }}" class="text-center fw-bold" style="color: #2f6fae; font-size: 8pt;"> 
                 {{ $jobCard->fabricType->fabric_type ?? 'N/A' }}
             </td>
-        </tr>
+        </tr> --}}
         <tr>
             <td class="bg-light fw-bold" style="width: 15%;">ART NO</td>
             @foreach($fabricDetails as $detail)
@@ -452,7 +512,7 @@
             @foreach($fabricDetails as $detail)
                 @php 
                     $rowTotal = $detail->quantities->sum('total_qty');
-                    $grandTotal += $rowTotal;
+    $grandTotal += $rowTotal;
                 @endphp
                 <tr class="text-center">
                     <td class="fw-bold">{{ $detail->art_no }}</td>
@@ -472,12 +532,12 @@
                 @foreach($allSizes as $s)
                     <td>
                         @php
-                            $sumFs = 0;
-                            foreach ($fabricDetails as $detail) {
-                                if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-                                    $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
-                                }
-                            }
+    $sumFs = 0;
+    foreach ($fabricDetails as $detail) {
+        if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+            $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
+        }
+    }
                         @endphp
                         {{ $sumFs ?: '-' }}
                     </td>
@@ -485,12 +545,12 @@
                 @foreach($allSizes as $s)
                     <td>
                         @php
-                            $sumHs = 0;
-                            foreach ($fabricDetails as $detail) {
-                                if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-                                    $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
-                                }
-                            }
+    $sumHs = 0;
+    foreach ($fabricDetails as $detail) {
+        if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+            $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
+        }
+    }
                         @endphp
                         {{ $sumHs ?: '-' }}
                     </td>
@@ -500,7 +560,6 @@
         </tbody>
     </table>
 
-    </table>
 
     {{-- Production Stages @if($jobCard->operations && $jobCard->operations->count() > 0)
     <table class="table table-bordered" style="margin-top: 10pt;">
@@ -531,66 +590,67 @@
     @endif --}}
 
     {{-- Redesigned Signatures Section --}}
-    <table class="table table-bordered" style="margin-top: 3pt; font-size: 6pt;">
-        <tr class="bg-light fw-bold text-center">
-            <td colspan="6" style="vertical-align: middle;">AUTHORISED SIGNATURES</td>
-            <td style="width: 10%; vertical-align: middle;">TOTAL MTRS</td>
-            <td style="width: 8%; vertical-align: middle;">{{ ( int)$grandTotal }}</td>
-            <td style="width: 15%; vertical-align: middle;">REMARKS</td>
-        </tr>
-        <tr class="text-center">
-            <td class="bg-light fw-bold" style="width: 6%;">DATE</td>
-            <td style="width: 14%; background-color: #fcfcfc;">FABRIC INCHARGE</td>
-            <td class="bg-light fw-bold" style="width: 6%;">DATE</td>
-            <td style="width: 14%; background-color: #fcfcfc;">CUTTING RECEIVED BY</td>
-            <td class="bg-light fw-bold" style="width: 6%;">DATE</td>
-            <td style="width: 14%; background-color: #fcfcfc;">ASSEMBLE</td>
-            <td class="bg-light fw-bold" style="width: 6%;">DATE</td>
-            <td style="width: 14%; background-color: #fcfcfc;">TRIMMING & CHECKING</td>
-            <td rowspan="8" style="vertical-align: top; text-align: left; padding: 5px;"></td>
-        </tr>
-        <tr style="height: 70pt;">
-            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
-        <tr class="text-center">
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">FABRIC ISSUED BY</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">UNIT INCHARGE</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">PRODUCTION UNIT SEND BY</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">IRONING</td>
-        </tr>
-        <tr style="height: 70pt;">
-            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
-        <tr class="text-center">
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">CUTTING SUPERVISOR</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">READY SECTION</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">H.O RECEIVED BY</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">PACKING & DELIVERY</td>
-        </tr>
-        <tr style="height: 70pt;">
-            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
-        <tr class="text-center">
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">CUTTING SEND BY</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">READY STORE</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">KAJA & BUTTON</td>
-            <td class="bg-light fw-bold">DATE</td>
-            <td style="background-color: #fcfcfc;">F.G STORE</td>
-        </tr>
-        <tr style="height: 70pt;">
-            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
+    <table class="table table-bordered page-break-avoid" style="margin-top: 3pt; font-size: 6pt; table-layout: fixed;">
+        <thead>
+            <tr class="bg-light fw-bold text-center">
+                <td colspan="7" style="vertical-align: middle;" class="text-start">AUTHORISED SIGNATURES</td>
+                <td style="width: 10%; vertical-align: middle;">TOTAL MTRS</td>
+                <td style="width: 8%; vertical-align: middle;">{{ (int) $grandTotal }}</td>
+                <td style="width: 16%; vertical-align: middle;" class="text-start">REMARKS:</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
+                <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
+                <td class="bg-light fw-bold" style="width: 8%;">PLANING DATE</td>
+                <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
+                <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
+                <td class="bg-light fw-bold" style="width: 8%;">DATE</td>
+                <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
+                <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
+                <td class="bg-light fw-bold" style="width: 8%;">DATE</td>
+                <!-- Remarks Grid Cell -->
+                <td rowspan="8" class="p-0" style="vertical-align: top; width: 16%;">
+                    
+                </td>
+            </tr>
+            <tr class="text-center">
+                <td class="text-start">PURCHASE</td><td></td><td rowspan="2" class="fw-bold">{{ $pDates['d1'] }}</td>
+                <td class="text-start">READY</td><td></td><td rowspan="2" class="fw-bold">{{ $pDates['d3'] }}</td>
+                <td class="text-start">FINAL FINISH RECD</td><td rowspan="4"></td><td rowspan="4" class="fw-bold">{{ $pDates['d6'] }}</td>
+            </tr>
+            <tr class="text-center">
+                <td class="text-start">FABRIC STORE</td><td></td>
+                <td class="text-start">READY STORE</td><td></td>
+                <td class="text-start">IRONING</td>
+            </tr>
+            <tr class="text-center">
+                <td class="text-start">CUTTING</td><td></td><td rowspan="2" class="fw-bold">{{ $pDates['d2'] }}</td>
+                <td class="text-start">ASSEMBLE</td><td></td><td rowspan="2" class="fw-bold">{{ $pDates['d4'] }}</td>
+                <td class="text-start">PACKING</td>
+            </tr>
+            <tr class="text-center">
+                <td class="text-start">FUSING & LOGO</td><td></td>
+                <td class="text-start">ASSEMBLE STORE</td><td></td>
+                <td class="text-start">DELIVERY</td>
+            </tr>
+            <tr class="text-center">
+                <td class="text-start">CUTTING SEND BY</td><td></td><td></td>
+                <td class="text-start">KAJA & BUTTON</td><td></td><td rowspan="3" class="fw-bold">{{ $pDates['d5'] }}</td>
+                <td class="text-start">F.G STORE</td><td></td><td></td>
+            </tr>
+            <tr class="text-center">
+                <td class="text-start">CUTTING RECD BY</td><td></td><td></td>
+                <td class="text-start">TRIM & CHECK</td><td></td>
+                <td></td><td></td><td></td>
+            </tr>
+            <tr class="text-center">
+                <td class="text-start">UNIT INCHARGE</td><td></td><td></td>
+                <td class="text-start">PRO SEND</td><td></td>
+                <td></td><td></td><td></td>
+            </tr>
+        </tbody>
     </table>
     <div style="margin-top: 3pt; font-weight: bold; font-size: 7pt;">
         MANDATORY : Please put your signature once you have completed your SYSTEM ENTRY
