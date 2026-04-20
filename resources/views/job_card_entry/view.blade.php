@@ -6,9 +6,11 @@
             <div class="col-lg-12">
                 <div class="table-header-box">
                     <h4>Job Card Entry</h4>
+                    @if(auth()->id() == 1 || auth()->user()->can('create job-card'))
                     <a class="btn btn-primary" href="{{ url('job_card_entries/add') }}">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                     </a>
+                    @endif
                 </div>
                 <div class="col-lg-12">
                     @include('flash_messages')

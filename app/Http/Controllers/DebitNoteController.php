@@ -19,7 +19,7 @@ class DebitNoteController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view debit-note')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view debit-notes')) {
             return unauthorizedRedirect();
         }
 
@@ -72,10 +72,10 @@ class DebitNoteController extends Controller
                 $status .= '<div class="status_msg_' . $note->id . '"></div>';
 
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view debit-note')) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details debit-notes')) {
                     $action .= '<a href="' . url('debit_notes/view/' . $note->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if (auth()->id() == 1 || auth()->user()->can('edit debit-note')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit debit-notesss')) {
                     $action .= '<a href="' . url('debit_notes/add/' . $note->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 /* if (auth()->id() == 1 || auth()->user()->can('delete debit-note')) {
@@ -110,13 +110,13 @@ class DebitNoteController extends Controller
     public function add($id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit debit-note')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit debit-notes')) {
                 return unauthorizedRedirect();
             }
             $debitNote = DebitNote::with(['items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
             $charges = $debitNote->charges;
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create debit-note')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create debit-notes')) {
                 return unauthorizedRedirect();
             }
         }
@@ -310,7 +310,7 @@ class DebitNoteController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view debit-note')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details debit-notes')) {
             return unauthorizedRedirect();
         }
         $debitNote = DebitNote::with(['supplier', 'purchaseInvoice', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
@@ -402,7 +402,7 @@ class DebitNoteController extends Controller
     }
     public function print($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view debit-note')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view debit-notes')) {
             return unauthorizedRedirect();
         }
 
@@ -416,7 +416,7 @@ class DebitNoteController extends Controller
     }
     public function download($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view debit-note')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view debit-notes')) {
             return unauthorizedRedirect();
         }
 

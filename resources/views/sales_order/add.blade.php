@@ -4,6 +4,9 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <form action="{{ $salesOrder ? url('sales_orders/add/' . $salesOrder->id) : url('sales_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
                 @csrf
                 <div class="card mb-4">

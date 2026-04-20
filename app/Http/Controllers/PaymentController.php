@@ -17,7 +17,7 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view payments')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view manage-payments')) {
             return unauthorizedRedirect();
         }
 
@@ -55,11 +55,17 @@ class PaymentController extends Controller
             $i = $start + 1;
 
             foreach ($payments as $row) {
-                $payment_no = '<a href="' . url('payments/view/' . $row->id) . '">' . $row->payment_no . '</a>';
-
+                $payment_no = '';
+                if(auth()->id() == 1 || auth()->user()->can('view_details manage-payments')){
+                    $payment_no = '<a href="' . url('payments/view/' . $row->id) . '">' . $row->payment_no . '</a>';
+                } else {
+                    $payment_no = $row->payment_no;
+                }
                 $action = '<div class="button-box">';
-                $action .= '<a href="' . url('payments/view/' . $row->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a> ';
-                if (auth()->id() == 1 || auth()->user()->can('delete payments')) {
+                if(auth()->id() == 1 || auth()->user()->can('view_details manage-payments')){
+                    $action .= '<a href="' . url('payments/view/' . $row->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a> ';
+                }
+                if (auth()->id() == 1 || auth()->user()->can('delete manage-payments')) {
                     $action .= '<button type="button" class="btn btn-delete" onclick="delete_data(\'' . url('payments/delete/' . $row->id) . '\')" title="Delete"><i class="icon-base ri ri-delete-bin-line"></i></button>';
                 }
                 $action .= '</div>';
@@ -91,7 +97,7 @@ class PaymentController extends Controller
 
     public function add(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('create payments')) {
+        if (auth()->id() != 1 && !auth()->user()->can('create manage-payments')) {
             return unauthorizedRedirect();
         }
         if ($request->isMethod('post')) {
@@ -253,7 +259,7 @@ class PaymentController extends Controller
 
     public function view($id = null)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view payments')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details manage-payments')) {
             return unauthorizedRedirect();
         }
         $payment = $id ?Payment::findOrFail($id) : null;
@@ -385,7 +391,7 @@ class PaymentController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete payments')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete manage-payments')) {
             return unauthorizedRedirect();
         }
 
@@ -442,7 +448,7 @@ class PaymentController extends Controller
 
     public function print($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view payments')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details manage-payments')) {
             return unauthorizedRedirect();
         }
         $payment = Payment::findOrFail($id);
@@ -455,7 +461,7 @@ class PaymentController extends Controller
 
     public function download($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view payments')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details manage-payments')) {
             return unauthorizedRedirect();
         }
         $payment = Payment::findOrFail($id);

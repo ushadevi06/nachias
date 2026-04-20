@@ -23,20 +23,35 @@
     }
 
     function renderDropdown(id, viewId) {
+        const canEdit = typeof window.canEditTask !== 'undefined' ? window.canEditTask : true;
+        const canView = typeof window.canViewTask !== 'undefined' ? window.canViewTask : true;
+
+        if (!canEdit && !canView) return '';
+
         const editUrl = window.kanbanAddUrl ? `${window.kanbanAddUrl}/${id}` : 'javascript:void(0)';
         const viewUrl = window.kanbanListViewUrl ? `${window.kanbanListViewUrl}/view/${id}` : 'javascript:void(0)';
+
+        let menuItems = '';
+        if (canEdit) {
+            menuItems += `<a class="dropdown-item" href="${editUrl}"> <i class="icon-base ri ri-edit-box-line me-2"></i> Edit</a>`;
+        }
+        if (canView) {
+            menuItems += `<a class="dropdown-item" href="${viewUrl}"><i class="icon-base ri ri-eye-line me-2"></i> View</a>`;
+        }
 
         return `
       <div class="dropdown kanban-tasks-item-dropdown">
         <i class="dropdown-toggle icon-base ri ri-more-2-fill cursor-pointer" id="kanban-tasks-item-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="kanban-tasks-item-dropdown">
-          <a class="dropdown-item" href="${editUrl}"> <i class="icon-base ri ri-edit-box-line me-2"></i> Edit</a>
-          <a class="dropdown-item" href="${viewUrl}"><i class="icon-base ri ri-eye-line me-2"></i> View</a>
+          ${menuItems}
         </div>
       </div>`;
     }
 
     function renderBoardDropdown() {
+        const canEdit = typeof window.canEditTask !== 'undefined' ? window.canEditTask : true;
+        if (!canEdit) return '';
+
         return `
       <div class="dropdown">
         <i class="dropdown-toggle icon-base ri ri-more-2-fill cursor-pointer" id="board-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></i>
@@ -108,6 +123,18 @@
         else if (currentStatus === 'Planned') statusColor = 'secondary';
         else statusColor = 'info';
 
+        const canEdit = typeof window.canEditTask !== 'undefined' ? window.canEditTask : true;
+
+        if (!canEdit) {
+            return `
+                <div class="mb-2">
+                    <span class="badge rounded-pill bg-label-${statusColor} p-2">
+                        ${currentStatus}
+                    </span>
+                </div>
+            `;
+        }
+
         let boards = [];
         if (window.kanban) {
             boards = window.kanban.options.boards.map(b => b.id);
@@ -132,11 +159,13 @@
         `;
     }
 
+    const canEditTaskGlobal = typeof window.canEditTask !== 'undefined' ? window.canEditTask : true;
+
     const kanban = new jKanban({
         element: '.kanban-wrapper',
         gutter: '12px',
         widthBoard: '250px',
-        dragItems: true,
+        dragItems: canEditTaskGlobal,
         boards: kanbanData,
         dragBoards: true,
         addItemButton: false,
@@ -322,6 +351,9 @@
             return;
         }
 
+        const canView = typeof window.canViewTask !== 'undefined' ? window.canViewTask : true;
+        if (!canView) return;
+
         const taskId = this.getAttribute('data-eid');
         if (taskId) {
             const viewUrl = window.kanbanListViewUrl ? `${window.kanbanListViewUrl}/view/${taskId}` : 'javascript:void(0)';
@@ -357,9 +389,7 @@
         const currentBoard = $(this).closest('.kanban-board').data('id');
 
         if (window.kanban && taskId && newStatus) {
-            // We use the same AJAX here instead of moveElement immediately
-            // to ensure validation passes before UI update
-             $.ajax({
+            $.ajax({
                     url: window.kanbanUpdateStatusUrl,
                     method: 'POST',
                     data: {

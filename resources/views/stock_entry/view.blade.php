@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Stock Entry</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('add stock entries'))
+                @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
                 <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>

@@ -1,858 +1,861 @@
 @extends('layouts.common')
 @section('title', ($invoice ? 'Edit' : 'Add') . ' Purchase Invoice - ' . env('WEBSITE_NAME'))
 @section('content')
-    <div class="container-xxl section-padding">
-        <div class="row">
-            <div class="col-lg-12">
-                <form action="{{ $invoice ? url('purchase_invoices/add/' . $invoice->id) : url('purchase_invoices/add') }}"
-                    method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
-                    @csrf
-                    <input type="hidden" id="isEditMode" value="{{ isset($invoice) ? 1 : 0 }}">
-                    <input type="hidden" name="purchase_commission_agent_id" id="purchase_commission_agent_id"
-                        value="{{ old('purchase_commission_agent_id', $invoice->purchase_commission_agent_id ?? '') }}">
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="card-header-box">
-                                <h4>{{ $invoice ? 'Edit' : 'Add' }} Purchase Invoice</h4>
+<div class="container-xxl section-padding">
+    <div class="row">
+        <div class="col-lg-12">
+            @include('flash_messages')
+        </div>
+        <div class="col-lg-12">
+            <form action="{{ $invoice ? url('purchase_invoices/add/' . $invoice->id) : url('purchase_invoices/add') }}"
+                method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
+                @csrf
+                <input type="hidden" id="isEditMode" value="{{ isset($invoice) ? 1 : 0 }}">
+                <input type="hidden" name="purchase_commission_agent_id" id="purchase_commission_agent_id"
+                    value="{{ old('purchase_commission_agent_id', $invoice->purchase_commission_agent_id ?? '') }}">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="card-header-box">
+                            <h4>{{ $invoice ? 'Edit' : 'Add' }} Purchase Invoice</h4>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('invoice_no') is-invalid @enderror" id="invoice_no" placeholder="Enter Invoice No" name="invoice_no" value="{{ old('invoice_no', $invoice->invoice_no ?? $nextInvoiceNumber ?? '') }}" {{ isset($invoice) ? 'readonly' : '' }}>
+                                    <label for="invoice_no">Invoice No. <span class="text-danger">*</span></label>
+                                </div>
+                                @error('invoice_no')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
-                            <div class="row g-4">
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('invoice_no') is-invalid @enderror" id="invoice_no" placeholder="Enter Invoice No" name="invoice_no" value="{{ old('invoice_no', $invoice->invoice_no ?? $nextInvoiceNumber ?? '') }}" {{ isset($invoice) ? 'readonly' : '' }}>
-                                        <label for="invoice_no">Invoice No. <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('invoice_no')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control invoice_date @error('invoice_date') is-invalid @enderror" placeholder="Enter Invoice Date" name="invoice_date" autocomplete="off" value="{{ old('invoice_date', $invoice ? $invoice->invoice_date->format('d-m-Y') : '') }}" {{ isset($invoice) ? 'readonly' : '' }} />
+                                    <label for="invoice_date">Invoice Date <span class="text-danger">*</span></label>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control invoice_date @error('invoice_date') is-invalid @enderror" placeholder="Enter Invoice Date" name="invoice_date" autocomplete="off" value="{{ old('invoice_date', $invoice ? $invoice->invoice_date->format('d-m-Y') : '') }}" {{ isset($invoice) ? 'readonly' : '' }} />
-                                        <label for="invoice_date">Invoice Date <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('invoice_date')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                                @error('invoice_date')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select name="purchase_order_id" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" {{ isset($invoice) ? 'disabled' : '' }}>
+                                        <option value="">Select Purchase Order</option>
+                                        @foreach($purchaseOrders as $po)
+                                            <option value="{{ $po->id }}" {{ old('purchase_order_id', $invoice->purchase_order_id ?? '') == $po->id ? 'selected' : '' }}>{{ $po->po_number }} - {{ $po->supplier->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @if(isset($invoice))
+                                        <input type="hidden" name="purchase_order_id" value="{{ $invoice->purchase_order_id }}">
+                                    @endif
+                                    <label for="purchase_order">Purchase Order No <span
+                                            class="text-danger">*</span></label>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <select name="purchase_order_id" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" {{ isset($invoice) ? 'disabled' : '' }}>
-                                            <option value="">Select Purchase Order</option>
-                                            @foreach($purchaseOrders as $po)
-                                                <option value="{{ $po->id }}" {{ old('purchase_order_id', $invoice->purchase_order_id ?? '') == $po->id ? 'selected' : '' }}>{{ $po->po_number }} - {{ $po->supplier->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        @if(isset($invoice))
-                                            <input type="hidden" name="purchase_order_id" value="{{ $invoice->purchase_order_id }}">
-                                        @endif
-                                        <label for="purchase_order">Purchase Order No <span
-                                                class="text-danger">*</span></label>
-                                    </div>
-                                    @error('purchase_order_id')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                                @error('purchase_order_id')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('supplier_name') is-invalid @enderror" id="supplier_name" readonly value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
+                                    <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
+                                    <input type="hidden" name="supplier_id" id="supplier_id" value="{{ old('supplier_id', $invoice->supplier_id ?? '') }}">
+                                    <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('supplier_name') is-invalid @enderror" id="supplier_name" readonly value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
-                                        <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
-                                        <input type="hidden" name="supplier_id" id="supplier_id" value="{{ old('supplier_id', $invoice->supplier_id ?? '') }}">
-                                        <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('supplier_id')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                                @error('supplier_id')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter PO Reference" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}">
+                                    <label for="po_reference">PO Reference</label>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter PO Reference" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}">
-                                        <label for="po_reference">PO Reference</label>
-                                    </div>
-                                    @error('po_reference')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                @error('po_reference')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control" id="purchase_commission_agent_name" placeholder="Commission Agent" readonly value="{{ old('purchase_commission_agent_name', $invoice->purchaseCommissionAgent->name ?? '') }}">
-                                        <label for="purchase_commission_agent_name">Purchase Commission Agent</label>
-                                    </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="purchase_commission_agent_name" placeholder="Commission Agent" readonly value="{{ old('purchase_commission_agent_name', $invoice->purchaseCommissionAgent->name ?? '') }}">
+                                    <label for="purchase_commission_agent_name">Purchase Commission Agent</label>
                                 </div>
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('transport') is-invalid @enderror" id="transport" placeholder="Enter Transport" name="transport" value="{{ old('transport', $invoice->transport ?? '') }}">
-                                        <label for="transport">Transport</label>
-                                    </div>
-                                    @error('transport')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('transport') is-invalid @enderror" id="transport" placeholder="Enter Transport" name="transport" value="{{ old('transport', $invoice->transport ?? '') }}">
+                                    <label for="transport">Transport</label>
                                 </div>
+                                @error('transport')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('destination') is-invalid @enderror" id="destination" placeholder="Enter Destination" name="destination" value="{{ old('destination', $invoice->destination ?? '') }}">
-                                        <label for="destination">Destination</label>
-                                    </div>
-                                    @error('destination')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('destination') is-invalid @enderror" id="destination" placeholder="Enter Destination" name="destination" value="{{ old('destination', $invoice->destination ?? '') }}">
+                                    <label for="destination">Destination</label>
                                 </div>
+                                @error('destination')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('lr_no') is-invalid @enderror" id="lr_no" placeholder="Enter LR No" name="lr_no" value="{{ old('lr_no', $invoice->lr_no ?? '') }}">
-                                        <label for="lr_no">LR No</label>
-                                    </div>
-                                    @error('lr_no')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('lr_no') is-invalid @enderror" id="lr_no" placeholder="Enter LR No" name="lr_no" value="{{ old('lr_no', $invoice->lr_no ?? '') }}">
+                                    <label for="lr_no">LR No</label>
                                 </div>
+                                @error('lr_no')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control date-picker @error('lr_date') is-invalid @enderror" placeholder="Enter LR Date" name="lr_date" autocomplete="off" value="{{ old('lr_date', $invoice && $invoice->lr_date ? $invoice->lr_date->format('d-m-Y') : '') }}" />
-                                        <label for="lr_date">LR Date</label>
-                                    </div>
-                                    @error('lr_date')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control date-picker @error('lr_date') is-invalid @enderror" placeholder="Enter LR Date" name="lr_date" autocomplete="off" value="{{ old('lr_date', $invoice && $invoice->lr_date ? $invoice->lr_date->format('d-m-Y') : '') }}" />
+                                    <label for="lr_date">LR Date</label>
                                 </div>
+                                @error('lr_date')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('eway_billno') is-invalid @enderror" id="eway_billno" placeholder="Enter Eway Bill No" name="eway_billno" value="{{ old('eway_billno', $invoice->eway_billno ?? '') }}">
-                                        <label for="eway_billno">Eway Bill No</label>
-                                    </div>
-                                    @error('eway_billno')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('eway_billno') is-invalid @enderror" id="eway_billno" placeholder="Enter Eway Bill No" name="eway_billno" value="{{ old('eway_billno', $invoice->eway_billno ?? '') }}">
+                                    <label for="eway_billno">Eway Bill No</label>
                                 </div>
+                                @error('eway_billno')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('indent_no') is-invalid @enderror" id="indent_no" placeholder="Enter Indent No" name="indent_no" value="{{ old('indent_no', $invoice->indent_no ?? '') }}">
-                                        <label for="indent_no">Indent No</label>
-                                    </div>
-                                    @error('indent_no')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('indent_no') is-invalid @enderror" id="indent_no" placeholder="Enter Indent No" name="indent_no" value="{{ old('indent_no', $invoice->indent_no ?? '') }}">
+                                    <label for="indent_no">Indent No</label>
                                 </div>
+                                @error('indent_no')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control date-picker @error('indent_date') is-invalid @enderror" placeholder="Enter Indent Date" name="indent_date" autocomplete="off" value="{{ old('indent_date', $invoice && $invoice->indent_date ? $invoice->indent_date->format('d-m-Y') : '') }}" />
-                                        <label for="indent_date">Indent Date</label>
-                                    </div>
-                                    @error('indent_date')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control date-picker @error('indent_date') is-invalid @enderror" placeholder="Enter Indent Date" name="indent_date" autocomplete="off" value="{{ old('indent_date', $invoice && $invoice->indent_date ? $invoice->indent_date->format('d-m-Y') : '') }}" />
+                                    <label for="indent_date">Indent Date</label>
                                 </div>
+                                @error('indent_date')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="card-header-box">
-                                <h4>Item Details</h4>
-                            </div>
-                            @error('items')
-                                <div class="alert alert-danger mt-2">{{ $message }}</div>
-                            @enderror
-                            <div id="item-rows" class="table-responsive">
-                                <table class="table table-bordered align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th width="50px">
-                                                <input type="checkbox" id="select_all_items" class="form-check-input">
-                                            </th>
-                                            <th>Store Category</th>
-                                            <th>Raw Material</th>
-                                            <th>Supplier Design Name</th>
-                                            <th>Brand</th>
-                                            <th>HSN Code</th>
-                                            <th>Fabric Width</th>
-                                            <th>Fabric Type</th>
-                                            <th>Ordered Qty</th>
-                                            <th>Balanced Qty</th>
-                                            <th>Invoiced Qty <span class="text-danger">*</span></th>
-                                            <th>UOM</th>
-                                            <th>Rate</th>
-                                            <th>Amount</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody id="items_tbody">
-                                        @if(old('items'))
-                                            @foreach(old('items') as $index => $item)
-                                                <tr class="item-row">
-                                                    <td>
-                                                        <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
-                                                        <input type="hidden" name="items[{{ $index }}][purchase_order_item_id]" value="{{ $item['purchase_order_item_id'] ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][raw_material_name]" value="{{ $item['raw_material_name'] ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ $item['uom_code'] ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="item-rate">
-                                                        <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $item['qty_ordered'] ?? 0 }}" class="qty-ordered-val">
-                                                        <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $item['qty_invoiced'] ?? 0 }}" class="qty-invoiced-val">
-                                                        <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $item['fabric_type_name'] ?? '-' }}">
-                                                    </td>
-                                                    <td>{{ $item['store_category_name'] ?? '-' }}</td>
-                                                    <td>{{ $item['raw_material_name'] ?? '-' }}</td>
-                                                    <td>{{ $item['art_no'] ?? '-' }}</td>
-                                                    <td>
-                                                        <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
-                                                            <option value="">Select Brand</option>
-                                                            @foreach($brands as $brand)
-                                                                <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>
-                                                                    {{ $brand->brand_name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" name="items[{{ $index }}][hsn_code]" class="form-control form-control-sm item-hsn @error('items.' . $index . '.hsn_code') is-invalid @enderror" value="{{ $item['hsn_code'] ?? '' }}" {{ isset($item['selected']) ? '' : 'readonly' }}>
-                                                        @error('items.' . $index . '.hsn_code')
-                                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
-                                                            <option value="">Select Width</option>
-                                                            @foreach($fabricSizes as $size)
-                                                                <option value="{{ $size->id }}" {{ ($item['fabric_width_id'] ?? '') == $size->id ? 'selected' : '' }}>
-                                                                    {{ $size->width }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                    <td>{{ $item['fabric_type_name'] ?? '-' }}</td>
-                                                    <td class="qty-ordered-display">{{ $item['qty_ordered'] ?? 0 }}</td>
-                                                    <td class="balanced-qty-display">
-                                                        {{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" name="items[{{ $index }}][quantity]"
-                                                            class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror"
-                                                            value="{{ $item['quantity'] ?? '' }}" step="0.01"
-                                                            data-max-qty="{{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}"
-                                                            {{ isset($item['selected']) ? '' : 'readonly' }}>
-                                                        <small class="text-secondary">
-                                                            Note: Invoiced quantity should not exceed 50% of ordered quantity.
-                                                        </small>
-
-                                                        @error("items.$index.quantity")
-                                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>{{ $item['uom_code'] ?? '-' }}</td>
-                                                    <td class="rate-display">{{ number_format($item['rate'] ?? 0, 2) }}</td>
-                                                    <td class="item-amount">
-                                                        {{ number_format(($item['quantity'] ?? 0) * ($item['rate'] ?? 0), 2) }}
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        @elseif(isset($invoice) && $invoice && $invoice->items->count())
-                                            @foreach($invoice->items as $index => $invItem)
-                                                @php
-                                                    $balancedQty = $invItem->qty_ordered - $invItem->qty_invoiced;
-                                                @endphp
-                                                <tr class="item-row">
-                                                    <td>
-                                                        <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" checked>
-                                                        <input type="hidden" name="items[{{ $index }}][purchase_order_item_id]" value="{{ $invItem->purchase_order_item_id }}">
-                                                        <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $invItem->raw_material_id }}">
-                                                        <input type="hidden" name="items[{{ $index }}][raw_material_name]" value="{{ $invItem->rawMaterial->name ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $invItem->uom_id }}">
-                                                        <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ $invItem->uom->uom_code ?? '' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="item-rate">
-                                                        <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $invItem->qty_ordered }}" class="qty-ordered-val">
-                                                        <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $invItem->qty_invoiced }}" class="qty-invoiced-val">
-                                                        <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $invItem->brand->brand_name ?? $invItem->purchaseOrderItem->brand->brand_name ?? '-' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $invItem->fabricWidth->width ?? $invItem->purchaseOrderItem->fabricWidth->width ?? '-' }}">
-                                                        <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}">
-                                                    </td>
-
-                                                    <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}</td>
-                                                    <td>{{ $invItem->rawMaterial->name ?? '-' }}</td>
-                                                    <td>{{ $invItem->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
-                                                    <td>
-                                                        <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
-                                                            <option value="">Select Brand</option>
-                                                            @foreach($brands as $brand)
-                                                                @php
-                                                                    $selectedBrandId = $invItem->brand_id ?? $invItem->purchaseOrderItem->brand_id ?? null;
-                                                                @endphp
-                                                                <option value="{{ $brand->id }}" {{ $selectedBrandId == $brand->id ? 'selected' : '' }}>
-                                                                    {{ $brand->brand_name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-
-                                                    <td>
-                                                        <input type="text" name="items[{{ $index }}][hsn_code]" class="form-control form-control-sm item-hsn @error('items.' . $index . '.hsn_code') is-invalid @enderror" value="{{ $invItem->hsn_code }}">
-                                                        @error('items.' . $index . '.hsn_code')
-                                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-
-                                                    <td>
-                                                        <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
-                                                            <option value="">Select Width</option>
-                                                            @foreach($fabricSizes as $size)
-                                                                @php
-                                                                    $selectedWidthId = $invItem->fabric_width_id ?? $invItem->purchaseOrderItem->fabric_width_id ?? null;
-                                                                @endphp
-                                                                <option value="{{ $size->id }}" {{ $selectedWidthId == $size->id ? 'selected' : '' }}>
-                                                                    {{ $size->width }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                    
-                                                    <td>{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
-
-                                                    <td class="qty-ordered-display">{{ $invItem->qty_ordered }}</td>
-                                                    <td class="balanced-qty-display">{{ $balancedQty }}</td>
-
-                                                    <td>
-                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror" value="{{ $invItem->quantity }}" step="0.01" data-max-qty="{{ $balancedQty }}">
-                                                        <small class="text-secondary">
-                                                            Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max:
-                                                            {{ number_format($invItem->qty_ordered * 1.5, 2) }}).
-                                                        </small>
-                                                        @error('items.' . $index . '.quantity')
-                                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-
-                                                    <td>{{ $invItem->uom->uom_code ?? '-' }}</td>
-                                                    <td class="rate-display">{{ number_format($invItem->rate, 2) }}</td>
-                                                    <td class="item-amount">
-                                                        {{ number_format($invItem->quantity * $invItem->rate, 2) }}
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        @else
-                                            <tr>
-                                                <td colspan="13" class="text-center text-muted">
-                                                    Please select a Purchase Order to load items
-                                                </td>
-                                            </tr>
-                                        @endif
-
-                                    </tbody>
-
-
-                                </table>
-                            </div>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="card-header-box">
+                            <h4>Item Details</h4>
                         </div>
-                    </div>
+                        @error('items')
+                            <div class="alert alert-danger mt-2">{{ $message }}</div>
+                        @enderror
+                        <div id="item-rows" class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead>
+                                    <tr>
+                                        <th width="50px">
+                                            <input type="checkbox" id="select_all_items" class="form-check-input">
+                                        </th>
+                                        <th>Store Category</th>
+                                        <th>Raw Material</th>
+                                        <th>Supplier Design Name</th>
+                                        <th>Brand</th>
+                                        <th>HSN Code</th>
+                                        <th>Fabric Width</th>
+                                        <th>Fabric Type</th>
+                                        <th>Ordered Qty</th>
+                                        <th>Balanced Qty</th>
+                                        <th>Invoiced Qty <span class="text-danger">*</span></th>
+                                        <th>UOM</th>
+                                        <th>Rate</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
 
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="card-header-box">
-                                <h4>Tax & Charges</h4>
-                            </div>
-                            <div class="row g-4">
-                                <div class="col-md-6 col-xl-3">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="charges_select" class="select2 form-select @error('charges_select') is-invalid @enderror" data-placeholder="Select Charge">
-                                            <option value="">Loading charges...</option>
-                                        </select>
-                                        <label>Charges <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('charges_select')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-6 col-xl-2">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="number" min="0" step="0.01" class="form-control @error('charge_amount') is-invalid @enderror" id="charge_amount" placeholder="Charge Amount">
-                                        <label>Amount</label>
-                                    </div>
-                                    @error('charge_amount')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-6 col-xl-3">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="charge_tax_type" class="form-select select2">
-                                            <option value="Pre-GST">Pre-GST (Taxable)</option>
-                                            <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
-                                        </select>
-                                        <label>Tax Type</label>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6 col-xl-2 d-flex align-items-center">
-                                    <button type="button" id="add_charge_btn" class="btn btn-primary w-100">Add Charge</button>
-                                </div>
-
-                            </div>
-                            <div class="table-responsive mt-4 {{ ($charges->count() || (old('charges') && isset(old('charges')['charge_id']))) ? '' : 'd-none' }}"
-                                id="charges_table">
-                                <table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>Charge Name</th>
-                                            <th>Tax Type</th>
-                                            <th>Amount</th>
-                                            <th width="120px">Action</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody id="added_charges_list">
-                                        @php
-                                            $oldCharges = old('charges');
-                                            $chargesToLoop = [];
-
-                                            if ($oldCharges && isset($oldCharges['charge_id'])) {
-                                                foreach ($oldCharges['charge_id'] as $index => $id) {
-                                                    $chargesToLoop[] = (object) [
-                                                        'charge_id' => $id,
-                                                        'charge_name' => $oldCharges['name'][$index] ?? '',
-                                                        'charge_amount' => $oldCharges['amount'][$index] ?? 0,
-                                                        'id' => null
-                                                    ];
-                                                }
-                                            } else {
-                                                $chargesToLoop = $charges;
-                                            }
-                                        @endphp
-
-                                        @foreach($chargesToLoop as $charge)
-                                            @php
-                                                $chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
-                                                $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
-                                                $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
-                                                $taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
-                                                $invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ?? null);
-                                            @endphp
-
-                                            <tr class="charge-row" data-charge-id="{{ $chargeId }}"
-                                                data-invoice-charge-id="{{ $invoiceChargeId }}" data-tax-type="{{ $taxType }}">
+                                <tbody id="items_tbody">
+                                    @if(old('items'))
+                                        @foreach(old('items') as $index => $item)
+                                            <tr class="item-row">
                                                 <td>
-                                                    {{ $chargeName }}
-                                                    <input type="hidden" name="charges[charge_id][]" value="{{ $chargeId }}">
-                                                    <input type="hidden" name="charges[name][]" value="{{ $chargeName }}">
+                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
+                                                    <input type="hidden" name="items[{{ $index }}][purchase_order_item_id]" value="{{ $item['purchase_order_item_id'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][raw_material_name]" value="{{ $item['raw_material_name'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ $item['uom_code'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="item-rate">
+                                                    <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $item['qty_ordered'] ?? 0 }}" class="qty-ordered-val">
+                                                    <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $item['qty_invoiced'] ?? 0 }}" class="qty-invoiced-val">
+                                                    <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $item['fabric_type_name'] ?? '-' }}">
+                                                </td>
+                                                <td>{{ $item['store_category_name'] ?? '-' }}</td>
+                                                <td>{{ $item['raw_material_name'] ?? '-' }}</td>
+                                                <td>{{ $item['art_no'] ?? '-' }}</td>
+                                                <td>
+                                                    <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
+                                                        <option value="">Select Brand</option>
+                                                        @foreach($brands as $brand)
+                                                            <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>
+                                                                {{ $brand->brand_name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
                                                 </td>
                                                 <td>
-                                                    {{ $taxType }}
-                                                    <input type="hidden" name="charges[tax_type][]" value="{{ $taxType }}">
+                                                    <input type="text" name="items[{{ $index }}][hsn_code]" class="form-control form-control-sm item-hsn @error('items.' . $index . '.hsn_code') is-invalid @enderror" value="{{ $item['hsn_code'] ?? '' }}" {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                                    @error('items.' . $index . '.hsn_code')
+                                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    {{ number_format($chargeAmount, 2) }}
-                                                    <input type="hidden" name="charges[amount][]" value="{{ $chargeAmount }}">
+                                                    <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
+                                                        <option value="">Select Width</option>
+                                                        @foreach($fabricSizes as $size)
+                                                            <option value="{{ $size->id }}" {{ ($item['fabric_width_id'] ?? '') == $size->id ? 'selected' : '' }}>
+                                                                {{ $size->width }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
                                                 </td>
-                                                <td class="d-flex align-items-center">
-                                                    <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
-                                                        <i class="ri ri-pencil-line"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge" {{ isset($invoice) ? 'disabled' : '' }}>
-                                                        <i class="ri ri-delete-bin-line"></i>
-                                                    </button>
+                                                <td>{{ $item['fabric_type_name'] ?? '-' }}</td>
+                                                <td class="qty-ordered-display">{{ $item['qty_ordered'] ?? 0 }}</td>
+                                                <td class="balanced-qty-display">
+                                                    {{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}
+                                                </td>
+                                                <td>
+                                                    <input type="number" name="items[{{ $index }}][quantity]"
+                                                        class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror"
+                                                        value="{{ $item['quantity'] ?? '' }}" step="0.01"
+                                                        data-max-qty="{{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}"
+                                                        {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                                    <small class="text-secondary">
+                                                        Note: Invoiced quantity should not exceed 50% of ordered quantity.
+                                                    </small>
+
+                                                    @error("items.$index.quantity")
+                                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>{{ $item['uom_code'] ?? '-' }}</td>
+                                                <td class="rate-display">{{ number_format($item['rate'] ?? 0, 2) }}</td>
+                                                <td class="item-amount">
+                                                    {{ number_format(($item['quantity'] ?? 0) * ($item['rate'] ?? 0), 2) }}
                                                 </td>
                                             </tr>
                                         @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                                    @elseif(isset($invoice) && $invoice && $invoice->items->count())
+                                        @foreach($invoice->items as $index => $invItem)
+                                            @php
+    $balancedQty = $invItem->qty_ordered - $invItem->qty_invoiced;
+                                            @endphp
+                                            <tr class="item-row">
+                                                <td>
+                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" checked>
+                                                    <input type="hidden" name="items[{{ $index }}][purchase_order_item_id]" value="{{ $invItem->purchase_order_item_id }}">
+                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $invItem->raw_material_id }}">
+                                                    <input type="hidden" name="items[{{ $index }}][raw_material_name]" value="{{ $invItem->rawMaterial->name ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $invItem->uom_id }}">
+                                                    <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ $invItem->uom->uom_code ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="item-rate">
+                                                    <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $invItem->qty_ordered }}" class="qty-ordered-val">
+                                                    <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $invItem->qty_invoiced }}" class="qty-invoiced-val">
+                                                    <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $invItem->brand->brand_name ?? $invItem->purchaseOrderItem->brand->brand_name ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $invItem->fabricWidth->width ?? $invItem->purchaseOrderItem->fabricWidth->width ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}">
+                                                </td>
 
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="row g-4 align-items-start">
-                                <div class="col-lg-6">
-                                    <div class="card p-3 border-0 shadow-sm">
-                                        <div class="card-body">
-                                            <h5 class="mb-3 fw-semibold">Invoice Details</h5>
-                                            <div class="form-floating form-floating-outline mb-2">
-                                                @php
-                                                    $currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
-                                                @endphp
+                                                <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}</td>
+                                                <td>{{ $invItem->rawMaterial->name ?? '-' }}</td>
+                                                <td>{{ $invItem->purchaseOrderItem->supplier_design_name ?? '-' }}</td>
+                                                <td>
+                                                    <select name="items[{{ $index }}][brand_id]" class="select2 form-select form-select-sm">
+                                                        <option value="">Select Brand</option>
+                                                        @foreach($brands as $brand)
+                                                            @php
+        $selectedBrandId = $invItem->brand_id ?? $invItem->purchaseOrderItem->brand_id ?? null;
+                                                            @endphp
+                                                            <option value="{{ $brand->id }}" {{ $selectedBrandId == $brand->id ? 'selected' : '' }}>
+                                                                {{ $brand->brand_name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
 
-                                                <select id="invoice_status" name="invoice_status"
-                                                    class="select2 form-select @error('invoice_status') is-invalid @enderror"
-                                                    data-placeholder="Select Invoice Status">
-                                                    <option value="">Select Invoice Status</option>
-                                                    @foreach (['Draft', 'Unpaid/Credit', 'Partially Paid', 'Paid'] as $status)
-                                                        @php
-                                                            $disabled = false;
-                                                            if ($currentStatus === 'Unpaid/Credit') {
-                                                                $disabled = ($status === 'Draft');
-                                                            }
-                                                            if ($currentStatus === 'Partially Paid') {
-                                                                $disabled = in_array($status, ['Draft', 'Unpaid/Credit']);
-                                                            }
-                                                            if ($currentStatus === 'Paid') {
-                                                                $disabled = ($status !== 'Paid');
-                                                            }
-                                                        @endphp
-                                                        <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ $disabled ? 'disabled' : '' }}>
-                                                            {{ $status }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="invoice_status">Invoice Status <span
-                                                        class="text-danger">*</span></label>
-                                            </div>
-                                            @error('invoice_status')
-                                                <div class="text-danger mb-3">{{ $message }}</div>
-                                            @enderror
-
-                                            <div class="form-floating form-floating-outline mb-3">
-                                                <select id="payment_mode" name="payment_mode" class="select2 form-select @error('payment_mode') is-invalid @enderror" data-placeholder="Select Payment Mode">
-                                                    <option value="">Select Payment Mode</option>
-                                                    <option value="Bank Transfer" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Bank Transfer' ? 'selected' : '' }}>Bank Transfer</option>
-                                                    <option value="Cheque" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cheque' ? 'selected' : '' }}>Cheque</option>
-                                                    <option value="UPI" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'UPI' ? 'selected' : '' }}>UPI</option>
-                                                    <option value="Cash" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cash' ? 'selected' : '' }}>Cash</option>
-                                                </select>
-                                                <label for="payment_mode">Payment Mode</label>
-                                            </div>
-                                            @error('payment_mode')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-
-                                            <div class="form-floating form-floating-outline mb-3 d-none" id="transaction_id_div">
-                                                <input type="text" name="transaction_id" id="transaction_id" class="form-control @error('transaction_id') is-invalid @enderror" placeholder="Enter details" value="{{ old('transaction_id', $invoice->transaction_id ?? '') }}">
-                                                <label for="transaction_id" id="transaction_id_label">Transaction Details</label>
-                                            </div>
-                                            @error('transaction_id')
-                                                <div class="text-danger mt-1 mb-3">{{ $message }}</div>
-                                            @enderror
-
-                                            <div class="form-floating form-floating-outline mb-3">
-                                                <input type="text" class="form-control due_date @error('due_date') is-invalid @enderror" placeholder="Enter Due Date" name="due_date" autocomplete="off" value="{{ old('due_date', $invoice && $invoice->due_date ? $invoice->due_date->format('d-m-Y') : '') }}" />
-                                                <label for="due_date">Due Date</label>
-                                            </div>
-                                            @error('due_date')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-
-                                            <div class="form-floating form-floating-outline mb-3">
-                                                <textarea name="notes" id="notes" class="form-control h-px-100 @error('notes') is-invalid @enderror" placeholder="Enter Additional Notes">{{ old('notes', $invoice->notes ?? '') }}</textarea>
-                                                <label for="notes">Additional Notes</label>
-                                            </div>
-                                            @error('notes')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-
-                                            <div class="mb-3">
-                                                <div class="form-floating form-floating-outline text-black">
-                                                    <input type="file" class="form-control @error('auth_sign') is-invalid @enderror" id="auth_sign" name="auth_sign" accept="*">
-                                                    <label for="auth_sign">Authorized Signature / Stamp Upload</label>
-                                                    @error('auth_sign')
-                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                <td>
+                                                    <input type="text" name="items[{{ $index }}][hsn_code]" class="form-control form-control-sm item-hsn @error('items.' . $index . '.hsn_code') is-invalid @enderror" value="{{ $invItem->hsn_code }}">
+                                                    @error('items.' . $index . '.hsn_code')
+                                                        <div class="invalid-feedback d-block">{{ $message }}</div>
                                                     @enderror
-                                                    <small class="text-muted d-block mt-1">Max file size: 2MB. Supported
-                                                        formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                                    @if(!empty($invoice->auth_signature))
-                                                        <div class="mt-2 preview-container">
+                                                </td>
+
+                                                <td>
+                                                    <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
+                                                        <option value="">Select Width</option>
+                                                        @foreach($fabricSizes as $size)
                                                             @php
-                                                                $attachment = $invoice->auth_signature;
-                                                                $extension = pathinfo($attachment, PATHINFO_EXTENSION);
-                                                                $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                                                $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
+        $selectedWidthId = $invItem->fabric_width_id ?? $invItem->purchaseOrderItem->fabric_width_id ?? null;
                                                             @endphp
+                                                            <option value="{{ $size->id }}" {{ $selectedWidthId == $size->id ? 'selected' : '' }}>
+                                                                {{ $size->width }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
 
-                                                            <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative"
-                                                                style="width: 100px; height: 100px;" title="{{ $attachment }}">
-                                                                @if($isImage)
-                                                                    <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Signature">
-                                                                @else
-                                                                    <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
-                                                                        <i class="ri ri-file-text-line fs-2 text-primary"></i>
-                                                                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
-                                                                    </a>
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    @else
-                                                        <div class="mt-2 preview-container"></div>
-                                                    @endif
-                                                </div>
-                                            </div>
+                                                <td>{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
 
-                                            <div class="mb-3 mt-5">
-                                                <div class="form-floating form-floating-outline text-black">
-                                                    <input type="file"
-                                                        class="form-control @error('attachments') is-invalid @enderror"
-                                                        id="attachments" name="attachments">
-                                                    <label for="attachments">Attachments</label>
-                                                    @if(!empty($invoice->attachments))
-                                                        <div class="mt-2 preview-container">
-                                                            @php
-                                                                $attachment = $invoice->attachments;
-                                                                $extension = pathinfo($attachment, PATHINFO_EXTENSION);
-                                                                $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                                                $url = url('uploads/purchase_invoices/' . $invoice->attachments);
-                                                            @endphp
+                                                <td class="qty-ordered-display">{{ $invItem->qty_ordered }}</td>
+                                                <td class="balanced-qty-display">{{ $balancedQty }}</td>
 
-                                                            @error('attachments')
-                                                                <div class="text-danger small mt-1">{{ $message }}</div>
-                                                            @enderror
-                                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported
-                                                                formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                                            <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative"
-                                                                style="width: 100px; height: 100px;" title="{{ $attachment }}">
-                                                                @if($isImage)
-                                                                    <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Attachment">
-                                                                @else
-                                                                    <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
-                                                                        <i class="ri ri-file-text-line fs-2 text-primary"></i>
-                                                                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
-                                                                    </a>
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    @else
-                                                        <div class="mt-2 preview-container"></div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @php
-                                    $subTotal = old('sub_total', $invoice->sub_total ?? 0);
-                                    $discountPercent = old('discount_percent', $invoice->discount_percent ?? 0);
-                                    $discountAmount = old('discount_amount', $invoice->discount_amount ?? 0);
-                                    $taxableAmount = old('taxable_amount', $invoice->taxable_amount ?? 0);
-                                    $otherState = old('other_state', isset($invoice) && $invoice->other_state ? 'Y' : 'N');
-                                    $igstPercent = old('igst_percent', $invoice->igst_percent ?? $web_settings->igst);
-                                    $igstAmount = old('igst_amount', $invoice->igst_amount ?? 0);
-                                    $cgstPercent = old('cgst_percent', $invoice->cgst_percent ?? $web_settings->cgst);
-                                    $cgstAmount = old('cgst_amount', $invoice->cgst_amount ?? 0);
-                                    $sgstPercent = old('sgst_percent', $invoice->sgst_percent ?? $web_settings->sgst);
-                                    $sgstAmount = old('sgst_amount', $invoice->sgst_amount ?? 0);
-                                    $taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
-                                    $otherCharges = old('other_charges', $invoice->other_charges ?? 0);
-                                    $roundOff = old('round_off', $invoice->round_off ?? 0);
-                                    $roundOffType = old('round_off_type', $invoice->round_off_type ?? 'Add');
-                                    $grandTotal = old('grand_total', $invoice->grand_total ?? 0);
-                                    $receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
-                                    $dueAmount = old('due_amount', $invoice->due_amount ?? 0);
+                                                <td>
+                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror" value="{{ $invItem->quantity }}" step="0.01" data-max-qty="{{ $balancedQty }}">
+                                                    <small class="text-secondary">
+                                                        Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max:
+                                                        {{ number_format($invItem->qty_ordered * 1.5, 2) }}).
+                                                    </small>
+                                                    @error('items.' . $index . '.quantity')
+                                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
 
-                                    $preGstTotal = 0;
-                                    $postGstTotal = 0;
-                                    foreach ($chargesToLoop as $c) {
-                                        $amt = is_array($c) ? ($c['amount'] ?? 0) : ($c->charge_amount ?? 0);
-                                        $type = is_array($c) ? ($c['tax_type'] ?? 'Post-GST') : ($c->tax_type ?? 'Post-GST');
-                                        if ($type === 'Pre-GST')
-                                            $preGstTotal += $amt;
-                                        else
-                                            $postGstTotal += $amt;
-                                    }
-                                @endphp
+                                                <td>{{ $invItem->uom->uom_code ?? '-' }}</td>
+                                                <td class="rate-display">{{ number_format($invItem->rate, 2) }}</td>
+                                                <td class="item-amount">
+                                                    {{ number_format($invItem->quantity * $invItem->rate, 2) }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="13" class="text-center text-muted">
+                                                Please select a Purchase Order to load items
+                                            </td>
+                                        </tr>
+                                    @endif
 
-                                <div class="col-lg-6">
-                                    <div class="p-3">
-                                        <h5 class="fw-semibold mb-3">Invoice Summary</h5>
-                                        <div class="d-flex justify-content-between py-2 border-bottom">
-                                            <span>Sub total:</span>
-                                            <strong id="subtotal">{{ number_format($subTotal, 2) }}</strong>
-                                            <input type="hidden" name="sub_total" id="sub_total_input" value="{{ $subTotal }}">
-                                        </div>
-                                        <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
-                                            <span>Commission:</span>
-                                            <div class="d-flex gap-2 align-items-center">
-                                                <div class="d-flex align-items-center gap-1">
-                                                    <strong id="commission_percent_display">{{ number_format(old('commission', $invoice->commission ?? 0), 2) }}</strong>
-                                                    <span>%</span>
-                                                </div>
-                                                <input type="hidden" name="commission" id="commission_input" value="{{ old('commission', $invoice->commission ?? 0) }}">
-                                                <strong id="commission_value">{{ number_format(old('commission_amount', $invoice->commission_amount ?? 0), 2) }}</strong>
-                                                <input type="hidden" name="commission_amount" id="commission_amount_input" value="{{ old('commission_amount', $invoice->commission_amount ?? 0) }}">
-                                            </div>
-                                        </div>
-                                        @error('commission')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                        @enderror
-                                        <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
-                                            <span>Discount:</span>
-                                            <div class="d-flex gap-2 align-items-center">
-                                                <div class="input-group input-group-sm" style="width:120px;">
-                                                    <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
-                                                    <span class="input-group-text">%</span>
-                                                </div>
-                                                <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
-                                                <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
-                                            </div>
-                                        </div>
-                                        @error('discount_percent')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                        @enderror
-                                        <div class="d-flex justify-content-between py-2 border-bottom">
-                                            <span>Pre-GST Charges:</span>
-                                            <strong id="pre_gst_total_display">{{ number_format($preGstTotal, 2) }}</strong>
-                                            <input type="hidden" id="pre_gst_total_input" value="{{ $preGstTotal }}">
-                                        </div>
-                                        <div class="d-flex justify-content-between py-2 border-bottom">
-                                            <span>Taxable Total:</span>
-                                            <strong id="total">{{ number_format($taxableAmount, 2) }}</strong>
-                                            <input type="hidden" name="taxable_amount" id="taxable_amount_input" value="{{ $taxableAmount }}">
-                                        </div>
-                                        <div class="py-3 border-bottom">
-                                            <label class="fw-semibold mb-2 d-block">Other State?</label>
-                                            <div class="d-flex gap-4">
-                                                <div class="form-check">
-                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="Y" {{ $otherState === 'Y' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
-                                                    <label class="form-check-label">Yes</label>
-                                                </div>
-
-                                                <div class="form-check">
-                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="N" {{ $otherState === 'N' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
-                                                    <label class="form-check-label">No</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        @error('other_state')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                        @enderror
-                                        <div id="igst_div" class="py-2 border-bottom"
-                                            style="{{ $otherState === 'Y' ? '' : 'display:none;' }}">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span>IGST</span>
-                                                <div class="d-flex gap-2 align-items-center">
-                                                    <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;">
-                                                    <span>%</span>
-                                                    <strong id="igst_amt">{{ number_format($igstAmount, 2) }}</strong>
-                                                    <input type="hidden" name="igst_amount" id="igst_amount_input" value="{{ $igstAmount }}">
-                                                </div>
-                                            </div>
-                                            @error('igst_percent')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        <div id="cgst_sgst_div" class="py-2 border-bottom"
-                                            style="{{ $otherState === 'N' ? '' : 'display:none;' }}">
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <span>CGST</span>
-                                                <div class="d-flex gap-2 align-items-center">
-                                                    <input type="number" name="cgst_percent" id="cgst_percent" value="{{ $cgstPercent }}" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" style="width:80px;" readonly>
-                                                    <span>%</span>
-                                                    <strong id="cgst_amt">{{ number_format($cgstAmount, 2) }}</strong>
-                                                    <input type="hidden" name="cgst_amount" id="cgst_amount_input" value="{{ $cgstAmount }}">
-                                                </div>
-                                            </div>
-                                            @error('cgst_percent')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-
-                                            <div class="d-flex justify-content-between">
-                                                <span>SGST</span>
-                                                <div class="d-flex gap-2 align-items-center">
-                                                    <input type="number" name="sgst_percent" id="sgst_percent" value="{{ $sgstPercent }}" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" style="width:80px;" readonly>
-                                                    <span>%</span>
-                                                    <strong id="sgst_amt">{{ number_format($sgstAmount, 2) }}</strong>
-                                                    <input type="hidden" name="sgst_amount" id="sgst_amount_input" value="{{ $sgstAmount }}">
-                                                </div>
-                                            </div>
-                                            @error('sgst_percent')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        <div class="d-flex justify-content-between py-2 border-bottom">
-                                            <span>Tax Amount:</span>
-                                            <strong id="tax_amount">{{ number_format($taxAmount, 2) }}</strong>
-                                            <input type="hidden" name="tax_amount" id="tax_amount_input" value="{{ $taxAmount }}">
-                                        </div>
-                                        <div class="d-flex justify-content-between py-2 border-bottom">
-                                            <span>Post-GST Charges:</span>
-                                            <strong id="post_gst_total_display">{{ number_format($postGstTotal, 2) }}</strong>
-                                            <input type="hidden" name="other_charges" id="other_charges_input"
-                                                value="{{ $postGstTotal }}">
-                                        </div>
-                                        @error('other_charges')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                        @enderror
-                                        <div class="d-flex justify-content-between py-2 border-bottom">
-                                            <label class="fw-semibold">Round Off:</label>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="form-check form-check-inline m-0">
-                                                    <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ $roundOffType == 'Add' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="round_off_add">Add</label>
-                                                </div>
-                                                <div class="form-check form-check-inline m-0">
-                                                    <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ $roundOffType == 'Less' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="round_off_less">Less</label>
-                                                </div>
-                                                <input type="number" class="form-control form-control-sm text-end" style="width: 80px;" id="round_off_input" name="round_off" value="{{ $roundOff }}" step="0.01" min="0">
-                                            </div>
-                                        </div>
-                                        <div class="d-flex justify-content-between py-2 border-top fw-semibold">
-                                            <span>Grand Total:</span>
-                                            <strong id="grand_total">{{ number_format($grandTotal, 2) }}</strong>
-                                            <input type="hidden" name="grand_total" id="grand_total_input" value="{{ $grandTotal }}">
-                                        </div>
-                                        @error('grand_total')
-                                            <div class="text-danger mt-1">{{ $message }}</div>
-                                        @enderror
-
-                                        <input type="hidden" id="paid_so_far_input" value="{{ $paid_so_far ?? 0 }}">
-
-                                        <input type="hidden" name="received_amount" id="received_amount_input" value="{{ isset($invoice) ? 0 : ($receivedAmt ?? 0) }}">
-
-                                        <input type="hidden" name="due_amount" id="due_amount_input" value="{{ $dueAmount }}">
-
-                                        <div class="text-end mt-4">
-                                            <button type="submit" class="btn btn-primary">Submit</button>
-                                            <a href="{{ url('purchase_invoices') }}" class="btn btn-secondary">Cancel</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    {{-- Payment History Modal --}}
-    @if(isset($invoice))
-        <div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Payment Transaction History - {{ $invoice->invoice_no }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Date & Time</th>
-                                        <th class="text-end">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="payment_history_body">
                                 </tbody>
-                                <tfoot>
-                                    <tr class="fw-bold bg-light">
-                                        <td colspan="1" class="text-end">Total Received:</td>
-                                        <td class="text-end" id="history_total_paid">₹0.00</td>
-                                    </tr>
-                                </tfoot>
+
+
                             </table>
                         </div>
                     </div>
                 </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="card-header-box">
+                            <h4>Tax & Charges</h4>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="charges_select" class="select2 form-select @error('charges_select') is-invalid @enderror" data-placeholder="Select Charge">
+                                        <option value="">Loading charges...</option>
+                                    </select>
+                                    <label>Charges <span class="text-danger">*</span></label>
+                                </div>
+                                @error('charges_select')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-2">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" min="0" step="0.01" class="form-control @error('charge_amount') is-invalid @enderror" id="charge_amount" placeholder="Charge Amount">
+                                    <label>Amount</label>
+                                </div>
+                                @error('charge_amount')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="charge_tax_type" class="form-select select2">
+                                        <option value="Pre-GST">Pre-GST (Taxable)</option>
+                                        <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
+                                    </select>
+                                    <label>Tax Type</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-xl-2 d-flex align-items-center">
+                                <button type="button" id="add_charge_btn" class="btn btn-primary w-100">Add Charge</button>
+                            </div>
+
+                        </div>
+                        <div class="table-responsive mt-4 {{ ($charges->count() || (old('charges') && isset(old('charges')['charge_id']))) ? '' : 'd-none' }}"
+                            id="charges_table">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Charge Name</th>
+                                        <th>Tax Type</th>
+                                        <th>Amount</th>
+                                        <th width="120px">Action</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="added_charges_list">
+                                    @php
+$oldCharges = old('charges');
+$chargesToLoop = [];
+
+if ($oldCharges && isset($oldCharges['charge_id'])) {
+foreach ($oldCharges['charge_id'] as $index => $id) {
+    $chargesToLoop[] = (object) [
+        'charge_id' => $id,
+        'charge_name' => $oldCharges['name'][$index] ?? '',
+        'charge_amount' => $oldCharges['amount'][$index] ?? 0,
+        'id' => null
+    ];
+}
+} else {
+$chargesToLoop = $charges;
+}
+                                    @endphp
+
+                                    @foreach($chargesToLoop as $charge)
+                                        @php
+$chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
+$chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
+$chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+$taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
+$invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ?? null);
+                                        @endphp
+
+                                        <tr class="charge-row" data-charge-id="{{ $chargeId }}"
+                                            data-invoice-charge-id="{{ $invoiceChargeId }}" data-tax-type="{{ $taxType }}">
+                                            <td>
+                                                {{ $chargeName }}
+                                                <input type="hidden" name="charges[charge_id][]" value="{{ $chargeId }}">
+                                                <input type="hidden" name="charges[name][]" value="{{ $chargeName }}">
+                                            </td>
+                                            <td>
+                                                {{ $taxType }}
+                                                <input type="hidden" name="charges[tax_type][]" value="{{ $taxType }}">
+                                            </td>
+                                            <td>
+                                                {{ number_format($chargeAmount, 2) }}
+                                                <input type="hidden" name="charges[amount][]" value="{{ $chargeAmount }}">
+                                            </td>
+                                            <td class="d-flex align-items-center">
+                                                <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                                                    <i class="ri ri-pencil-line"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge" {{ isset($invoice) ? 'disabled' : '' }}>
+                                                    <i class="ri ri-delete-bin-line"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-4 align-items-start">
+                            <div class="col-lg-6">
+                                <div class="card p-3 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="mb-3 fw-semibold">Invoice Details</h5>
+                                        <div class="form-floating form-floating-outline mb-2">
+                                            @php
+$currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
+                                            @endphp
+
+                                            <select id="invoice_status" name="invoice_status"
+                                                class="select2 form-select @error('invoice_status') is-invalid @enderror"
+                                                data-placeholder="Select Invoice Status">
+                                                <option value="">Select Invoice Status</option>
+                                                @foreach (['Draft', 'Unpaid/Credit', 'Partially Paid', 'Paid'] as $status)
+                                                    @php
+$disabled = false;
+if ($currentStatus === 'Unpaid/Credit') {
+    $disabled = ($status === 'Draft');
+}
+if ($currentStatus === 'Partially Paid') {
+    $disabled = in_array($status, ['Draft', 'Unpaid/Credit']);
+}
+if ($currentStatus === 'Paid') {
+    $disabled = ($status !== 'Paid');
+}
+                                                    @endphp
+                                                    <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ $disabled ? 'disabled' : '' }}>
+                                                        {{ $status }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <label for="invoice_status">Invoice Status <span
+                                                    class="text-danger">*</span></label>
+                                        </div>
+                                        @error('invoice_status')
+                                            <div class="text-danger mb-3">{{ $message }}</div>
+                                        @enderror
+
+                                        <div class="form-floating form-floating-outline mb-3">
+                                            <select id="payment_mode" name="payment_mode" class="select2 form-select @error('payment_mode') is-invalid @enderror" data-placeholder="Select Payment Mode">
+                                                <option value="">Select Payment Mode</option>
+                                                <option value="Bank Transfer" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Bank Transfer' ? 'selected' : '' }}>Bank Transfer</option>
+                                                <option value="Cheque" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cheque' ? 'selected' : '' }}>Cheque</option>
+                                                <option value="UPI" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'UPI' ? 'selected' : '' }}>UPI</option>
+                                                <option value="Cash" {{ old('payment_mode', $invoice->payment_mode ?? '') == 'Cash' ? 'selected' : '' }}>Cash</option>
+                                            </select>
+                                            <label for="payment_mode">Payment Mode</label>
+                                        </div>
+                                        @error('payment_mode')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+
+                                        <div class="form-floating form-floating-outline mb-3 d-none" id="transaction_id_div">
+                                            <input type="text" name="transaction_id" id="transaction_id" class="form-control @error('transaction_id') is-invalid @enderror" placeholder="Enter details" value="{{ old('transaction_id', $invoice->transaction_id ?? '') }}">
+                                            <label for="transaction_id" id="transaction_id_label">Transaction Details</label>
+                                        </div>
+                                        @error('transaction_id')
+                                            <div class="text-danger mt-1 mb-3">{{ $message }}</div>
+                                        @enderror
+
+                                        <div class="form-floating form-floating-outline mb-3">
+                                            <input type="text" class="form-control due_date @error('due_date') is-invalid @enderror" placeholder="Enter Due Date" name="due_date" autocomplete="off" value="{{ old('due_date', $invoice && $invoice->due_date ? $invoice->due_date->format('d-m-Y') : '') }}" />
+                                            <label for="due_date">Due Date</label>
+                                        </div>
+                                        @error('due_date')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+
+                                        <div class="form-floating form-floating-outline mb-3">
+                                            <textarea name="notes" id="notes" class="form-control h-px-100 @error('notes') is-invalid @enderror" placeholder="Enter Additional Notes">{{ old('notes', $invoice->notes ?? '') }}</textarea>
+                                            <label for="notes">Additional Notes</label>
+                                        </div>
+                                        @error('notes')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+
+                                        <div class="mb-3">
+                                            <div class="form-floating form-floating-outline text-black">
+                                                <input type="file" class="form-control @error('auth_sign') is-invalid @enderror" id="auth_sign" name="auth_sign" accept="*">
+                                                <label for="auth_sign">Authorized Signature / Stamp Upload</label>
+                                                @error('auth_sign')
+                                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                                @enderror
+                                                <small class="text-muted d-block mt-1">Max file size: 2MB. Supported
+                                                    formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                                @if(!empty($invoice->auth_signature))
+                                                    <div class="mt-2 preview-container">
+                                                        @php
+$attachment = $invoice->auth_signature;
+$extension = pathinfo($attachment, PATHINFO_EXTENSION);
+$isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+$url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
+                                                        @endphp
+
+                                                        <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative"
+                                                            style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                            @if($isImage)
+                                                                <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Signature">
+                                                            @else
+                                                                <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
+                                                                    <i class="ri ri-file-text-line fs-2 text-primary"></i>
+                                                                    <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                </a>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="mt-2 preview-container"></div>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3 mt-5">
+                                            <div class="form-floating form-floating-outline text-black">
+                                                <input type="file"
+                                                    class="form-control @error('attachments') is-invalid @enderror"
+                                                    id="attachments" name="attachments">
+                                                <label for="attachments">Attachments</label>
+                                                @if(!empty($invoice->attachments))
+                                                    <div class="mt-2 preview-container">
+                                                        @php
+$attachment = $invoice->attachments;
+$extension = pathinfo($attachment, PATHINFO_EXTENSION);
+$isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+$url = url('uploads/purchase_invoices/' . $invoice->attachments);
+                                                        @endphp
+
+                                                        @error('attachments')
+                                                            <div class="text-danger small mt-1">{{ $message }}</div>
+                                                        @enderror
+                                                        <small class="text-muted d-block mt-1">Max file size: 2MB. Supported
+                                                            formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                                        <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative"
+                                                            style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                            @if($isImage)
+                                                                <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Attachment">
+                                                            @else
+                                                                <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
+                                                                    <i class="ri ri-file-text-line fs-2 text-primary"></i>
+                                                                    <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                </a>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="mt-2 preview-container"></div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @php
+$subTotal = old('sub_total', $invoice->sub_total ?? 0);
+$discountPercent = old('discount_percent', $invoice->discount_percent ?? 0);
+$discountAmount = old('discount_amount', $invoice->discount_amount ?? 0);
+$taxableAmount = old('taxable_amount', $invoice->taxable_amount ?? 0);
+$otherState = old('other_state', isset($invoice) && $invoice->other_state ? 'Y' : 'N');
+$igstPercent = old('igst_percent', $invoice->igst_percent ?? $web_settings->igst);
+$igstAmount = old('igst_amount', $invoice->igst_amount ?? 0);
+$cgstPercent = old('cgst_percent', $invoice->cgst_percent ?? $web_settings->cgst);
+$cgstAmount = old('cgst_amount', $invoice->cgst_amount ?? 0);
+$sgstPercent = old('sgst_percent', $invoice->sgst_percent ?? $web_settings->sgst);
+$sgstAmount = old('sgst_amount', $invoice->sgst_amount ?? 0);
+$taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
+$otherCharges = old('other_charges', $invoice->other_charges ?? 0);
+$roundOff = old('round_off', $invoice->round_off ?? 0);
+$roundOffType = old('round_off_type', $invoice->round_off_type ?? 'Add');
+$grandTotal = old('grand_total', $invoice->grand_total ?? 0);
+$receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
+$dueAmount = old('due_amount', $invoice->due_amount ?? 0);
+
+$preGstTotal = 0;
+$postGstTotal = 0;
+foreach ($chargesToLoop as $c) {
+$amt = is_array($c) ? ($c['amount'] ?? 0) : ($c->charge_amount ?? 0);
+$type = is_array($c) ? ($c['tax_type'] ?? 'Post-GST') : ($c->tax_type ?? 'Post-GST');
+if ($type === 'Pre-GST')
+    $preGstTotal += $amt;
+else
+    $postGstTotal += $amt;
+}
+                            @endphp
+
+                            <div class="col-lg-6">
+                                <div class="p-3">
+                                    <h5 class="fw-semibold mb-3">Invoice Summary</h5>
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
+                                        <span>Sub total:</span>
+                                        <strong id="subtotal">{{ number_format($subTotal, 2) }}</strong>
+                                        <input type="hidden" name="sub_total" id="sub_total_input" value="{{ $subTotal }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                                        <span>Commission:</span>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <div class="d-flex align-items-center gap-1">
+                                                <strong id="commission_percent_display">{{ number_format(old('commission', $invoice->commission ?? 0), 2) }}</strong>
+                                                <span>%</span>
+                                            </div>
+                                            <input type="hidden" name="commission" id="commission_input" value="{{ old('commission', $invoice->commission ?? 0) }}">
+                                            <strong id="commission_value">{{ number_format(old('commission_amount', $invoice->commission_amount ?? 0), 2) }}</strong>
+                                            <input type="hidden" name="commission_amount" id="commission_amount_input" value="{{ old('commission_amount', $invoice->commission_amount ?? 0) }}">
+                                        </div>
+                                    </div>
+                                    @error('commission')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                                        <span>Discount:</span>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <div class="input-group input-group-sm" style="width:120px;">
+                                                <input type="number" name="discount_percent" id="discount_input" class="form-control text-end @error('discount_percent') is-invalid @enderror" value="{{ $discountPercent }}" step="0.01" {{ isset($invoice) ? 'readonly' : '' }}>
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <strong id="discount_value">{{ number_format($discountAmount, 2) }}</strong>
+                                            <input type="hidden" name="discount_amount" id="discount_amount_input" value="{{ $discountAmount }}">
+                                        </div>
+                                    </div>
+                                    @error('discount_percent')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
+                                        <span>Pre-GST Charges:</span>
+                                        <strong id="pre_gst_total_display">{{ number_format($preGstTotal, 2) }}</strong>
+                                        <input type="hidden" id="pre_gst_total_input" value="{{ $preGstTotal }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
+                                        <span>Taxable Total:</span>
+                                        <strong id="total">{{ number_format($taxableAmount, 2) }}</strong>
+                                        <input type="hidden" name="taxable_amount" id="taxable_amount_input" value="{{ $taxableAmount }}">
+                                    </div>
+                                    <div class="py-3 border-bottom">
+                                        <label class="fw-semibold mb-2 d-block">Other State?</label>
+                                        <div class="d-flex gap-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="Y" {{ $otherState === 'Y' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
+                                                <label class="form-check-label">Yes</label>
+                                            </div>
+
+                                            <div class="form-check">
+                                                <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" value="N" {{ $otherState === 'N' ? 'checked' : '' }} {{ isset($invoice) ? 'disabled' : '' }} onclick="return false;">
+                                                <label class="form-check-label">No</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @error('other_state')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                    <div id="igst_div" class="py-2 border-bottom"
+                                        style="{{ $otherState === 'Y' ? '' : 'display:none;' }}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>IGST</span>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <input type="number" name="igst_percent" id="igst_percent" value="{{ $igstPercent }}" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" style="width:80px;">
+                                                <span>%</span>
+                                                <strong id="igst_amt">{{ number_format($igstAmount, 2) }}</strong>
+                                                <input type="hidden" name="igst_amount" id="igst_amount_input" value="{{ $igstAmount }}">
+                                            </div>
+                                        </div>
+                                        @error('igst_percent')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div id="cgst_sgst_div" class="py-2 border-bottom"
+                                        style="{{ $otherState === 'N' ? '' : 'display:none;' }}">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>CGST</span>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <input type="number" name="cgst_percent" id="cgst_percent" value="{{ $cgstPercent }}" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" style="width:80px;" readonly>
+                                                <span>%</span>
+                                                <strong id="cgst_amt">{{ number_format($cgstAmount, 2) }}</strong>
+                                                <input type="hidden" name="cgst_amount" id="cgst_amount_input" value="{{ $cgstAmount }}">
+                                            </div>
+                                        </div>
+                                        @error('cgst_percent')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+
+                                        <div class="d-flex justify-content-between">
+                                            <span>SGST</span>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <input type="number" name="sgst_percent" id="sgst_percent" value="{{ $sgstPercent }}" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" style="width:80px;" readonly>
+                                                <span>%</span>
+                                                <strong id="sgst_amt">{{ number_format($sgstAmount, 2) }}</strong>
+                                                <input type="hidden" name="sgst_amount" id="sgst_amount_input" value="{{ $sgstAmount }}">
+                                            </div>
+                                        </div>
+                                        @error('sgst_percent')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
+                                        <span>Tax Amount:</span>
+                                        <strong id="tax_amount">{{ number_format($taxAmount, 2) }}</strong>
+                                        <input type="hidden" name="tax_amount" id="tax_amount_input" value="{{ $taxAmount }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
+                                        <span>Post-GST Charges:</span>
+                                        <strong id="post_gst_total_display">{{ number_format($postGstTotal, 2) }}</strong>
+                                        <input type="hidden" name="other_charges" id="other_charges_input"
+                                            value="{{ $postGstTotal }}">
+                                    </div>
+                                    @error('other_charges')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                    <div class="d-flex justify-content-between py-2 border-bottom">
+                                        <label class="fw-semibold">Round Off:</label>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="form-check form-check-inline m-0">
+                                                <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ $roundOffType == 'Add' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="round_off_add">Add</label>
+                                            </div>
+                                            <div class="form-check form-check-inline m-0">
+                                                <input class="form-check-input round-off-type-radio" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ $roundOffType == 'Less' ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="round_off_less">Less</label>
+                                            </div>
+                                            <input type="number" class="form-control form-control-sm text-end" style="width: 80px;" id="round_off_input" name="round_off" value="{{ $roundOff }}" step="0.01" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-top fw-semibold">
+                                        <span>Grand Total:</span>
+                                        <strong id="grand_total">{{ number_format($grandTotal, 2) }}</strong>
+                                        <input type="hidden" name="grand_total" id="grand_total_input" value="{{ $grandTotal }}">
+                                    </div>
+                                    @error('grand_total')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+
+                                    <input type="hidden" id="paid_so_far_input" value="{{ $paid_so_far ?? 0 }}">
+
+                                    <input type="hidden" name="received_amount" id="received_amount_input" value="{{ isset($invoice) ? 0 : ($receivedAmt ?? 0) }}">
+
+                                    <input type="hidden" name="due_amount" id="due_amount_input" value="{{ $dueAmount }}">
+
+                                    <div class="text-end mt-4">
+                                        <button type="submit" class="btn btn-primary">Submit</button>
+                                        <a href="{{ url('purchase_invoices') }}" class="btn btn-secondary">Cancel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Payment History Modal --}}
+@if(isset($invoice))
+    <div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Payment Transaction History - {{ $invoice->invoice_no }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payment_history_body">
+                            </tbody>
+                            <tfoot>
+                                <tr class="fw-bold bg-light">
+                                    <td colspan="1" class="text-end">Total Received:</td>
+                                    <td class="text-end" id="history_total_paid">₹0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
-    @endif
+    </div>
+@endif
 
 @endsection
 @section('scripts')

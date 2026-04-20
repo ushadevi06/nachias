@@ -291,10 +291,11 @@
                                     @enderror
                                 </div>
                             </div>
-
-                            <div class="col-lg-12 text-end">
-                                <button type="submit" class="btn btn-primary">Submit</button>
-                            </div>
+                            @if(auth()->id() == 1 || auth()->user()->can('edit settings'))
+                                <div class="col-md-12 text-end">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                </div>
+                            @endif
                         </div>
                     </form>
                 </div>

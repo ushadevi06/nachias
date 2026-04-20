@@ -6,9 +6,11 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Ticket Management</h4>
-                <a class="btn btn-primary" href="{{ url('ticket_management/add') }}">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
+                @if(auth()->id() == 1 || auth()->user()->can('create ticket-management'))
+                    <a class="btn btn-primary" href="{{ url('ticket_management/add') }}">
+                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                    </a>
+                @endif
             </div>
             <div class="col-lg-12">
                 @include('flash_messages')

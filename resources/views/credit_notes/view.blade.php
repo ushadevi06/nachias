@@ -6,15 +6,15 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Credit Notes</h4>
+                @if(auth()->id() == 1 || auth()->user()->can('create credit-notes'))
                 <a class="btn btn-primary" href="{{ url('credit_notes/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
-            @if(session('success'))
-                <div class="alert alert-success mt-3">
-                    {{ session('success') }}
-                </div>
-            @endif
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card mt-3">
                 <div class="card-body">
                     <div class="card-datatable table-responsive">

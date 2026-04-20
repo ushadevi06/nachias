@@ -56,7 +56,7 @@ class DocumentRepositoryController extends Controller
                 }
 
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view document-repository')) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details document-repository')) {
                     $action .= '<a href="' . url('document_repository/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('edit document-repository')) {
@@ -168,7 +168,7 @@ class DocumentRepositoryController extends Controller
     }
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view document-repository')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details document-repository')) {
             return unauthorizedRedirect();
         }
         $document = DocumentRepository::with('department')->findOrFail($id);

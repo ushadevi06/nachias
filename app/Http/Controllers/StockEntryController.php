@@ -23,7 +23,7 @@ class StockEntryController extends Controller
      */
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view stock entries')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
             return unauthorizedRedirect();
         }
 
@@ -156,9 +156,13 @@ class StockEntryController extends Controller
                         : ($firstItem && $firstItem->finished_item_code ? $firstItem->finished_item_code : '-');
 
                     $action = '<div class="button-box">';
-                    $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-art-no="' . $artNo . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
-                    $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
-                    if (auth()->id() == 1 || auth()->user()->can('view_details stock entries')) {
+                    if (auth()->id() == 1 || auth()->user()->can('stock_adjustment stock-entry')) {
+                        $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-art-no="' . $artNo . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
+                    }
+                    if (auth()->id() == 1 || auth()->user()->can('stock_adjustment_logs stock-entry')) {
+                        $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
+                    }
+                    if (auth()->id() == 1 || auth()->user()->can('view_details stock-entry')) {
                         $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=raw_materials') . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                     }
                     $action .= '</div>';
@@ -194,12 +198,12 @@ class StockEntryController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit stock entries')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit stock-entry')) {
                 return unauthorizedRedirect();
             }
         }
         else {
-            if (auth()->id() != 1 && !auth()->user()->can('create stock entries')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create stock-entry')) {
                 return unauthorizedRedirect();
             }
         }
@@ -369,7 +373,7 @@ class StockEntryController extends Controller
     }
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view_details stock entries')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details stock-entry')) {
             return unauthorizedRedirect();
         }
         $stockEntry = StockEntry::with([
@@ -519,7 +523,7 @@ class StockEntryController extends Controller
 
     public function adjustmentLogs($id = null)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view stock entries')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
             return unauthorizedRedirect();
         }
 

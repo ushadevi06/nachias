@@ -117,7 +117,7 @@ class PurchaseOrderController extends Controller
                 $action .= '<button class="btn dropdown-toggle hide-arrow" data-bs-toggle="dropdown"><i class="icon-base ri ri-more-2-fill"></i></button>';
 
                 $action .= '<div class="dropdown-menu dropdown-menu-end m-0">';
-                if (auth()->id() == 1 || auth()->user()->can('view purchase-order')) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details purchase-order')) {
                     $action .= '<a href="' . url('purchase_orders/view/' . $po->id) . '" class="dropdown-item"><i class="icon-base ri ri-eye-line me-2"></i>View</a>';
                 }
 
@@ -227,6 +227,12 @@ class PurchaseOrderController extends Controller
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 'items.required' => 'At least one item is required.',
+                'items.*.store_category_id.required' => 'This field is required.',
+                'items.*.brand_id.required' => 'This field is required.',
+                'items.*.raw_material_id.required' => 'This field is required.',
+                'items.*.uom_id.required' => 'This field is required.',
+                'items.*.quantity.required' => 'This field is required.',
+                'items.*.rate.required' => 'This field is required.',
                 'items.*.attached_file.image' => 'File must be an image.',
                 'items.*.attached_file.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp).',
                 'items.*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
@@ -413,7 +419,7 @@ class PurchaseOrderController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details purchase-order')) {
             return unauthorizedRedirect();
         }
         $purchaseOrder = PurchaseOrder::with([

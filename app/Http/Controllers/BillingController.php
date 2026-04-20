@@ -60,11 +60,17 @@ class BillingController extends Controller
                 $status .= '</select><div class="status-msg-' . $row->id . ' small mt-1"></div>';
 
                 $action = '
-                <div class="button-box">
-                    <a href="' . url('billing/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                    <a href="' . url('billing/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                    <a href="javascript:;" class="btn btn-delete delete-btn" onclick="delete_data(\'' . url('billing/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                </div>';
+                <div class="d-inline-block text-nowrap">';
+                if(auth()->id()== 1 || auth()->user()->can('view_details billing')){
+                    $action .= '<a href="' . url('billing/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                }
+                if (auth()->id() == 1 || auth()->user()->can('edit billing')) {
+                    $action .= '<a href="' . url('billing/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                }
+                if (auth()->id() == 1 || auth()->user()->can('delete billing')) {
+                    $action .= '<a href="javascript:;" class="btn btn-delete delete-btn" onclick="delete_data(\'' . url('billing/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                }
+                $action .= '</div>';
 
                 $data[] = [
                     'DT_RowIndex' => $i++,
@@ -90,6 +96,15 @@ class BillingController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit billing')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create billing')) {
+                return unauthorizedRedirect();
+            }
+        }
         $billing = $id ?Billing::findOrFail($id) : null;
 
         if ($request->isMethod('POST')) {
@@ -140,12 +155,18 @@ class BillingController extends Controller
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details billing')) {
+            return unauthorizedRedirect();
+        }
         $billing = Billing::findOrFail($id);
         return view('billings/view_details', compact('billing'));
     }
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete billing')) {
+            return unauthorizedRedirect();
+        }
         $billing = Billing::findOrFail($id);
         $oldData = $billing->toArray();
         $billing->delete();

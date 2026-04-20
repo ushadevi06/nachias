@@ -1,902 +1,904 @@
 @extends('layouts.common')
 @section('title', ($purchaseOrder ? 'Edit' : 'Add') . ' Purchase Order - ' . env('WEBSITE_NAME'))
 @section('content')
-    <div class="container-xxl section-padding">
-        <div class="row">
-            <div class="col-lg-12">
-                <form
-                    action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}"
-                    method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
-                    @csrf
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="card-header-box">
-                                <h4>{{ $purchaseOrder ? 'Edit' : 'Add' }} Purchase Order</h4>
+<div class="container-xxl section-padding">
+    <div class="row">
+        <div class="col-lg-12">
+            @include('flash_messages')
+        </div>
+        <div class="col-lg-12">
+            <form action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}"
+                method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
+                @csrf
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="card-header-box">
+                            <h4>{{ $purchaseOrder ? 'Edit' : 'Add' }} Purchase Order</h4>
+                        </div>
+                        <div class="row g-4">
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? $nextPoNumber ?? '') }}">
+                                    <label for="po_number">PO Number <span class="text-danger">*</span></label>
+                                </div>
+                                @error('po_number')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
-                            <div class="row g-4">
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('po_number') is-invalid @enderror" id="po_number" name="po_number" placeholder="Enter PO Number" value="{{ old('po_number', $purchaseOrder->po_number ?? $nextPoNumber ?? '') }}">
-                                        <label for="po_number">PO Number <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('po_number')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control po_date @error('po_date') is-invalid @enderror" id="po_date" name="po_date" autocomplete="off" placeholder="Enter PO Date" value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
+                                    <label for="po_date">PO Date <span class="text-danger">*</span></label>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control po_date @error('po_date') is-invalid @enderror" id="po_date" name="po_date" autocomplete="off" placeholder="Enter PO Date" value="{{ old('po_date', $purchaseOrder ? $purchaseOrder->po_date->format('d-m-Y') : '') }}" />
-                                        <label for="po_date">PO Date <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('po_date')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                                @error('po_date')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="purchase_commission_agent_id" name="purchase_commission_agent_id"
+                                        class="select2 form-select @error('purchase_commission_agent_id') is-invalid @enderror"
+                                        data-placeholder="Select Purchase Commission Agent">
+                                        <option value="">Select Purchase Commission Agent</option>
+                                        @foreach($purchaseCommissionAgents as $agent)
+                                            <option value="{{ $agent->id }}" {{ old('purchase_commission_agent_id', $purchaseOrder->purchase_commission_agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }} ({{ $agent->code }})</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="purchase_commission_agent_id">Purchase Commission Agent</label>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="purchase_commission_agent_id" name="purchase_commission_agent_id"
-                                            class="select2 form-select @error('purchase_commission_agent_id') is-invalid @enderror"
-                                            data-placeholder="Select Purchase Commission Agent">
-                                            <option value="">Select Purchase Commission Agent</option>
-                                            @foreach($purchaseCommissionAgents as $agent)
-                                                <option value="{{ $agent->id }}" {{ old('purchase_commission_agent_id', $purchaseOrder->purchase_commission_agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }} ({{ $agent->code }})</option>
-                                            @endforeach
-                                        </select>
-                                        <label for="purchase_commission_agent_id">Purchase Commission Agent</label>
-                                    </div>
-                                    @error('purchase_commission_agent_id')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                @error('purchase_commission_agent_id')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
-                                        <label for="commission">Commission (%)</label>
-                                    </div>
-                                    @error('commission')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" class="form-control @error('commission') is-invalid @enderror" id="commission" name="commission" step="0.01" placeholder="Enter Commission (%)" value="{{ old('commission', $purchaseOrder->commission ?? '') }}">
+                                    <label for="commission">Commission (%)</label>
                                 </div>
+                                @error('commission')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="supplier_id" name="supplier_id" class="select2 form-select @error('supplier_id') is-invalid @enderror" data-placeholder="Select Supplier">
-                                            <option value="">Select Supplier</option>
-                                            @foreach($suppliers as $supplier)
-                                                <option value="{{ $supplier->id }}" 
-                                                    data-state-id="{{ $supplier->state_id }}" 
-                                                    data-payment-terms="{{ $supplier->payment_terms ?? '' }}" 
-                                                    data-store-id="{{ $supplier->store_id ?? '' }}"
-                                                    data-igst="{{ $supplier->igst_percent ?? 0 }}"
-                                                    data-cgst="{{ $supplier->cgst_percent ?? 0 }}"
-                                                    data-sgst="{{ $supplier->sgst_percent ?? 0 }}"
-                                                    {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>
-                                                    {{ $supplier->name }} ({{ $supplier->code }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <label for="supplier_id">Supplier <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('supplier_id')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="supplier_id" name="supplier_id" class="select2 form-select @error('supplier_id') is-invalid @enderror" data-placeholder="Select Supplier">
+                                        <option value="">Select Supplier</option>
+                                        @foreach($suppliers as $supplier)
+                                            <option value="{{ $supplier->id }}" 
+                                                data-state-id="{{ $supplier->state_id }}" 
+                                                data-payment-terms="{{ $supplier->payment_terms ?? '' }}" 
+                                                data-store-id="{{ $supplier->store_id ?? '' }}"
+                                                data-igst="{{ $supplier->igst_percent ?? 0 }}"
+                                                data-cgst="{{ $supplier->cgst_percent ?? 0 }}"
+                                                data-sgst="{{ $supplier->sgst_percent ?? 0 }}"
+                                                {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>
+                                                {{ $supplier->name }} ({{ $supplier->code }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <label for="supplier_id">Supplier <span class="text-danger">*</span></label>
                                 </div>
+                                @error('supplier_id')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control @error('reference_no') is-invalid @enderror" id="reference_no" name="reference_no" placeholder="Enter Reference No" value="{{ old('reference_no', $purchaseOrder->reference_no ?? '') }}">
-                                        <label for="reference_no">Reference No <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('reference_no')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('reference_no') is-invalid @enderror" id="reference_no" name="reference_no" placeholder="Enter Reference No" value="{{ old('reference_no', $purchaseOrder->reference_no ?? '') }}">
+                                    <label for="reference_no">Reference No <span class="text-danger">*</span></label>
                                 </div>
+                                @error('reference_no')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control reference_date @error('reference_date') is-invalid @enderror" id="reference_date" name="reference_date" autocomplete="off" placeholder="Enter Reference Date" value="{{ old('reference_date', $purchaseOrder ? optional($purchaseOrder->reference_date)->format('d-m-Y') : '') }}" />
-                                        <label for="reference_date">Reference / Order Date <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('reference_date')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control reference_date @error('reference_date') is-invalid @enderror" id="reference_date" name="reference_date" autocomplete="off" placeholder="Enter Reference Date" value="{{ old('reference_date', $purchaseOrder ? optional($purchaseOrder->reference_date)->format('d-m-Y') : '') }}" />
+                                    <label for="reference_date">Reference / Order Date <span class="text-danger">*</span></label>
                                 </div>
+                                @error('reference_date')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control due_date @error('due_date') is-invalid @enderror" id="due_date" name="due_date" autocomplete="off" placeholder="Enter Due Date" value="{{ old('due_date', $purchaseOrder ? $purchaseOrder->due_date->format('d-m-Y') : '') }}" />
-                                        <label for="due_date">Due Date <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('due_date')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control due_date @error('due_date') is-invalid @enderror" id="due_date" name="due_date" autocomplete="off" placeholder="Enter Due Date" value="{{ old('due_date', $purchaseOrder ? $purchaseOrder->due_date->format('d-m-Y') : '') }}" />
+                                    <label for="due_date">Due Date <span class="text-danger">*</span></label>
                                 </div>
+                                @error('due_date')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <select id="store_type_id" name="store_type_id" class="select2 form-select @error('store_type_id') is-invalid @enderror" data-placeholder="Select Store Type">
-                                            <option value="">Select Store Type</option>
-                                            @foreach($storeTypes as $storeType)
-                                                <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>{{ $storeType->store_type_name }}</option>
-                                            @endforeach
-                                        </select>
-                                        <label for="store_type_id">Store Type <span class="text-danger">*</span></label>
-                                    </div>
-                                    @error('store_type_id')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="store_type_id" name="store_type_id" class="select2 form-select @error('store_type_id') is-invalid @enderror" data-placeholder="Select Store Type">
+                                        <option value="">Select Store Type</option>
+                                        @foreach($storeTypes as $storeType)
+                                            <option value="{{ $storeType->id }}" {{ old('store_type_id', $purchaseOrder->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>{{ $storeType->store_type_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="store_type_id">Store Type <span class="text-danger">*</span></label>
                                 </div>
+                                @error('store_type_id')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <div class="card-header-box">
-                                <h4>Item Details</h4>
-                            </div>
-                            @error('items')
-                                <div class="alert alert-danger mt-2">{{ $message }}</div>
-                            @enderror
+                </div>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="card-header-box">
+                            <h4>Item Details</h4>
+                        </div>
+                        @error('items')
+                            <div class="alert alert-danger mt-2">{{ $message }}</div>
+                        @enderror
 
-                            <div id="item-rows" class="table-responsive text-nowrap">
-                                <input type="hidden" id="itemIndex" value="{{ $purchaseOrder?->items?->count() ?? 1 }}">
-                                <table class="table align-middle">
-                                    <thead class="table-primary">
-                                        <tr>
-                                            <th style="min-width: 200px;">Store Category *</th>
-                                            <th style="min-width: 200px;">Brand *</th>
-                                            <th style="min-width: 240px;">Raw Material *</th>
-                                            <th style="min-width: 150px;">Style</th>
-                                            <th style="min-width: 150px;">Fabric Width</th>
-                                            <th style="min-width: 150px;">Fabric Type</th>
-                                            <th style="min-width: 100px;">UOM *</th>
-                                            <th style="min-width: 150px;">Qty *</th>
-                                            <th style="min-width: 180px;">Supplier Design Name</th>
-                                            <th style="min-width: 150px;">Color</th>
-                                            <th style="min-width: 150px;">Rate *</th>
-                                            <th style="min-width: 120px;">Amount</th>
-                                            <th style="min-width: 150px;">Remarks</th>
-                                            <th style="min-width: 200px;">File</th>
-                                            <th style="min-width: 50px;">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @if(old('items'))
-                                            @foreach(old('items') as $index => $item)
-                                                <tr class="item-row">
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select po_store_category @error('items.' . $index . '.store_category_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][store_category_id]"
-                                                            data-placeholder="Select Store Category">
-                                                            <option value="">Select Store Category</option>
-                                                            @foreach($storeCategories as $category)
-                                                                <option value="{{ $category->id }}" {{ $item['store_category_id'] == $category->id ? 'selected' : '' }}>
-                                                                    {{ $category->category_name }}({{ $category->code }})
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.store_category_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
-                                                            <option value="">Select Brand</option>
-                                                            @foreach($brands as $brand)
-                                                                <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}
-                                                                    ({{ $brand->code }})</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.brand_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select material @error('items.' . $index . '.raw_material_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][raw_material_id]"
-                                                            data-placeholder="Select Raw Material">
-                                                            @if(isset($item['raw_material_id']) && $item['raw_material_id'])
-                                                                @php
-                                                                    $selectedMaterial = \App\Models\RawMaterial::find($item['raw_material_id']);
-                                                                @endphp
-                                                                @if($selectedMaterial)
-                                                                    <option value="{{ $selectedMaterial->id }}"
-                                                                        data-uom-id="{{ $selectedMaterial->uom_id }}" selected>
-                                                                        {{ $selectedMaterial->name }} ({{ $selectedMaterial->code }})
-                                                                    </option>
-                                                                @endif
-                                                            @endif
-                                                        </select>
-                                                        @error('items.' . $index . '.raw_material_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select style @error('items.' . $index . '.style_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][style_id]" data-placeholder="Select Style">
-                                                            <option value="">Select Style</option>
-                                                            @foreach($styles as $style)
-                                                                <option value="{{ $style->id }}" {{ ($item['style_id'] ?? '') == $style->id ? 'selected' : '' }}>{{ $style->style_name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.style_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][fabric_width_id]"
-                                                            data-placeholder="Select Width">
-                                                            <option value="">Select Width</option>
-                                                            @foreach($fabricSizes as $fabricSize)
-                                                                <option value="{{ $fabricSize->id }}" {{ ($item['fabric_width_id'] ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.fabric_width_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][fabric_type_id]"
-                                                            data-placeholder="Select Fabric Type">
-                                                            <option value="">Select Fabric Type</option>
-                                                            @foreach($fabricTypes as $fabricType)
-                                                                <option value="{{ $fabricType->id }}" {{ ($item['fabric_type_id'] ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.fabric_type_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][uom_id]" disabled
-                                                            data-placeholder="Select UOM">
-                                                            <option value="">Select UOM</option>
-                                                            @foreach($uoms as $uom)
-                                                                <option value="{{ $uom->id }}" {{ ($item['uom_id'] ?? '') == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        <input type="hidden" name="items[{{ $index }}][uom_id]"
-                                                            value="{{ $item['uom_id'] ?? '' }}" class="uom_hidden">
-                                                        @error('items.' . $index . '.uom_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="number"
-                                                            class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
-                                                            name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
-                                                            value="{{ $item['quantity'] ?? '' }}">
-                                                        @error('items.' . $index . '.quantity')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="text"
-                                                            class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror"
-                                                            name="items[{{ $index }}][supplier_design_name]"
-                                                            value="{{ $item['supplier_design_name'] ?? '' }}">
-                                                        @error('items.' . $index . '.supplier_design_name')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select color @error('items.' . $index . '.color_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][color_id]" data-placeholder="Select Color">
-                                                            <option value="">Select Color</option>
-                                                            @foreach($colors as $color)
-                                                                <option value="{{ $color->id }}" {{ ($item['color_id'] ?? '') == $color->id ? 'selected' : '' }}>{{ $color->color_name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.color_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="number"
-                                                            class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror"
-                                                            name="items[{{ $index }}][rate]" step="0.01" min="0"
-                                                            value="{{ $item['rate'] ?? '' }}">
-                                                        @error('items.' . $index . '.rate')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control amount"
-                                                            value="{{ ($item['quantity'] ?? 0) * ($item['rate'] ?? 0) }}" readonly>
-                                                    </td>
-                                                    <td>
-                                                        <textarea
-                                                            class="form-control remarks @error('items.' . $index . '.remarks') is-invalid @enderror"
-                                                            name="items[{{ $index }}][remarks]"
-                                                            style="height: 58px;">{{ $item['remarks'] ?? '' }}</textarea>
-                                                        @error('items.' . $index . '.remarks')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="file"
-                                                            class="form-control file-input @error('items.' . $index . '.attached_file') is-invalid @enderror"
-                                                            name="items[{{ $index }}][attached_file]" accept="*">
-                                                        <input type="hidden" name="items[{{ $index }}][existing_file]"
-                                                            value="{{ $item['existing_file'] ?? '' }}">
-                                                        <div class="mt-2 preview-container"></div>
-                                                        @error('items.' . $index . '.attached_file')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        @if($loop->first)
-                                                            <button type="button" class="btn btn-primary add_item"><i
-                                                                    class="ri ri-add-line"></i></button>
-                                                        @else
-                                                            <button type="button" class="btn btn-danger delete_item"><i
-                                                                    class="ri ri-delete-bin-line"></i></button>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        @elseif($purchaseOrder && $purchaseOrder->items->count() > 0)
-                                            @foreach($purchaseOrder->items as $index => $item)
-                                                <tr class="item-row">
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select po_store_category @error('items.' . $index . '.store_category_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][store_category_id]"
-                                                            data-placeholder="Select Store Category">
-                                                            <option value="">Select Store Category</option>
-                                                            @foreach($storeCategories as $category)
-                                                                <option value="{{ $category->id }}" {{ $item->store_category_id == $category->id ? 'selected' : '' }}>
-                                                                    {{ $category->category_name }}({{ $category->code }})
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.store_category_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
-                                                            <option value="">Select Brand</option>
-                                                            @foreach($brands as $brand)
-                                                                <option value="{{ $brand->id }}" {{ ($item->brand_id ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.brand_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select material @error('items.' . $index . '.raw_material_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][raw_material_id]"
-                                                            data-placeholder="Select Raw Material">
-                                                            <option value="{{ $item->raw_material_id }}"
-                                                                data-uom-id="{{ $item->rawMaterial->uom_id }}">
-                                                                {{ $item->rawMaterial->name }} ({{ $item->rawMaterial->code }})
-                                                            </option>
-                                                        </select>
-                                                        @error('items.' . $index . '.raw_material_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select style @error('items.' . $index . '.style_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][style_id]" data-placeholder="Select Style">
-                                                            <option value="">Select Style</option>
-                                                            @foreach($styles as $style)
-                                                                <option value="{{ $style->id }}" {{ $item->style_id == $style->id ? 'selected' : '' }}>{{ $style->style_name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.style_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][fabric_width_id]"
-                                                            data-placeholder="Select Width">
-                                                            <option value="">Select Width</option>
-                                                            @foreach($fabricSizes as $fabricSize)
-                                                                <option value="{{ $fabricSize->id }}" {{ ($item->fabric_width_id ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.fabric_width_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][fabric_type_id]"
-                                                            data-placeholder="Select Fabric Type">
-                                                            <option value="">Select Fabric Type</option>
-                                                            @foreach($fabricTypes as $fabricType)
-                                                                <option value="{{ $fabricType->id }}" {{ ($item->fabric_type_id ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.fabric_type_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror"
-                                                            disabled data-placeholder="Select UOM">
-                                                            @foreach($uoms as $uom)
-                                                                <option value="{{ $uom->id }}" {{ $item->uom_id == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        <input type="hidden" name="items[{{ $index }}][uom_id]"
-                                                            value="{{ $item->uom_id }}" class="uom_hidden">
-                                                        @error('items.' . $index . '.uom_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="number"
-                                                            class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
-                                                            name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
-                                                            value="{{ $item->quantity }}">
-                                                        @error('items.' . $index . '.quantity')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="text"
-                                                            class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror"
-                                                            name="items[{{ $index }}][supplier_design_name]"
-                                                            value="{{ $item->supplier_design_name }}">
-                                                        @error('items.' . $index . '.supplier_design_name')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <select
-                                                            class="select2 form-select color @error('items.' . $index . '.color_id') is-invalid @enderror"
-                                                            name="items[{{ $index }}][color_id]" data-placeholder="Select Color">
-                                                            <option value="">Select Color</option>
-                                                            @foreach($colors as $color)
-                                                                <option value="{{ $color->id }}" {{ $item->color_id == $color->id ? 'selected' : '' }}>{{ $color->color_name }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                        @error('items.' . $index . '.color_id')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="number"
-                                                            class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror"
-                                                            name="items[{{ $index }}][rate]" step="0.01" min="0"
-                                                            value="{{ $item->rate }}">
-                                                        @error('items.' . $index . '.rate')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control amount" value="{{ $item->amount }}"
-                                                            readonly>
-                                                    </td>
-                                                    <td>
-                                                        <textarea
-                                                            class="form-control remarks @error('items.' . $index . '.remarks') is-invalid @enderror"
-                                                            name="items[{{ $index }}][remarks]">{{ $item->remarks }}</textarea>
-                                                        @error('items.' . $index . '.remarks')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        <input type="file"
-                                                            class="form-control file-input @error('items.' . $index . '.attached_file') is-invalid @enderror"
-                                                            name="items[{{ $index }}][attached_file]" accept="*">
-                                                        <input type="hidden" name="items[{{ $index }}][existing_file]"
-                                                            value="{{ $item->attached_file }}">
-                                                        <div class="mt-2 preview-container">
-                                                            @if($item->attached_file)
-                                                                @php
-                                                                    $extension = pathinfo($item->attached_file, PATHINFO_EXTENSION);
-                                                                    $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                                                    $fileUrl = url('uploads/purchase_orders/' . $item->attached_file);
-                                                                @endphp
-                                                                <div class="attachment-thumb bg-white position-relative"
-                                                                    title="{{ $item->attached_file }}">
-                                                                    @if($isImage)
-                                                                        <button type="button"
-                                                                            class="btn btn-sm btn-outline-primary view-image"
-                                                                            data-image="{{ $fileUrl }}">
-                                                                            <i class="ri ri-eye-line"></i> View
-                                                                        </button>
-                                                                    @else
-                                                                        <a href="{{ $fileUrl }}" target="_blank"
-                                                                            class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border"
-                                                                            style="width: 80px; height: 80px;">
-                                                                            <i class="ri ri-file-text-line fs-2"></i>
-                                                                            <span class="badge bg-primary text-white mt-1"
-                                                                                style="font-size: 10px;">{{ strtoupper($extension) }}</span>
-                                                                        </a>
-                                                                    @endif
-                                                                </div>
-                                                            @endif
-                                                        </div>
-                                                        @error('items.' . $index . '.attached_file')
-                                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                                        @enderror
-                                                    </td>
-                                                    <td>
-                                                        @if($loop->first)
-                                                            <button type="button" class="btn btn-primary add_item"><i class="ri ri-add-line"></i></button>
-                                                        @else
-                                                            <button type="button" class="btn btn-danger delete_item"><i class="ri ri-delete-bin-line"></i></button>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        @else
+                        <div id="item-rows" class="table-responsive text-nowrap">
+                            <input type="hidden" id="itemIndex" value="{{ $purchaseOrder?->items?->count() ?? 1 }}">
+                            <table class="table align-middle">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th style="min-width: 200px;">Store Category *</th>
+                                        <th style="min-width: 200px;">Brand *</th>
+                                        <th style="min-width: 240px;">Raw Material *</th>
+                                        <th style="min-width: 150px;">Style</th>
+                                        <th style="min-width: 150px;">Fabric Width</th>
+                                        <th style="min-width: 150px;">Fabric Type</th>
+                                        <th style="min-width: 100px;">UOM *</th>
+                                        <th style="min-width: 150px;">Qty *</th>
+                                        <th style="min-width: 180px;">Supplier Design Name</th>
+                                        <th style="min-width: 150px;">Color</th>
+                                        <th style="min-width: 150px;">Rate *</th>
+                                        <th style="min-width: 120px;">Amount</th>
+                                        <th style="min-width: 150px;">Remarks</th>
+                                        <th style="min-width: 200px;">File</th>
+                                        <th style="min-width: 50px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if(old('items'))
+                                        @foreach(old('items') as $index => $item)
                                             <tr class="item-row">
                                                 <td>
-                                                    <select class="select2 form-select po_store_category"
-                                                        name="items[0][store_category_id]"
+                                                    <select
+                                                        class="select2 form-select po_store_category @error('items.' . $index . '.store_category_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][store_category_id]"
                                                         data-placeholder="Select Store Category">
                                                         <option value="">Select Store Category</option>
                                                         @foreach($storeCategories as $category)
-                                                            <option value="{{ $category->id }}">
+                                                            <option value="{{ $category->id }}" {{ $item['store_category_id'] == $category->id ? 'selected' : '' }}>
                                                                 {{ $category->category_name }}({{ $category->code }})
                                                             </option>
                                                         @endforeach
                                                     </select>
+                                                    @error('items.' . $index . '.store_category_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select brand" name="items[0][brand_id]"
-                                                        data-placeholder="Select Brand">
+                                                    <select
+                                                        class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
                                                         <option value="">Select Brand</option>
                                                         @foreach($brands as $brand)
-                                                            <option value="{{ $brand->id }}">{{ $brand->brand_name }}
+                                                            <option value="{{ $brand->id }}" {{ ($item['brand_id'] ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }}
                                                                 ({{ $brand->code }})</option>
                                                         @endforeach
                                                     </select>
+                                                    @error('items.' . $index . '.brand_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select material"
-                                                        name="items[0][raw_material_id]" data-placeholder="Select Raw Material">
-                                                        <option value="">Select Raw Material</option>
+                                                    <select
+                                                        class="select2 form-select material @error('items.' . $index . '.raw_material_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][raw_material_id]"
+                                                        data-placeholder="Select Raw Material">
+                                                        @if(isset($item['raw_material_id']) && $item['raw_material_id'])
+                                                            @php
+        $selectedMaterial = \App\Models\RawMaterial::find($item['raw_material_id']);
+                                                            @endphp
+                                                            @if($selectedMaterial)
+                                                                <option value="{{ $selectedMaterial->id }}"
+                                                                    data-uom-id="{{ $selectedMaterial->uom_id }}" selected>
+                                                                    {{ $selectedMaterial->name }} ({{ $selectedMaterial->code }})
+                                                                </option>
+                                                            @endif
+                                                        @endif
                                                     </select>
+                                                    @error('items.' . $index . '.raw_material_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select style" name="items[0][style_id]"
-                                                        data-placeholder="Select Style">
+                                                    <select
+                                                        class="select2 form-select style @error('items.' . $index . '.style_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][style_id]" data-placeholder="Select Style">
                                                         <option value="">Select Style</option>
                                                         @foreach($styles as $style)
-                                                            <option value="{{ $style->id }}">{{ $style->style_name }}</option>
+                                                            <option value="{{ $style->id }}" {{ ($item['style_id'] ?? '') == $style->id ? 'selected' : '' }}>{{ $style->style_name }}
+                                                            </option>
                                                         @endforeach
                                                     </select>
+                                                    @error('items.' . $index . '.style_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select fabric_width"
-                                                        name="items[0][fabric_width_id]" data-placeholder="Select Width">
+                                                    <select
+                                                        class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][fabric_width_id]"
+                                                        data-placeholder="Select Width">
                                                         <option value="">Select Width</option>
                                                         @foreach($fabricSizes as $fabricSize)
-                                                            <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
+                                                            <option value="{{ $fabricSize->id }}" {{ ($item['fabric_width_id'] ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                         @endforeach
                                                     </select>
+                                                    @error('items.' . $index . '.fabric_width_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select fabric_type"
-                                                        name="items[0][fabric_type_id]" data-placeholder="Select Fabric Type">
+                                                    <select
+                                                        class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][fabric_type_id]"
+                                                        data-placeholder="Select Fabric Type">
                                                         <option value="">Select Fabric Type</option>
                                                         @foreach($fabricTypes as $fabricType)
-                                                            <option value="{{ $fabricType->id }}">{{ $fabricType->fabric_type }}</option>
+                                                            <option value="{{ $fabricType->id }}" {{ ($item['fabric_type_id'] ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
                                                         @endforeach
                                                     </select>
+                                                    @error('items.' . $index . '.fabric_type_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select uom" name="items[0][uom_id]" disabled
+                                                    <select
+                                                        class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][uom_id]" disabled
                                                         data-placeholder="Select UOM">
                                                         <option value="">Select UOM</option>
                                                         @foreach($uoms as $uom)
-                                                            <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
+                                                            <option value="{{ $uom->id }}" {{ ($item['uom_id'] ?? '') == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
                                                         @endforeach
                                                     </select>
-                                                    <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]"
+                                                        value="{{ $item['uom_id'] ?? '' }}" class="uom_hidden">
+                                                    @error('items.' . $index . '.uom_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
+                                                    <input type="number"
+                                                        class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
+                                                        name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
+                                                        value="{{ $item['quantity'] ?? '' }}">
+                                                    @error('items.' . $index . '.quantity')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control supplier_design_name" name="items[0][supplier_design_name]" placeholder="Enter Supplier Design Name">
+                                                    <input type="text"
+                                                        class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror"
+                                                        name="items[{{ $index }}][supplier_design_name]"
+                                                        value="{{ $item['supplier_design_name'] ?? '' }}">
+                                                    @error('items.' . $index . '.supplier_design_name')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select color" name="items[0][color_id]"
-                                                        data-placeholder="Select Color">
+                                                    <select
+                                                        class="select2 form-select color @error('items.' . $index . '.color_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][color_id]" data-placeholder="Select Color">
                                                         <option value="">Select Color</option>
                                                         @foreach($colors as $color)
-                                                            <option value="{{ $color->id }}">{{ $color->color_name }}</option>
+                                                            <option value="{{ $color->id }}" {{ ($item['color_id'] ?? '') == $color->id ? 'selected' : '' }}>{{ $color->color_name }}
+                                                            </option>
                                                         @endforeach
                                                     </select>
+                                                    @error('items.' . $index . '.color_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control rate" name="items[0][rate]"
-                                                        step="0.01" min="0" placeholder="Enter Rate">
+                                                    <input type="number"
+                                                        class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror"
+                                                        name="items[{{ $index }}][rate]" step="0.01" min="0"
+                                                        value="{{ $item['rate'] ?? '' }}">
+                                                    @error('items.' . $index . '.rate')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control amount" readonly>
+                                                    <input type="text" class="form-control amount"
+                                                        value="{{ ($item['quantity'] ?? 0) * ($item['rate'] ?? 0) }}" readonly>
                                                 </td>
                                                 <td>
-                                                    <textarea class="form-control remarks" name="items[0][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
+                                                    <textarea
+                                                        class="form-control remarks @error('items.' . $index . '.remarks') is-invalid @enderror"
+                                                        name="items[{{ $index }}][remarks]"
+                                                        style="height: 58px;">{{ $item['remarks'] ?? '' }}</textarea>
+                                                    @error('items.' . $index . '.remarks')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="file" class="form-control file-input" name="items[0][attached_file]" accept="*">
-                                                    <input type="hidden" name="items[0][existing_file]" value="">
+                                                    <input type="file"
+                                                        class="form-control file-input @error('items.' . $index . '.attached_file') is-invalid @enderror"
+                                                        name="items[{{ $index }}][attached_file]" accept="*">
+                                                    <input type="hidden" name="items[{{ $index }}][existing_file]"
+                                                        value="{{ $item['existing_file'] ?? '' }}">
                                                     <div class="mt-2 preview-container"></div>
+                                                    @error('items.' . $index . '.attached_file')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
                                                 </td>
                                                 <td>
-                                                    <button type="button" class="btn btn-primary add_item">
-                                                        <i class="ri ri-add-line"></i>
-                                                    </button>
+                                                    @if($loop->first)
+                                                        <button type="button" class="btn btn-primary add_item"><i
+                                                                class="ri ri-add-line"></i></button>
+                                                    @else
+                                                        <button type="button" class="btn btn-danger delete_item"><i
+                                                                class="ri ri-delete-bin-line"></i></button>
+                                                    @endif
                                                 </td>
                                             </tr>
-                                        @endif
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row g-4">
-                        <div class="col-lg-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div class="card-header-box">
-                                        <h4>Additional Information</h4>
-                                    </div>
-                                    <div class="row g-4">
-                                        <div class="col-12">
-                                            @php
-                                                $currentStatus = old('status', $purchaseOrder->status ?? 'Draft');
-                                                $disabledStatuses = match ($currentStatus) {
-                                                    'Approved' => ['Draft'],
-                                                    'Dispatched' => ['Draft', 'Approved'],
-                                                    'Received' => ['Draft', 'Approved', 'Dispatched'],
-                                                    default => [],
-                                                };
-                                            @endphp
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="status" name="status"
-                                                    class="select2 form-select @error('status') is-invalid @enderror"
-                                                    data-placeholder="Select Status">
-                                                    <option value="">Select Status</option>
-                                                    @foreach(['Draft', 'Approved', 'Dispatched', 'Received'] as $status)
-                                                        <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ in_array($status, $disabledStatuses) ? 'disabled' : '' }}>
-                                                            {{ $status }}
+                                        @endforeach
+                                    @elseif($purchaseOrder && $purchaseOrder->items->count() > 0)
+                                        @foreach($purchaseOrder->items as $index => $item)
+                                            <tr class="item-row">
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select po_store_category @error('items.' . $index . '.store_category_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][store_category_id]"
+                                                        data-placeholder="Select Store Category">
+                                                        <option value="">Select Store Category</option>
+                                                        @foreach($storeCategories as $category)
+                                                            <option value="{{ $category->id }}" {{ $item->store_category_id == $category->id ? 'selected' : '' }}>
+                                                                {{ $category->category_name }}({{ $category->code }})
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('items.' . $index . '.store_category_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select brand @error('items.' . $index . '.brand_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][brand_id]" data-placeholder="Select Brand">
+                                                        <option value="">Select Brand</option>
+                                                        @foreach($brands as $brand)
+                                                            <option value="{{ $brand->id }}" {{ ($item->brand_id ?? '') == $brand->id ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('items.' . $index . '.brand_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select material @error('items.' . $index . '.raw_material_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][raw_material_id]"
+                                                        data-placeholder="Select Raw Material">
+                                                        <option value="{{ $item->raw_material_id }}"
+                                                            data-uom-id="{{ $item->rawMaterial->uom_id }}">
+                                                            {{ $item->rawMaterial->name }} ({{ $item->rawMaterial->code }})
+                                                        </option>
+                                                    </select>
+                                                    @error('items.' . $index . '.raw_material_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select style @error('items.' . $index . '.style_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][style_id]" data-placeholder="Select Style">
+                                                        <option value="">Select Style</option>
+                                                        @foreach($styles as $style)
+                                                            <option value="{{ $style->id }}" {{ $item->style_id == $style->id ? 'selected' : '' }}>{{ $style->style_name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('items.' . $index . '.style_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][fabric_width_id]"
+                                                        data-placeholder="Select Width">
+                                                        <option value="">Select Width</option>
+                                                        @foreach($fabricSizes as $fabricSize)
+                                                            <option value="{{ $fabricSize->id }}" {{ ($item->fabric_width_id ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('items.' . $index . '.fabric_width_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][fabric_type_id]"
+                                                        data-placeholder="Select Fabric Type">
+                                                        <option value="">Select Fabric Type</option>
+                                                        @foreach($fabricTypes as $fabricType)
+                                                            <option value="{{ $fabricType->id }}" {{ ($item->fabric_type_id ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('items.' . $index . '.fabric_type_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror"
+                                                        disabled data-placeholder="Select UOM">
+                                                        @foreach($uoms as $uom)
+                                                            <option value="{{ $uom->id }}" {{ $item->uom_id == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]"
+                                                        value="{{ $item->uom_id }}" class="uom_hidden">
+                                                    @error('items.' . $index . '.uom_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="number"
+                                                        class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
+                                                        name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
+                                                        value="{{ $item->quantity }}">
+                                                    @error('items.' . $index . '.quantity')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="text"
+                                                        class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror"
+                                                        name="items[{{ $index }}][supplier_design_name]"
+                                                        value="{{ $item->supplier_design_name }}">
+                                                    @error('items.' . $index . '.supplier_design_name')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        class="select2 form-select color @error('items.' . $index . '.color_id') is-invalid @enderror"
+                                                        name="items[{{ $index }}][color_id]" data-placeholder="Select Color">
+                                                        <option value="">Select Color</option>
+                                                        @foreach($colors as $color)
+                                                            <option value="{{ $color->id }}" {{ $item->color_id == $color->id ? 'selected' : '' }}>{{ $color->color_name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('items.' . $index . '.color_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="number"
+                                                        class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror"
+                                                        name="items[{{ $index }}][rate]" step="0.01" min="0"
+                                                        value="{{ $item->rate }}">
+                                                    @error('items.' . $index . '.rate')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control amount" value="{{ $item->amount }}"
+                                                        readonly>
+                                                </td>
+                                                <td>
+                                                    <textarea
+                                                        class="form-control remarks @error('items.' . $index . '.remarks') is-invalid @enderror"
+                                                        name="items[{{ $index }}][remarks]">{{ $item->remarks }}</textarea>
+                                                    @error('items.' . $index . '.remarks')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="file"
+                                                        class="form-control file-input @error('items.' . $index . '.attached_file') is-invalid @enderror"
+                                                        name="items[{{ $index }}][attached_file]" accept="*">
+                                                    <input type="hidden" name="items[{{ $index }}][existing_file]"
+                                                        value="{{ $item->attached_file }}">
+                                                    <div class="mt-2 preview-container">
+                                                        @if($item->attached_file)
+                                                            @php
+        $extension = pathinfo($item->attached_file, PATHINFO_EXTENSION);
+        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+        $fileUrl = url('uploads/purchase_orders/' . $item->attached_file);
+                                                            @endphp
+                                                            <div class="attachment-thumb bg-white position-relative"
+                                                                title="{{ $item->attached_file }}">
+                                                                @if($isImage)
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-outline-primary view-image"
+                                                                        data-image="{{ $fileUrl }}">
+                                                                        <i class="ri ri-eye-line"></i> View
+                                                                    </button>
+                                                                @else
+                                                                    <a href="{{ $fileUrl }}" target="_blank"
+                                                                        class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border"
+                                                                        style="width: 80px; height: 80px;">
+                                                                        <i class="ri ri-file-text-line fs-2"></i>
+                                                                        <span class="badge bg-primary text-white mt-1"
+                                                                            style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                    </a>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                    @error('items.' . $index . '.attached_file')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    @if($loop->first)
+                                                        <button type="button" class="btn btn-primary add_item"><i class="ri ri-add-line"></i></button>
+                                                    @else
+                                                        <button type="button" class="btn btn-danger delete_item"><i class="ri ri-delete-bin-line"></i></button>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <tr class="item-row">
+                                            <td>
+                                                <select class="select2 form-select po_store_category"
+                                                    name="items[0][store_category_id]"
+                                                    data-placeholder="Select Store Category">
+                                                    <option value="">Select Store Category</option>
+                                                    @foreach($storeCategories as $category)
+                                                        <option value="{{ $category->id }}">
+                                                            {{ $category->category_name }}({{ $category->code }})
                                                         </option>
                                                     @endforeach
                                                 </select>
-                                                <label for="status">Status <span class="text-danger">*</span></label>
-                                            </div>
-                                            @error('status')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-
-                                        {{-- <div class="col-12">
-                                            <div class="form-check form-check-inline mt-2">
-                                                <input class="form-check-input" type="checkbox" name="is_self_closed"
-                                                    id="is_self_closed" value="1" {{ old('is_self_closed',
-                                                    $purchaseOrder->is_self_closed ?? false) ? 'checked' : '' }}>
-                                                <label class="form-check-label fw-bold text-danger"
-                                                    for="is_self_closed">Self Closing PO (Check this to hide from Purchase
-                                                    Invoice)</label>
-                                            </div>
-                                        </div> --}}
-
-                                        <div class="col-12">
-                                            <div class="form-floating form-floating-outline">
-                                                <textarea
-                                                    class="form-control h-px-100 @error('payment_terms') is-invalid @enderror"
-                                                    id="payment_terms" name="payment_terms"
-                                                    placeholder="Enter Payment Terms">{{ old('payment_terms', $purchaseOrder->payment_terms ?? '') }}</textarea>
-                                                <label for="payment_terms">Payment Terms</label>
-                                            </div>
-                                            @error('payment_terms')
-                                                <div class="text-danger mt-1">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-
-                                        <div class="col-12">
-                                            <div class="form-floating form-floating-outline text-black">
-                                                <input type="file"
-                                                    class="form-control @error('additional_attachments.*') is-invalid @enderror"
-                                                    id="additional_attachments" name="additional_attachments[]" multiple
-                                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
-                                                <label for="additional_attachments">Additional Attachments (Max 5)</label>
-                                                @error('additional_attachments')
-                                                    <div class="text-danger mt-1 small">{{ $message }}</div>
-                                                @enderror
-                                                @error('additional_attachments.*')
-                                                    <div class="text-danger mt-1 small">{{ $message }}</div>
-                                                @enderror
-                                                <div id="attachment-list" class="mt-3 d-flex flex-wrap gap-3">
-                                                    @if($purchaseOrder && $purchaseOrder->additional_attachments)
-                                                        @php
-                                                            $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
-                                                        @endphp
-                                                        @foreach($attachments as $attachment)
-                                                            @php
-                                                                $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
-                                                                $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp']);
-                                                                $fileUrl = url('uploads/purchase_orders/' . $attachment);
-                                                            @endphp
-                                                            <div class="attachment-item position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="{{ $attachment }}">
-                                                                @if($isImage)
-                                                                    <img src="{{ $fileUrl }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" alt="Attachment">
-                                                                @else
-                                                                    <a href="{{ $fileUrl }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
-                                                                        <i class="ri ri-file-text-line fs-2"></i>
-                                                                        <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
-                                                                    </a>
-                                                                @endif
-                                                                <button type="button"
-                                                                    class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center remove-existing-attachment"
-                                                                    style="width: 20px; height: 20px; border: 2px solid white; line-height: 1;">
-                                                                    <i class="ri ri-close-line fs-6"></i>
-                                                                </button>
-                                                                <input type="hidden" name="existing_additional_attachments[]" value="{{ $attachment }}">
-                                                            </div>
-                                                        @endforeach
-                                                    @endif
-                                                </div>
-                                                <small class="text-muted d-block mt-2">Max file size: 2MB per file.
-                                                    Supported: JPG, PNG, WEBP, PDF, DOC, DOCX</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select brand" name="items[0][brand_id]"
+                                                    data-placeholder="Select Brand">
+                                                    <option value="">Select Brand</option>
+                                                    @foreach($brands as $brand)
+                                                        <option value="{{ $brand->id }}">{{ $brand->brand_name }}
+                                                            ({{ $brand->code }})</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select material"
+                                                    name="items[0][raw_material_id]" data-placeholder="Select Raw Material">
+                                                    <option value="">Select Raw Material</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select style" name="items[0][style_id]"
+                                                    data-placeholder="Select Style">
+                                                    <option value="">Select Style</option>
+                                                    @foreach($styles as $style)
+                                                        <option value="{{ $style->id }}">{{ $style->style_name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select fabric_width"
+                                                    name="items[0][fabric_width_id]" data-placeholder="Select Width">
+                                                    <option value="">Select Width</option>
+                                                    @foreach($fabricSizes as $fabricSize)
+                                                        <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select fabric_type"
+                                                    name="items[0][fabric_type_id]" data-placeholder="Select Fabric Type">
+                                                    <option value="">Select Fabric Type</option>
+                                                    @foreach($fabricTypes as $fabricType)
+                                                        <option value="{{ $fabricType->id }}">{{ $fabricType->fabric_type }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select uom" name="items[0][uom_id]" disabled
+                                                    data-placeholder="Select UOM">
+                                                    <option value="">Select UOM</option>
+                                                    @foreach($uoms as $uom)
+                                                        <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control supplier_design_name" name="items[0][supplier_design_name]" placeholder="Enter Supplier Design Name">
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select color" name="items[0][color_id]"
+                                                    data-placeholder="Select Color">
+                                                    <option value="">Select Color</option>
+                                                    @foreach($colors as $color)
+                                                        <option value="{{ $color->id }}">{{ $color->color_name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control rate" name="items[0][rate]"
+                                                    step="0.01" min="0" placeholder="Enter Rate">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control amount" readonly>
+                                            </td>
+                                            <td>
+                                                <textarea class="form-control remarks" name="items[0][remarks]" style="height: 58px;" placeholder="Enter Remarks"></textarea>
+                                            </td>
+                                            <td>
+                                                <input type="file" class="form-control file-input" name="items[0][attached_file]" accept="*">
+                                                <input type="hidden" name="items[0][existing_file]" value="">
+                                                <div class="mt-2 preview-container"></div>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-primary add_item">
+                                                    <i class="ri ri-add-line"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endif
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-lg-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div class="card-header-box">
-                                        <h4>Tax Summary</h4>
-                                    </div>
-                                    <div class="row g-4">
-                                        <div class="col-12">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <label for="total_qty" class="fw-medium">Total Qty:</label>
-                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="total_qty" name="total_qty" value="{{ old('total_qty', $purchaseOrder->total_qty ?? '') }}" readonly>
-                                            </div>
-
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <label for="sub_total" class="fw-medium">Sub Total:</label>
-                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="sub_total" name="sub_total" value="{{ old('sub_total', $purchaseOrder->sub_total ?? '') }}" readonly>
-                                            </div>
-
-                                            <div class="mb-2">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <label class="fw-medium">Discount:</label>
-                                                    <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent" step="0.01" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
-                                                        <span class="input-group-text px-1">%</span>
-                                                    </div>
-                                                </div>
-                                                <div class="text-end mt-1">
-                                                    <input type="text" class="form-control-plaintext form-control-sm text-end py-0" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $purchaseOrder->discount_amount ?? '') }}" readonly>
-                                                </div>
-                                            </div>
-
-                                            <div class="mb-2 d-none" id="commission_row">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <label class="fw-medium">Commission Amount:</label>
-                                                    <div class="text-end">
-                                                        <span id="commission_amount_display" class="fw-bold">0.00</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="d-flex justify-content-between align-items-center border-top pt-2">
-                                                <label for="taxable_amount" class="fw-medium">Net Amount (Before Tax):</label>
-                                                <input type="text" id="taxable_amount" name="taxable_amount" class="form-control-plaintext text-end w-50 fw-bold" value="{{ old('taxable_amount', $purchaseOrder->taxable_amount ?? '') }}" readonly>
-                                            </div>
-
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <label class="fw-medium">Other State:</label>
-                                                <div>
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
-                                                        <label class="form-check-label" for="other_state_yes">Yes</label>
-                                                    </div>
-                                                    <div class="form-check form-check-inline">
-                                                        <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
-                                                        <label class="form-check-label" for="other_state_no">No</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') }}">
-                                            <div class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <label for="igst_percent" class="fw-medium">IGST :</label>
-                                                    <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
-                                                        <span class="input-group-text px-1">%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <label for="cgst_percent" class="fw-medium">CGST :</label>
-                                                    <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
-                                                        <span class="input-group-text px-1">%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <label for="sgst_percent" class="fw-medium">SGST :</label>
-                                                    <div class="input-group input-group-sm" style="width:120px;">
-                                                        <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
-                                                        <span class="input-group-text px-1">%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <label for="tax_amount" class="fw-medium">Tax Amount:</label>
-                                                <input type="text" class="form-control-plaintext text-end w-50" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $purchaseOrder->tax_amount ?? '') }}" readonly>
-                                            </div>
-
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <label class="fw-medium">Round Off:</label>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="form-check form-check-inline me-2">
-                                                        <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="round_off_add">Add</label>
-                                                    </div>
-                                                    <div class="form-check form-check-inline me-2">
-                                                        <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="round_off_less">Less</label>
-                                                    </div>
-                                                    <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}" autocomplete="off">
-                                                </div>
-                                            </div>
-
-                                            <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
-                                                <label for="total_amount" class="fw-bold fs-5">Total Amount:</label>
-                                                <input type="text" class="form-control-plaintext text-end w-50 fw-bold fs-5 text-primary" id="total_amount" name="total_amount" value="{{ old('total_amount', $purchaseOrder->total_amount ?? '') }}" readonly>
-                                            </div>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="card-header-box">
+                                    <h4>Additional Information</h4>
+                                </div>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        @php
+$currentStatus = old('status', $purchaseOrder->status ?? 'Draft');
+$disabledStatuses = match ($currentStatus) {
+'Approved' => ['Draft'],
+'Dispatched' => ['Draft', 'Approved'],
+'Received' => ['Draft', 'Approved', 'Dispatched'],
+default => [],
+};
+                                        @endphp
+                                        <div class="form-floating form-floating-outline">
+                                            <select id="status" name="status"
+                                                class="select2 form-select @error('status') is-invalid @enderror"
+                                                data-placeholder="Select Status">
+                                                <option value="">Select Status</option>
+                                                @foreach(['Draft', 'Approved', 'Dispatched', 'Received'] as $status)
+                                                    <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ in_array($status, $disabledStatuses) ? 'disabled' : '' }}>
+                                                        {{ $status }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <label for="status">Status <span class="text-danger">*</span></label>
                                         </div>
+                                        @error('status')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
-                                    <div class="col-lg-12 text-end mt-4">
-                                        <button type="submit" class="btn btn-primary">Submit</button>
-                                        <a href="{{ url('purchase_orders') }}" class="btn btn-secondary">Cancel</a>
+
+                                    {{-- <div class="col-12">
+                                        <div class="form-check form-check-inline mt-2">
+                                            <input class="form-check-input" type="checkbox" name="is_self_closed"
+                                                id="is_self_closed" value="1" {{ old('is_self_closed',
+                                                $purchaseOrder->is_self_closed ?? false) ? 'checked' : '' }}>
+                                            <label class="form-check-label fw-bold text-danger"
+                                                for="is_self_closed">Self Closing PO (Check this to hide from Purchase
+                                                Invoice)</label>
+                                        </div>
+                                    </div> --}}
+
+                                    <div class="col-12">
+                                        <div class="form-floating form-floating-outline">
+                                            <textarea
+                                                class="form-control h-px-100 @error('payment_terms') is-invalid @enderror"
+                                                id="payment_terms" name="payment_terms"
+                                                placeholder="Enter Payment Terms">{{ old('payment_terms', $purchaseOrder->payment_terms ?? '') }}</textarea>
+                                            <label for="payment_terms">Payment Terms</label>
+                                        </div>
+                                        @error('payment_terms')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+
+                                    <div class="col-12">
+                                        <div class="form-floating form-floating-outline text-black">
+                                            <input type="file"
+                                                class="form-control @error('additional_attachments.*') is-invalid @enderror"
+                                                id="additional_attachments" name="additional_attachments[]" multiple
+                                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
+                                            <label for="additional_attachments">Additional Attachments (Max 5)</label>
+                                            @error('additional_attachments')
+                                                <div class="text-danger mt-1 small">{{ $message }}</div>
+                                            @enderror
+                                            @error('additional_attachments.*')
+                                                <div class="text-danger mt-1 small">{{ $message }}</div>
+                                            @enderror
+                                            <div id="attachment-list" class="mt-3 d-flex flex-wrap gap-3">
+                                                @if($purchaseOrder && $purchaseOrder->additional_attachments)
+                                                    @php
+$attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
+                                                    @endphp
+                                                    @foreach($attachments as $attachment)
+                                                        @php
+    $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
+    $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp']);
+    $fileUrl = url('uploads/purchase_orders/' . $attachment);
+                                                        @endphp
+                                                        <div class="attachment-item position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                                            @if($isImage)
+                                                                <img src="{{ $fileUrl }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $fileUrl }}" alt="Attachment">
+                                                            @else
+                                                                <a href="{{ $fileUrl }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                                                    <i class="ri ri-file-text-line fs-2"></i>
+                                                                    <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                </a>
+                                                            @endif
+                                                            <button type="button"
+                                                                class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 rounded-circle p-0 d-flex align-items-center justify-content-center remove-existing-attachment"
+                                                                style="width: 20px; height: 20px; border: 2px solid white; line-height: 1;">
+                                                                <i class="ri ri-close-line fs-6"></i>
+                                                            </button>
+                                                            <input type="hidden" name="existing_additional_attachments[]" value="{{ $attachment }}">
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                            </div>
+                                            <small class="text-muted d-block mt-2">Max file size: 2MB per file.
+                                                Supported: JPG, PNG, WEBP, PDF, DOC, DOCX</small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </form>
-            </div>
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="card-header-box">
+                                    <h4>Tax Summary</h4>
+                                </div>
+                                <div class="row g-4">
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="total_qty" class="fw-medium">Total Qty:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="total_qty" name="total_qty" value="{{ old('total_qty', $purchaseOrder->total_qty ?? '') }}" readonly>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="sub_total" class="fw-medium">Sub Total:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="sub_total" name="sub_total" value="{{ old('sub_total', $purchaseOrder->sub_total ?? '') }}" readonly>
+                                        </div>
+
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="fw-medium">Discount:</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('discount_percent') is-invalid @enderror" id="discount_percent" name="discount_percent" step="0.01" value="{{ old('discount_percent', $purchaseOrder->discount_percent ?? 0) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-1">
+                                                <input type="text" class="form-control-plaintext form-control-sm text-end py-0" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $purchaseOrder->discount_amount ?? '') }}" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-2 d-none" id="commission_row">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="fw-medium">Commission Amount:</label>
+                                                <div class="text-end">
+                                                    <span id="commission_amount_display" class="fw-bold">0.00</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                                            <label for="taxable_amount" class="fw-medium">Net Amount (Before Tax):</label>
+                                            <input type="text" id="taxable_amount" name="taxable_amount" class="form-control-plaintext text-end w-50 fw-bold" value="{{ old('taxable_amount', $purchaseOrder->taxable_amount ?? '') }}" readonly>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Other State:</label>
+                                            <div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_yes" value="yes" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? 'checked' : '' }} onclick="return false;">
+                                                    <label class="form-check-label" for="other_state_yes">Yes</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input @error('other_state') is-invalid @enderror" type="radio" name="other_state" id="other_state_no" value="no" {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? 'checked' : '' }} onclick="return false;">
+                                                    <label class="form-check-label" for="other_state_no">No</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') }}">
+                                        <div class="igst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'yes' ? '' : 'd-none' }}">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label for="igst_percent" class="fw-medium">IGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('igst_percent') is-invalid @enderror" id="igst_percent" name="igst_percent" step="0.01" value="{{ old('igst_percent', $purchaseOrder->igst_percent ?? (!empty($web_settings->igst) ? $web_settings->igst : '')) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="cgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }}">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label for="cgst_percent" class="fw-medium">CGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('cgst_percent') is-invalid @enderror" id="cgst_percent" name="cgst_percent" step="0.01" value="{{ old('cgst_percent', $purchaseOrder->cgst_percent ?? (!empty($web_settings->cgst) ? $web_settings->cgst : '')) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="sgst-field {{ old('other_state', $purchaseOrder && $purchaseOrder->other_state ? 'yes' : 'no') == 'no' ? '' : 'd-none' }} mt-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label for="sgst_percent" class="fw-medium">SGST :</label>
+                                                <div class="input-group input-group-sm" style="width:120px;">
+                                                    <input type="number" class="form-control form-control-sm text-end @error('sgst_percent') is-invalid @enderror" id="sgst_percent" name="sgst_percent" step="0.01" value="{{ old('sgst_percent', $purchaseOrder->sgst_percent ?? (!empty($web_settings->sgst) ? $web_settings->sgst : '')) }}">
+                                                    <span class="input-group-text px-1">%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label for="tax_amount" class="fw-medium">Tax Amount:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $purchaseOrder->tax_amount ?? '') }}" readonly>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Round Off:</label>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-check-inline me-2">
+                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="round_off_add">Add</label>
+                                                </div>
+                                                <div class="form-check form-check-inline me-2">
+                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $purchaseOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="round_off_less">Less</label>
+                                                </div>
+                                                <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $purchaseOrder->round_off ?? '') }}" autocomplete="off">
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                                            <label for="total_amount" class="fw-bold fs-5">Total Amount:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50 fw-bold fs-5 text-primary" id="total_amount" name="total_amount" value="{{ old('total_amount', $purchaseOrder->total_amount ?? '') }}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-12 text-end mt-4">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                    <a href="{{ url('purchase_orders') }}" class="btn btn-secondary">Cancel</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 @endsection
 
 @section('scripts')

@@ -11,6 +11,7 @@
       <div class="col-lg-12"> 
         <div class="table-header-box">
             <h4 class="mb-0 text-primary fw-bold">Task Management</h4>
+              @if(auth()->id() == 1 || auth()->user()->can('create task-management'))
               <form class="kanban-add-new-board m-0 p-0" style="float: right !important;">
               <label class="kanban-add-board-btn mb-0" style="cursor: pointer;" for="kanban-add-board-input">
                 {{-- <a class="btn btn-primary" href="{{ url('task_management/add') }}">
@@ -23,6 +24,7 @@
                 <button type="button" class="btn btn-outline-secondary btn-sm kanban-add-board-cancel-btn">Cancel</button>
               </div>
             </form>
+            @endif
         </div>
       </div>
     </div>
@@ -72,6 +74,9 @@
   window.kanbanAddUrl = "{{ url('task_management/add') }}";
   window.kanbanListViewUrl = "{{ url('task_management') }}";
   window.kanbanViewUrl = "{{ route('task_management.fetch') }}";
+  window.canEditTask = @json(auth()->id() == 1 || auth()->user()->can('edit task-management'));
+  window.canViewTask = @json(auth()->id() == 1 || auth()->user()->can('view_details task-management'));
+  window.canCreateTask = @json(auth()->id() == 1 || auth()->user()->can('create task-management'));
 </script>
 <script src="{{ url('assets/js/app-kanban.js') }}?v={{ time() }}"></script>
 <script>

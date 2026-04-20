@@ -82,7 +82,7 @@ class SalesOrderController extends Controller
                 <div class="status_msg_' . $so->id . ' mt-1"></div>';
 
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view sales-order')) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details sales-order')) {
                     $action .= '<a href="' . url('sales_orders/view/' . $so->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
                 if ($so->status == 'Draft') {
@@ -452,7 +452,7 @@ class SalesOrderController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view sales-order')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details sales-order')) {
             return unauthorizedRedirect();
         }
         $salesOrder = SalesOrder::with(['customer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom'])->findOrFail($id);

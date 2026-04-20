@@ -76,23 +76,23 @@ class PermissionSeeder extends Seeder
 
             /* Store */
             'grn-entry' => ['create', 'edit', 'view','view_details'],
-            'stock-entry' => ['create', 'edit', 'view', 'stock_adjustment','stock_adjustment_logs'],
+            'stock-entry' => ['create', 'view', 'view_details', 'stock_adjustment','stock_adjustment_logs'],
             'debit-notes' => ['create', 'edit', 'view','view_details'],
             'stock-consumable-return' => ['view', 'view_details'],
 
             /* Production */
             'job-card' => ['create', 'edit', 'view', 'view_details', 'fabric-consumption-pdf', 'work-order-pdf', 'issue-item'],
             'task-management' => ['edit', 'view', 'view_details'],
-            'production-receipts' => ['create', 'edit', 'view'],
+            'production-receipts' => ['create', 'edit', 'view', 'view_details'],
 
             /* Sales */
-            'sales-order' => ['create', 'edit', 'delete', 'view'],
-            'sales-invoice' => ['create', 'edit', 'delete', 'view'],
-            'credit-notes' => ['create', 'edit', 'delete', 'view'],
+            'sales-order' => ['create', 'edit', 'delete', 'view', 'view_details'],
+            'sales-invoice' => ['create', 'edit', 'delete', 'view', 'view_details'],
+            'credit-notes' => ['create', 'edit', 'delete', 'view', 'view_details'],
 
             /* Accounts */
-            'billing' => ['create', 'edit', 'view'],
-            'manage-payments' => ['create', 'edit', 'delete', 'view'],
+            'billing' => ['create', 'edit', 'delete', 'view','view_details'],
+            'manage-payments' => ['create', 'edit', 'delete', 'view', 'view_details'],
 
             /* Payroll */
             'attendance' => ['create', 'edit', 'delete', 'view'],
@@ -103,7 +103,7 @@ class PermissionSeeder extends Seeder
             'payroll-reports' => ['create', 'edit', 'delete', 'view'],
 
             /* System  Utilities */
-            'document-repository' => ['create', 'edit', 'delete', 'view'],
+            'document-repository' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'log' => ['view'],
             'backup-restore' => ['view'],
 

@@ -14,6 +14,9 @@ class SalesMarketingReportController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view sales-marketing-report')) {
+            return unauthorizedRedirect();
+        }
         $query = SalesOrder::with(['customer', 'items.item'])->whereNull('deleted_at');
 
         if ($request->from_date) {

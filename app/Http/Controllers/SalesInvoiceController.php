@@ -107,6 +107,16 @@ class SalesInvoiceController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit sales-invoice')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create sales-invoice')) {
+                return unauthorizedRedirect();
+            }
+        }
+
         if ($request->isMethod('post')) {
             $request->validate([
                 'inv_no' => 'required|min:3|max:50|unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
@@ -256,6 +266,9 @@ class SalesInvoiceController extends Controller
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details sales-invoice')) {
+            return unauthorizedRedirect();
+        }
         $invoice = SalesInvoice::with(['customer', 'salesOrder', 'items.brandCategory', 'items.item', 'items.uom'])->findOrFail($id);
         return view('sales_invoice.view_details', compact('invoice'));
     }

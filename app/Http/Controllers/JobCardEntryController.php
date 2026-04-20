@@ -96,7 +96,7 @@ class JobCardEntryController extends Controller
                 $action .= '<button class="btn dropdown-toggle hide-arrow" data-bs-toggle="dropdown"><i class="icon-base ri ri-more-2-fill"></i></button>';
                 $action .= '<div class="dropdown-menu dropdown-menu-end m-0">';
 
-                if (auth()->id() == 1 || auth()->user()->can('view job-card')) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details job-card')) {
                     $action .= '<a href="' . url('job_card_entries/view/' . $jc->id) . '" class="dropdown-item"><i class="icon-base ri ri-eye-line me-2"></i>View</a>';
                 }
                 if (auth()->id() == 1 || auth()->user()->can('issue-item job-card')) {
@@ -678,7 +678,7 @@ class JobCardEntryController extends Controller
 
     public function view_details($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view job-card')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details job-card')) {
             return unauthorizedRedirect();
         }
         $jobCard = JobCardEntry::with(['purchaseOrder.items.rawMaterial', 'brand', 'sizeRatio', 'season', 'processGroup', 'cuttingSizeRatios', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'images', 'sleeveMeters', 'fit', 'pattiType', 'collarType', 'cuffType', 'pocketType', 'bottomCut', 'fabricType', 'issueItems.stockEntryItem', 'issueItems.rawMaterial'])->findOrFail($id);

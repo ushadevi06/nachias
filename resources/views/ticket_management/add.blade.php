@@ -4,6 +4,9 @@
     <div class="container-xxl section-padding">
         <div class="row justify-content-center">
             <div class="col-lg-12">
+                <div class="col-lg-12">
+                    @include('flash_messages')
+                </div>
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
                         <div class="card-header-box mb-4">

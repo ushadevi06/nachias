@@ -94,7 +94,7 @@ class PurchaseInvoiceController extends Controller
                 <div class="status_msg_' . $invoice->id . ' mt-1"></div>';
 
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view purchase-invoice')) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details purchase-invoice')) {
                     $action .= '<a href="' . url('purchase_invoices/view/' . $invoice->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
                 if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid' && $invoice->grn_entries_count == 0) {
@@ -506,7 +506,7 @@ class PurchaseInvoiceController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view purchase-invoice')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details purchase-invoice')) {
             return unauthorizedRedirect();
         }
         $invoice = PurchaseInvoice::with([

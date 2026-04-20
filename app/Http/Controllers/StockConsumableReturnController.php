@@ -10,6 +10,9 @@ class StockConsumableReturnController extends Controller
 {
     public function index(Request $request)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-consumable-return')) {
+            return unauthorizedRedirect();
+        }
         if ($request->ajax()) {
             $query = ProductionStageConsumable::with(['jobCard', 'rawMaterial', 'uom'])->where('status', 'Active')->where('item_type', 'Consumable');
 
@@ -59,7 +62,7 @@ class StockConsumableReturnController extends Controller
                     'hs_qty' => number_format($row->hs_qty, 2),
                     'total_issue_qty' => number_format($row->actual_qty, 2),
                     'issued_date' => $row->created_at->format('d-m-Y'),
-                    'action' => '<a href="' . url('stock_consumables_returns/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>',
+                    'action' => (auth()->id() == 1 || auth()->user()->can('view_details stock-consumable-return')) ? '<a href="' . url('stock_consumables_returns/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>' : '',
                 ];
             }
 
@@ -77,6 +80,9 @@ class StockConsumableReturnController extends Controller
         return view('stock_consumable_returns/add');
     }
     public function view($id){
+        if (auth()->id() != 1 && !auth()->user()->can('view_details stock-consumable-return')) {
+            return unauthorizedRedirect();
+        }
         $consumable = ProductionStageConsumable::with(['jobCard', 'rawMaterial', 'uom'])->findOrFail($id);
         return view('stock_consumable_returns/view_details', compact('consumable'));
     }

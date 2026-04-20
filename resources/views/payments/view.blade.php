@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Payments</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create payments'))
+                @if(auth()->id() == 1 || auth()->user()->can('create manage-payments'))
                 <a class="btn btn-primary" href="{{ url('payments/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>

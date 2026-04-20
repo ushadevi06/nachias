@@ -4,6 +4,9 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <form action="{{ url('billing/add/' . ($billing->id ?? '')) }}" method="POST" class="common-form">
                 @csrf
                 <div class="card mb-6">

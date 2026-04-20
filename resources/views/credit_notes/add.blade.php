@@ -4,6 +4,9 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <form action="{{ url('credit_notes/add' . (isset($creditNote) ? '/' . $creditNote->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
                 <!-- Credit Note Details -->
@@ -110,7 +113,7 @@
                                             foreach (old('items') as $oldItem) {
                                                 $itemModel = \App\Models\Item::find($oldItem['item_id']);
                                                 $uomModel = \App\Models\Uom::find($oldItem['uom_id'] ?? null);
-                                                $displayItems[] = (object)[
+                                                $displayItems[] = (object) [
                                                     'selected' => isset($oldItem['selected']),
                                                     'sales_invoice_item_id' => $oldItem['sales_invoice_item_id'],
                                                     'item_id' => $oldItem['item_id'],
@@ -130,7 +133,7 @@
                                             }
                                         } elseif (isset($creditNote)) {
                                             foreach ($creditNote->items as $noteItem) {
-                                                $displayItems[] = (object)[
+                                                $displayItems[] = (object) [
                                                     'selected' => true,
                                                     'sales_invoice_item_id' => $noteItem->sales_invoice_item_id,
                                                     'item_id' => $noteItem->item_id,
@@ -495,7 +498,7 @@ $(document).ready(function() {
 
         let cgst = 0, sgst = 0, igst = 0;
         let taxAmt = 0;
-        
+
         if ($('#state_yes').is(':checked')) {
             let igstPercent = parseFloat($('#igst_percent').val()) || 0;
             igst = subTotal * (igstPercent / 100);
@@ -516,7 +519,7 @@ $(document).ready(function() {
 
         let roundOff = parseFloat($('#round_off').val()) || 0;
         let roundOffType = $('input[name="round_off_type"]:checked').val();
-        
+
         let grandTotal = subTotal + taxAmt;
         if (roundOffType === 'Less') {
             grandTotal -= roundOff;

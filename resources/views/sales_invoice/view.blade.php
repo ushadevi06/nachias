@@ -6,9 +6,11 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Sales Invoices</h4>
+                @if(auth()->id() == 1 || auth()->user()->can('create sales-invoice'))
                 <a class="btn btn-primary" href="{{ url('sales_invoices/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
+                @endif
             </div>
             <div class="col-lg-12">
                 @include('flash_messages')

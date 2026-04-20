@@ -4,11 +4,11 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            @include('flash_messages')
+        </div>
+        <div class="col-lg-12">
             <form action="{{ url('production_receipts/add' . ($receipt ? '/' . $receipt->id : '')) }}" method="POST" class="common-form">
                 @csrf
-                <div class="col-lg-12">
-                @include('flash_messages')
-            </div>
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">

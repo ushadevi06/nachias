@@ -22,7 +22,7 @@ class ProductionReceiptController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view production')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view production-receipts')) {
             return unauthorizedRedirect();
         }
 
@@ -62,8 +62,10 @@ class ProductionReceiptController extends Controller
 
             foreach ($receipts as $row) {
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view production')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit production-receipts')) {
                     $action .= '<a href="' . url('production_receipts/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                }
+                if (auth()->id() == 1 || auth()->user()->can('view_details production-receipts')) {
                     $action .= '<a href="' . url('production_receipts/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
                 /* if (auth()->id() == 1 || auth()->user()->can('delete production')) {
@@ -101,12 +103,12 @@ class ProductionReceiptController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('view production')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit production-receipts')) {
                 return unauthorizedRedirect();
             }
         }
         else {
-            if (auth()->id() != 1 && !auth()->user()->can('view production')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create production-receipts')) {
                 return unauthorizedRedirect();
             }
         }
@@ -586,7 +588,7 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        $calculateItemUnitPrice = function ($artNo, $size, $sleeve) use ($allMaterials, $articlePrices, $getStoreCategoryIdForArtNo) {
+        $calculateItemUnitPrice = function ($artNo, $size, $sleeve) use ($allMaterials, $articlePrices, $getStoreCategoryIdForArtNo, $jobCard) {
             $totalCost = 0;
             $consumptionDetails = [];
             $normalizedArtNo = trim($artNo ?? '');
@@ -858,7 +860,7 @@ class ProductionReceiptController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view production')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details production-receipts')) {
             return unauthorizedRedirect();
         }
 
@@ -882,7 +884,7 @@ class ProductionReceiptController extends Controller
 
     public function print($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view production')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view production-receipts')) {
             return unauthorizedRedirect();
         }
 
@@ -907,7 +909,7 @@ class ProductionReceiptController extends Controller
 
     public function downloadPdf($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view production')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view production-receipts')) {
             return unauthorizedRedirect();
         }
 

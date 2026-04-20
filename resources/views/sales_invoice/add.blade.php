@@ -4,6 +4,9 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <form action="{{ isset($invoice) ? url('sales_invoices/add/'.$invoice->id) : url('sales_invoices/add') }}" method="POST" class="common-form" enctype="multipart/form-data">
                 @csrf
                 <div class="card mb-4">

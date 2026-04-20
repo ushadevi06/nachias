@@ -3,12 +3,9 @@
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
-        @if(session('danger'))
-        <div class="alert alert-danger alert-dismissible fade show">
-            {{ session('danger') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="col-lg-12">
+            @include('flash_messages')
         </div>
-        @endif
         <div class="col-lg-12">
             <form action="{{ url('payments/add') }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
                 @csrf

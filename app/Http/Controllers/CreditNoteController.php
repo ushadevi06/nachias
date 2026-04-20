@@ -38,11 +38,17 @@ class CreditNoteController extends Controller
                 $status .= '</select>';
                 $status .= '<div class="status_msg_' . $note->id . '"></div>';
 
-                $action = '<div class="button-box">
-                    <a href="' . url('credit_notes/view/' . $note->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                    <a href="' . url('credit_notes/add/' . $note->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                    <a href="javascript:;" class="btn btn-delete delete-btn" onclick="delete_data(\'' . url('credit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>
-                </div>';
+                $action = '<div class="button-box">';
+                if(auth()->id() == 1 || auth()->user()->can('view_details credit-notes')) {
+                    $action .= '<a href="' . url('credit_notes/view/' . $note->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
+                }
+                if(auth()->id() == 1 || auth()->user()->can('edit credit-notes')) {
+                    $action .= '<a href="' . url('credit_notes/add/' . $note->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                }
+                if(auth()->id() == 1 || auth()->user()->can('delete credit-notes')) {
+                    $action .= '<a href="javascript:;" class="btn btn-delete delete-btn" onclick="delete_data(\'' . url('credit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                }
+                $action .= '</div>';
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -65,6 +71,16 @@ class CreditNoteController extends Controller
 
     public function add(Request $request, $id = null)
     {
+        if ($id) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit credit-notes')) {
+                return unauthorizedRedirect();
+            }
+        } else {
+            if (auth()->id() != 1 && !auth()->user()->can('create credit-notes')) {
+                return unauthorizedRedirect();
+            }
+        }
+
         $creditNote = $id ?CreditNote::with('items.item', 'items.uom', 'items.brandCategory')->findOrFail($id) : null;
 
         $nextNoteNo = '';
@@ -254,12 +270,18 @@ class CreditNoteController extends Controller
 
     public function view($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details credit-notes')) {
+            return unauthorizedRedirect();
+        }
         $creditNote = CreditNote::with(['customer', 'salesInvoice', 'items.item', 'items.uom'])->findOrFail($id);
         return view('credit_notes.view_details', compact('creditNote'));
     }
 
     public function destroy($id)
     {
+        if (auth()->id() != 1 && !auth()->user()->can('delete credit-notes')) {
+            return unauthorizedRedirect();
+        }
         $note = CreditNote::findOrFail($id);
         $oldData = $note->toArray();
         $note->delete();

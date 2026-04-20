@@ -614,5 +614,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
         }
     );
 
+    Route::get('/run-permission-seeder', function () {
+        Artisan::call('db:seed', ['--class' => 'PermissionSeeder']);
+        return "Permission Seeder run successfully!";
+    });
+
 });
 
