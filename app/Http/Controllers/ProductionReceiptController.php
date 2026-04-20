@@ -595,8 +595,6 @@ class ProductionReceiptController extends Controller
 
             foreach ($allMaterials as $fd) {
                 $fdCategoryId = $getStoreCategoryIdForArtNo($fd->art_no);
-                // If it is a primary material (Fabric, Cat 1), it must match the current item's Art No.
-                // If it is an accessory or other category, include it in the cost for all items in the job card.
                 if ($fdCategoryId === 1 && $normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
                     continue;
                 }
