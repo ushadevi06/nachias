@@ -9,7 +9,7 @@ class TransportModeController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view transport-modes')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view transport-mode')) {
             return unauthorizedRedirect();
         }
 
@@ -33,11 +33,11 @@ class TransportModeController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit transport-modes')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit transport-mode')) {
                     $action .= '<a href="' . url('transport_modes/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete transport-modes')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete transport-mode')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('transport_modes/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
@@ -60,11 +60,11 @@ class TransportModeController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit transport-modes')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit transport-mode')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create transport-modes')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create transport-mode')) {
                 return unauthorizedRedirect();
             }
         }
@@ -106,7 +106,7 @@ class TransportModeController extends Controller
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete transport-modes')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete transport-mode')) {
             return unauthorizedRedirect();
         }
         $transportMode = TransportMode::findOrFail($id);

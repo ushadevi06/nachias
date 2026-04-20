@@ -4,13 +4,13 @@
     <div class="container-xxl section-padding">
         <div class="row">
             <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
+            <div class="col-lg-12">
                 <div class="card">
                     <div class="card-body">
                         <div class="card-header-box">
                             <h4>{{ $customer ? 'Edit' : 'Add' }} Customer</h4>
-                        </div>
-                        <div class="col-lg-12">
-                            @include('flash_messages')
                         </div>
                         <form action="{{ url('customers/add' . ($customer ? '/' . $customer->id : '')) }}" method="POST"
                             class="common-form" autocomplete="off">

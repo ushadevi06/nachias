@@ -10,7 +10,7 @@ class PocketTypeController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view pocket -types')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view pocket-types')) {
             return unauthorizedRedirect();
         }
 

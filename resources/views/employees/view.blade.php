@@ -7,7 +7,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4 class="mb-0">Employees</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create employee'))
+                @if(auth()->id() == 1 || auth()->user()->can('create employees'))
                 <a class="btn btn-primary" href="{{ url('employees/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>

@@ -23,7 +23,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view employee')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view employees')) {
             return unauthorizedRedirect();
         }
 
@@ -47,15 +47,15 @@ class EmployeeController extends Controller
 
                 $actionBtn = '<div class="button-box">';
 
-                if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('view employee'))) {
+                if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('view_details employees'))) {
                     $actionBtn .= '<a href="' . url('employees/view/' . $emp->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
 
-                if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('edit employee'))) {
+                if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('edit employees'))) {
                     $actionBtn .= '<a href="' . url('employees/add/' . $emp->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
-                if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('delete employee'))) {
+                if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('delete employees'))) {
                     $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('employees/delete/' . $emp->id) . '\')" data-id="' . $emp->id . '"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
@@ -101,11 +101,11 @@ class EmployeeController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit employee')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit employees')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create employee')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create employees')) {
                 return unauthorizedRedirect();
             }
         }
@@ -346,7 +346,7 @@ class EmployeeController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view employee')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details employees')) {
             return unauthorizedRedirect();
         }
 
@@ -357,7 +357,7 @@ class EmployeeController extends Controller
     
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete employee')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete employees')) {
             return unauthorizedRedirect();
         }
 

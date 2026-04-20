@@ -4,6 +4,9 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card">
                 <div class="card-body">
                     <div class="card-header-box">
@@ -83,7 +86,7 @@
                                     <select id="state_id" name="state_id" class="select2 form-select @error('state_id') is-invalid @enderror" data-placeholder="Select State">
                                         <option value="">Select State</option>
                                         @foreach($states as $s)
-                                        <option value="{{ $s->id }}" {{ (string)old('state_id', optional($agent)->state_id ?? '') === (string)$s->id ? 'selected' : '' }}>{{ $s->state_name }}</option>
+                                        <option value="{{ $s->id }}" {{ (string) old('state_id', optional($agent)->state_id ?? '') === (string) $s->id ? 'selected' : '' }}>{{ $s->state_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="state_id">State <span class="text-danger">*</span></label>
@@ -98,7 +101,7 @@
                                     <select id="city_id" name="city_id" class="select2 form-select @error('city_id') is-invalid @enderror" data-placeholder="Select City">
                                         <option value="">Select City</option>
                                         @foreach($cities as $c)
-                                        <option value="{{ $c->id }}" {{ (string)old('city_id', optional($agent)->city_id ?? '') === (string)$c->id ? 'selected' : '' }}>{{ $c->city_name }}</option>
+                                        <option value="{{ $c->id }}" {{ (string) old('city_id', optional($agent)->city_id ?? '') === (string) $c->id ? 'selected' : '' }}>{{ $c->city_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="city_id">City <span class="text-danger">*</span></label>
@@ -113,7 +116,7 @@
                                     <select id="place_id" name="place_id" class="select2 form-select @error('place_id') is-invalid @enderror" data-placeholder="Select Place">
                                         <option value="">Select Place</option>
                                         @foreach($servicePoints as $sp)
-                                        <option value="{{ $sp->id }}" {{ (string)old('place_id', optional($agent)->place_id ?? '') === (string)$sp->id ? 'selected' : '' }}>{{ $sp->place_name }}</option>
+                                        <option value="{{ $sp->id }}" {{ (string) old('place_id', optional($agent)->place_id ?? '') === (string) $sp->id ? 'selected' : '' }}>{{ $sp->place_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="place_id">Place <span class="text-danger">*</span></label>

@@ -39,7 +39,14 @@ if (!function_exists('addLog')) {
 if (!function_exists('unauthorizedRedirect')) {
     function unauthorizedRedirect($message = 'Unauthorized action.')
     {
-        return redirect(url(''))->with('danger', $message);
+        $previous = url()->previous();
+        $baseUrl = url('/');
+        
+        if ($previous && $previous !== url()->current() && $previous !== $baseUrl . '/login') {
+            return redirect()->back()->with('danger', $message);
+        }
+        
+        return redirect($baseUrl)->with('danger', $message);
     }
 }
 

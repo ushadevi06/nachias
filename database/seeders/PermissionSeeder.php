@@ -18,7 +18,7 @@ class PermissionSeeder extends Seeder
 
             /* Employee Module */
             'roles' => ['create', 'edit', 'delete', 'view'],
-            'employees' => ['create', 'edit', 'delete', 'view'],
+            'employees' => ['create', 'edit', 'delete', 'view','view_details'],
             
             /* Master */
             'states' => ['create', 'edit', 'delete', 'view'],

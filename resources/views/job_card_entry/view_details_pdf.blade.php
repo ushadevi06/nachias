@@ -512,7 +512,7 @@ if ($issueDate && $deliveryDate) {
             @foreach($fabricDetails as $detail)
                 @php 
                     $rowTotal = $detail->quantities->sum('total_qty');
-    $grandTotal += $rowTotal;
+                    $grandTotal += $rowTotal;
                 @endphp
                 <tr class="text-center">
                     <td class="fw-bold">{{ $detail->art_no }}</td>
@@ -532,12 +532,12 @@ if ($issueDate && $deliveryDate) {
                 @foreach($allSizes as $s)
                     <td>
                         @php
-    $sumFs = 0;
-    foreach ($fabricDetails as $detail) {
-        if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-            $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
-        }
-    }
+                            $sumFs = 0;
+                            foreach ($fabricDetails as $detail) {
+                                if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+                                    $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
+                                }
+                            }
                         @endphp
                         {{ $sumFs ?: '-' }}
                     </td>
@@ -545,12 +545,12 @@ if ($issueDate && $deliveryDate) {
                 @foreach($allSizes as $s)
                     <td>
                         @php
-    $sumHs = 0;
-    foreach ($fabricDetails as $detail) {
-        if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-            $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
-        }
-    }
+                            $sumHs = 0;
+                            foreach ($fabricDetails as $detail) {
+                                if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+                                    $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
+                                }
+                            }
                         @endphp
                         {{ $sumHs ?: '-' }}
                     </td>

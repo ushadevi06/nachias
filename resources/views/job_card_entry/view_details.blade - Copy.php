@@ -254,7 +254,10 @@
                                                 <div class="col-4 fw-bold text-center p-3" style="font-size: 0.7rem;">MARK</div>
                                             </div>
                                         </td>
-                                        @php $currentRow = 1; @endphp
+                                        @php 
+                                            $totalRatioRows = max(4, (count($fsRows) ?: 1) + (count($hsRows) ?: 1)) + 1;
+                                            $currentRow = 1; 
+                                        @endphp
                                         <td class="text-center">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                     </tr>
 
@@ -370,22 +373,23 @@
                                                         </tr>
                                                     </table>
                                                 </td>
-                                                <td class="py-1" colspan="2">
-                                                    @php $lm = $allLayMarks[$index] ?? null; @endphp
-                                                    @if($lm)
-                                                        <div class="row g-0">
-                                                            <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
+                                                @if($index === 0)
+                                                <td class="p-0 border-bottom text-center" rowspan="{{ $totalRatioRows }}">
+                                                    @foreach($allLayMarks as $lm)
+                                                        <div class="row g-0 border-bottom">
+                                                            <div class="col-5 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
                                                                 {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
                                                             </div>
-                                                            <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
+                                                            <div class="col-3 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
                                                                 {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
                                                             </div>
-                                                            <div class="col-4 text-center" style="font-size: 0.75rem;">
+                                                            <div class="col-4 text-center" style="font-size: 0.75rem; padding: 4px;">
                                                                 {{ $lm->lay_mark_meter }}
                                                             </div>
                                                         </div>
-                                                    @endif
+                                                    @endforeach
                                                 </td>
+                                                @endif
                                                 @php $currentRow++; @endphp
                                                 <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                             </tr>
@@ -407,21 +411,20 @@
                                                     </tr>
                                                 </table>
                                             </td>
-                                            <td class="py-1" colspan="2">
-                                                @php $lm = $allLayMarks[0] ?? null; @endphp
-                                                @if($lm)
-                                                    <div class="row g-0">
-                                                        <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
+                                            <td class="p-0 border-bottom text-center" rowspan="{{ $totalRatioRows }}">
+                                                @foreach($allLayMarks as $lm)
+                                                    <div class="row g-0 border-bottom">
+                                                        <div class="col-5 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
                                                             {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
                                                         </div>
-                                                        <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
+                                                        <div class="col-3 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
                                                             {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
                                                         </div>
-                                                        <div class="col-4 text-center" style="font-size: 0.75rem;">
+                                                        <div class="col-4 text-center" style="font-size: 0.75rem; padding: 4px;">
                                                             {{ $lm->lay_mark_meter }}
                                                         </div>
                                                     </div>
-                                                @endif
+                                                @endforeach
                                             </td>
                                             @php $currentRow++; @endphp
                                             <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
@@ -432,10 +435,10 @@
                                     @if(count($hsRows) > 0)
                                         @foreach($hsRows as $index => $row)
                                             <tr>
-                                                @if($index === 0)
+                                                @if($index === 0 && count($fsRows) === 0)
                                                     <td class="fw-bold py-1"></td>
                                                     <td class="py-1"></td>
-                                                @else
+                                                @elseif(count($fsRows) > 0)
                                                     <td colspan="2" style="border: none;"></td>
                                                 @endif
                                                 <td class="fw-bold py-1 text-center">QTY - H/S</td>
@@ -453,31 +456,19 @@
                                                         </tr>
                                                     </table>
                                                 </td>
-                                                <td class="py-1" colspan="2">
-                                                    @php $lmIndex = count($fsRows) + $index; @endphp
-                                                    @php $lm = $allLayMarks[$lmIndex] ?? null; @endphp
-                                                    @if($lm)
-                                                        <div class="row g-0">
-                                                            <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
-                                                                {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                            </div>
-                                                            <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
-                                                                {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                            </div>
-                                                            <div class="col-4 text-center" style="font-size: 0.75rem;">
-                                                                {{ $lm->lay_mark_meter }}
-                                                            </div>
-                                                        </div>
-                                                    @endif
-                                                </td>
+
                                                 @php $currentRow++; @endphp
                                                 <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                             </tr>
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td class="fw-bold py-1"></td>
-                                            <td class="py-1"></td>
+                                            @if(count($fsRows) > 0)
+                                                <td colspan="2" style="border: none;"></td>
+                                            @else
+                                                <td class="fw-bold py-1"></td>
+                                                <td class="py-1"></td>
+                                            @endif
                                             <td class="fw-bold py-1 text-center">QTY - H/S</td>
                                             <td colspan="3" class="p-0">
                                                 <table class="table table-bordered mb-0 job-card-table" style="border: none;">
@@ -491,24 +482,7 @@
                                                     </tr>
                                                 </table>
                                             </td>
-                                            <td class="py-1" colspan="2">
-                                                {{-- If no fsRows, we use index 1 (0 was used by fs fallback) --}}
-                                                @php $lmIndex = (count($fsRows) > 0) ? count($fsRows) : 1; @endphp
-                                                @php $lm = $allLayMarks[$lmIndex] ?? null; @endphp
-                                                @if($lm)
-                                                    <div class="row g-0">
-                                                        <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
-                                                            {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                        </div>
-                                                        <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
-                                                            {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                        </div>
-                                                        <div class="col-4 text-center" style="font-size: 0.75rem;">
-                                                            {{ $lm->lay_mark_meter }}
-                                                        </div>
-                                                    </div>
-                                                @endif
-                                            </td>
+
                                             @php $currentRow++; @endphp
                                             <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                         </tr>
@@ -524,7 +498,6 @@
                                             <td class="py-1">&nbsp;</td>
                                             <td class="fw-bold py-1 text-center">&nbsp;</td>
                                             <td colspan="3">&nbsp;</td>
-                                            <td class="py-1" colspan="2">&nbsp;</td>
                                             <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                         </tr>
                                     @endfor
@@ -533,26 +506,9 @@
                                     <tr>
                                         <td class="fw-bold py-1"></td>
                                         <td class="py-1"></td>
-                                        <td class="p-0" colspan="2">
-                                            @for($i = max(1, (count($fsRows) + count($hsRows))); $i < count($allLayMarks); $i++)
-                                                @php $lm = $allLayMarks[$i] ?? null; @endphp
-                                                @if($lm)
-                                                    <div class="row g-0 border-bottom">
-                                                        <div class="col-5 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
-                                                            {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                        </div>
-                                                        <div class="col-3 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
-                                                            {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                        </div>
-                                                        <div class="col-4 text-center" style="font-size: 0.75rem; padding: 4px;">
-                                                            {{ $lm->lay_mark_meter }}
-                                                        </div>
-                                                    </div>
-                                                @endif
-                                            @endfor
-                                        </td>
-                                        <td class="py-1" colspan="2"></td>
-                                         <td class="py-1"></td>
+                                        <td class="p-0" colspan="2"></td>
+                                        @php $currentRow++; @endphp
+                                        <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                     </tr>
                                 </tbody>
                             </table>

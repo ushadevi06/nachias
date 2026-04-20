@@ -4,6 +4,9 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card">
                 <div class="card-body">
                     <div class="card-header-box">
@@ -139,9 +142,9 @@
                                             $selectedSizeRatio = \App\Models\SizeRatio::find($sizeRatioIdValue);
                                             if ($selectedSizeRatio) {
                                                 $sizeRatioDisplay = $selectedSizeRatio->size . '(' . $selectedSizeRatio->ratio .
-                                                ')';
+                                                    ')';
                                             }
-                                    }
+                                        }
                                     @endphp
                                     <input type="text" id="selected_size_ratio" class="form-control pe-5 @error('size_ratio_id') is-invalid @enderror" placeholder="Select Size/Ratio" readonly value="{{ $sizeRatioDisplay }}">
                                     <label for="selected_size_ratio">Size / Ratio</label>
@@ -166,7 +169,7 @@
                                                 $selectedColors = json_decode($colorIdValue, true) ?? [];
                                             }
                                         }
-                                        $selectedColors = array_map('intval', (array)$selectedColors);
+                                        $selectedColors = array_map('intval', (array) $selectedColors);
                                     @endphp
 
                                     <select name="color_id[]" class="select2 form-select @error('color_id') is-invalid @enderror" multiple data-placeholder="Select Color">
@@ -285,21 +288,21 @@
                                 <label class="d-block mb-4">Operation Stages</label>
                                 <div class="row g-4">
                                     @php
-                                        // Get old values from session (after validation error)
-                                        $oldOperationStages = old('operation_stages', []);
-                                        $oldServiceProviders = old('service_providers', []);
+                                    // Get old values from session (after validation error)
+                                    $oldOperationStages = old('operation_stages', []);
+                                    $oldServiceProviders = old('service_providers', []);
 
-                                        // Get current item values (on edit)
-                                        $itemStages = (isset($item) && $item && is_array($item->operation_stages)) ? $item->operation_stages : [];
-                                        $itemProviders = (isset($item) && $item && is_array($item->service_providers)) ? $item->service_providers : [];
+                                    // Get current item values (on edit)
+                                    $itemStages = (isset($item) && $item && is_array($item->operation_stages)) ? $item->operation_stages : [];
+                                    $itemProviders = (isset($item) && $item && is_array($item->service_providers)) ? $item->service_providers : [];
 
-                                        // Use old values if present (validation error case), otherwise use item values
-                                        $stagesToCheck = !empty($oldOperationStages) ? $oldOperationStages : $itemStages;
-                                        $providersToUse = !empty($oldServiceProviders) ? $oldServiceProviders : $itemProviders;
-                                    @endphp
+                                    // Use old values if present (validation error case), otherwise use item values
+                                    $stagesToCheck = !empty($oldOperationStages) ? $oldOperationStages : $itemStages;
+                                    $providersToUse = !empty($oldServiceProviders) ? $oldServiceProviders : $itemProviders;
+                                                                        @endphp
 
-                                    @foreach($operationStages as $stage)
-                                    @php
+                                                                        @foreach($operationStages as $stage)
+                                                                        @php
                                         $stageKey = strtolower($stage->operation_stage_name);
                                         $stageName = $stage->operation_stage_name;
 

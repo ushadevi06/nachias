@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Services</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create services'))
+                @if(auth()->id() == 1 || auth()->user()->can('create production-services'))
                 <a class="btn btn-primary" href="{{ url('production_services/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>

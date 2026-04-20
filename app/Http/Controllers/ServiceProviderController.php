@@ -43,7 +43,7 @@ class ServiceProviderController extends Controller
                     </label>
                     <div class="status_msg_' . $provider->id . '"></div>';
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('view service-providers')) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details service-providers')) {
                     $action .= '<a href="' . url('service_providers/view/' . $provider->id) . '" class="btn btn-view">
                         <i class="icon-base ri ri-eye-line"></i>
                     </a>';
@@ -228,7 +228,7 @@ class ServiceProviderController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view service-providers')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details service-providers')) {
             return unauthorizedRedirect();
         }
 

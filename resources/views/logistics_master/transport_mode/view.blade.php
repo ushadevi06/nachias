@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Transport Modes</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create transport-modes'))
+                @if(auth()->id() == 1 || auth()->user()->can('create transport-mode'))
                 <a class="btn btn-primary" href="{{ url('transport_modes/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>
