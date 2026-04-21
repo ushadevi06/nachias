@@ -111,8 +111,15 @@ class BackupController extends Controller
             $dbPass = env('DB_PASSWORD');
             $dbHost = env('DB_HOST');
 
-            $dumpPath = env('MYSQLDUMP_PATH');
-            $command = "\"{$dumpPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
+            $dumpPath = env('MYSQLDUMP_PATH', 'mysqldump');
+            
+            if ($dumpPath !== 'mysqldump' && !file_exists($dumpPath)) {
+                $backup->update(['status' => 'Failed', 'error_message' => 'mysqldump binary not found at: ' . $dumpPath]);
+                return response()->json(['status' => 'error', 'message' => 'mysqldump binary not found. Please check MYSQLDUMP_PATH in .env']);
+            }
+
+            $passwordPart = $dbPass ? "--password=\"{$dbPass}\"" : "";
+            $command = "\"{$dumpPath}\" --user={$dbUser} {$passwordPart} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
 
             exec($command, $output, $returnVar);
 
@@ -172,8 +179,14 @@ class BackupController extends Controller
 
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
-            $mysqlPath = env('MYSQL_PATH', 'C:\xampp\mysql\bin\mysql.exe');
-            $command = "\"{$mysqlPath}\" --user={$dbUser} --password={$dbPass} --host={$dbHost} {$dbName} < \"{$path}\"";
+            $mysqlPath = env('MYSQL_PATH', 'mysql');
+            
+            if ($mysqlPath !== 'mysql' && !file_exists($mysqlPath)) {
+                return response()->json(['status' => 'error', 'message' => 'mysql binary not found. Please check MYSQL_PATH in .env']);
+            }
+
+            $passwordPart = $dbPass ? "--password=\"{$dbPass}\"" : "";
+            $command = "\"{$mysqlPath}\" --user={$dbUser} {$passwordPart} --host={$dbHost} {$dbName} < \"{$path}\" 2>&1";
             exec($command, $output, $returnVar);
 
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');

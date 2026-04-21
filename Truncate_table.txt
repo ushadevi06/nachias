@@ -1,5 +1,6 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
+TRUNCATE `backups`;
 TRUNCATE `charges`;
 TRUNCATE `cities`;
 TRUNCATE `collar_types`;
@@ -179,8 +180,6 @@ DELETE FROM tickets;
 ALTER TABLE tickets AUTO_INCREMENT = 1;
 DELETE FROM transport_modes;
 ALTER TABLE transport_modes AUTO_INCREMENT = 1;
-DELETE FROM production_movements;
-ALTER TABLE production_movements AUTO_INCREMENT = 1;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -189,4 +188,20 @@ SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE `model_has_permissions`;
 TRUNCATE `model_has_roles`;
 TRUNCATE `role_has_permissions`;
+TRUNCATE `roles`;
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+BAckupController
+
+$dumpPath = env('MYSQLDUMP_PATH', 'mysqldump');
+
+if ($dumpPath !== 'mysqldump' && !file_exists($dumpPath)) {
+	$backup->update(['status' => 'Failed', 'error_message' => 'mysqldump binary not found at: ' . $dumpPath]);
+	return response()->json(['status' => 'error', 'message' => 'mysqldump binary not found. Please check MYSQLDUMP_PATH in .env']);
+}
+
+$passwordPart = $dbPass ? "--password=\"{$dbPass}\"" : "";
+$command = "\"{$dumpPath}\" --user={$dbUser} {$passwordPart} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
+
+exec($command, $output, $returnVar);
