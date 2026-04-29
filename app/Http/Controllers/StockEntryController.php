@@ -15,12 +15,12 @@ use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\FinishedGoodsStockExport;
+use App\Exports\BarcodeExport;
 
 class StockEntryController extends Controller
 {
-    /**
-     * Display listing with AJAX DataTable support
-     */
     public function index(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
@@ -28,110 +28,157 @@ class StockEntryController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType']);
-            if ($request->material_category) {
-                $query->whereHas('stockEntryItems', function ($q) use ($request) {
-                    $q->where('store_category_id', $request->material_category);
+            if ($request->entry_type === 'Finished Goods') {
+                $query = StockEntryItem::with([
+                    'stockEntry.productionReceipt.jobCard.fabricType',
+                    'fabricType',
+                    'color',
+                    'item'
+                ])->whereHas('stockEntry', function($q) {
+                    $q->where('entry_type', 'Finished Goods');
                 });
-            }
 
-            if ($request->entry_type) {
-                $query->where('entry_type', $request->entry_type);
-            }
-
-            if ($request->material) {
-                $query->whereHas('stockEntryItems', function ($q) use ($request) {
-                    $q->where('raw_material_id', $request->material);
-                });
-            }
-
-            if ($request->art_no) {
-                $query->whereHas('stockEntryItems', function ($q) use ($request) {
-                    $q->where('art_no', $request->art_no);
-                });
-            }
-
-            if ($request->grn_no) {
-                $query->whereHas('grnEntry', function ($q) use ($request) {
-                    $q->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
-                });
-            }
-            $totalRecords = $query->count();
-
-            if ($request->has('search') && !empty($request->input('search')['value'])) {
-                $search = $request->input('search')['value'];
-                $query->where(function ($q) use ($search) {
-                    $q->where('stock_entry_no', 'like', "%{$search}%")
-                        ->orWhereHas('grnEntry', function ($q2) use ($search) {
-                            $q2->where('grn_number', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('stockEntryItems', function ($q3) use ($search) {
-                            $q3->where('art_no', 'like', "%{$search}%")
-                               ->orWhereHas('rawMaterial', function ($q4) use ($search) {
-                                   $q4->where('name', 'like', "%{$search}%");
-                               });
-                        });
-                });
-            }
-
-            $filteredRecords = $query->count();
-
-            $start = $request->input('start', 0);
-            $length = $request->input('length', 10);
-
-            if ($length != -1) {
-                $query->skip($start)->take($length);
-            }
-
-            $stockEntries = $query->with('productionReceipt.jobCard.fabricType', 'productionReceipt.jobCard.purchaseOrder')->orderBy('id', 'desc')->get();
-            $data = [];
-            $count = $start + 1;
-
-            foreach ($stockEntries as $entry) {
-                $itemsToShow = $entry->stockEntryItems;
-                $isFinishedGoods = ($entry->entry_type === 'Finished Goods');
-
-                if ($isFinishedGoods) {
-                    foreach ($itemsToShow as $item) {
-                        $materialDisplay = $item->finished_item_code ?: '-';
-                        if ($item->size) {
-                            $materialDisplay .= ' <span class="badge bg-label-secondary mx-1">' . $item->size . '</span>';
-                        }
-
-                        $action = '<div class="button-box">';
-                        $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=finished_goods?item_id=' . $item->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
-                        $action .= '</div>';
-
-                        $jobCardNo = '-';
-                        if ($entry->productionReceipt && $entry->productionReceipt->jobCard) {
-                            $jobCardNo = $entry->productionReceipt->jobCard->job_card_no;
-                        }
-
-                        $fabricType = $item->fabricType->fabric_type ?? null;
-                        if (!$fabricType && $entry->productionReceipt && $entry->productionReceipt->jobCard) {
-                            $fabricType = $entry->productionReceipt->jobCard->fabricType->fabric_type ?? '-';
-                        }
-                        $fabricType = $fabricType ?: '-';
-
-                        $data[] = [
-                            'DT_RowIndex' => $count++,
-                            'stock_entry_no' => $entry->stock_entry_no,
-                            'stock_date' => $entry->stock_date->format('d-m-Y'),
-                            'material_category' => '<span class="badge bg-label-info">Finished Goods</span>',
-                            'art_no' => $item->art_no ?? '-',
-                            'material' => $materialDisplay,
-                            'grn_no' => $jobCardNo,
-                            'item_name' => ($item->item->name ?? '-') . ' <span class="mini-title">(' . ($item->finished_item_code ?: '-') . ')</span>',
-                            'fabric_type' => $fabricType,
-                            'sleeve_type' => $item->sleeve_type ?? '-',
-                            'size' => $item->size ?? '-',
-                            'sku' => $item->sku ?? '-',
-                            'total_qty' => '+' . number_format($item->qty_in, 2),
-                            'action' => $action,
-                        ];
-                    }
+                if ($request->art_no) {
+                    $query->where('art_no', $request->art_no);
                 }
-                else {
+
+                if ($request->grn_no) {
+                    $query->whereHas('stockEntry.productionReceipt.jobCard', function($q) use ($request) {
+                        $q->where('job_card_no', 'like', '%' . $request->grn_no . '%');
+                    });
+                }
+
+                $totalRecords = $query->count();
+
+                if ($request->has('search') && !empty($request->input('search')['value'])) {
+                    $search = $request->input('search')['value'];
+                    $query->where(function ($q) use ($search) {
+                        $q->where('art_no', 'like', "%{$search}%")
+                            ->orWhere('finished_item_code', 'like', "%{$search}%")
+                            ->orWhere('sku', 'like', "%{$search}%")
+                            ->orWhereHas('stockEntry', function($q2) use ($search) {
+                                $q2->where('stock_entry_no', 'like', "%{$search}%")
+                                    ->orWhereHas('productionReceipt.jobCard', function($q3) use ($search) {
+                                        $q3->where('job_card_no', 'like', "%{$search}%");
+                                    });
+                            });
+                    });
+                }
+
+                $filteredRecords = $query->count();
+
+                $start = $request->input('start', 0);
+                $length = $request->input('length', 10);
+                if ($length != -1) {
+                    $query->skip($start)->take($length);
+                }
+
+                $items = $query->orderBy('id', 'desc')->get();
+                $data = [];
+                $count = $start + 1;
+
+                foreach ($items as $item) {
+                    $entry = $item->stockEntry;
+                    if (!$entry) continue;
+
+                    $materialDisplay = $item->finished_item_code ?: '-';
+                    if ($item->size) {
+                        $materialDisplay .= ' <span class="badge bg-label-secondary mx-1">' . $item->size . '</span>';
+                    }
+
+                    $action = '<div class="button-box">';
+                    $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=finished_goods?item_id=' . $item->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
+                    $action .= '</div>';
+
+                    $jobCardNo = '-';
+                    if ($entry->productionReceipt && $entry->productionReceipt->jobCard) {
+                        $jobCardNo = $entry->productionReceipt->jobCard->job_card_no;
+                    }
+
+                    $fabricType = $item->fabricType->fabric_type ?? null;
+                    if (!$fabricType && $entry->productionReceipt && $entry->productionReceipt->jobCard) {
+                        $fabricType = $entry->productionReceipt->jobCard->fabricType->fabric_type ?? '-';
+                    }
+                    $fabricType = $fabricType ?: '-';
+
+                    $data[] = [
+                        'DT_RowIndex' => $count++,
+                        'stock_entry_no' => $entry->stock_entry_no,
+                        'stock_date' => $entry->stock_date ? $entry->stock_date->format('d-m-Y') : '-',
+                        'material_category' => '<span class="badge bg-label-info">Finished Goods</span>',
+                        'art_no' => $item->art_no ?? '-',
+                        'material' => $materialDisplay,
+                        'grn_no' => $jobCardNo,
+                        'item_name' => $item->finished_item_code ?: '-',
+                        'fabric_type' => $fabricType,
+                        'sleeve_type' => $item->sleeve_type ?? '-',
+                        'size' => $item->size ?? '-',
+                        'sku' => $item->sku ?? '-',
+                        'total_qty' => '+' . number_format($item->qty_in, 2),
+                        'action' => $action,
+                    ];
+                }
+            } else {
+                $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType']);
+                if ($request->material_category) {
+                    $query->whereHas('stockEntryItems', function ($q) use ($request) {
+                        $q->where('store_category_id', $request->material_category);
+                    });
+                }
+
+                if ($request->entry_type) {
+                    $query->where('entry_type', $request->entry_type);
+                }
+
+                if ($request->material) {
+                    $query->whereHas('stockEntryItems', function ($q) use ($request) {
+                        $q->where('raw_material_id', $request->material);
+                    });
+                }
+
+                if ($request->art_no) {
+                    $query->whereHas('stockEntryItems', function ($q) use ($request) {
+                        $q->where('art_no', $request->art_no);
+                    });
+                }
+
+                if ($request->grn_no) {
+                    $query->whereHas('grnEntry', function ($q) use ($request) {
+                        $q->where('grn_number', 'LIKE', '%' . $request->grn_no . '%');
+                    });
+                }
+                $totalRecords = $query->count();
+
+                if ($request->has('search') && !empty($request->input('search')['value'])) {
+                    $search = $request->input('search')['value'];
+                    $query->where(function ($q) use ($search) {
+                        $q->where('stock_entry_no', 'like', "%{$search}%")
+                            ->orWhereHas('grnEntry', function ($q2) use ($search) {
+                                $q2->where('grn_number', 'like', "%{$search}%");
+                            })
+                            ->orWhereHas('stockEntryItems', function ($q3) use ($search) {
+                                $q3->where('art_no', 'like', "%{$search}%")
+                                    ->orWhereHas('rawMaterial', function ($q4) use ($search) {
+                                        $q4->where('name', 'like', "%{$search}%");
+                                    });
+                            });
+                    });
+                }
+
+                $filteredRecords = $query->count();
+
+                $start = $request->input('start', 0);
+                $length = $request->input('length', 10);
+
+                if ($length != -1) {
+                    $query->skip($start)->take($length);
+                }
+
+                $stockEntries = $query->with('productionReceipt.jobCard.fabricType', 'productionReceipt.jobCard.purchaseOrder')->orderBy('id', 'desc')->get();
+                $data = [];
+                $count = $start + 1;
+
+                foreach ($stockEntries as $entry) {
                     $totalQtyIn = $entry->stockEntryItems->sum('qty_in');
                     $totalQtyOut = $entry->stockEntryItems->sum('qty_out');
 
@@ -195,6 +242,7 @@ class StockEntryController extends Controller
 
         return view('stock_entry.view');
     }
+
     public function add(Request $request, $id = null)
     {
         if ($id) {
@@ -207,18 +255,17 @@ class StockEntryController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        $stockEntry = $id ?StockEntry::with(['stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.storeLocation', 'grnEntry'])->findOrFail($id) : null;
+        $stockEntry = $id ? StockEntry::with(['stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.storeLocation', 'grnEntry'])->findOrFail($id) : null;
         $grnEntries = GrnEntry::where('status', 'Received')
             ->where(function ($query) use ($id, $stockEntry) {
-            $query->whereHas('grnEntryItems', function ($q) use ($id) {
+                $query->whereHas('grnEntryItems', function ($q) use ($id) {
                     $q->whereRaw('qty_accepted > (
                         select COALESCE(sum(qty_in), 0) 
                         from stock_entry_items 
                         where grn_entry_item_id = grn_entry_items.id 
                         ' . ($id ? "AND stock_entry_id != $id" : "") . '
                     )');
-                }
-                );
+                });
 
                 if ($id && $stockEntry) {
                     $query->orWhere('id', $stockEntry->grn_entry_id);
@@ -267,8 +314,8 @@ class StockEntryController extends Controller
                         $grnItem = GrnEntryItem::findOrFail($item['grn_entry_item_id']);
                         $totalStocked = StockEntryItem::where('grn_entry_item_id', $item['grn_entry_item_id'])
                             ->when($id, function ($q) use ($id) {
-                            $q->where('stock_entry_id', '!=', $id);
-                        })->sum('qty_in');
+                                $q->where('stock_entry_id', '!=', $id);
+                            })->sum('qty_in');
                         $availableBalance = $grnItem->qty_accepted - $totalStocked;
 
                         if ($item['qty_in'] > $availableBalance) {
@@ -308,8 +355,7 @@ class StockEntryController extends Controller
                     $stockEntry->update($headerData);
                     $stockEntry->stockEntryItems()->forceDelete();
                     addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
-                }
-                else {
+                } else {
                     $lastEntry = StockEntry::latest('id')->first();
                     $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
                     $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
@@ -341,8 +387,7 @@ class StockEntryController extends Controller
                 }
                 DB::commit();
                 return redirect('stock_entries')->with('success', 'Stock Entry saved successfully');
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 DB::rollBack();
                 return back()->withInput()->withErrors(['error' => $e->getMessage()]);
             }
@@ -354,23 +399,24 @@ class StockEntryController extends Controller
         if ($stockEntry && $stockEntry->grn_entry_id) {
             $savedItems = $stockEntry->stockEntryItems->map(function ($item) {
                 return [
-                'store_category_id' => $item->store_category_id,
-                'store_category_name' => $item->storeCategory->category_name . ' (' . $item->storeCategory->code . ')',
-                'grn_entry_item_id' => $item->grn_entry_item_id,
-                'raw_material_id' => $item->raw_material_id,
-                'raw_material_name' => $item->rawMaterial->name . ' (' . $item->rawMaterial->code . ')',
-                'uom_id' => $item->uom_id,
-                'uom_name' => $item->uom->uom_code ?? '',
-                'qty_in' => $item->qty_in,
-                'qty_out' => $item->qty_out,
-                'store_location_id' => $item->store_location_id,
-                'store_location_name' => $item->storeLocation->store_location ?? '',
+                    'store_category_id' => $item->store_category_id,
+                    'store_category_name' => $item->storeCategory->category_name . ' (' . $item->storeCategory->code . ')',
+                    'grn_entry_item_id' => $item->grn_entry_item_id,
+                    'raw_material_id' => $item->raw_material_id,
+                    'raw_material_name' => $item->rawMaterial->name . ' (' . $item->rawMaterial->code . ')',
+                    'uom_id' => $item->uom_id,
+                    'uom_name' => $item->uom->uom_code ?? '',
+                    'qty_in' => $item->qty_in,
+                    'qty_out' => $item->qty_out,
+                    'store_location_id' => $item->store_location_id,
+                    'store_location_name' => $item->storeLocation->store_location ?? '',
                 ];
             })->values()->all();
         }
 
         return view('stock_entry.add', compact('stockEntry', 'grnEntries', 'storeCategories', 'rawMaterials', 'storeLocations', 'uoms', 'nextStockNo', 'savedItems'));
     }
+
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view_details stock-entry')) {
@@ -395,6 +441,7 @@ class StockEntryController extends Controller
 
         return view('stock_entry.view_details', compact('stockEntry'));
     }
+
     public function getGrnEntryItems($grn_entry_id)
     {
         $stockEntryId = request('stock_entry_id');
@@ -407,46 +454,45 @@ class StockEntryController extends Controller
 
         $items = $grnEntry->grnEntryItems
             ->filter(function ($item) use ($stockEntryId) {
-            $stockQty = $item->stockEntryItems->sum('qty_in');
-            return $stockQty < $item->qty_accepted || ($stockEntryId && $item->stockEntryItems->contains('stock_entry_id', $stockEntryId));
-        })
-            ->values()
+                $stockQty = $item->stockEntryItems->sum('qty_in');
+                return $stockQty < $item->qty_accepted || ($stockEntryId && $item->stockEntryItems->contains('stock_entry_id', $stockEntryId));
+            })->values()
             ->map(function ($item) use ($stockEntryId) {
-            $piItem = $item->purchaseInvoiceItem ?? null;
-            $rawMaterial = $piItem ? $piItem->rawMaterial : null;
+                $piItem = $item->purchaseInvoiceItem ?? null;
+                $rawMaterial = $piItem ? $piItem->rawMaterial : null;
 
-            $rawMaterialId = $rawMaterial ? $rawMaterial->id : ($item->raw_material_id ?? null);
-            $rawMaterialName = $rawMaterial
-                ? ($rawMaterial->name . ' (' . $rawMaterial->code . ')')
-                : ($item->raw_material_name ?? 'Unknown Material');
+                $rawMaterialId = $rawMaterial ? $rawMaterial->id : ($item->raw_material_id ?? null);
+                $rawMaterialName = $rawMaterial
+                    ? ($rawMaterial->name . ' (' . $rawMaterial->code . ')')
+                    : ($item->raw_material_name ?? 'Unknown Material');
 
-            $storeCategoryId = $rawMaterial ? $rawMaterial->store_category_id : null;
-            $storeCategoryName = ($rawMaterial && $rawMaterial->storeCategory)
-                ? ($rawMaterial->storeCategory->category_name . ' (' . $rawMaterial->storeCategory->code . ')')
-                : '-';
+                $storeCategoryId = $rawMaterial ? $rawMaterial->store_category_id : null;
+                $storeCategoryName = ($rawMaterial && $rawMaterial->storeCategory)
+                    ? ($rawMaterial->storeCategory->category_name . ' (' . $rawMaterial->storeCategory->code . ')')
+                    : '-';
 
-            $uomId = $piItem ? $piItem->uom_id : ($item->uom_id ?? null);
-            $uomName = ($piItem && $piItem->uom) ? $piItem->uom->uom_code : '-';
+                $uomId = $piItem ? $piItem->uom_id : ($item->uom_id ?? null);
+                $uomName = ($piItem && $piItem->uom) ? $piItem->uom->uom_code : '-';
 
-            $rate = $piItem ? $piItem->rate : ($item->rate ?? 0);
+                $rate = $piItem ? $piItem->rate : ($item->rate ?? 0);
 
-            return [
-            'id' => $item->id,
-            'grn_entry_item_id' => $item->id,
-            'stock_type' => 'raw_material',
-            'raw_material_id' => $rawMaterialId,
-            'raw_material_name' => $rawMaterialName,
-            'store_category_id' => $storeCategoryId,
-            'store_category_name' => $storeCategoryName,
-            'store_location_id' => $item->store_location_id,
-            'store_location_name' => $item->storeLocation->store_location ?? '-',
-            'uom_id' => $uomId,
-            'uom_name' => $uomName,
-            'qty_accepted' => $item->qty_accepted - $item->stockEntryItems->where('stock_entry_id', '!=', $stockEntryId)->sum('qty_in'),
-            'rate' => $rate,
-            'fabric_type_id' => $item->fabric_type_id,
-            ];
-        });
+                return [
+                    'id' => $item->id,
+                    'grn_entry_item_id' => $item->id,
+                    'stock_type' => 'raw_material',
+                    'raw_material_id' => $rawMaterialId,
+                    'raw_material_name' => $rawMaterialName,
+                    'store_category_id' => $storeCategoryId,
+                    'store_category_name' => $storeCategoryName,
+                    'store_location_id' => $item->store_location_id,
+                    'store_location_name' => $item->storeLocation->store_location ?? '-',
+                    'uom_id' => $uomId,
+                    'uom_name' => $uomName,
+                    'qty_accepted' => $item->qty_accepted - $item->stockEntryItems->where('stock_entry_id', '!=', $stockEntryId)->sum('qty_in'),
+                    'rate' => $rate,
+                    'fabric_type_id' => $item->fabric_type_id,
+                ];
+            });
 
         return response()->json([
             'success' => true,
@@ -464,11 +510,11 @@ class StockEntryController extends Controller
             $material = $item->rawMaterial ? ($item->rawMaterial->name . ' (' . $item->rawMaterial->code . ')') : ($item->finished_item_code ?: '-');
 
             return [
-            'id' => $item->id,
-            'category' => $category,
-            'material' => $material,
-            'art_no' => $item->art_no ?: '-',
-            'current_qty' => $item->qty_in,
+                'id' => $item->id,
+                'category' => $category,
+                'material' => $material,
+                'art_no' => $item->art_no ?: '-',
+                'current_qty' => $item->qty_in,
             ];
         });
 
@@ -514,8 +560,7 @@ class StockEntryController extends Controller
 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Stock adjusted successfully']);
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -538,5 +583,23 @@ class StockEntryController extends Controller
         $logs = $query->orderBy('created_at', 'desc')->get();
 
         return view('stock_entry.adjustment_logs', compact('logs'));
+    }
+
+    public function exportFinishedGoods()
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+            return unauthorizedRedirect();
+        }
+
+        return Excel::download(new FinishedGoodsStockExport, 'finished_goods_stock_' . date('Ymd_His') . '.xlsx');
+    }
+
+    public function exportBarcode()
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+            return unauthorizedRedirect();
+        }
+
+        return Excel::download(new BarcodeExport, 'barcode_export_' . date('Ymd_His') . '.xlsx');
     }
 }

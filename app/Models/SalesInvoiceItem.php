@@ -19,6 +19,7 @@ class SalesInvoiceItem extends Model
         'rate',
         'mrp',
         'amount',
+        'color_id',
         'hsn_sac',
         'art_no',
         'size',
@@ -34,6 +35,11 @@ class SalesInvoiceItem extends Model
     public function item()
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(Color::class);
     }
 
     public function brandCategory()

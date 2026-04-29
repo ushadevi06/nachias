@@ -7,8 +7,7 @@
             @include('flash_messages')
         </div>
         <div class="col-lg-12">
-            <form action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}"
-                method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
+            <form action="{{ $purchaseOrder ? url('purchase_orders/add/' . $purchaseOrder->id) : url('purchase_orders/add') }}" method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
                 @csrf
                 <div class="card mb-4">
                     <div class="card-body">
@@ -148,14 +147,14 @@
                                     <tr>
                                         <th style="min-width: 200px;">Store Category *</th>
                                         <th style="min-width: 200px;">Brand *</th>
-                                        <th style="min-width: 240px;">Raw Material *</th>
-                                        <th style="min-width: 150px;">Style</th>
-                                        <th style="min-width: 150px;">Fabric Width</th>
-                                        <th style="min-width: 150px;">Fabric Type</th>
+                                        <th style="min-width: 200px;">Raw Material *</th>
+                                        <th style="min-width: 150px;" class="th-style">Style</th>
+                                        <th style="min-width: 150px;" class="th-fabric-width">Fabric Width</th>
+                                        <th style="min-width: 150px;" class="th-fabric-type">Fabric Type</th>
                                         <th style="min-width: 100px;">UOM *</th>
-                                        <th style="min-width: 150px;">Qty *</th>
                                         <th style="min-width: 180px;">Supplier Design Name</th>
                                         <th style="min-width: 150px;">Color</th>
+                                        <th style="min-width: 150px;">Qty *</th>
                                         <th style="min-width: 150px;">Rate *</th>
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 150px;">Remarks</th>
@@ -168,8 +167,7 @@
                                         @foreach(old('items') as $index => $item)
                                             <tr class="item-row">
                                                 <td>
-                                                    <select
-                                                        class="select2 form-select po_store_category @error('items.' . $index . '.store_category_id') is-invalid @enderror"
+                                                    <select class="select2 form-select po_store_category @error('items.' . $index . '.store_category_id') is-invalid @enderror"
                                                         name="items[{{ $index }}][store_category_id]"
                                                         data-placeholder="Select Store Category">
                                                         <option value="">Select Store Category</option>
@@ -204,12 +202,12 @@
                                                         data-placeholder="Select Raw Material">
                                                         @if(isset($item['raw_material_id']) && $item['raw_material_id'])
                                                             @php
-        $selectedMaterial = \App\Models\RawMaterial::find($item['raw_material_id']);
+                                                                $selectedMaterial = \App\Models\RawMaterial::find($item['raw_material_id']);
                                                             @endphp
                                                             @if($selectedMaterial)
                                                                 <option value="{{ $selectedMaterial->id }}"
                                                                     data-uom-id="{{ $selectedMaterial->uom_id }}" selected>
-                                                                    {{ $selectedMaterial->name }} ({{ $selectedMaterial->code }})
+                                                                    {{ $selectedMaterial->name }} ({{ $selectedMaterial->code }})dd
                                                                 </option>
                                                             @endif
                                                         @endif
@@ -218,7 +216,7 @@
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
-                                                <td>
+                                                <td class="td-style">
                                                     <select
                                                         class="select2 form-select style @error('items.' . $index . '.style_id') is-invalid @enderror"
                                                         name="items[{{ $index }}][style_id]" data-placeholder="Select Style">
@@ -228,11 +226,12 @@
                                                             </option>
                                                         @endforeach
                                                     </select>
+                                                    <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.style_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
-                                                <td>
+                                                <td class="td-fabric-width">
                                                     <select
                                                         class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror"
                                                         name="items[{{ $index }}][fabric_width_id]"
@@ -242,11 +241,12 @@
                                                             <option value="{{ $fabricSize->id }}" {{ ($item['fabric_width_id'] ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                         @endforeach
                                                     </select>
+                                                    <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.fabric_width_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
-                                                <td>
+                                                <td class="td-fabric-type">
                                                     <select
                                                         class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
                                                         name="items[{{ $index }}][fabric_type_id]"
@@ -256,6 +256,7 @@
                                                             <option value="{{ $fabricType->id }}" {{ ($item['fabric_type_id'] ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
                                                         @endforeach
                                                     </select>
+                                                    <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.fabric_type_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -273,15 +274,6 @@
                                                     <input type="hidden" name="items[{{ $index }}][uom_id]"
                                                         value="{{ $item['uom_id'] ?? '' }}" class="uom_hidden">
                                                     @error('items.' . $index . '.uom_id')
-                                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                                    @enderror
-                                                </td>
-                                                <td>
-                                                    <input type="number"
-                                                        class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
-                                                        name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
-                                                        value="{{ $item['quantity'] ?? '' }}">
-                                                    @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
@@ -305,6 +297,15 @@
                                                         @endforeach
                                                     </select>
                                                     @error('items.' . $index . '.color_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="number"
+                                                        class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
+                                                        name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
+                                                        value="{{ $item['quantity'] ?? '' }}">
+                                                    @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
@@ -399,7 +400,7 @@
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
-                                                <td>
+                                                <td class="td-style">
                                                     <select
                                                         class="select2 form-select style @error('items.' . $index . '.style_id') is-invalid @enderror"
                                                         name="items[{{ $index }}][style_id]" data-placeholder="Select Style">
@@ -408,11 +409,12 @@
                                                             <option value="{{ $style->id }}" {{ $item->style_id == $style->id ? 'selected' : '' }}>{{ $style->style_name }}</option>
                                                         @endforeach
                                                     </select>
+                                                    <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.style_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
-                                                <td>
+                                                <td class="td-fabric-width">
                                                     <select
                                                         class="select2 form-select fabric_width @error('items.' . $index . '.fabric_width_id') is-invalid @enderror"
                                                         name="items[{{ $index }}][fabric_width_id]"
@@ -422,11 +424,12 @@
                                                             <option value="{{ $fabricSize->id }}" {{ ($item->fabric_width_id ?? '') == $fabricSize->id ? 'selected' : '' }}>{{ $fabricSize->width }}</option>
                                                         @endforeach
                                                     </select>
+                                                    <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.fabric_width_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
-                                                <td>
+                                                <td class="td-fabric-type">
                                                     <select
                                                         class="select2 form-select fabric_type @error('items.' . $index . '.fabric_type_id') is-invalid @enderror"
                                                         name="items[{{ $index }}][fabric_type_id]"
@@ -436,6 +439,7 @@
                                                             <option value="{{ $fabricType->id }}" {{ ($item->fabric_type_id ?? '') == $fabricType->id ? 'selected' : '' }}>{{ $fabricType->fabric_type }}</option>
                                                         @endforeach
                                                     </select>
+                                                    <span class="hyphen d-none">-</span>
                                                     @error('items.' . $index . '.fabric_type_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -451,15 +455,6 @@
                                                     <input type="hidden" name="items[{{ $index }}][uom_id]"
                                                         value="{{ $item->uom_id }}" class="uom_hidden">
                                                     @error('items.' . $index . '.uom_id')
-                                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                                    @enderror
-                                                </td>
-                                                <td>
-                                                    <input type="number"
-                                                        class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
-                                                        name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
-                                                        value="{{ $item->quantity }}">
-                                                    @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
@@ -482,6 +477,15 @@
                                                         @endforeach
                                                     </select>
                                                     @error('items.' . $index . '.color_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="number"
+                                                        class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror"
+                                                        name="items[{{ $index }}][quantity]" step="0.01" min="0.01"
+                                                        value="{{ $item->quantity }}">
+                                                    @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
@@ -582,7 +586,7 @@
                                                     <option value="">Select Raw Material</option>
                                                 </select>
                                             </td>
-                                            <td>
+                                            <td class="td-style">
                                                 <select class="select2 form-select style" name="items[0][style_id]"
                                                     data-placeholder="Select Style">
                                                     <option value="">Select Style</option>
@@ -590,8 +594,9 @@
                                                         <option value="{{ $style->id }}">{{ $style->style_name }}</option>
                                                     @endforeach
                                                 </select>
+                                                <span class="hyphen d-none">-</span>
                                             </td>
-                                            <td>
+                                            <td class="td-fabric-width">
                                                 <select class="select2 form-select fabric_width"
                                                     name="items[0][fabric_width_id]" data-placeholder="Select Width">
                                                     <option value="">Select Width</option>
@@ -599,8 +604,9 @@
                                                         <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                                                     @endforeach
                                                 </select>
+                                                <span class="hyphen d-none">-</span>
                                             </td>
-                                            <td>
+                                            <td class="td-fabric-type">
                                                 <select class="select2 form-select fabric_type"
                                                     name="items[0][fabric_type_id]" data-placeholder="Select Fabric Type">
                                                     <option value="">Select Fabric Type</option>
@@ -608,6 +614,7 @@
                                                         <option value="{{ $fabricType->id }}">{{ $fabricType->fabric_type }}</option>
                                                     @endforeach
                                                 </select>
+                                                <span class="hyphen d-none">-</span>
                                             </td>
                                             <td>
                                                 <select class="select2 form-select uom" name="items[0][uom_id]" disabled
@@ -620,9 +627,6 @@
                                                 <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
                                             </td>
                                             <td>
-                                                <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
-                                            </td>
-                                            <td>
                                                 <input type="text" class="form-control supplier_design_name" name="items[0][supplier_design_name]" placeholder="Enter Supplier Design Name">
                                             </td>
                                             <td>
@@ -633,6 +637,9 @@
                                                         <option value="{{ $color->id }}">{{ $color->color_name }}</option>
                                                     @endforeach
                                                 </select>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
                                             </td>
                                             <td>
                                                 <input type="number" class="form-control rate" name="items[0][rate]"
@@ -929,29 +936,32 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
                             <option value="">Select Raw Material</option>
                         </select>
                     </td>
-                    <td>
+                    <td class="td-style">
                         <select class="select2 form-select style" name="items[${itemIndex}][style_id]" data-placeholder="Select Style">
                             <option value="">Select Style</option>
                             @foreach($styles as $style)
                                 <option value="{{ $style->id }}">{{ $style->style_name }}</option>
                             @endforeach
                         </select>
+                        <span class="hyphen d-none">-</span>
                     </td>
-                    <td>
+                    <td class="td-fabric-width">
                         <select class="select2 form-select fabric_width" name="items[${itemIndex}][fabric_width_id]" data-placeholder="Select Width">
                             <option value="">Select Width</option>
                             @foreach($fabricSizes as $fabricSize)
                                 <option value="{{ $fabricSize->id }}">{{ $fabricSize->width }}</option>
                             @endforeach
                         </select>
+                        <span class="hyphen d-none">-</span>
                     </td>
-                    <td>
+                    <td class="td-fabric-type">
                         <select class="select2 form-select fabric_type" name="items[${itemIndex}][fabric_type_id]" data-placeholder="Select Fabric Type">
                             <option value="">Select Fabric Type</option>
                             @foreach($fabricTypes as $fabricType)
                                 <option value="{{ $fabricType->id }}">{{ $fabricType->fabric_type }}</option>
                             @endforeach
                         </select>
+                        <span class="hyphen d-none">-</span>
                     </td>
                     <td>
                         <select class="select2 form-select uom" name="items[${itemIndex}][uom_id]" disabled data-placeholder="Select UOM">
@@ -963,9 +973,6 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
                         <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
                     </td>
                     <td>
-                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
-                    </td>
-                    <td>
                         <input type="text" class="form-control supplier_design_name" name="items[${itemIndex}][supplier_design_name]" placeholder="Enter Supplier Design Name">
                     </td>
                     <td>
@@ -975,6 +982,9 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
                                 <option value="{{ $color->id }}">{{ $color->color_name }}</option>
                             @endforeach
                         </select>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
                     </td>
                     <td>
                         <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="0.01" min="0" placeholder="Enter Rate">
@@ -999,6 +1009,7 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
 
                 $('#item-rows tbody').append(rowHtml);
                 initSelect2Fields();
+                toggleStyleFabricFields();
                 
                 let storeTypeId = $('#store_type_id').val();
                 if (storeTypeId) {
@@ -1025,7 +1036,7 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
                 let category_id = $(this).val();
                 let row = $(this).closest('tr');
                 let materialSelect = row.find('.material');
-                let currentMaterialId = materialSelect.val(); // Capture current selection
+                let currentMaterialId = materialSelect.val();
 
                 if (materialSelect.hasClass("select2-hidden-accessible")) {
                     materialSelect.select2('destroy');
@@ -1068,7 +1079,6 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
                             width: '100%'
                         });
                         
-                        // If we restored a selection, trigger change to update UOM and other fields
                         if (currentMaterialId && materialSelect.val() == currentMaterialId) {
                             materialSelect.trigger('change');
                         }
@@ -1081,6 +1091,7 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
                         });
                     }
                 });
+                toggleStyleFabricFields();
             });
 
             $(document).on('change', '.material', function () {
@@ -1365,10 +1376,27 @@ $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder
                 } else {
                     $('.po_store_category').val('').trigger('change.select2').trigger('change');
                 }
+                toggleStyleFabricFields();
             });
+
+            function toggleStyleFabricFields() {
+                let storeTypeId = $('#store_type_id').val();
+                $('.item-row').each(function() {
+                    let row = $(this);
+                    let categoryId = row.find('.po_store_category').val();
+                    if (storeTypeId == 2) {
+                        row.find('.td-style select, .td-style .select2-container, .td-fabric-width select, .td-fabric-width .select2-container, .td-fabric-type select, .td-fabric-type .select2-container').hide();
+                        row.find('.td-style .hyphen, .td-fabric-width .hyphen, .td-fabric-type .hyphen').removeClass('d-none').show();
+                    } else {
+                        row.find('.td-style select, .td-style .select2-container, .td-fabric-width select, .td-fabric-width .select2-container, .td-fabric-type select, .td-fabric-type .select2-container').show();
+                        row.find('.td-style .hyphen, .td-fabric-width .hyphen, .td-fabric-type .hyphen').addClass('d-none').hide();
+                    }
+                });
+            }
 
             initSelect2Fields();
             calculateTotals();
+            toggleStyleFabricFields();
         });
     </script>
 @endsection

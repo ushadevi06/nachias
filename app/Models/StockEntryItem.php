@@ -28,8 +28,11 @@ class StockEntryItem extends Model
         'price',
         'sku',
         'qrcode',
+        'barcode',
         'fabric_type_id',
         'sleeve_type',
+        'fit_id',
+        'size_ratio_id',
     ];
 
     public function stockEntry()
@@ -75,6 +78,11 @@ class StockEntryItem extends Model
     public function fabricType()
     {
         return $this->belongsTo(FabricType::class, 'fabric_type_id');
+    }
+
+    public function fit()
+    {
+        return $this->belongsTo(Fit::class, 'fit_id');
     }
 
     /**

@@ -54,9 +54,17 @@ class PurchaseOrderController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('po_number', 'like', "%{$search}%")
                         ->orWhere('reference_no', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%")
+                        ->orWhere('total_qty', 'like', "%{$search}%")
+                        ->orWhere('total_amount', 'like', "%{$search}%")
+                        ->orWhere(DB::raw("DATE_FORMAT(po_date, '%d-%m-%Y')"), 'like', "%{$search}%")
+                        ->orWhere(DB::raw("DATE_FORMAT(due_date, '%d-%m-%Y')"), 'like', "%{$search}%")
                         ->orWhereHas('supplier', function ($q2) use ($search) {
                             $q2->where('name', 'like', "%{$search}%")
-                               ->orWhere('code', 'like', "%{$search}%");
+                                ->orWhere('code', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('storeType', function ($q2) use ($search) {
+                            $q2->where('store_type_name', 'like', "%{$search}%");
                         });
                 });
             }

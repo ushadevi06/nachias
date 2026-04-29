@@ -221,6 +221,7 @@ class SalesInvoiceController extends Controller
                             'hsn_sac' => $item['hsn_sac'] ?? null,
                             'art_no' => $item['art_no'] ?? null,
                             'size' => $item['size'] ?? null,
+                            'color_id' => $item['color_id'] ?? null,
                             'sleeve_type' => $item['sleeve_type'] ?? null,
                             'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
                         ]
@@ -243,7 +244,7 @@ class SalesInvoiceController extends Controller
             }
         }
 
-        $invoice = $id ? SalesInvoice::with(['items.brandCategory', 'items.item', 'items.uom', 'items.sizeRatio', 'salesOrder'])->findOrFail($id) : null;
+        $invoice = $id ? SalesInvoice::with(['items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'items.sizeRatio', 'salesOrder'])->findOrFail($id) : null;
         $customers = Customer::active()->orderBy('id','desc')->get();
 
         $usedSoIds = SalesInvoice::whereNotNull('so_id')
@@ -269,23 +270,79 @@ class SalesInvoiceController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details sales-invoice')) {
             return unauthorizedRedirect();
         }
-        $invoice = SalesInvoice::with(['customer', 'salesOrder', 'items.brandCategory', 'items.item', 'items.uom'])->findOrFail($id);
+        $invoice = SalesInvoice::with(['customer', 'salesOrder', 'items.brandCategory', 'items.item', 'items.color', 'items.uom'])->findOrFail($id);
         return view('sales_invoice.view_details', compact('invoice'));
     }
     
     public function getSaleOrderDetails($id)
     {
-        $so = SalesOrder::with(['items.brandCategory', 'items.item', 'items.uom', 'items.size', 'customer'])->find($id);
+        $so = SalesOrder::with([
+            'items.brandCategory', 
+            'items.item.brand', 
+            'items.item.style', 
+            'items.stockEntryItem.item.brand', 
+            'items.stockEntryItem.item.style', 
+            'items.uom', 
+            'items.size', 
+            'items.color', 
+            'customer'
+        ])->find($id);
         if (!$so) {
             return response()->json(['success' => false, 'message' => 'Sale Order not found']);
         }
 
         $items = $so->items->map(function($item) {
+            $brandName = '';
+            $itemName = '';
+            $sleeveType = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
+
+            // Try to get from direct item relation
+            if ($item->item) {
+                if ($item->item->brand) {
+                    $brandName = $item->item->brand->brand_name;
+                } elseif ($item->brandCategory) {
+                    $brandName = $item->brandCategory->name;
+                }
+
+                if ($item->item->style) {
+                    $itemName = $item->item->style->style_name;
+                } else {
+                    $itemName = $item->item->name;
+                }
+            } 
+            // Fallback to stockEntryItem if direct item is missing
+            elseif ($item->stockEntryItem) {
+                if ($item->stockEntryItem->item) {
+                    $seItem = $item->stockEntryItem->item;
+                    if ($seItem->brand) {
+                        $brandName = $seItem->brand->brand_name;
+                    } elseif ($seItem->brandCategory) {
+                        $brandName = $seItem->brandCategory->name;
+                    }
+
+                    if ($seItem->style) {
+                        $itemName = $seItem->style->style_name;
+                    } else {
+                        $itemName = $seItem->name;
+                    }
+                } else {
+                    // Ultimate fallback: finished_item_code
+                    $brandName = $item->stockEntryItem->finished_item_code;
+                }
+                
+                if (empty($sleeveType)) {
+                    $sleeveType = $item->stockEntryItem->sleeve_type;
+                }
+            }
+            elseif ($item->brandCategory) {
+                $brandName = $item->brandCategory->name;
+            }
+
             return [
                 'brand_id' => $item->brand_cat_id,
-                'brand_name' => $item->brandCategory ? $item->brandCategory->name : '',
+                'brand_name' => $brandName ?: '',
                 'item_id' => $item->item_id,
-                'item_name' => $item->item ? $item->item->name : '',
+                'item_name' => $itemName ?: '',
                 'item_code' => $item->item ? $item->item->code : '',
                 'uom_id' => $item->uom_id,
                 'uom_code' => $item->uom ? $item->uom->uom_code : '',
@@ -296,7 +353,9 @@ class SalesInvoiceController extends Controller
                 'art_no' => $item->art_no,
                 'size_id' => $item->size_id,
                 'size_name' => $item->size ? $item->size->size : '',
-                'sleeve' => is_array($item->sleeve) ? $item->sleeve[0] : $item->sleeve,
+                'color_id' => $item->color_id,
+                'color_name' => $item->color ? $item->color->color_name : '',
+                'sleeve' => $sleeveType ?: '',
                 'stock_entry_item_id' => $item->stock_entry_item_id,
             ];
         });

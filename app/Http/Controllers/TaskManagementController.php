@@ -454,7 +454,6 @@ class TaskManagementController extends Controller
             $task->save();
             $this->logActivity($task->id, 'Status Change', 'Status changed to ' . $request->status);
 
-            // Sync movements when status is changed (especially to Completed)
             $this->syncProductionMovements($task);
 
             return response()->json(['success' => true]);
@@ -627,7 +626,7 @@ class TaskManagementController extends Controller
             $stageName = $task->stage->operationStage->operation_stage_name ?? ($task->stage->stage ?? 'N/A');
             $serviceData = [];
             if ($task->services && is_array($task->services)) {
-                $serviceData = \App\Models\ProductionService::whereIn('id', $task->services)
+                $serviceData = ProductionService::whereIn('id', $task->services)
                     ->get(['id', 'service_name', 'service_code'])
                     ->map(function ($s) {
                         return [
@@ -653,7 +652,7 @@ class TaskManagementController extends Controller
 
     public function getStageConsumables(Request $request, $id)
     {
-        $schedule = \App\Models\ProcessSchedule::with(['operationStage', 'jobCard.fabricDetails', 'jobCard.item'])->find($id);
+        $schedule = ProcessSchedule::with(['operationStage', 'jobCard.fabricDetails', 'jobCard.item'])->find($id);
 
         $jobCard = null;
         $stageName = '';

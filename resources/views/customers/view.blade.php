@@ -13,6 +13,9 @@
                                 data-bs-target="#importModal">
                                 <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                             </button>
+                            <a class="btn btn-outline-success" href="{{ url('customers/export-excel') }}">
+                                <i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Export
+                            </a>
                             <a class="btn btn-primary" href="{{ url('customers/add') }}">
                                 <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                             </a>

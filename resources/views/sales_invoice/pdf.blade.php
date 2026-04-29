@@ -372,16 +372,17 @@
         <table class="item-table" style="margin-top: 0;">
             <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
-                    <th width="5%">S.No</th>
-                    <th width="{{ $showAmount ? '35%' : '43%' }}">Description</th>
-                    <th width="8%">Size</th>
+                    <th width="4%">S.No</th>
+                    <th width="{{ $showAmount ? '22%' : '28%' }}">Stock Item</th>
+                    <th width="10%">Color</th>
                     <th width="10%">Art</th>
-                    <th width="8%">Tax (%)</th>
                     <th width="6%">UOM</th>
-                    <th width="{{ $showAmount ? '8%' : '10%' }}">Quantity</th>
-                    <th width="8%">MRP</th>
+                    <th width="8%">Size</th>
+                    <th width="8%">Qty</th>
+                    <th width="10%">MRP</th>
                     @if($showAmount)
-                    <th width="14%">Amount</th>
+                    <th width="10%">Price</th>
+                    <th width="12%">Amount</th>
                     @endif
                 </tr>
             </thead>
@@ -390,19 +391,37 @@
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
-                            {{ $item->brandCategory->category_name ?? '' }} 
-                            {{ $item->item->name ?? '' }}
-                            @if($item->sleeve_type == 'Full') (F/S) @endif
-                            @if($item->sleeve_type == 'Half') (H/S) @endif
+                            @php
+                                $brandName = '';
+                                $itemName = '';
+                                if ($item->item) {
+                                    $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : ''));
+                                    $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+                                } elseif ($item->stockEntryItem) {
+                                    if ($item->stockEntryItem->item) {
+                                        $seItem = $item->stockEntryItem->item;
+                                        $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : ''));
+                                        $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+                                    } else {
+                                        $brandName = $item->stockEntryItem->finished_item_code;
+                                    }
+                                } else {
+                                    $brandName = $item->brandCategory ? $item->brandCategory->name : '';
+                                    $itemName = $item->item ? $item->item->name : '';
+                                }
+                            @endphp
+                            <div class="bold">{{ $brandName }}</div>
+                            <div>{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</div>
                         </td>
-                        <td class="text-center">{{ $item->size }}</td>
+                        <td class="text-center">{{ $item->color ? $item->color->color_name : '-' }}</td>
                         <td class="text-center">{{ $item->art_no }}</td>
-                        <td class="text-center">{{ $invoice->other_state ? $invoice->igst_percent : ($invoice->cgst_percent + $invoice->sgst_percent) }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
+                        <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
                         <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
                         @if($showAmount)
-                        <td class="text-right">{{ number_format($item->amount, 2) }}</td>
+                        <td class="text-right">{{ number_format($item->rate, 2) }}</td>
+                        <td class="text-right bold">{{ number_format($item->amount, 2) }}</td>
                         @endif
                     </tr>
                 @endforeach
@@ -416,7 +435,9 @@
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
+                        <td>&nbsp;</td>
                         @if($showAmount)
+                        <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         @endif
                     </tr>
@@ -424,14 +445,9 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="6" class="text-right bold"></td>
+                    <td colspan="6" class="text-right bold">Total</td>
                     <td class="text-center bold">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
-                    @if($showSubTotal)
-                    <td class="text-right">Gross</td>
-                    <td class="text-right bold">{{ number_format($invoice->sub_total, 2) }}</td>
-                    @else
-                    <td class="text-right" colspan="{{ $showAmount ? 2 : 1 }}"></td>
-                    @endif
+                    <td class="text-right" colspan="{{ $showAmount ? 3 : 1 }}"></td>
                 </tr>
             </tfoot>
         </table>

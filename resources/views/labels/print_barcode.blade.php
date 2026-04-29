@@ -198,13 +198,13 @@
 
             <div class="qr-area">
                 @php
-                    $qrString = ($labelData['sku'] ?? '-') . " | " . 
-                                ($labelData['product_name'] ?? '-') . " | " . 
-                                ($labelData['fabric'] ?? '-') . " | " . 
-                                ($labelData['size'] ?? '-') . " | " . 
-                                ($labelData['color'] ?? '-') . " | " . 
-                                ($labelData['sleeve'] ?? '-') . " | Qty: " . 
-                                ($labelData['quantity'] ?? '-');
+                    $qrString = ($labelData['sku'] ?? '-') . " | " .
+                        ($labelData['product_name'] ?? '-') . " | " .
+                        ($labelData['fabric'] ?? '-') . " | " .
+                        ($labelData['size'] ?? '-') . " | " .
+                        ($labelData['color'] ?? '-') . " | " .
+                        ($labelData['sleeve'] ?? '-') . " | Qty: " .
+                        ($labelData['quantity'] ?? '-');
                 @endphp
                 {!! QrCode::size(65)->generate($qrString) !!}
                 <div class="sku-under-qr">{{ $labelData['sku'] }}</div>

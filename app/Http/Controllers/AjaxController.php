@@ -49,6 +49,12 @@ class AjaxController extends Controller
         return response()->json($places);
     }
 
+    public function fetchZonesByCity($city_id)
+    {
+        $zones = Zone::active()->whereRaw("FIND_IN_SET(?, city_ids)", [$city_id])->get(['id', 'zone_name']);
+        return response()->json($zones);
+    }
+
     public function getRawMaterialsByCategory($categoryId)
     {
         $rawMaterials = RawMaterial::where('store_category_id', $categoryId)->where('status', 'Active')->get(['id', 'name', 'code', 'uom_id']);

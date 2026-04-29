@@ -1,4 +1,28 @@
-ALTER TABLE purchase_order_items
-ADD COLUMN fabric_type_id BIGINT UNSIGNED NULL AFTER brand_id;
-ALTER TABLE job_card_entries
-ADD COLUMN job_card_type VARCHAR(255) NULL DEFAULT 'Regular' AFTER job_card_no;
+ALTER TABLE `uoms` DROP INDEX `uoms_uom_code_unique`;
+ALTER TABLE `states` DROP INDEX `states_state_code_unique`;
+ALTER TABLE `shipping_methods` DROP INDEX `shipping_methods_name_unique`;
+ALTER TABLE `transport_modes` DROP INDEX `transport_modes_name_unique`;
+ALTER TABLE `seasons` DROP INDEX `seasons_season_code_unique`;
+ALTER TABLE `shifts` DROP INDEX `shifts_updated_by_foreign`;
+ALTER TABLE `shifts` DROP INDEX `shifts_shift_name_unique`;
+ALTER TABLE `shifts` DROP INDEX `shifts_created_by_foreign`;
+ALTER TABLE `customers` DROP INDEX `customers_code_unique`;
+ALTER TABLE `suppliers` DROP INDEX `suppliers_store_id_foreign`;
+ALTER TABLE `suppliers` DROP INDEX `suppliers_code_unique`;
+ALTER TABLE `purchase_commission_agents` DROP INDEX `purchase_commission_agents_code_unique`;
+ALTER TABLE `service_providers` DROP INDEX `service_providers_operation_stage_id_foreign`;
+ALTER TABLE `sales_agents` DROP INDEX `sales_agents_zone_id_foreign`;
+ALTER TABLE `sales_agents` DROP INDEX `sales_agents_code_unique`;
+ALTER TABLE `sales_agents` DROP INDEX `sales_agents_state_id_foreign`;
+ALTER TABLE `sales_agents` DROP INDEX `sales_agents_city_id_foreign`;
+ALTER TABLE `sales_agents` DROP INDEX `sales_agents_place_id_foreign`;
+ALTER TABLE `store_categories` DROP INDEX `store_categories_code_unique`;
+ALTER TABLE `brand_categories` DROP INDEX `brand_categories_code_unique`;
+ALTER TABLE `items` DROP INDEX `items_product_barcode_unique`;
+ALTER TABLE `items` DROP INDEX `items_code_unique`;
+
+ALTER TABLE sales_order_items
+DROP COLUMN uom_id;
+
+ALTER TABLE sales_order_items
+ADD COLUMN uom_id VARCHAR(255) NULL;

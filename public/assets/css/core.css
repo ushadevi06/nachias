@@ -35576,3 +35576,27 @@ margin-bottom: 0 !important;
 .remove-lay-mark {
     color: #fff;
 }
+.ui-autocomplete {
+    z-index: 9999 !important;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+    border: 1px solid #e0e0e0 !important;
+    padding: 0 !important;
+}
+.ui-menu-item-wrapper {
+    padding: 12px 15px !important;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+}
+.ui-menu-item-wrapper.ui-state-active {
+    background-color: #f0eaff !important;
+    border: none !important;
+    color: #666 !important;
+    margin: 0 !important;
+}
+.search-item-title { font-weight: 600; color: #444; display: block; margin-bottom: 2px; }
+.search-item-balance { float: right; color: #28a745; font-weight: bold; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; }
+.search-item-info { font-size: 0.85em; color: #888; }

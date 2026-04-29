@@ -22,7 +22,6 @@
                                 </div>
                                 @error('so_no')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                             </div>
-
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control so_date @error('so_date') is-invalid @enderror" id="so_date" name="so_date" placeholder="SO Date" value="{{ old('so_date', $salesOrder ? $salesOrder->so_date->format('d-m-Y') : date('d-m-Y')) }}">
@@ -33,7 +32,7 @@
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="order_type" name="order_type" class="select2 form-select">
-                                        @foreach(['Regular'=>'Regular Order','Sample'=>'Sample Order','Bulk'=>'Bulk/Export'] as $val=>$label)
+                                        @foreach(['Regular'=>'Regular Order','Sample'=>'Sample Order','Bulk'=>'Bulk/Export','Urgent'=>'Urgent Order','Special'=>'Special Order'] as $val=>$label)
                                         <option value="{{ $val }}" {{ old('order_type', $salesOrder->order_type ?? 'Regular') == $val ? 'selected' : '' }}>{{ $label }}</option>
                                         @endforeach
                                     </select>
@@ -65,14 +64,13 @@
                                     <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer">
                                         <option value="">Select Customer</option>
                                         @foreach($customers as $customer)
-                                        <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" {{ old('customer_id', $salesOrder->customer_id ?? '') == $customer->id ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
+                                        <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-zone-id="{{ $customer->zone_id }}" {{ old('customer_id', $salesOrder->customer_id ?? '') == $customer->id ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
                                     <label for="customer_id">Customer <span class="text-danger">*</span></label>
                                 </div>
                                 @error('customer_id')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                             </div>
-
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('customer_po_ref') is-invalid @enderror" id="customer_po_ref" name="customer_po_ref" placeholder="Customer PO Reference" value="{{ old('customer_po_ref', $salesOrder->customer_po_ref ?? '') }}">
@@ -93,7 +91,6 @@
                                 </div>
                                 @error('store_id')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                             </div>
-
                             <div class="col-md-4">
                                 <div class="row gx-2">
                                     <div class="col-6">
@@ -132,7 +129,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">Billing &amp; Shipping Details</h5>
@@ -160,7 +156,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">Logistics &amp; Destination</h5>
@@ -245,304 +240,421 @@
                         <h5 class="mb-0">Item Details</h5>
                     </div>
                     <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" id="global_item_search" class="form-control border-primary" placeholder="Scan Barcode" autocomplete="off" style="border-width: 2px;">
+                                    <label for="global_item_search" class="text-primary fw-bold">SCAN BARCODE</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center">
+                                <small class="text-muted">Tip: Scan a barcode or type item code to quickly add it to the order.</small>
+                            </div>
+                        </div>
                         <div class="table-responsive text-nowrap">
                             <table class="table table-bordered align-middle" id="item-rows">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="min-width: 250px;">Stock Item *</th>
+                                        <th style="min-width: 150px;">SKU</th>
                                         <th style="min-width: 150px;">Color</th>
+                                        <th style="min-width: 100px;">Sleeve</th>
                                         <th style="min-width: 150px;">Art No *</th>
                                         <th style="min-width: 100px;">UOM *</th>
                                         <th style="min-width: 120px;">Size *</th>
                                         <th style="min-width: 120px;">Quantity *</th>
-                                        {{-- <th style="min-width: 120px;">Rate *</th> --}}
                                         <th style="min-width: 120px;">MRP *</th>
+                                        <th style="min-width: 120px;">Selling Price *</th>
                                         <th style="min-width: 120px;">Amount</th>
-                                        <th style="min-width: 140px;">Sleeve Type</th>
                                         <th style="min-width: 50px;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                            @if(old('items'))
-                                @foreach(old('items') as $index => $item)
-                                    <tr class="item-row">
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][stock_item_key]" class="select2 form-select stock-item-select @error("items.$index.stock_item_key") is-invalid @enderror" data-placeholder="Select Stock Item">
-                                                    <option value="">Select</option>
-                                                    @foreach($stockItems as $si)
-                                                        @php $key = $si['finished_item_code'] . '|' . $si['color_id']; @endphp
-                                                        <option value="{{ $key }}" {{ ($item['stock_item_key'] ?? ($si['finished_item_code'] . '|' . $si['color_id'])) == $key ? 'selected' : '' }}>{{ $si['finished_item_code'] }} ({{ $si['color_name'] }})</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            @error("items.$index.stock_item_key")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                            <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $item['item_id'] ?? '' }}">
-                                            <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $item['brand_cat_id'] ?? '' }}">
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][color_id]" class="select2 form-select @error("items.$index.color_id") is-invalid @enderror" data-placeholder="Color">
-                                                    <option value="">Select Color</option>
-                                                    @foreach($colors as $col)
-                                                        <option value="{{ $col->id }}" {{ ($item['color_id'] ?? '') == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            @error("items.$index.color_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[{{ $index }}][art_no]" class="form-control @error("items.$index.art_no") is-invalid @enderror" placeholder="Art No" value="{{ $item['art_no'] ?? '' }}">
-                                            </div>
-                                            @error("items.$index.art_no")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][uom_id]" class="select2 form-select @error("items.$index.uom_id") is-invalid @enderror" data-placeholder="UOM">
-                                                    <option value="">UOM</option>
-                                                    @foreach($uoms as $u)
-                                                        <option value="{{ $u->id }}" {{ ($item['uom_id'] ?? '') == $u->id ? 'selected' : '' }}>{{ $u->uom_code }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            @error("items.$index.uom_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select @error("items.$index.size_id") is-invalid @enderror" data-selected="{{ $item['size_id'] ?? '' }}">
-                                                    <option value="">Select Size</option>
-                                                </select>
-                                            </div>
-                                            @error("items.$index.size_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0.01" step="0.01">
-                                                <div class="stock-info-wrapper mt-1">
-                                                    <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                                                    <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
-                                                </div>
-                                            </div>
-                                            @error("items.$index.qty")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        {{-- <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
-                                            </div>
-                                            @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td> --}}
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
-                                            </div>
-                                            @error("items.$index.mrp")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format(($item['qty'] ?? 0) * ($item['mrp'] ?? 0), 2, '.', '') }}" readonly>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="segmented-control">
-                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_full_{{ $index }}" value="Full" {{ (is_array($item['sleeve'] ?? 'Full') ? in_array('Full', (array)$item['sleeve']) : ($item['sleeve'] ?? 'Full') == 'Full') ? 'checked' : '' }}>
-                                                <label for="sleeve_full_{{ $index }}">Full</label>
-                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_half_{{ $index }}" value="Half" {{ (is_array($item['sleeve'] ?? '') ? in_array('Half', (array)$item['sleeve']) : ($item['sleeve'] ?? '') == 'Half') ? 'checked' : '' }}>
-                                                <label for="sleeve_half_{{ $index }}">Half</label>
-                                            </div>
-                                            @error("items.$index.sleeve")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
-                                        </td>
-                                        <td>
-                                            <div class="d-flex gap-2">
-                                                <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
-                                                <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item['stock_entry_item_id'] ?? '' }}">
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @elseif(isset($salesOrder) && $salesOrder->items->count() > 0)
-                                @foreach($salesOrder->items as $index => $item) 
-                                    <tr class="item-row">
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][stock_item_key]" class="select2 form-select stock-item-select" data-placeholder="Select Stock Item">
-                                                    <option value="">Select</option>
-                                                    @foreach($stockItems as $si)
+                                    @if(old('items'))
+                                        @foreach(old('items') as $index => $item)
+                                            <tr class="item-row">
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $item['stock_item_key'] ?? '' }}" autocomplete="off">
+                                                        <input type="hidden" name="items[{{ $index }}][stock_item_key]" class="stock-item-select" value="{{ $item['stock_item_key'] ?? '' }}">
+                                                        <label>Stock Item*</label>
+                                                    </div>
+                                                    @error("items.$index.stock_item_key")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                    <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $item['item_id'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $item['brand_cat_id'] ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item['stock_entry_item_id'] ?? '' }}">
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][sku]" class="form-control sku-input" placeholder="SKU" value="{{ $item['sku'] ?? '' }}" readonly tabindex="-1">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <select name="items[{{ $index }}][color_id]" class="select2 form-select @error("items.$index.color_id") is-invalid @enderror" data-placeholder="Color">
+                                                            <option value="">Select Color</option>
+                                                            @foreach($colors as $col)
+                                                                <option value="{{ $col->id }}" {{ ($item['color_id'] ?? '') == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    @error("items.$index.color_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][sleeve]" class="form-control sleeve-input" placeholder="Sleeve" value="{{ $item['sleeve'] ?? '' }}" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input @error("items.$index.art_no") is-invalid @enderror" placeholder="Art No" value="{{ $item['art_no'] ?? '' }}">
+                                                    </div>
+                                                    @error("items.$index.art_no")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" class="form-control" value="PCS" readonly tabindex="-1">
+                                                        <input type="hidden" name="items[{{ $index }}][uom_id]" value="PCS">
+                                                        <label>UOM</label>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select @error("items.$index.size_id") is-invalid @enderror" data-selected="{{ $item['size_id'] ?? '' }}">
+                                                            <option value="">Select Size</option>
+                                                            @foreach(['36','38','40','42','44'] as $s)
+                                                                <option value="{{ $s }}" {{ ($item['size_id'] ?? '') == $s ? 'selected' : '' }}>{{ $s }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    @error("items.$index.size_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input @error("items.$index.qty") is-invalid @enderror" value="{{ $item['qty'] ?? 1 }}" min="0.01" step="0.01">
+                                                        <div class="stock-info-wrapper mt-1">
+                                                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                                                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                                                        </div>
+                                                    </div>
+                                                    @error("items.$index.qty")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input @error("items.$index.mrp") is-invalid @enderror" placeholder="0.00" value="{{ $item['mrp'] ?? '' }}" step="0.01">
+                                                    </div>
+                                                    @error("items.$index.mrp")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
+                                                    </div>
+                                                    @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format(($item['qty'] ?? 0) * ($item['rate'] ?? 0), 2, '.', '') }}" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-2">
+                                                        <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @elseif(isset($salesOrder) && $salesOrder->items->count() > 0)
+                                        @foreach($salesOrder->items as $index => $item) 
+                                            <tr class="item-row">
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
                                                         @php 
-                                                            $key = $si['finished_item_code'] . '|' . $si['color_id']; 
                                                             $itemFinishedCode = $item->stockEntryItem ? $item->stockEntryItem->finished_item_code : ($item->item->code ?? '');
                                                         @endphp
-                                                        <option value="{{ $key }}" {{ ($itemFinishedCode == $si['finished_item_code'] && $item->color_id == $si['color_id']) ? 'selected' : '' }}>{{ $si['finished_item_code'] }} ({{ $si['color_name'] }})</option>
-                                                    @endforeach
-                                                </select>
+                                                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $itemFinishedCode }}" autocomplete="off">
+                                                        <input type="hidden" name="items[{{ $index }}][stock_item_key]" class="stock-item-select" value="{{ $itemFinishedCode }}">
+                                                        <label>Stock Item*</label>
+                                                    </div>
+                                                    <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $item->item_id }}">
+                                                    <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $item->brand_cat_id }}">
+                                                    <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item->stock_entry_item_id }}">
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][sku]" class="form-control sku-input" placeholder="SKU" value="{{ $item->sku }}" readonly tabindex="-1">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <select name="items[{{ $index }}][color_id]" class="select2 form-select" data-placeholder="Color">
+                                                            <option value="">Select Color</option>
+                                                            @foreach($colors as $col)
+                                                                <option value="{{ $col->id }}" {{ $item->color_id == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][sleeve]" class="form-control sleeve-input" placeholder="Sleeve" value="{{ is_array($item->sleeve) ? implode(', ', $item->sleeve) : $item->sleeve }}" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input" placeholder="Art No" value="{{ $item->art_no }}">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" class="form-control" value="PCS" readonly tabindex="-1">
+                                                        <input type="hidden" name="items[{{ $index }}][uom_id]" value="PCS">
+                                                        <label>UOM</label>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select" data-selected="{{ $item->size_id }}">
+                                                            <option value="">Select Size</option>
+                                                            @foreach(['36','38','40','42','44'] as $s)
+                                                                <option value="{{ $s }}" {{ $item->size_id == $s ? 'selected' : '' }}>{{ $s }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0.01" step="0.01">
+                                                        <div class="stock-info-wrapper mt-1">
+                                                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                                                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->qty * ($item->rate ?: 0), 2, '.', '') }}" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-2">
+                                                        <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                        <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item->stock_entry_item_id ?? '' }}">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                    <tr class="item-row">
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="" autocomplete="off">
+                                                <input type="hidden" name="items[0][stock_item_key]" class="stock-item-select" value="">
+                                                <label>Stock Item*</label>
                                             </div>
-                                            <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $item->item_id }}">
-                                            <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $item->brand_cat_id }}">
+                                            <input type="hidden" name="items[0][item_id]" value="">
+                                            <input type="hidden" name="items[0][brand_cat_id]" value="">
+                                            <input type="hidden" name="items[0][stock_entry_item_id]" class="stock-entry-item-id" value="">
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][color_id]" class="select2 form-select" data-placeholder="Color">
+                                                <input type="text" name="items[0][sku]" class="form-control sku-input" placeholder="SKU" readonly>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <select name="items[0][color_id]" class="select2 form-select" data-placeholder="Color">
                                                     <option value="">Select Color</option>
                                                     @foreach($colors as $col)
-                                                        <option value="{{ $col->id }}" {{ $item->color_id == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
+                                                        <option value="{{ $col->id }}">{{ $col->color_name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[{{ $index }}][art_no]" class="form-control" placeholder="Art No" value="{{ $item->art_no }}">
+                                                <input type="text" name="items[0][sleeve]" class="form-control sleeve-input" placeholder="Sleeve" readonly>
                                             </div>
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][uom_id]" class="select2 form-select" data-placeholder="UOM">
-                                                    <option value="">UOM</option>
-                                                    @foreach($uoms as $u)
-                                                        <option value="{{ $u->id }}" {{ $item->uom_id == $u->id ? 'selected' : '' }}>{{ $u->uom_code }}</option>
-                                                    @endforeach
-                                                </select>
+                                                <input type="text" name="items[0][art_no]" class="form-control art-no-input" placeholder="Art No">
                                             </div>
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select" data-selected="{{ $item->size_id }}">
+                                                <input type="text" class="form-control" value="PCS" readonly tabindex="-1">
+                                                <input type="hidden" name="items[0][uom_id]" value="PCS">
+                                                <label>UOM</label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <select name="items[0][size_id]" class="form-select select2 size-select">
                                                     <option value="">Select Size</option>
+                                                    @foreach(['36','38','40','42','44'] as $s)
+                                                        <option value="{{ $s }}">{{ $s }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0.01" step="0.01">
+                                                <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
                                                 <div class="stock-info-wrapper mt-1">
                                                     <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                                                    <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                                                    <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        {{-- <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
-                                            </div>
-                                        </td> --}}
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $item->mrp }}" step="0.01">
+                                                <input type="number" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">
                                             </div>
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->qty * $item->mrp, 2, '.', '') }}" readonly>
+                                                <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="segmented-control">
-                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_full_{{ $index }}" value="Full" {{ (is_array($item->sleeve) ? in_array('Full', $item->sleeve) : $item->sleeve == 'Full') ? 'checked' : '' }}>
-                                                <label for="sleeve_full_{{ $index }}">Full</label>
-                                                <input type="radio" name="items[{{ $index }}][sleeve]" id="sleeve_half_{{ $index }}" value="Half" {{ (is_array($item->sleeve) ? in_array('Half', $item->sleeve) : $item->sleeve == 'Half') ? 'checked' : '' }}>
-                                                <label for="sleeve_half_{{ $index }}">Half</label>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="text" name="items[0][amount]" class="form-control amount-input" value="0.00" readonly>
                                             </div>
                                         </td>
                                         <td>
                                             <div class="d-flex gap-2">
-                                                <button type="button" class="btn btn-danger btn-sm delete_row"><i class="ri ri-delete-bin-line"></i></button>
-                                                <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $item->stock_entry_item_id ?? '' }}">
+                                                <button type="button" class="btn btn-danger btn-sm delete_row">
+                                                    <i class="ri ri-delete-bin-line"></i>
+                                                </button>
+                                                <input type="hidden" name="items[0][stock_entry_item_id]" class="stock-entry-item-id" value="">
                                             </div>
                                         </td>
                                     </tr>
-                                @endforeach
-                            @else
-                                <tr class="item-row">
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select name="items[0][stock_item_key]" class="select2 form-select stock-item-select" data-placeholder="Select Stock Item">
-                                                <option value="">Select</option>
-                                                @foreach($stockItems as $si)
-                                                    @php $key = $si['finished_item_code'] . '|' . $si['color_id']; @endphp
-                                                    <option value="{{ $key }}">{{ $si['finished_item_code'] }} ({{ $si['color_name'] }})</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <input type="hidden" name="items[0][item_id]" value="">
-                                        <input type="hidden" name="items[0][brand_cat_id]" value="">
-                                    </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select name="items[0][color_id]" class="select2 form-select" data-placeholder="Color">
-                                                <option value="">Select Color</option>
-                                                @foreach($colors as $col)
-                                                    <option value="{{ $col->id }}">{{ $col->color_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="text" name="items[0][art_no]" class="form-control" placeholder="Art No">
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select name="items[0][uom_id]" class="select2 form-select" data-placeholder="UOM">
-                                                <option value="">UOM</option>
-                                                @foreach($uoms as $u)
-                                                    <option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <select name="items[0][size_id]" class="form-select select2 size-select">
-                                                <option value="">Select Size</option>
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="number" name="items[0][qty]" class="form-control qty-input" value="1" min="0.01" step="0.01">
-                                            <div class="stock-info-wrapper mt-1">
-                                                <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
-                                                <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds available stock!</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    {{-- <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
-                                        </div>
-                                    </td> --}}
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="number" name="items[0][mrp]" class="form-control mrp-input" placeholder="0.00" step="0.01">
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="text" name="items[0][amount]" class="form-control amount-input" value="0.00" readonly>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="segmented-control">
-                                            <input type="radio" name="items[0][sleeve]" id="sleeve_full_0" value="Full" checked>
-                                            <label for="sleeve_full_0">Full</label>
-                                            <input type="radio" name="items[0][sleeve]" id="sleeve_half_0" value="Half">
-                                            <label for="sleeve_half_0">Half</label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-primary btn-sm add_item">
-                                                <i class="ri ri-add-line"></i>
-                                            </button>
-                                            <input type="hidden" name="items[0][stock_entry_item_id]" class="stock-entry-item-id" value="">
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endif
+                                    @endif
                                 </tbody>
                             </table>
                             <input type="hidden" id="itemIndex" value="{{ (old('items') ? count(old('items')) : (isset($salesOrder) ? $salesOrder->items->count() : 1)) }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Tax &amp; Charges</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="charges_select" class="select2 form-select @error('charges_select') is-invalid @enderror" data-placeholder="Select Charge">
+                                        <option value="">Loading charges...</option>
+                                    </select>
+                                    <label>Charges <span class="text-danger">*</span></label>
+                                </div>
+                                @error('charges_select')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-2">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" min="0" step="0.01" class="form-control @error('charge_amount') is-invalid @enderror" id="charge_amount" placeholder="Charge Amount">
+                                    <label>Amount</label>
+                                </div>
+                                @error('charge_amount')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="charge_tax_type" class="form-select select2">
+                                        <option value="Pre-GST">Pre-GST (Taxable)</option>
+                                        <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
+                                    </select>
+                                    <label>Tax Type</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-xl-2 d-flex align-items-center">
+                                <button type="button" id="add_charge_btn" class="btn btn-primary w-100">Add Charge</button>
+                            </div>
+
+                        </div>
+                        <div class="table-responsive mt-4 {{ (isset($charges) && $charges->count() || (old('charges') && isset(old('charges')['charge_id']))) ? '' : 'd-none' }}" id="charges_table">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Charge Name</th>
+                                        <th>Tax Type</th>
+                                        <th>Amount</th>
+                                        <th width="120px">Action</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody id="added_charges_list">
+                                    @php
+                                        $oldCharges = old('charges');
+                                        $chargesToLoop = [];
+
+                                        if ($oldCharges && isset($oldCharges['charge_id'])) {
+                                            foreach ($oldCharges['charge_id'] as $index => $id) {
+                                                $chargesToLoop[] = (object) [
+                                                    'charge_id' => $id,
+                                                    'charge_name' => $oldCharges['name'][$index] ?? '',
+                                                    'charge_amount' => $oldCharges['amount'][$index] ?? 0,
+                                                    'id' => null
+                                                ];
+                                            }
+                                        } else {
+                                            $chargesToLoop = isset($charges) ? $charges : collect();
+                                        }
+                                    @endphp
+
+                                    @foreach($chargesToLoop as $charge)
+                                        @php
+                                            $chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
+                                            $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
+                                            $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+                                            $taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
+                                            $invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ?? null);
+                                        @endphp
+
+                                        <tr class="charge-row" data-charge-id="{{ $chargeId }}" data-invoice-charge-id="{{ $invoiceChargeId }}" data-tax-type="{{ $taxType }}">
+                                            <td>
+                                                {{ $chargeName }}
+                                                <input type="hidden" name="charges[charge_id][]" value="{{ $chargeId }}">
+                                                <input type="hidden" name="charges[name][]" value="{{ $chargeName }}">
+                                            </td>
+                                            <td>
+                                                {{ $taxType }}
+                                                <input type="hidden" name="charges[tax_type][]" value="{{ $taxType }}">
+                                            </td>
+                                            <td>
+                                                {{ number_format($chargeAmount, 2) }}
+                                                <input type="hidden" name="charges[amount][]" value="{{ $chargeAmount }}">
+                                            </td>
+                                            <td class="d-flex align-items-center">
+                                                <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                                                    <i class="ri ri-pencil-line"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge" {{ isset($salesOrder) ? 'disabled' : '' }}>
+                                                    <i class="ri ri-delete-bin-line"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -557,10 +669,24 @@
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
                                             <select id="status" name="status" class="select2 form-select">
-                                                @foreach(['Draft','Approved','Rejected','Pending','In Production','Dispatched','Cancelled'] as $st)
-                                                <option value="{{ $st }}" {{ old('status', $salesOrder->status ?? 'Draft') == $st ? 'selected' : '' }}>{{ $st }}</option>
+                                                @php
+                                                    $currentStatus = $salesOrder->status ?? 'Draft';
+                                                    $allStatuses = ['Draft', 'Pending', 'Approved', 'Rejected'];
+                                                @endphp
+                                                @foreach($allStatuses as $st)
+                                                    @php
+                                                        $disabled = '';
+                                                        if ($currentStatus === 'Draft') {
+                                                            if (!in_array($st, ['Draft', 'Pending', 'Approved', 'Rejected'])) $disabled = 'disabled';
+                                                        } elseif ($currentStatus === 'Pending') {
+                                                            if (!in_array($st, ['Draft', 'Pending', 'Approved', 'Rejected'])) $disabled = 'disabled';
+                                                        } elseif ($currentStatus === 'Approved' || $currentStatus === 'Rejected') {
+                                                            if ($st !== $currentStatus) $disabled = 'disabled';
+                                                        }
+                                                    @endphp
+                                                    <option value="{{ $st }}" {{ old('status', $currentStatus) == $st ? 'selected' : '' }} {{ $disabled }}>{{ $st }}</option>
                                                 @endforeach
-                                            </select>
+                                             </select>
                                             <label for="status">Order Status <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
@@ -622,6 +748,13 @@
                                 </div>
                                 <div class="row g-4">
                                     <div class="col-md-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <label class="fw-bold">Sales Discount:</label>
+                                            <div class="input-group input-group-sm" style="width:100px;">
+                                                <input type="number" class="form-control form-control-sm text-end" id="sales_discount_percent" name="sales_discount_percent" step="0.01" min="0" max="100" value="{{ old('sales_discount_percent', $salesOrder->sales_discount_percent ?? '0') }}">
+                                                <span class="input-group-text px-1">%</span>
+                                            </div>
+                                        </div>
                                         <div class="mb-4">
                                             <label class="fw-bold mb-2">Box Discount Option:</label>
                                             <div class="d-flex justify-content-between align-items-center">
@@ -664,6 +797,10 @@
                                                     <input type="hidden" id="commission_amount" name="commission_amount" value="{{ old('commission_amount', $salesOrder->commission_amount ?? '0.00') }}">
                                                 </div>
                                             </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <label class="fw-medium">Pre-GST Charges:</label>
+                                            <input type="text" id="pre_gst_total_input" name="pre_gst_total" class="form-control-plaintext text-end w-50 fw-bold" value="0.00" readonly>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
                                             <label class="fw-medium">Net Amount (Before Tax):</label>
@@ -712,6 +849,10 @@
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Tax Amount:</label>
                                             <input type="text" class="form-control-plaintext text-end w-50" id="tax_amount" name="tax_amount" value="{{ old('tax_amount', $salesOrder->tax_amount ?? '0.00') }}" readonly>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <label class="fw-medium">Post-GST Charges:</label>
+                                            <input type="text" id="other_charges_input" name="other_charges" class="form-control-plaintext text-end w-50 fw-bold" value="{{ old('other_charges', $salesOrder->other_charges ?? '0.00') }}" readonly>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Round Off:</label>
@@ -785,9 +926,51 @@
         font-size: 0.7rem;
         font-weight: 600;
     }
+    .ui-autocomplete {
+        z-index: 10000 !important;
+        max-height: 300px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        border: 1px solid #e0e2ef;
+    }
+    .ui-menu-item {
+        border-bottom: 1px solid #f0f1f8;
+    }
+    .ui-menu-item:last-child {
+        border-bottom: none;
+    }
+    .ui-menu-item .ui-menu-item-wrapper {
+        padding: 10px 15px !important;
+        transition: all 0.2s;
+    }
+    .ui-menu-item .ui-menu-item-wrapper.ui-state-active {
+        background-color: #f4f5fb !important;
+        color: var(--bs-primary) !important;
+        border: none !important;
+        margin: 0 !important;
+    }
+    .search-item-title {
+        font-weight: 700;
+        color: #323452;
+        margin-bottom: 2px;
+        display: block;
+    }
+    .search-item-info {
+        font-size: 12px;
+        color: #6d6f89;
+    }
+    .search-item-balance {
+        float: right;
+        font-weight: 600;
+        color: var(--bs-success);
+    }
+
 </style>
 @endsection
 @section('scripts')
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script>
 $(document).ready(function () {
     let itemIndex = Number($('#itemIndex').val()) || 0;
@@ -795,30 +978,63 @@ $(document).ready(function () {
     $('.so_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
     $('.request_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
 
-    function createRow() {
-        let stockOpts = `<option value="">Select</option>`;
-        @foreach($stockItems as $si)
-        stockOpts += `<option value="{{ $si['finished_item_code'] }}|{{ $si['color_id'] }}">{{ addslashes($si['finished_item_code']) }} ({{ addslashes($si['color_name']) }})</option>`;
-        @endforeach
+    $('.select2').each(function() {
+        $(this).select2({ dropdownParent: $(this).closest('.card-body').length ? $(this).closest('.card-body') : $('body') });
+    });
 
+    $('#customer_id').on('change', function() {
+        let zoneId = $(this).find(':selected').data('zone-id');
+        if (zoneId) {
+            $('#zone_id').val(zoneId).trigger('change');
+        } else {
+            $('#zone_id').val('').trigger('change');
+        }
+        
+        let customerId = $(this).val();
+        if (customerId) {
+            $.ajax({
+                url: `{{ url('get-customer-details') }}/${customerId}`,
+                type: 'GET',
+                success: function(res) {
+                    if (res.success) {
+                        $('#customer_box_discount').val(res.box_discount || 0);
+                        $('#customer_sales_discount').val(res.sales_discount || 0);
+                        $('#sales_discount_percent').val(res.sales_discount || 0);
+                        if ($('input[name="discount_type"]:checked').val() === 'box') {
+                            $('#discount_percent').val(res.box_discount || 0);
+                        } else {
+                            $('#discount_percent').val(0);
+                        }
+                        calculateTotals();
+                    }
+                }
+            });
+        }
+    });
+
+    function createRow() {
         let colorOpts = `<option value="">Select Color</option>`;
         @foreach($colors as $col)
         colorOpts += `<option value="{{ $col->id }}">{{ addslashes($col->color_name) }}</option>`;
         @endforeach
 
-        let uomOpts = `<option value="">UOM</option>`;
-        @foreach($uoms as $u)
-        uomOpts += `<option value="{{ $u->id }}" {{ $u->uom_code == 'PCS' ? 'selected' : '' }}>{{ $u->uom_code }}</option>`;
-        @endforeach
 
         let rowHtml = `
             <tr class="item-row">
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][stock_item_key]" class="select2 form-select stock-item-select" data-placeholder="Select Stock Item">${stockOpts}</select>
+                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Search Item (Code/SKU)" value="" autocomplete="off">
+                        <input type="hidden" name="items[${itemIndex}][stock_item_key]" class="stock-item-select" value="">
+                        <label>Search Stock Item (Code/SKU) *</label>
                     </div>
                     <input type="hidden" name="items[${itemIndex}][item_id]" value="">
                     <input type="hidden" name="items[${itemIndex}][brand_cat_id]" value="">
+                    <input type="hidden" name="items[${itemIndex}][stock_entry_item_id]" class="stock-entry-item-id" value="">
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[${itemIndex}][sku]" class="form-control sku-input" placeholder="SKU" readonly>
+                    </div>
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
@@ -827,18 +1043,30 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="text" name="items[${itemIndex}][art_no]" class="form-control" placeholder="Art No">
+                        <input type="text" name="items[${itemIndex}][sleeve]" class="form-control sleeve-input" placeholder="Sleeve" readonly>
                     </div>
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][uom_id]" class="select2 form-select" data-placeholder="UOM">${uomOpts}</select>
+                        <input type="text" name="items[${itemIndex}][art_no]" class="form-control art-no-input" placeholder="Art No">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" class="form-control" value="PCS" readonly tabindex="-1">
+                        <input type="hidden" name="items[${itemIndex}][uom_id]" value="PCS">
+                        <label>UOM</label>
                     </div>
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
                         <select name="items[${itemIndex}][size_id]" class="select2 form-select size-select" data-placeholder="Size">
                             <option value="">Select Size</option>
+                            <option value="36">36</option>
+                            <option value="38">38</option>
+                            <option value="40">40</option>
+                            <option value="42">42</option>
+                            <option value="44">44</option>
                         </select>
                     </div>
                 </td>
@@ -858,15 +1086,12 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
+                        <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
                     </div>
                 </td>
                 <td>
-                    <div class="segmented-control">
-                        <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_full_${itemIndex}" value="Full" checked>
-                        <label for="sleeve_full_${itemIndex}">Full</label>
-                        <input type="radio" name="items[${itemIndex}][sleeve]" id="sleeve_half_${itemIndex}" value="Half">
-                        <label for="sleeve_half_${itemIndex}">Half</label>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
                     </div>
                 </td>
                 <td>
@@ -888,6 +1113,165 @@ $(document).ready(function () {
 
         itemIndex++;
     }
+
+    function initStockItemAutocomplete($el) {
+        $el.autocomplete({
+            source: function(request, response) {
+                $.getJSON("{{ url('sales_orders/search-stock-items') }}", {
+                    term: request.term
+                }, response);
+            },
+            minLength: 1,
+            select: function(event, ui) {
+                let $this = $(this);
+                let $row = $this.closest('.item-row');
+                
+                if (ui.item) {
+                    if ($row.length) {
+                        $this.val(ui.item.label);
+                        $row.find('.stock-item-select').val(ui.item.value).trigger('change');
+                    } else if ($this.attr('id') === 'global_item_search') {
+                        $.ajax({
+                            url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}&so_id={{ $salesOrder->id ?? '' }}`,
+                            type: 'GET',
+                            success: function(res) {
+                                if (res.success) {
+                                    handleGlobalItemSelection(res);
+                                    $this.val('').focus();
+                                } else {
+                                    alert("Failed to fetch item details. Please try again.");
+                                    $this.val('').focus();
+                                }
+                            },
+                            error: function() {
+                                alert("Error fetching item stock. Please check your connection.");
+                            }
+                        });
+                    }
+                }
+                return false;
+            }
+        }).autocomplete("instance")._renderItem = function(ul, item) {
+            let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
+            return $("<li>")
+                .append(`<div class="ui-menu-item-wrapper">
+                    <span class="search-item-title">${item.label}</span>
+                    <span class="search-item-balance">Stock: ${parseFloat(item.balance).toFixed(2)}</span>
+                    <div class="search-item-info">
+                        Art No: ${item.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(item.price).toFixed(2)}
+                    </div>
+                </div>`)
+                .appendTo(ul);
+        };
+
+        $el.on('keydown', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                let $this = $(this);
+                let val = $this.val();
+                if (val && $this.attr('id') !== 'global_item_search') {
+                    $.ajax({
+                        url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(val)}&so_id={{ $salesOrder->id ?? '' }}`,
+                        type: 'GET',
+                        success: function(res) {
+                            if (res.success) {
+                                populateRowData($this.closest('.item-row'), res);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    initStockItemAutocomplete($('#global_item_search'));
+    
+    $('#global_item_search').on('keydown', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            let val = $(this).val();
+            if (val) {
+                $.ajax({
+                    url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(val)}&so_id={{ $salesOrder->id ?? '' }}`,
+                    type: 'GET',
+                    success: function(res) {
+                        if (res.success) {
+                            handleGlobalItemSelection(res);
+                            $('#global_item_search').val('').focus();
+                        } else {
+                            alert("Item not found or out of stock.");
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    function handleGlobalItemSelection(res) {
+        let $targetRow = null;
+        $('.item-row').each(function() {
+            let itemKey = $(this).find('.stock-item-select').val();
+            if (!itemKey || itemKey === "") {
+                $targetRow = $(this);
+                return false;
+            }
+        });
+        if (!$targetRow || !$targetRow.length) {
+            createRow();
+            $targetRow = $('.item-row').last();
+        }
+        populateRowData($targetRow, res);
+        $('#global_item_search').focus();
+    }
+
+    function populateRowData($row, res) {
+        if (!$row || !$row.length) return;
+        
+        let displayName = res.finished_item_code;
+        if (res.item_name) {
+            displayName += ' - ' + res.item_name;
+        }
+        $row.find('.stock-item-autocomplete').val(displayName);
+        $row.find('.stock-item-select').val(res.finished_item_code);
+        $row.find('input[name*="[item_id]"]').val(res.item_id);
+        $row.find('input[name*="[brand_cat_id]"]').val(res.brand_cat_id);
+        $row.find('.stock-entry-item-id').val(res.stock_entry_item_id);
+        $row.find('.sku-input').val(res.sku);
+        $row.find('select[name*="[color_id]"]').val(res.color_id).trigger('change');
+        $row.find('.sleeve-input').val(res.sleeve_type);
+        $row.find('.art-no-input').val(res.art_no);
+        
+        let mrp = parseFloat(res.mrp || 0);
+        let price = parseFloat(res.price || 0);
+        
+        $row.find('.mrp-input').val(mrp.toFixed(2));
+        $row.find('.rate-input').val(price.toFixed(2));
+        
+        const sizeList = ['36', '38', '40', '42', '44'];
+        let sizeOpts = `<option value="">Select Size</option>`;
+        sizeList.forEach(s => {
+            sizeOpts += `<option value="${s}">${s}</option>`;
+        });
+        let $sizeSelect = $row.find('.size-select');
+        $sizeSelect.html(sizeOpts);
+        
+        $row.data('size-stock', res.size_stock);
+        if (res.size) {
+            $sizeSelect.val(res.size).trigger('change');
+        }
+        
+        $row.find('.qty-input').trigger('input');
+        if (typeof calculateTotals === 'function') {
+            calculateTotals();
+        }
+    }
+
+    $(document).on('focus', '.stock-item-autocomplete', function() {
+        if (!$(this).hasClass('ui-autocomplete-input')) {
+            initStockItemAutocomplete($(this));
+        }
+    });
+
     $('.add_item').on('click', createRow);
     
     $('#customer_id').on('change', function() {
@@ -952,41 +1336,17 @@ $(document).ready(function () {
         }
     });
 
-    function reindexItems() {
-        // Not strictly needed for table display but good to keep if logic depends on counting
-    }
-
     $(document).on('change', '.stock-item-select', function() {
-        let key = $(this).val();
+        let code = $(this).val();
         let $row = $(this).closest('.item-row');
         
-        if (key) {
-            let parts = key.split('|');
-            let code = parts[0];
-            let colorId = parts[1];
-            
+        if (code) {
             $.ajax({
-                url: `{{ url('get-finished-item-details') }}/${encodeURIComponent(code)}/${colorId}`,
+                url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(code)}&so_id={{ $salesOrder->id ?? '' }}`,
                 type: 'GET',
                 success: function(res) {
                     if (res.success) {
-                        let d = res.data;
-                        $row.find('input[name*="[item_id]"]').val(d.item_id);
-                        $row.find('input[name*="[brand_cat_id]"]').val(d.brand_cat_id);
-                        $row.find('select[name*="[color_id]"]').val(colorId).trigger('change');
-                        $row.find('input[name*="[art_no]"]').val(d.art_no);
-                        $row.find('select[name*="[uom_id]"]').val(d.uom_id).trigger('change');
-                        $row.find('.available-stock-display').text(parseFloat(d.balance).toFixed(2));
-                        $row.find('input[name*="[mrp]"]').val(parseFloat(d.mrp).toFixed(2));
-                        
-                        if (d.sleeve) {
-                            $row.find(`input[name*="[sleeve]"][value="${d.sleeve}"]`).prop('checked', true).trigger('change');
-                        }
-                        
-                        let sizeOpts = `<option value="">Select Size</option><option value="${d.size}" selected>${d.size}</option>`;
-                        $row.find('.size-select').html(sizeOpts).trigger('change');
-                        
-                        $row.find('.qty-input').trigger('input');
+                        populateRowData($row, res);
                     }
                 }
             });
@@ -994,30 +1354,40 @@ $(document).ready(function () {
             $row.find('input[name*="[item_id]"]').val('');
             $row.find('input[name*="[brand_cat_id]"]').val('');
             $row.find('select[name*="[color_id]"]').val('').trigger('change');
-            $row.find('input[name*="[art_no]"]').val('');
+            $row.find('.sku-input').val('');
+            $row.find('.sleeve-input').val('');
+            $row.find('.art-no-input').val('');
             $row.find('.available-stock-display').text('0.00');
-            $row.find('input[name*="[mrp]"]').val('');
+            $row.find('.mrp-input').val('');
+            $row.find('.rate-input').val('');
             $row.find('.size-select').html('<option value="">Select Size</option>').trigger('change');
+            $row.data('size-stock', {});
             calculateTotals();
         }
     });
 
     function updateStockAndRate($row) {
-        // This function might need to be adjusted or kept if it handles other things like sleeve change
-        // But for now, the stock item selection already fetches the balance.
+        let size = $row.find('.size-select').val();
+        let sizeStock = $row.data('size-stock') || {};
+        let balance = sizeStock[size] || 0;
+        
+        $row.find('.available-stock-display').text(parseFloat(balance).toFixed(2));
+        $row.find('.qty-input').trigger('input');
     }
 
     $(document).on('change', '.size-select, select[name*="[color_id]"]', function() {
         updateStockAndRate($(this).closest('.item-row'));
     });
 
-    $('.item-row').each(function() {
-        let $row = $(this);
-        let itemId = $row.find('.item-select').val();
-        if (itemId) {
-            $row.find('.item-select').trigger('change');
-        }
-    });
+    setTimeout(function() {
+        $('.item-row').each(function() {
+            let $row = $(this);
+            let code = $row.find('.stock-item-select').val();
+            if (code) {
+                $row.find('.stock-item-select').trigger('change');
+            }
+        });
+    }, 500);
 
     $(document).on('change', 'input[type="radio"][name*="[sleeve]"]', function() {
         if (this.checked) {
@@ -1025,11 +1395,12 @@ $(document).ready(function () {
         }
     });
 
-    $(document).on('input', '.qty-input, .mrp-input', function() {
+    $(document).on('input', '.qty-input, .mrp-input, .rate-input', function() {
         let $row = $(this).closest('.item-row');
         let qtyInput = $row.find('.qty-input');
         let qty = parseFloat(qtyInput.val()) || 0;
         let mrp = parseFloat($row.find('.mrp-input').val()) || 0;
+        let rate = parseFloat($row.find('.rate-input').val()) || 0;
         let available = parseFloat($row.find('.available-stock-display').text()) || 0;
 
         if (qty > available && available > 0) {
@@ -1040,7 +1411,8 @@ $(document).ready(function () {
             $row.find('.stock-error-msg').hide();
         }
 
-        $row.find('.amount-input').val((qty * mrp).toFixed(2));
+        let price = rate;
+        $row.find('.amount-input').val((qty * price).toFixed(2));
         calculateTotals();
         validateSubmit();
     });
@@ -1061,10 +1433,28 @@ $(document).ready(function () {
         $('#sub_total_qty').val(subTotal.toFixed(2));
 
         const discPercent = parseFloat($('#discount_percent').val()) || 0;
-        const discountAmount = (subTotal * discPercent) / 100;
+        const salesDiscPercent = parseFloat($('#sales_discount_percent').val()) || 0;
+        const totalDiscPercent = discPercent + salesDiscPercent;
+        
+        const discountAmount = (subTotal * totalDiscPercent) / 100;
         $('#discount_amount').val(discountAmount.toFixed(2));
 
-        const taxableAmount = subTotal - discountAmount;
+        let preGstCharges = 0;
+        let postGstCharges = 0;
+        $('.charge-row').each(function () {
+            let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+            let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+            if (taxType === 'Pre-GST') {
+                preGstCharges += amount;
+            } else {
+                postGstCharges += amount;
+            }
+        });
+        
+        $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
+        $('#other_charges_input').val(postGstCharges.toFixed(2));
+
+        const taxableAmount = subTotal - discountAmount + preGstCharges;
         $('#taxable_amount').val(taxableAmount.toFixed(2));
 
         let taxPercent = 0;
@@ -1096,7 +1486,7 @@ $(document).ready(function () {
             $('#commission_row').addClass('d-none');
         }
 
-        let finalTotal = taxableAmount + taxAmount;
+        let finalTotal = taxableAmount + taxAmount + postGstCharges;
         
         if ($('#freight_type').val() === 'Paid') {
             finalTotal += parseFloat($('#freight_amount').val()) || 0;
@@ -1114,13 +1504,19 @@ $(document).ready(function () {
         $('#total_amount').val(finalTotal.toFixed(2));
     }
 
-    $(document).on('input', '#discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off, #commission_percent', calculateTotals);
+    $(document).on('input', '#discount_percent, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off, #commission_percent', calculateTotals);
     $(document).on('change', 'input[name="other_state"], input[name="round_off_type"]', calculateTotals);
 
     $(document).on('change', 'input[name="discount_type"]', function() {
         let type = $(this).val();
         $('#apply_box_discount_hidden').val(type === 'box' ? 1 : 0);
-        $('#discount_percent').val('');
+        
+        if (type === 'box') {
+            $('#discount_percent').val($('#customer_box_discount').val() || 0);
+        } else {
+            $('#discount_percent').val(0);
+        }
+        
         calculateTotals();
     });
 
@@ -1178,6 +1574,197 @@ $(document).ready(function () {
             });
         }
     });
+
+    function refreshChargeDropdownState() {
+        let selectedChargeIds = [];
+        $('#added_charges_list tr').each(function () {
+            let id = $(this).data('charge-id');
+            if (id) selectedChargeIds.push(id.toString());
+        });
+
+        $('#charges_select option').each(function () {
+            let optionId = $(this).val();
+            if (optionId) {
+                if (selectedChargeIds.includes(optionId.toString())) {
+                    $(this).prop('disabled', true);
+                } else {
+                    $(this).prop('disabled', false);
+                }
+            }
+        });
+
+        $('#charges_select').select2('destroy').select2({
+            dropdownParent: $('#charges_select').closest('.card-body')
+        });
+    }
+
+    function loadCharges() {
+        $.ajax({
+            url: "{{ url('get_charges') }}",
+            type: "GET",
+            success: function (data) {
+                let select = $('#charges_select');
+                select.empty();
+                select.append('<option value="">Select Charge</option>');
+
+                data.forEach(function (charge) {
+                    select.append(`<option value="${charge.id}">${charge.charge_name}</option>`);
+                });
+                refreshChargeDropdownState();
+            }
+        });
+    }
+    loadCharges();
+
+    $('#add_charge_btn').click(function () {
+        let chargeId = $('#charges_select').val();
+        let chargeText = $('#charges_select option:selected').text();
+        let amount = parseFloat($('#charge_amount').val());
+        let taxType = $('#charge_tax_type').val();
+
+        if (!chargeId) {
+            alert("Please select a charge");
+            return;
+        }
+
+        if (!amount || amount <= 0) {
+            alert("Please enter a valid amount");
+            return;
+        }
+
+        $('#charges_table').removeClass('d-none');
+
+        let row = `
+            <tr class="charge-row" data-charge-id="${chargeId}" data-tax-type="${taxType}">
+                <td>
+                    ${chargeText}
+                    <input type="hidden" name="charges[charge_id][]" value="${chargeId}">
+                    <input type="hidden" name="charges[name][]" value="${chargeText}">
+                </td>
+                <td>
+                    ${taxType}
+                    <input type="hidden" name="charges[tax_type][]" value="${taxType}">
+                </td>
+                <td>
+                    ${amount.toFixed(2)}
+                    <input type="hidden" name="charges[amount][]" value="${amount.toFixed(2)}">
+                </td>
+                <td class="d-flex align-items-center">
+                    <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                        <i class="ri ri-pencil-line"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
+                        <i class="ri ri-delete-bin-line"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $('#added_charges_list').append(row);
+
+        $('#charges_select').val('').trigger('change');
+        $('#charge_amount').val('');
+
+        calculateTotals();
+        refreshChargeDropdownState();
+    });
+
+    $(document).on('click', '.edit-charge', function () {
+        let $row = $(this).closest('tr');
+        let chargeId = $row.data('charge-id');
+        let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
+        let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Post-GST';
+
+        $('#charges_select').val(chargeId).trigger('change');
+        $('#charge_amount').val(amount.toFixed(2));
+        $('#charge_tax_type').val(taxType).trigger('change');
+
+        $row.remove();
+
+        if ($('#added_charges_list tr').length === 0) {
+            $('#charges_table').addClass('d-none');
+        }
+        calculateTotals();
+        refreshChargeDropdownState();
+    });
+
+    $(document).on("click", ".remove-charge", function () {
+        let $row = $(this).closest('tr');
+        let invoiceChargeId = $row.data('invoice-charge-id');
+
+        if (invoiceChargeId) {
+            Swal.fire({
+                title: "Are you sure?",
+                text: "Do you really want to delete this charge?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#8c57ff",
+                cancelButtonColor: "#ff4c51",
+                confirmButtonText: "Yes, delete it!"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Deleting...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('sales_orders/delete-charge') }}/" + invoiceChargeId,
+                        type: "DELETE",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: 'Charge has been deleted.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+
+                                $row.remove();
+
+                                if ($('#added_charges_list tr').length === 0) {
+                                    $('#charges_table').addClass('d-none');
+                                }
+
+                                calculateTotals();
+                                refreshChargeDropdownState();
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: response.message || 'Failed to delete charge'
+                                });
+                            }
+                        },
+                        error: function (xhr) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Failed to delete charge'
+                            });
+                        }
+                    });
+                }
+            });
+        } else {
+            $row.remove();
+
+            if ($('#added_charges_list tr').length === 0) {
+                $('#charges_table').addClass('d-none');
+            }
+
+            calculateTotals();
+            refreshChargeDropdownState();
+        }
+    });
+
 });
 </script>
 @endsection

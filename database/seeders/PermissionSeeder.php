@@ -58,6 +58,7 @@ class PermissionSeeder extends Seeder
 
             /* Parties */
             'customers' => ['create', 'edit', 'delete', 'view', 'view_details'],
+            'retailers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'suppliers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'service-providers' => ['create', 'edit', 'delete', 'view', 'view_details'],
             'sales-agents' => ['create', 'edit', 'delete', 'view', 'view_details'],

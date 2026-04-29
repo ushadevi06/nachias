@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'orderaxe' => [
+        'base_url' => env('ORDERAXE_BASE_URL'),
+        'client_id' => env('ORDERAXE_CLIENT_ID'),
+        'client_secret' => env('ORDERAXE_CLIENT_SECRET'),
+    ],
+
 ];

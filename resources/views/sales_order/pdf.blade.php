@@ -250,42 +250,44 @@
             <thead style="border-bottom: 1px solid #000;">
                 <tr>
                     <th width="5%">S.No</th>
-                    <th width="15%">Brand Category</th>
-                    <th width="22%">Item</th>
-                    <th width="10%">Color</th>
-                    <th width="7%">Size</th>
-                    <th width="10%">Art No.</th>
-                    <th width="6%">UOM</th>
-                    <th width="8%">Quantity</th>
-                    <th width="8%">MRP</th>
-                    <th width="9%">Amount</th>
+                    <th width="25%">Item Name</th>
+                    <th width="12%">Color</th>
+                    <th width="8%">Size</th>
+                    <th width="12%">Art No</th>
+                    <th width="8%">UOM</th>
+                    <th width="10%">Quantity</th>
+                    <th width="10%">MRP</th>
+                    <th width="10%">Amount</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($salesOrder->items as $index => $item)
                     <tr>
                         <td class="text-center">{{ $index + 1 }}</td>
-                        <td class="text-center">{{ $item->brandCategory->name ?? '' }}</td>
                         <td>
-                            {{ $item->item->item_name ?? $item->item->name ?? '' }}
                             @php
-                                $sleeveAbbr = '';
+                                $brand = $item->item->brand->name ?? $item->brandCategory->name ?? '-';
+                                $style = $item->item->style->name ?? $item->item->name ?? '';
+                                
+                                if ($brand == '-' && $item->stockEntryItem) {
+                                    $brand = $item->stockEntryItem->finished_item_code;
+                                }
+                                
+                                $displayName = array_filter([$brand, $style]);
+                                $displayName = implode(' - ', $displayName);
+                                
+                                $sleeveStr = '';
                                 if ($item->sleeve) {
                                     $sleeve = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
-                                    $sleeveLower = strtolower($sleeve);
-                                    if ($sleeveLower == 'full') {
-                                        $sleeveAbbr = ' (F/S)';
-                                    } elseif ($sleeveLower == 'half' || $sleeveLower == 'short') {
-                                        $sleeveAbbr = ' (H/S)';
-                                    }
+                                    $sleeveStr = ' ('.$sleeve.')';
                                 }
                             @endphp
-                            {{ $sleeveAbbr }}
+                            {{ $displayName }}{{ $sleeveStr }}
                         </td>
                         <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->size->size ?? $item->size_id ?? '-' }}</td>
                         <td class="text-center">{{ $item->art_no }}</td>
-                        <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
+                        <td class="text-center">{{ $item->uom->uom_code ?? $item->uom_id ?? 'PCS' }}</td>
                         <td class="text-center">{{ number_format($item->qty, 2) }}</td>
                         <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
                         <td class="text-right">{{ number_format($item->amount, 2) }}</td>
@@ -302,13 +304,12 @@
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
-                        <td>&nbsp;</td>
                     </tr>
                 @endfor
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="7" class="text-right bold">Total</td>
+                    <td colspan="6" class="text-right bold">Total</td>
                     <td class="text-center bold">{{ number_format($salesOrder->total_qty, 2) }}</td>
                     <td></td>
                     <td class="text-right bold">{{ number_format($salesOrder->taxable_amount, 2) }}</td>

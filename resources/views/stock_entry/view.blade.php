@@ -4,13 +4,21 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <div class="table-header-box">
-                <h4>Stock Entry</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
-                <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
-                @endif
+            <div class="table-header-box d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Stock Entry</h4>
+                <div class="d-flex gap-2">
+                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
+                    <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
+                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                    </a>
+                    @endif
+                    <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success" id="export-finished-goods-btn" style="display: none;">
+                        <i class="icon-base ri ri-file-excel-line"></i> Export Finished Goods
+                    </a>
+                    <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary" id="export-barcode-btn" style="display: none;">
+                        <i class="icon-base ri ri-file-excel-line"></i> Export Barcode
+                    </a>
+                </div>
             </div>
              <div class="col-lg-12">
                 @include('flash_messages')
@@ -57,6 +65,7 @@
                                     <th>Stock Entry No.</th>
                                     <th>Stock Date</th>
                                     <th>GRN No.</th>
+                                    <th>Item Name</th>
                                     <th>Fabric Type</th>
                                     <th>Sleeve Type</th>
                                     <th>Size</th>
@@ -144,6 +153,7 @@
                 {data: 'stock_entry_no', name: 'stock_entry_no'},
                 {data: 'stock_date', name: 'stock_date'},
                 {data: 'grn_no', name: 'grn_no'},
+                {data: 'item_name', name: 'item_name'},
                 {data: 'fabric_type', name: 'fabric_type', visible: false},
                 {data: 'sleeve_type', name: 'sleeve_type', visible: false},
                 {data: 'size', name: 'size', visible: false},
@@ -160,21 +170,27 @@
             if($(this).data('entry-type') === 'Finished Goods') {
                 $('.filter-box').hide();
                 $('#add-stock-entry-btn').hide();
+                $('#export-finished-goods-btn').show();
+                $('#export-barcode-btn').show();
                 table.column(1).visible(false);
                 $(table.column(3).header()).text('Job Card No.');
                 table.column(4).visible(true);
                 table.column(5).visible(true);
                 table.column(6).visible(true);
                 table.column(7).visible(true);
+                table.column(8).visible(true);
             } else {
                 $('.filter-box').show();
                 $('#add-stock-entry-btn').show();
+                $('#export-finished-goods-btn').hide();
+                $('#export-barcode-btn').hide();
                 table.column(1).visible(true);
                 $(table.column(3).header()).text('GRN No.');
-                table.column(4).visible(false);
+                table.column(4).visible(true);
                 table.column(5).visible(false);
                 table.column(6).visible(false);
                 table.column(7).visible(false);
+                table.column(8).visible(false);
             }
             
             table.ajax.reload();

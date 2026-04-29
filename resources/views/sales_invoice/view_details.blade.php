@@ -71,15 +71,14 @@
                                         <thead class="table-light">
                                             <tr>
                                                 <th>S.No</th>
-                                                <th>Brand Category</th>
-                                                <th>Item (Code)</th>
+                                                <th>Stock Item</th>
+                                                <th>Color</th>
                                                 <th>Art No</th>
-
-                                                <th>Size</th>
-                                                <th>Sleeve</th>
                                                 <th>UOM</th>
+                                                <th>Size</th>
                                                 <th class="text-end">Quantity</th>
                                                 <th class="text-end">MRP</th>
+                                                <th class="text-end">Price</th>
                                                 <th class="text-end">Amount</th>
                                             </tr>
                                         </thead>
@@ -87,19 +86,37 @@
                                             @foreach($invoice->items as $index => $item)
                                                 <tr>
                                                     <td>{{ $index + 1 }}</td>
-                                                    <td>{{ $item->brandCategory ? $item->brandCategory->name : 'N/A' }}</td>
-                                                    <td>{{ $item->item ? $item->item->name : 'N/A' }} <span
-                                                            class="mini-title">({{ $item->item ? $item->item->code : '' }})</span>
+                                                     <td>
+                                                        @php
+                                                            $brandName = '';
+                                                            $itemName = '';
+                                                            if ($item->item) {
+                                                                $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : 'N/A'));
+                                                                $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+                                                            } elseif ($item->stockEntryItem) {
+                                                                if ($item->stockEntryItem->item) {
+                                                                    $seItem = $item->stockEntryItem->item;
+                                                                    $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : 'N/A'));
+                                                                    $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+                                                                } else {
+                                                                    $brandName = $item->stockEntryItem->finished_item_code;
+                                                                }
+                                                            } else {
+                                                                $brandName = $item->brandCategory ? $item->brandCategory->name : 'N/A';
+                                                                $itemName = $item->item ? $item->item->name : 'N/A';
+                                                            }
+                                                        @endphp
+                                                        <div class="fw-bold">{{ $brandName }}</div>
+                                                        <small class="text-muted">{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</small>
                                                     </td>
+                                                    <td>{{ $item->color ? $item->color->color_name : '-' }}</td>
                                                     <td>{{ $item->art_no ?? '-' }}</td>
-
-                                                    <td>{{ $item->size ?? '-' }}</td>
-                                                    <td>{{ $item->sleeve_type ?? '-' }}</td>
-                                                    <td>{{ $item->uom ? $item->uom->uom_code : ($item->item && $item->item->uom ? $item->item->uom->uom_code : '-') }}
-                                                    </td>
+                                                    <td>{{ $item->uom ? $item->uom->uom_code : '-' }}</td>
+                                                    <td>{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                                                     <td class="text-end">{{ number_format($item->quantity, 2) }}</td>
                                                     <td class="text-end">₹{{ number_format($item->mrp ?? 0, 2) }}</td>
-                                                    <td class="text-end">₹{{ number_format($item->amount, 2) }}</td>
+                                                    <td class="text-end">₹{{ number_format($item->rate ?? 0, 2) }}</td>
+                                                    <td class="text-end fw-bold">₹{{ number_format($item->amount, 2) }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>

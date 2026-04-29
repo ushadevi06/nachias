@@ -38,11 +38,16 @@
                 <div class="card-body p-4">
                     <div class="row g-4 text-break">
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Customer</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Customer / Retailer</div>
                             <div class="fw-bold text-dark">
-                                {{ $salesOrder->customer->name ?? 'N/A' }}
-                                @if($salesOrder->customer && $salesOrder->customer->code)
+                                @if($salesOrder->customer)
+                                    {{ $salesOrder->customer->name }}
                                     <span class="text-primary small">({{ $salesOrder->customer->code }})</span>
+                                @elseif($salesOrder->retailer)
+                                    {{ $salesOrder->retailer->name }}
+                                    <span class="text-primary small">({{ $salesOrder->retailer->code }})</span>
+                                @else
+                                    N/A
                                 @endif
                             </div>
                         </div>
@@ -155,19 +160,38 @@
                                     <tr>
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $idx + 1) }}</td>
                                         <td>
-                                            <div class="fw-bold text-dark">{{ $item->brandCategory->name ?? '-' }} {{ $item->item->item_name ?? $item->item->name ?? '-' }}</div>
-                                            <small class="text-primary fw-medium">{{ $item->art_no ?? '-' }}</small>
+                                            @php
+                                                $brand = $item->item->brand->name ?? $item->brandCategory->name ?? '-';
+                                                $style = $item->item->style->name ?? $item->item->name ?? '';
+                                                $sleeve = is_array($item->sleeve) ? implode(', ', $item->sleeve) : $item->sleeve;
+                                                
+                                                if ($brand == '-' && $item->stockEntryItem) {
+                                                    $brand = $item->stockEntryItem->finished_item_code;
+                                                }
+                                                
+                                                $displayName = array_filter([$brand, $style]);
+                                                $displayName = implode(' - ', $displayName);
+
+                                                // if (($displayName == '-' || empty($displayName) || $item->stockEntryItem) && $item->art_no) {
+                                                //     $displayName = $item->art_no;
+                                                // }
+                                                // {{ dd($displayName) }}
+                                            @endphp
+                                            <div class="fw-medium text-dark">{{ $displayName }}</div>
+                                            @if($sleeve)
+                                                <small class="text-primary fw-medium">{{ $sleeve }} Sleeve</small>
+                                            @endif
+                                            @if($item->art_no)
+                                                <div class="text-muted" style="font-size: 11px;">Art No: {{ $item->art_no }}</div>
+                                            @endif
                                         </td>
                                         <td class="text-center">
                                             <div class="small fw-bold">{{ $item->color->color_name ?? '-' }}</div>
                                             <div class="badge bg-light text-dark border">{{ $item->size->name ?? $item->size_id ?? '-' }}</div>
-                                            @if($item->sleeve)
-                                                <div class="small text-muted mt-1">{{ is_array($item->sleeve) ? implode(', ', $item->sleeve) : $item->sleeve }}</div>
-                                            @endif
                                         </td>
                                         <td class="text-center">
                                             <span class="badge bg-light text-dark px-3 py-2 fw-medium border">
-                                                {{ number_format($item->qty, 2) }} {{ $item->uom->uom_code ?? '-' }}
+                                                {{ number_format($item->qty, 2) }} {{ $item->uom_id ?? '-' }}
                                             </span>
                                         </td>
                                         <td class="text-end">

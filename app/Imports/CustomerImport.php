@@ -25,7 +25,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
-            if (!isset($row['name']) && !isset($row['code']) && !isset($row['mobile_number'])) {
+            if (!isset($row['name']) && !isset($row['code']) && !isset($row['mobile_number']) && !isset($row['name_with_code'])) {
                 continue;
             }
             $stateId = null;
@@ -100,22 +100,48 @@ class CustomerImport implements ToCollection, WithHeadingRow
             $category = $row['category_retailerwholesaler'] ?? ($row['category'] ?? 'Retailer');
             $status = $row['status_activeinactive'] ?? ($row['status'] ?? 'Active');
 
+            $name = $row['name'] ?? null;
+            $code = isset($row['code']) ? (string) $row['code'] : null;
+
+            if (isset($row['name_with_code'])) {
+                if (preg_match('/^(.*)\s*\((.*)\)$/', $row['name_with_code'], $matches)) {
+                    $name = trim($matches[1]);
+                    $code = trim($matches[2]);
+                } else {
+                    $name = trim($row['name_with_code']);
+                }
+            }
+
+            if ($cityId && $cityId > 0) {
+                if (!$placeId || $placeId == -1) {
+                    $firstPlace = Place::where('city_id', $cityId)->first();
+                    $placeId = $firstPlace ? $firstPlace->id : -1;
+                    if ($placeId == -1) $errors[] = "Row {$rowNumber}: No place found for City '{$row['city']}'.";
+                }
+                
+                if (!$zoneId || $zoneId == -1) {
+                    $firstZone = Zone::active()->whereRaw("FIND_IN_SET(?, city_ids)", [$cityId])->first();
+                    $zoneId = $firstZone ? $firstZone->id : -1;
+                    if ($zoneId == -1) $errors[] = "Row {$rowNumber}: No zone found for City '{$row['city']}'.";
+                }
+            }
+
             $data = [
-                'category' => $category,
-                'name' => $row['name'] ?? null,
-                'code' => isset($row['code']) ? (string) $row['code'] : null,
-                'mobile_no' => isset($row['mobile_number']) ? preg_replace('/[^0-9]/', '', (string) $row['mobile_number']) : null,
+                'category' => $row['category'] ?? 'Retailer',
+                'name' => $name,
+                'code' => $code,
+                'mobile_no' => isset($row['phone']) ? preg_replace('/[^0-9]/', '', (string) $row['phone']) : (isset($row['mobile_number']) ? preg_replace('/[^0-9]/', '', (string) $row['mobile_number']) : null),
                 'email' => $row['email'] ?? null,
                 'website_url' => $row['website_url'] ?? null,
                 'transport_name' => $row['transport_name'] ?? null,
                 'booking_office' => $row['booking_office'] ?? null,
                 'zone_id' => $zoneId,
                 'store_id' => $storeId,
-                'status' => $status,
+                'status' => $row['status'] ?? 'Active',
                 'state_id' => $stateId,
                 'city_id' => $cityId,
                 'place_id' => $placeId,
-                'address_line_1' => $row['address_line_1'] ?? null,
+                'address_line_1' => $row['address'] ?? ($row['address_line_1'] ?? null),
                 'address_line_2' => $row['address_line_2'] ?? null,
                 'address_line_3' => $row['address_line_3'] ?? null,
                 'zip_code' => $row['zip_code'] ?? null,
@@ -144,8 +170,8 @@ class CustomerImport implements ToCollection, WithHeadingRow
 
             $validator = Validator::make($data, [
                 'category' => 'required|in:Retailer,Wholesaler',
-                'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:20|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => 'required|string|min:2|max:100',
+                'code' => 'required|string|min:2|max:50|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'mobile_no' => 'required|numeric|digits_between:10,15|unique:customers,mobile_no,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:customers,email,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'zone_id' => 'required',

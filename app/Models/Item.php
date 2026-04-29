@@ -39,7 +39,7 @@ class Item extends Model
     protected $casts = [
         'color_id' => 'array',
         'related_materials' => 'array',
-        'operation_stages'  => 'array',
+        'operation_stages' => 'array',
         'service_providers' => 'array',
         'variations' => 'array',
     ];
@@ -117,12 +117,12 @@ class Item extends Model
         if (!$baseBarcode) {
             $baseBarcode = self::generateCode();
         }
-        
+
         // Use the base barcode and append a 3-digit suffix for the variation
         // or just generate a completely new unique barcode from the same sequence
         // To ensure uniqueness and scan-ability, generating a new one is safer if it's 12 digits
         // But if they want a 15-char like "QWERY1234567890", we can customize it.
-        
+
         // For now, let's use the sequence to generate another unique numeric barcode
         return self::generateCode();
     }

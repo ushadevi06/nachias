@@ -248,12 +248,10 @@ class JobCardEntryController extends Controller
                              $used = (float) ($fabric['mtr'] ?? 0);
                             $plannedQty = (float) ($fabric['total_qty'] ?? 0);
                             
-                            // Use the higher of the Matrix requirement or the Planned Total quantity
                             if ($plannedQty > $totalNeeded) {
                                 $totalNeeded = $plannedQty;
                             }
 
-                            // Add a small epsilon to avoid float precision issues during comparison
                             if (($totalNeeded - $used) > 0.001) {
                                 $unit = $isFabric ? ' MTR' : '';
                                 $totalNeededFormatted = (fmod($totalNeeded, 1) == 0) ? (int)$totalNeeded : number_format($totalNeeded, 2, '.', '');

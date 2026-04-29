@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
+use App\Models\SalesOrderCharge;
+use App\Models\StockEntryItem;
 use App\Models\Season;
 use App\Models\Customer;
 use App\Models\StoreType;
@@ -22,6 +24,7 @@ use App\Models\Zone;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\OrderaxeService;
 
 class SalesOrderController extends Controller
 {
@@ -32,7 +35,7 @@ class SalesOrderController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id', 'desc');
+            $query = SalesOrder::with(['customer', 'retailer', 'salesAgent'])->orderBy('id', 'desc');
 
             if (!empty($request->customer_id)) {
                 $query->where('customer_id', $request->customer_id);
@@ -61,15 +64,29 @@ class SalesOrderController extends Controller
 
             foreach ($salesOrders as $so) {
                 $statusOptions = '';
-                foreach (['Draft', 'Approved', 'Pending', 'In Production', 'Dispatched', 'Cancelled'] as $status) {
+                $allStatuses = ['Draft', 'Pending', 'Approved', 'Rejected', 'Dispatched', 'Cancelled'];
+                foreach ($allStatuses as $status) {
                     $selected = $so->status === $status ? 'selected' : '';
                     $disabled = '';
-                    if ($so->status === 'Approved' && $status === 'Draft')
-                        $disabled = 'disabled';
-                    if ($so->status === 'Dispatched' && in_array($status, ['Draft', 'Approved']))
-                        $disabled = 'disabled';
-                    if ($so->status === 'Cancelled' && $status !== 'Cancelled')
-                        $disabled = 'disabled';
+
+                    // Transition Logic based on user requirements
+                    if ($so->status === 'Draft') {
+                        // Draft can go to Pending, Approved, Rejected
+                        if (!in_array($status, ['Draft', 'Pending', 'Approved', 'Rejected'])) $disabled = 'disabled';
+                    } elseif ($so->status === 'Pending') {
+                        // Pending can go to Approved, Rejected, Draft
+                        if (!in_array($status, ['Pending', 'Approved', 'Rejected', 'Draft'])) $disabled = 'disabled';
+                    } elseif ($so->status === 'Approved') {
+                        // Approved is locked. Can only go to Cancelled or Dispatched
+                        if (!in_array($status, ['Approved', 'Cancelled', 'Dispatched'])) $disabled = 'disabled';
+                    } elseif ($so->status === 'Rejected') {
+                        // Rejected can go back to Draft
+                        if (!in_array($status, ['Rejected', 'Draft'])) $disabled = 'disabled';
+                    } elseif ($so->status === 'Cancelled' || $so->status === 'Dispatched') {
+                        // Cancelled/Dispatched are final
+                        if ($status !== $so->status) $disabled = 'disabled';
+                    }
+
                     $statusOptions .= "<option value=\"{$status}\" {$selected} {$disabled}>{$status}</option>";
                 }
 
@@ -98,8 +115,8 @@ class SalesOrderController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'so_no' => $so->so_no,
-                    'so_date' => $so->so_date->format('d-m-Y'),
-                    'customer_name' => $so->customer ? $so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>' : '-',
+                    'so_date' => $so->so_date ? $so->so_date->format('d-m-Y') : '-',
+                    'customer_name' => $so->customer ? ($so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>') : ($so->retailer ? ($so->retailer->name . ' <span class="mini-title">(' . $so->retailer->code . ')</span>') : '-'),
                     'customer_po_ref' => $so->customer_po_ref ?? '-',
                     'total_qty' => number_format($so->total_qty, 2),
                     'sales_agent' => $so->salesAgent ? $so->salesAgent->name : '-',
@@ -129,8 +146,10 @@ class SalesOrderController extends Controller
         }
 
         $salesOrder = null;
+        $charges = collect();
         if ($id) {
-            $salesOrder = SalesOrder::with('items')->findOrFail($id);
+            $salesOrder = SalesOrder::with(['items', 'charges'])->findOrFail($id);
+            $charges = $salesOrder->charges;
         }
 
         if (request()->isMethod('post')) {
@@ -150,19 +169,18 @@ class SalesOrderController extends Controller
                 'shipping_method_id' => 'nullable|exists:shipping_methods,id',
                 'transport_mode_id' => 'nullable|exists:transport_modes,id',
                 'dispatch_from_id' => 'nullable|exists:service_providers,id',
-                'status' => 'required|in:Draft,Approved,Rejected,Pending,In Production,Dispatched,Cancelled',
+                'status' => 'required|in:Draft,Approved,Rejected,Pending,Dispatched,Cancelled',
                 'items' => 'required|array|min:1',
-                'items.*.brand_cat_id' => 'required|exists:brand_categories,id',
-                'items.*.item_id' => 'required|exists:items,id',
                 'items.*.color_id' => 'nullable|exists:colors,id',
                 'items.*.art_no' => 'required|string|min:5|max:50',
-                'items.*.uom_id' => 'required|exists:uoms,id',
+                'items.*.uom_id' => 'required|string',
                 'items.*.size_id' => 'required',
                 'items.*.qty' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'nullable|numeric|min:0',
                 'items.*.mrp' => 'required|numeric|min:0',
                 'commission_percent' => 'nullable|numeric|min:0',
                 'commission_amount' => 'nullable|numeric|min:0',
+                'sales_discount_percent' => 'nullable|numeric|min:0|max:100',
                 'discount_percent' => 'nullable|numeric|min:0|max:100',
                 'round_off_type' => 'nullable|in:Add,Less',
                 'round_off' => 'nullable|numeric|min:0',
@@ -202,6 +220,27 @@ class SalesOrderController extends Controller
 
             $request->validate($rules, $messages);
 
+            if ($id && $salesOrder->status !== $request->status) {
+                $oldStatus = $salesOrder->status;
+                $newStatus = $request->status;
+                $valid = true;
+                if ($oldStatus === 'Draft') {
+                    if (!in_array($newStatus, ['Pending', 'Approved', 'Rejected', 'Draft'])) $valid = false;
+                } elseif ($oldStatus === 'Pending') {
+                    if (!in_array($newStatus, ['Approved', 'Rejected', 'Draft', 'Pending'])) $valid = false;
+                } elseif ($oldStatus === 'Approved') {
+                    if (!in_array($newStatus, ['Cancelled', 'Dispatched', 'Approved'])) $valid = false;
+                } elseif ($oldStatus === 'Rejected') {
+                    if (!in_array($newStatus, ['Draft', 'Rejected'])) $valid = false;
+                } elseif (in_array($oldStatus, ['Cancelled', 'Dispatched'])) {
+                    if ($newStatus !== $oldStatus) $valid = false;
+                }
+
+                if (!$valid) {
+                    return back()->with('error', 'Invalid status transition from ' . $oldStatus . ' to ' . $newStatus)->withInput();
+                }
+            }
+
             DB::beginTransaction();
             try {
                 $taxableAmount = $request->taxable_amount ?? 0;
@@ -235,6 +274,7 @@ class SalesOrderController extends Controller
                     'sub_total_qty' => $request->sub_total_qty ?? 0,
                     'commission_percent' => $request->commission_percent ?? 0,
                     'commission_amount' => $request->commission_amount ?? 0,
+                    'sales_discount_percent' => $request->sales_discount_percent ?? 0,
                     'discount_percent' => $request->discount_percent ?? 0,
                     'discount_amount' => $request->discount_amount ?? 0,
                     'taxable_amount' => $taxableAmount,
@@ -243,6 +283,7 @@ class SalesOrderController extends Controller
                     'cgst_percent' => $request->cgst_percent ?? 0,
                     'sgst_percent' => $request->sgst_percent ?? 0,
                     'tax_amount' => $taxAmount,
+                    'other_charges' => $request->other_charges ?? 0,
                     'round_off_type' => $roundOffType,
                     'round_off' => $roundOffAmount,
                     'total_amount' => $finalTotal,
@@ -258,10 +299,12 @@ class SalesOrderController extends Controller
                     'apply_box_discount' => $request->apply_box_discount == '1',
                 ];
 
+                $isNewApproval = false;
                 if ($request->status === 'Approved') {
                     if (!$id || SalesOrder::find($id)->status !== 'Approved') {
                         $soData['approved_by'] = auth()->id();
                         $soData['approved_date'] = now();
+                        $isNewApproval = true;
                     }
                 }
                 else {
@@ -274,6 +317,7 @@ class SalesOrderController extends Controller
                     $soData['updated_by'] = auth()->id();
                     $salesOrder->update($soData);
                     SalesOrderItem::where('sale_order_id', $id)->forceDelete();
+                    SalesOrderCharge::where('sales_order_id', $id)->forceDelete();
                     $message = 'Sale Order updated successfully';
                 }
                 else {
@@ -358,12 +402,35 @@ class SalesOrderController extends Controller
                         'rate' => $item['rate'] ?? 0,
                         'mrp' => $item['mrp'] ?? 0,
                         'amount' => $item['qty'] * ($item['mrp'] ?? 0),
-                        'sleeve' => isset($item['sleeve']) ? (array)$item['sleeve'] : null,
+                        'sleeve' => isset($item['sleeve']) ? (is_array($item['sleeve']) ? $item['sleeve'] : [$item['sleeve']]) : null,
                         'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? (int)$item['stock_entry_item_id'] : null,
+                        'sku' => $item['sku'] ?? null,
                     ]);
                 }
 
+                if ($request->has('charges') && isset($request->charges['charge_id'])) {
+                    $chargeIds = $request->charges['charge_id'];
+                    $chargeNames = $request->charges['name'];
+                    $chargeAmounts = $request->charges['amount'];
+                    $taxTypes = $request->charges['tax_type'] ?? [];
+
+                    foreach ($chargeIds as $index => $chargeId) {
+                        SalesOrderCharge::create([
+                            'sales_order_id' => $salesOrder->id,
+                            'charge_id' => $chargeId,
+                            'charge_name' => $chargeNames[$index],
+                            'charge_amount' => $chargeAmounts[$index],
+                            'tax_type' => $taxTypes[$index] ?? 'Post-GST',
+                        ]);
+                    }
+                }
+
                 DB::commit();
+
+                if ($isNewApproval) {
+                    $this->adjustStock($salesOrder->id);
+                }
+
                 addLog($id ? 'update' : 'create', 'Sale Order', 'sales_orders', $salesOrder->id, null, $salesOrder->toArray());
                 return redirect('sales_orders')->with('success', $message);
 
@@ -380,20 +447,30 @@ class SalesOrderController extends Controller
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
 
         $availableStockItems = DB::table('stock_entry_items')
-            ->where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at')
-            ->select('finished_item_code', 'color_id', DB::raw('SUM(qty_in - qty_out) as balance'))
-            ->groupBy('finished_item_code', 'color_id')
+            ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
+            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
+            ->leftJoin('styles', 'items.style_id', '=', 'styles.id')
+            ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
+            ->where('stock_entry_items.stock_type', 'finished_goods')
+            ->whereNull('stock_entry_items.deleted_at')
+            ->select(
+                'stock_entry_items.finished_item_code', 
+                'brands.brand_name', 
+                'brand_categories.name as category_name',
+                'styles.style_name',
+                'items.name as item_name',
+                'stock_entry_items.sleeve_type',
+                DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance')
+            )
+            ->groupBy('stock_entry_items.finished_item_code', 'brands.brand_name', 'brand_categories.name', 'styles.style_name', 'items.name', 'stock_entry_items.sleeve_type')
             ->having('balance', '>', 0)
             ->get();
 
         $stockItems = [];
         foreach ($availableStockItems as $si) {
-            $color = Color::find($si->color_id);
             $stockItems[] = [
                 'finished_item_code' => $si->finished_item_code,
-                'color_id' => $si->color_id,
-                'color_name' => $color ? $color->color_name : 'No Color',
+                'display_name' => $si->finished_item_code,
                 'balance' => $si->balance
             ];
         }
@@ -403,17 +480,14 @@ class SalesOrderController extends Controller
                 $finishedCode = $soItem->stockEntryItem ? $soItem->stockEntryItem->finished_item_code : ($soItem->item->code ?? '');
                 $found = false;
                 foreach ($stockItems as $si) {
-                    if ($si['finished_item_code'] == $finishedCode && $si['color_id'] == $soItem->color_id) {
+                    if ($si['finished_item_code'] == $finishedCode) {
                         $found = true;
                         break;
                     }
                 }
                 if (!$found) {
-                    $color = Color::find($soItem->color_id);
                     $stockItems[] = [
                         'finished_item_code' => $finishedCode,
-                        'color_id' => $soItem->color_id,
-                        'color_name' => $color ? $color->color_name : 'No Color',
                         'balance' => 0
                     ];
                 }
@@ -446,7 +520,7 @@ class SalesOrderController extends Controller
         $transportModes = TransportMode::where('status', 'Active')->get();
         $serviceProviders = ServiceProvider::where('status', 'Active')->get();
 
-        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders'));
+        return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders', 'charges'));
 
     }
 
@@ -455,7 +529,7 @@ class SalesOrderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details sales-order')) {
             return unauthorizedRedirect();
         }
-        $salesOrder = SalesOrder::with(['customer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom'])->findOrFail($id);
+        $salesOrder = SalesOrder::with(['customer', 'retailer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom', 'items.stockEntryItem'])->findOrFail($id);
         return view('sales_order.view_details', compact('salesOrder'));
     }
 
@@ -478,16 +552,70 @@ class SalesOrderController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $salesOrder = SalesOrder::findOrFail($id);
-        $salesOrder->status = $request->status;
-        $salesOrder->save();
-        addLog('update_status', 'Sale Order Status', 'sales_orders', $id, null, $salesOrder->toArray());
-        return response()->json(['success' => true, 'message' => 'Status updated successfully']);
+        $oldStatus = $salesOrder->status;
+        $newStatus = $request->status;
+        $valid = true;
+        if ($oldStatus === 'Draft') {
+            if (!in_array($newStatus, ['Pending', 'Approved', 'Rejected', 'Draft'])) $valid = false;
+        } elseif ($oldStatus === 'Pending') {
+            if (!in_array($newStatus, ['Approved', 'Rejected', 'Draft', 'Pending'])) $valid = false;
+        } elseif ($oldStatus === 'Approved') {
+            if (!in_array($newStatus, ['Cancelled', 'Dispatched', 'Approved'])) $valid = false;
+        } elseif ($oldStatus === 'Rejected') {
+            if (!in_array($newStatus, ['Draft', 'Rejected'])) $valid = false;
+        } elseif (in_array($oldStatus, ['Cancelled', 'Dispatched'])) {
+            if ($newStatus !== $oldStatus) $valid = false;
+        }
+
+        if (!$valid) {
+            return response()->json(['success' => false, 'message' => 'Invalid status transition from ' . $oldStatus . ' to ' . $newStatus], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $salesOrder->status = $newStatus;
+            
+            if ($newStatus === 'Approved' && $oldStatus !== 'Approved') {
+                $salesOrder->approved_by = auth()->id();
+                $salesOrder->approved_date = now();
+                $this->adjustStock($id);
+            } elseif ($newStatus === 'Cancelled' && $oldStatus === 'Approved') {
+                $this->adjustStock($id, true); 
+            }
+
+            $salesOrder->save();
+            DB::commit();
+            addLog('update_status', 'Sale Order Status', 'sales_orders', $id, ['old_status' => $oldStatus], $salesOrder->toArray());
+            return response()->json(['success' => true, 'message' => 'Status updated successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Failed to update status: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function adjustStock($salesOrderId, $revert = false)
+    {
+        $items = SalesOrderItem::where('sale_order_id', $salesOrderId)->get();
+        foreach ($items as $item) {
+            if ($item->stock_entry_item_id) {
+                if ($revert) {
+                    StockEntryItem::where('id', $item->stock_entry_item_id)
+                        ->where('qty_out', '>=', $item->qty)
+                        ->decrement('qty_out', $item->qty);
+                } else {
+                    StockEntryItem::where('id', $item->stock_entry_item_id)
+                        ->increment('qty_out', $item->qty);
+                }
+            }
+        }
     }
     public function downloadPdf($id)
     {
         $salesOrder = SalesOrder::with([
             'customer.state',
             'customer.city',
+            'retailer.state',
+            'retailer.city',
             'salesAgent',
             'items.brandCategory',
             'items.item',
@@ -537,6 +665,8 @@ class SalesOrderController extends Controller
         $salesOrder = SalesOrder::with([
             'customer.state',
             'customer.city',
+            'retailer.state',
+            'retailer.city',
             'salesAgent',
             'items.brandCategory',
             'items.item',
@@ -595,8 +725,6 @@ class SalesOrderController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'item_id' => $stockItem->item_id,
-                    'brand_cat_id' => $item ? $item->brand_category_id : null,
                     'art_no' => $stockItem->art_no,
                     'size' => $stockItem->size,
                     'mrp' => $stockItem->price,
@@ -609,6 +737,188 @@ class SalesOrderController extends Controller
         }
 
         return response()->json(['success' => false, 'message' => 'Item not found in stock']);
+    }
+
+    public function getFinishedItemStock(Request $request)
+    {
+        $code = $request->code;
+        $soId = $request->so_id;
+        $exactMatch = DB::table('stock_entry_items')
+            ->where('sku', $code)
+            ->where('stock_type', 'finished_goods')
+            ->whereNull('deleted_at')
+            ->first();
+
+        $query = DB::table('stock_entry_items')
+            ->where('stock_type', 'finished_goods')
+            ->whereNull('deleted_at');
+
+        if ($exactMatch) {
+            $query->where('finished_item_code', $exactMatch->finished_item_code);
+        } else {
+            $query->where(function($q) use ($code) {
+                $q->where('finished_item_code', $code)
+                  ->orWhere(DB::raw("REPLACE(finished_item_code, ' ', '')"), str_replace(' ', '', $code));
+            });
+        }
+
+        $items = $query->select('finished_item_code', 'color_id', 'item_id', 'art_no', 'size', 'price', 'uom_id', 'sleeve_type', 'sku', DB::raw('MAX(id) as stock_entry_item_id'), DB::raw('SUM(qty_in - qty_out) as balance'))
+            ->groupBy('finished_item_code', 'color_id', 'item_id', 'art_no', 'size', 'price', 'uom_id', 'sleeve_type', 'sku')
+            ->get();
+
+        if ($items->isNotEmpty()) {
+            $first = $items->first();
+            $target = $exactMatch ?: $first;
+            $item = Item::find($target->item_id);
+            $sizeStock = [];
+            foreach ($items as $si) {
+                $sizeStock[$si->size] = (float)$si->balance;
+            }
+
+            $itemPrice = DB::table('item_prices')
+                ->where('finished_item_code', $target->finished_item_code)
+                ->where('status', 'Active')
+                ->whereNull('deleted_at')
+                ->orderBy('effective_from', 'desc')
+                ->first();
+
+            $finalMrp = $itemPrice ? $itemPrice->selling_price : ($item ? $item->mrp : $target->price);
+            $finalPrice = $itemPrice ? $itemPrice->unit_price : $target->price;
+
+            return response()->json([
+                'success' => true,
+                'finished_item_code' => $target->finished_item_code,
+                'item_id' => $target->item_id,
+                'item_name' => $item ? $item->name : '',
+                'brand_name' => ($item && $item->brand) ? $item->brand->brand_name : '',
+                'brand_cat_id' => $item ? $item->brand_category_id : null,
+                'stock_entry_item_id' => $target->stock_entry_item_id ?? $target->id,
+                'color_id' => $target->color_id,
+                'size' => $target->size,
+                'art_no' => $target->art_no,
+                'price' => $finalPrice,
+                'mrp' => $finalMrp,
+                'uom_id' => $target->uom_id,
+                'sleeve_type' => $target->sleeve_type,
+                'sku' => $target->sku,
+                'balance' => $target->balance ?? 0,
+                'size_stock' => $sizeStock
+            ]);
+        }
+
+        return response()->json(['success' => false]);
+    }
+
+    public function searchStockItems(Request $request)
+    {
+        $term = $request->term;
+        $results = DB::table('stock_entry_items')
+            ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
+            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
+            ->leftJoin(DB::raw('(SELECT finished_item_code, MAX(unit_price) as unit_price, MAX(selling_price) as selling_price FROM item_prices WHERE status = "Active" AND deleted_at IS NULL GROUP BY finished_item_code) as ip'), 'stock_entry_items.finished_item_code', '=', 'ip.finished_item_code')
+            ->where('stock_entry_items.stock_type', 'finished_goods')
+            ->whereNull('stock_entry_items.deleted_at')
+            ->where(function ($query) use ($term) {
+                $query->where('stock_entry_items.finished_item_code', 'LIKE', "%{$term}%")->orWhere('stock_entry_items.sku', 'LIKE', "%{$term}%");
+            })
+            ->select(
+                'stock_entry_items.finished_item_code',
+                'stock_entry_items.sku',
+                'items.name as item_name',
+                'brands.brand_name',
+                'stock_entry_items.art_no',
+                'stock_entry_items.price as fallback_price',
+                'ip.unit_price',
+                'ip.selling_price as retail_mrp',
+                'stock_entry_items.sleeve_type',
+                DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance')
+            )->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.sku', 'items.name', 'brands.brand_name', 'stock_entry_items.art_no', 'stock_entry_items.price', 'ip.unit_price', 'ip.selling_price', 'stock_entry_items.sleeve_type')->having('balance', '>', 0)->limit(20)->get();
+
+        $formattedResults = [];
+        foreach ($results as $item) {
+            $label = $item->finished_item_code . ' - ' . $item->item_name;
+            if ($item->sleeve_type) {
+                $label .= ' (' . $item->sleeve_type . ')';
+            }
+            if ($item->sku) {
+                $label .= ' | SKU: ' . $item->sku;
+            }
+            
+            $finalPrice = $item->unit_price ?? $item->fallback_price;
+            $finalMrp = $item->retail_mrp ?? $item->fallback_price;
+
+            $formattedResults[] = [
+                'id' => $item->finished_item_code,
+                'label' => $label,
+                'value' => $item->finished_item_code,
+                'sku' => $item->sku,
+                'item_name' => $item->item_name,
+                'brand_name' => $item->brand_name,
+                'art_no' => $item->art_no,
+                'price' => $finalPrice,
+                'mrp' => $finalMrp,
+                'balance' => $item->balance,
+                'sleeve_type' => $item->sleeve_type,
+            ];
+        }
+
+        return response()->json($formattedResults);
+    }
+
+    public function syncFromOrderaxe(Request $request, OrderaxeService $orderaxeService)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create sales-order')) {
+            return unauthorizedRedirect();
+        }
+
+        $limit = $request->query('limit');
+        $count = $orderaxeService->syncOrders($limit);
+
+
+        if ($count > 0) {
+            return redirect('sales_orders')->with('success', "Successfully synced $count orders from Orderaxe.");
+        }
+
+        return redirect('sales_orders')->with('error', "No new orders found to sync.");
+    }
+
+    public function deleteCharge($id)
+    {
+        try {
+            $charge = SalesOrderCharge::findOrFail($id);
+            $charge->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Charge deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete charge: ' . $e->getMessage()
+            ], 500);
+
+        }
+    }
+    public function syncOrderaxe(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create sales-order')) {
+            return unauthorizedRedirect();
+        }
+
+        try {
+            $service = new \App\Services\OrderaxeService();
+            $limit = $request->query('limit', 1);
+            $syncCount = $service->syncOrders((int)$limit);
+
+            if ($syncCount > 0) {
+                return redirect('sales_orders')->with('success', $syncCount . ' orders synced successfully from Orderaxe');
+            } else {
+                return redirect('sales_orders')->with('info', 'No new orders found to sync from Orderaxe');
+            }
+        } catch (\Exception $e) {
+            return redirect('sales_orders')->with('error', 'Sync failed: ' . $e->getMessage());
+        }
     }
 }
 

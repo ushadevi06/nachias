@@ -14,11 +14,13 @@ class SalesOrder extends Model
 
     protected $fillable = [
         'so_no',
+        'orderaxe_id',
         'so_date',
         'request_date',
         'order_type',
         'season_id',
         'customer_id',
+        'retailer_id',
         'customer_po_ref',
         'store_id',
         'agent_id',
@@ -32,6 +34,7 @@ class SalesOrder extends Model
         'sub_total_qty',
         'commission_percent',
         'commission_amount',
+        'sales_discount_percent',
         'discount_percent',
         'discount_amount',
         'taxable_amount',
@@ -40,6 +43,7 @@ class SalesOrder extends Model
         'cgst_percent',
         'sgst_percent',
         'tax_amount',
+        'other_charges',
         'round_off_type',
         'round_off',
         'total_amount',
@@ -75,6 +79,7 @@ class SalesOrder extends Model
         'sub_total_qty'   => 'decimal:2',
         'commission_percent'=> 'decimal:2',
         'commission_amount' => 'decimal:2',
+        'sales_discount_percent'=> 'decimal:2',
         'discount_percent'=> 'decimal:2',
         'discount_amount' => 'decimal:2',
         'taxable_amount'  => 'decimal:2',
@@ -92,6 +97,11 @@ class SalesOrder extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function retailer()
+    {
+        return $this->belongsTo(Retailer::class);
     }
 
     public function salesAgent()
@@ -137,5 +147,10 @@ class SalesOrder extends Model
     public function items()
     {
         return $this->hasMany(SalesOrderItem::class, 'sale_order_id');
+    }
+
+    public function charges()
+    {
+        return $this->hasMany(SalesOrderCharge::class, 'sales_order_id');
     }
 }

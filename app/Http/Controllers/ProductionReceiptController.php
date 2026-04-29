@@ -355,6 +355,12 @@ class ProductionReceiptController extends Controller
             'price' => $receipt->items->sum('total_value'),
         ]);
 
+        $fitId = null;
+        if ($receipt->job_card_id) {
+            $jobCard = JobCardEntry::find($receipt->job_card_id);
+            $fitId = $jobCard ? $jobCard->fit_id : null;
+        }
+
 
         foreach ($receipt->items as $item) {
             if ($item->qty_to_receive > 0) {
@@ -368,15 +374,22 @@ class ProductionReceiptController extends Controller
                         $itemCode = trim($parts[0]) . ' - ' . $sleevePart;
                     }
                 }
-
-                $year = date('y');
-                $prefix = 'BC' . $year;
-                $lastSku = StockEntryItem::where('sku', 'like', $prefix . '%')->orderBy('sku', 'desc')->first();
-                $nextNum = 1;
-                if ($lastSku) {
-                    $nextNum = (int)substr($lastSku->sku, 4) + 1;
+                preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $item->art_no, $matches);
+                $numericBase = $matches[2] ?? '';
+                $suffix = $matches[3] ?? '1';
+                $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
+                $formattedSize = str_pad(trim((string)$item->size), 2, '0', STR_PAD_LEFT);
+                
+                $sleeveCode = '00';
+                if (isset($sleevePart)) {
+                    if ($sleevePart == 'F/S') $sleeveCode = '01';
+                    elseif ($sleevePart == 'H/S') $sleeveCode = '02';
+                } else {
+                    if ($sleeve == 'Full') $sleeveCode = '01';
+                    elseif ($sleeve == 'Half') $sleeveCode = '02';
                 }
-                $sku = $prefix . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+                
+                $sku = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
 
                 $itemModel = Item::with('fabricType')->find($item->item_id);
 
@@ -396,7 +409,6 @@ class ProductionReceiptController extends Controller
 
                 $qrData = [
                     'sku' => $sku,
-                    'name' => $item->item_name,
                     'design' => $design,
                     'fabric' => $fabric,
                     'size' => $item->size,
@@ -422,6 +434,7 @@ class ProductionReceiptController extends Controller
                     'sku' => $sku,
                     'qrcode' => json_encode($qrData),
                     'sleeve_type' => $sleeve,
+                    'fit_id' => $fitId,
                 ]);
             }
         }
@@ -781,7 +794,7 @@ class ProductionReceiptController extends Controller
             'success' => true,
             'data' => [
                 'job_card_no' => $jobCard->job_card_no,
-                'employee_id' => null, // Left empty because employee shouldn't be auto-fetched from job card, it's manually selected
+                'employee_id' => null,
                 'purchase_order_id' => $jobCard->purchase_order_id,
                 'po_number' => $jobCard->purchaseOrder ? $jobCard->purchaseOrder->po_number : '',
                 'plant_id' => $jobCard->service_provider_id,

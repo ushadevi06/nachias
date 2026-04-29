@@ -26,6 +26,7 @@ class SalesOrderItem extends Model
         'amount',
         'sleeve',
         'stock_entry_item_id',
+        'sku',
     ];
 
     protected $casts = [

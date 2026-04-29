@@ -91,15 +91,14 @@
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 12%;">Brand Category</th>
-                                        <th style="width: 18%;">Item with Sleeve Type</th>
-                                        <th style="width: 8%;">Size</th>
+                                        <th style="width: 15%;">Stock Item</th>
+                                        <th style="width: 10%;">Color</th>
                                         <th style="width: 10%;">Art No</th>
-
                                         <th style="width: 8%;">UOM</th>
-                                        <th style="width: 8%;">Qty *</th>
-
+                                        <th style="width: 8%;">Size</th>
+                                        <th style="width: 8%;">Quantity *</th>
                                         <th style="width: 10%;">MRP</th>
+                                        <th style="width: 10%;">Price *</th>
                                         <th style="width: 12%;">Amount *</th>
                                     </tr>
                                 </thead>
@@ -108,25 +107,73 @@
                                         $items = old('items');
                                         if (!$items && isset($invoice)) {
                                             $items = $invoice->items->map(function($item) {
-                                                return [
-                                                    'brand_id' => $item->brand_id,
-                                                    'brand_name' => $item->brandCategory ? $item->brandCategory->name : '',
-                                                    'item_id' => $item->item_id,
-                                                    'item_name' => $item->item ? $item->item->name : '',
-                                                    'sleeve_type' => $item->sleeve_type,
-                                                    'size' => $item->size,
-                                                    'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
-                                                    'art_no' => $item->art_no,
-                                                    'hsn_sac' => $item->hsn_sac,
-                                                    'uom_id' => $item->uom_id,
-                                                    'uom_code' => $item->uom ? $item->uom->uom_code : '',
-                                                    'quantity' => $item->quantity,
-                                                    'rate' => $item->rate,
-                                                    'mrp' => $item->mrp,
-                                                    'amount' => $item->amount,
-                                                    'stock_entry_item_id' => $item->stock_entry_item_id,
-                                                    'id' => $item->id,
-                                                ];
+                                                    $brandName = '';
+                                                    $itemName = '';
+                                                    $sleeveType = $item->sleeve_type;
+
+                                                    // Try to get from direct item relation
+                                                    if ($item->item) {
+                                                        if ($item->item->brand) {
+                                                            $brandName = $item->item->brand->brand_name;
+                                                        } elseif ($item->brandCategory) {
+                                                            $brandName = $item->brandCategory->name;
+                                                        }
+
+                                                        if ($item->item->style) {
+                                                            $itemName = $item->item->style->style_name;
+                                                        } else {
+                                                            $itemName = $item->item->name;
+                                                        }
+                                                    } 
+                                                    // Fallback to stockEntryItem if direct item is missing
+                                                    elseif ($item->stockEntryItem) {
+                                                        if ($item->stockEntryItem->item) {
+                                                            $seItem = $item->stockEntryItem->item;
+                                                            if ($seItem->brand) {
+                                                                $brandName = $seItem->brand->brand_name;
+                                                            } elseif ($seItem->brandCategory) {
+                                                                $brandName = $seItem->brandCategory->name;
+                                                            }
+
+                                                            if ($seItem->style) {
+                                                                $itemName = $seItem->style->style_name;
+                                                            } else {
+                                                                $itemName = $seItem->name;
+                                                            }
+                                                        } else {
+                                                            // Ultimate fallback: finished_item_code
+                                                            $brandName = $item->stockEntryItem->finished_item_code;
+                                                        }
+                                                        
+                                                        if (empty($sleeveType)) {
+                                                            $sleeveType = $item->stockEntryItem->sleeve_type;
+                                                        }
+                                                    }
+                                                    elseif ($item->brandCategory) {
+                                                        $brandName = $item->brandCategory->name;
+                                                    }
+
+                                                    return [
+                                                        'brand_id' => $item->brand_id,
+                                                        'brand_name' => $brandName ?: '',
+                                                        'item_id' => $item->item_id,
+                                                        'item_name' => $itemName ?: '',
+                                                        'sleeve_type' => $sleeveType ?: '',
+                                                        'color_id' => $item->color_id,
+                                                        'color_name' => $item->color ? $item->color->color_name : '',
+                                                        'size' => $item->size,
+                                                        'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
+                                                        'art_no' => $item->art_no,
+                                                        'hsn_sac' => $item->hsn_sac,
+                                                        'uom_id' => $item->uom_id,
+                                                        'uom_code' => $item->uom ? $item->uom->uom_code : '',
+                                                        'quantity' => $item->quantity,
+                                                        'rate' => $item->rate,
+                                                        'mrp' => $item->mrp,
+                                                        'amount' => $item->amount,
+                                                        'stock_entry_item_id' => $item->stock_entry_item_id,
+                                                        'id' => $item->id,
+                                                    ];
                                             })->toArray();
                                         }
                                     @endphp
@@ -135,17 +182,29 @@
                                         @php $row = (object) $row; @endphp
                                         <tr class="item-row">
                                             <td>
-                                                <span class="brand-text">{{ $row->brand_name ?? '' }}</span>
+                                                <div class="fw-bold text-dark">{{ $row->brand_name ?? '' }}</div>
+                                                <div class="small text-muted">{{ $row->item_name ?? '' }} ({{ $row->sleeve_type ?? '' }})</div>
                                                 <input type="hidden" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
-                                            </td>
-                                            <td>
-                                                <span class="item-text">{{ $row->item_name ?? '' }} ({{ $row->sleeve_type ?? '' }})</span>
                                                 <input type="hidden" name="items[{{ $index }}][item_id]" class="item-id" value="{{ $row->item_id }}">
                                                 <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name" value="{{ $row->item_name ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][sleeve_type]" class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
+                                                <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                            </td>
+                                            <td>
+                                                <span class="color-text">{{ $row->color_name ?? '-' }}</span>
+                                                <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id" value="{{ $row->color_id }}">
+                                                <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name" value="{{ $row->color_name ?? '' }}">
+                                            </td>
+                                            <td>
+                                                <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
+                                                <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
+                                            </td>
+                                            <td>
+                                                <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
+                                                <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id }}">
+                                                <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code" value="{{ $row->uom_code ?? '' }}">
                                             </td>
                                             <td>
                                                 <span class="size-text">{{ $row->size_name ?? '' }}</span>
@@ -153,26 +212,21 @@
                                                 <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name" value="{{ $row->size_name ?? '' }}">
                                             </td>
                                             <td>
-                                                <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
-                                                <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
-                                            </td>
-
-                                            <td>
-                                                <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
-                                                <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id }}">
-                                                <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code" value="{{ $row->uom_code ?? '' }}">
-                                            </td>
-                                            <td>
                                                 <div class="form-floating form-floating-outline">
                                                     <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" placeholder="Qty">
                                                     <label>Qty *</label>
                                                 </div>
                                             </td>
-
                                             <td>
                                                 <div class="form-floating form-floating-outline">
                                                     <input type="number" step="any" class="form-control mrp" name="items[{{ $index }}][mrp]" value="{{ $row->mrp ?? '' }}" placeholder="MRP">
                                                     <label>MRP</label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="form-floating form-floating-outline">
+                                                    <input type="number" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price">
+                                                    <label>Price *</label>
                                                 </div>
                                             </td>
                                             <td>
@@ -185,7 +239,7 @@
                                         @endforeach
                                     @else
                                         <tr class="item-row">
-                                            <td colspan="8" class="text-center">No items found</td>
+                                            <td colspan="9" class="text-center">No items found</td>
                                         </tr>
                                     @endif
                                 </tbody>
@@ -535,16 +589,28 @@
                                 var html = `
                                  <tr class="item-row">
                                     <td>
-                                        <span class="brand-text">${item.brand_name}</span>
+                                        <div class="fw-bold text-dark">${item.brand_name || ''}</div>
+                                        <div class="small text-muted">${item.item_name || ''} (${item.sleeve || ''})</div>
                                         <input type="hidden" name="items[${index}][brand_id]" class="brand-id" value="${item.brand_id}">
-                                        <input type="hidden" name="items[${index}][brand_name]" class="brand-name" value="${item.brand_name}">
+                                         <input type="hidden" name="items[${index}][brand_name]" class="brand-name" value="${item.brand_name || ''}">
+                                         <input type="hidden" name="items[${index}][item_id]" class="item-id" value="${item.item_id || ''}">
+                                         <input type="hidden" name="items[${index}][item_name]" class="item-name" value="${item.item_name || ''}">
+                                         <input type="hidden" name="items[${index}][sleeve_type]" class="sleeve-type" value="${item.sleeve || ''}">
                                         <input type="hidden" name="items[${index}][stock_entry_item_id]" class="stock-entry-item-id" value="${item.stock_entry_item_id || ''}">
                                     </td>
                                     <td>
-                                        <span class="item-text">${item.item_name} (${item.sleeve})</span>
-                                        <input type="hidden" name="items[${index}][item_id]" class="item-id" value="${item.item_id}">
-                                        <input type="hidden" name="items[${index}][item_name]" class="item-name" value="${item.item_name}">
-                                        <input type="hidden" name="items[${index}][sleeve_type]" class="sleeve-type" value="${item.sleeve}">
+                                        <span class="color-text">${item.color_name || '-'}</span>
+                                        <input type="hidden" name="items[${index}][color_id]" class="color-id" value="${item.color_id || ''}">
+                                        <input type="hidden" name="items[${index}][color_name]" class="color-name" value="${item.color_name || ''}">
+                                    </td>
+                                    <td>
+                                        <span class="art-no-text">${item.art_no || ''}</span>
+                                        <input type="hidden" name="items[${index}][art_no]" class="art-no" value="${item.art_no || ''}">
+                                    </td>
+                                    <td>
+                                        <span class="uom-text">${item.uom_code}</span>
+                                        <input type="hidden" name="items[${index}][uom_id]" class="uom-id" value="${item.uom_id}">
+                                        <input type="hidden" name="items[${index}][uom_code]" class="uom-code" value="${item.uom_code}">
                                     </td>
                                     <td>
                                         <span class="size-text">${item.size_name || item.size_id || ''}</span>
@@ -552,22 +618,11 @@
                                         <input type="hidden" name="items[${index}][size_name]" class="size-name" value="${item.size_name || item.size_id || ''}">
                                     </td>
                                     <td>
-                                        <span class="art-no-text">${item.art_no || ''}</span>
-                                        <input type="hidden" name="items[${index}][art_no]" class="art-no" value="${item.art_no}">
-                                    </td>
-
-                                    <td>
-                                        <span class="uom-text">${item.uom_code}</span>
-                                        <input type="hidden" name="items[${index}][uom_id]" class="uom-id" value="${item.uom_id}">
-                                        <input type="hidden" name="items[${index}][uom_code]" class="uom-code" value="${item.uom_code}">
-                                    </td>
-                                    <td>
                                         <div class="form-floating form-floating-outline">
                                             <input type="number" step="any" class="form-control qty" name="items[${index}][quantity]" value="${item.qty}">
                                             <label>Qty *</label>
                                         </div>
                                     </td>
-
                                     <td>
                                         <div class="form-floating form-floating-outline">
                                             <input type="number" step="any" class="form-control mrp" name="items[${index}][mrp]" value="${item.mrp || 0}">
@@ -576,7 +631,13 @@
                                     </td>
                                     <td>
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control amount" name="items[${index}][amount]" value="${(item.qty * (item.mrp || 0)).toFixed(2)}" readonly>
+                                            <input type="number" step="any" class="form-control rate" name="items[${index}][rate]" value="${item.rate || 0}">
+                                            <label>Price *</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" class="form-control amount" name="items[${index}][amount]" value="${(item.qty * (item.rate || item.mrp || 0)).toFixed(2)}" readonly>
                                             <label>Amount *</label>
                                         </div>
                                     </td>
@@ -730,11 +791,13 @@
 
 
 
-        $('#item-rows').on('input', '.qty, .mrp', function() {
+        $('#item-rows').on('input', '.qty, .mrp, .rate', function() {
             var row = $(this).closest('.item-row');
             var qty = parseFloat(row.find('.qty').val()) || 0;
             var mrp = parseFloat(row.find('.mrp').val()) || 0;
-            row.find('.amount').val((qty * mrp).toFixed(2));
+            var rate = parseFloat(row.find('.rate').val()) || 0;
+            var price = rate > 0 ? rate : mrp;
+            row.find('.amount').val((qty * price).toFixed(2));
             calculateTotals();
         });
 

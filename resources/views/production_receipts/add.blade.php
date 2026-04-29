@@ -78,9 +78,7 @@
                                     <select name="store_type_id" id="store_type_id" class="form-select select2" data-placeholder="Select Store">
                                         <option value="">Select Store</option>
                                         @foreach($storeTypes as $storeType)
-                                            <option value="{{ $storeType->id }}" {{ old('store_type_id', $receipt->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>
-                                                {{ $storeType->store_type_name }}
-                                            </option>
+                                            <option value="{{ $storeType->id }}" {{ old('store_type_id', $receipt->store_type_id ?? '') == $storeType->id ? 'selected' : '' }}>{{ $storeType->store_type_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="store_type_id">Store *</label>

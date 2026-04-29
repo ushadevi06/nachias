@@ -19,6 +19,7 @@ use App\Http\Controllers\DebitNoteController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ServiceProviderController;
+use App\Http\Controllers\RetailerController;
 use App\Http\Controllers\SalesAgentController;
 use App\Http\Controllers\ShippingMethodController;
 use App\Http\Controllers\TransportModeController;
@@ -79,9 +80,8 @@ use App\Http\Controllers\ProcessGroupController;
 use App\Http\Controllers\SeasonController;
 use App\Http\Controllers\TicketManagementController;
 use App\Http\Controllers\FabricSizeController;
+use App\Http\Controllers\ItemPriceController;
 
-
-/* |-------------------------------------------------------------------------- | Web Routes |-------------------------------------------------------------------------- | | Here is where you can register web routes for your application. These | routes are loaded by the RouteServiceProvider and all of them will | be assigned to the "web" middleware group. Make something great! | */
 
 Route::get('/', function () {
     return view('login');
@@ -107,6 +107,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Ajax */
     Route::get('get-cities/{state_id}', [AjaxController::class, 'fetchCities']);
     Route::get('get-zones/{state_id}', [AjaxController::class, 'fetchZones']);
+    Route::get('get-zones-by-city/{city_id}', [AjaxController::class, 'fetchZonesByCity']);
     Route::get('/get-places/{city_id}', [AjaxController::class, 'fetchPlaces']);
     Route::get('/raw-materials-by-category/{categoryId}', [AjaxController::class, 'getRawMaterialsByCategory']);
     Route::get('/get_charges', [AjaxController::class, 'getCharges']);
@@ -119,6 +120,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('get-customer-details/{id}', [AjaxController::class, 'getCustomerDetails']);
     Route::get('get-agents-by-zone/{zone_id}', [AjaxController::class, 'fetchAgentsByZone']);
     Route::get('get-finished-item-details/{code}/{color_id}', [SalesOrderController::class, 'getFinishedItemDetails']);
+    Route::get('get-finished-item-stock', [SalesOrderController::class, 'getFinishedItemStock']);
 
     /* Employees */
     Route::get('employees', [EmployeeController::class, 'index']);
@@ -300,6 +302,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('customers/delete/{id}', [CustomerController::class, 'destroy']);
     Route::post('customers/import', [CustomerController::class, 'import']);
     Route::get('customers/download-sample', [CustomerController::class, 'downloadSample']);
+    Route::get('customers/export-excel', [CustomerController::class, 'exportExcel']);
 
     /* Customer/Suppliers */
     Route::get('/suppliers', [SupplierController::class, 'index']);
@@ -317,6 +320,14 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['get', 'post'], 'service_providers/add/{id}', [ServiceProviderController::class, 'add']);
     Route::get('service_providers/view/{id}', [ServiceProviderController::class, 'view']);
     Route::get('service_provider/delete/{id}', [ServiceProviderController::class, 'destroy']);
+
+    /* Retailers */
+    Route::get('retailers', [RetailerController::class, 'index']);
+    Route::match(['GET', 'POST'], 'retailers/add/{id?}', [RetailerController::class, 'add']);
+    Route::get('retailers/view/{id}', [RetailerController::class, 'view']);
+    Route::get('retailers/delete/{id}', [RetailerController::class, 'destroy']);
+    Route::post('retailers/status/{id}', [RetailerController::class, 'updateStatus']);
+    Route::get('retailers/export-excel', [RetailerController::class, 'exportExcel']);
 
     /* Sales Agents */
     Route::get('sales_agents', [SalesAgentController::class, 'index']);
@@ -376,6 +387,15 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('items/status/{id}', [ItemController::class, 'updateStatus']);
     Route::get('items/filter', [ItemController::class, 'filter']);
 
+    /* Item Price */
+    Route::get('item_prices', [ItemPriceController::class, 'index']);
+    Route::match(['get', 'post'], 'item_prices/add/{id?}', [ItemPriceController::class, 'add']);
+    Route::get('item_prices/delete/{id}', [ItemPriceController::class, 'destroy']);
+    Route::post('item_prices/status/{id}', [ItemPriceController::class, 'updateStatus']);
+    Route::get('item_prices/export-excel', [ItemPriceController::class, 'exportExcel']);
+    Route::get('item_prices/get_art_nos', [ItemPriceController::class, 'getArtNos']);
+    Route::get('item_prices/search_items', [ItemPriceController::class, 'searchItems']);
+
     /* Grn Entry */
     Route::get('grn_entries', [GrnEntryController::class, 'index']);
     Route::match(['get', 'post'], 'grn_entries/add/{id?}', [GrnEntryController::class, 'add']);
@@ -409,6 +429,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_orders/print/{id}', [SalesOrderController::class, 'print']);
     Route::get('sales_orders/delete/{id}', [SalesOrderController::class, 'destroy']);
     Route::post('sales_orders/status/{id}', [SalesOrderController::class, 'updateStatus']);
+    Route::get('sales_orders/search-stock-items', [SalesOrderController::class, 'searchStockItems']);
+    Route::get('sales_orders/sync-orderaxe', [SalesOrderController::class, 'syncOrderaxe']);
+    Route::get('stock_entries/export-finished-goods', [StockEntryController::class, 'exportFinishedGoods']);
+    Route::get('stock_entries/export-barcode', [StockEntryController::class, 'exportBarcode']);
+    Route::delete('sales_orders/delete-charge/{id}', [SalesOrderController::class, 'deleteCharge']);
 
     /* Sales Invoice */
     Route::get('sales_invoices', [SalesInvoiceController::class, 'index']);
@@ -614,10 +639,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
         }
     );
 
-    Route::get('/run-permission-seeder', function () {
-        Artisan::call('db:seed', ['--class' => 'PermissionSeeder']);
-        return "Permission Seeder run successfully!";
-    });
 
 });
 

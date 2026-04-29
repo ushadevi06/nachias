@@ -10,6 +10,8 @@ use App\Models\Place;
 use App\Models\Tax;
 use App\Models\StoreType;
 use Illuminate\Http\Request;
+use App\Exports\CustomersExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CustomerController extends Controller
 {
@@ -295,13 +297,7 @@ class CustomerController extends Controller
     public function downloadSample()
     {
         $headers = [
-            'Category (Retailer/Wholesaler)', 'Name', 'Code', 'Mobile Number', 'Email', 'Website URL', 
-            'Transport Name', 'Booking Office', 'Zone', 'Store', 'Status (Active/Inactive)', 
-            'State', 'City', 'Place', 'Address Line 1', 'Address Line 2', 'Address Line 3', 
-            'Zip Code', 'Contact Person Name', 'Designation', 'Contact Mobile No', 
-            'Contact Email', 'Tax Type', 'GST No', 'PAN No', 'Payment Terms', 
-            'Credit Limit', 'Sales Discount', 'Box Discount', 'Bank Name', 'Branch', 
-            'Account Number', 'IFSC Code'
+            'Name with Code', 'Email', 'Phone', 'Address', 'State', 'City'
         ];
 
         $callback = function() use ($headers) {
@@ -313,5 +309,13 @@ class CustomerController extends Controller
         return response()->streamDownload($callback, 'Customer_Sample_Format.csv', [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    public function exportExcel()
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view customers')) {
+            return unauthorizedRedirect();
+        }
+        return Excel::download(new CustomersExport, 'customers_' . date('Ymd_His') . '.xlsx');
     }
 }
