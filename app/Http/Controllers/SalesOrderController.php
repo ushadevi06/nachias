@@ -35,7 +35,7 @@ class SalesOrderController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = SalesOrder::with(['customer', 'retailer', 'salesAgent'])->orderBy('id', 'desc');
+            $query = SalesOrder::with(['customer', 'salesAgent'])->orderBy('id', 'desc');
 
             if (!empty($request->customer_id)) {
                 $query->where('customer_id', $request->customer_id);
@@ -116,7 +116,7 @@ class SalesOrderController extends Controller
                     'DT_RowIndex' => $count++,
                     'so_no' => $so->so_no,
                     'so_date' => $so->so_date ? $so->so_date->format('d-m-Y') : '-',
-                    'customer_name' => $so->customer ? ($so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>') : ($so->retailer ? ($so->retailer->name . ' <span class="mini-title">(' . $so->retailer->code . ')</span>') : '-'),
+                    'customer_name' => $so->customer ? ($so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>') : '-',
                     'customer_po_ref' => $so->customer_po_ref ?? '-',
                     'total_qty' => number_format($so->total_qty, 2),
                     'sales_agent' => $so->salesAgent ? $so->salesAgent->name : '-',
@@ -529,7 +529,7 @@ class SalesOrderController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details sales-order')) {
             return unauthorizedRedirect();
         }
-        $salesOrder = SalesOrder::with(['customer', 'retailer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom', 'items.stockEntryItem'])->findOrFail($id);
+        $salesOrder = SalesOrder::with(['customer', 'salesAgent', 'store', 'season', 'items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'shippingMethod', 'transportMode', 'dispatchFrom', 'items.stockEntryItem'])->findOrFail($id);
         return view('sales_order.view_details', compact('salesOrder'));
     }
 
@@ -614,8 +614,6 @@ class SalesOrderController extends Controller
         $salesOrder = SalesOrder::with([
             'customer.state',
             'customer.city',
-            'retailer.state',
-            'retailer.city',
             'salesAgent',
             'items.brandCategory',
             'items.item',
@@ -665,8 +663,6 @@ class SalesOrderController extends Controller
         $salesOrder = SalesOrder::with([
             'customer.state',
             'customer.city',
-            'retailer.state',
-            'retailer.city',
             'salesAgent',
             'items.brandCategory',
             'items.item',

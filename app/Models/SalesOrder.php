@@ -20,7 +20,6 @@ class SalesOrder extends Model
         'order_type',
         'season_id',
         'customer_id',
-        'retailer_id',
         'customer_po_ref',
         'store_id',
         'agent_id',
@@ -99,10 +98,6 @@ class SalesOrder extends Model
         return $this->belongsTo(Customer::class);
     }
 
-    public function retailer()
-    {
-        return $this->belongsTo(Retailer::class);
-    }
 
     public function salesAgent()
     {

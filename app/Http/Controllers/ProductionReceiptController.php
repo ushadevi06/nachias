@@ -162,7 +162,7 @@ class ProductionReceiptController extends Controller
                     'job_card_id' => $request->job_card_id,
                     'employee_id' => $request->employee_id,
                     'order_due_date' => $request->order_due_date ? date('Y-m-d', strtotime($request->order_due_date)) : null,
-                    'receipt_no' => $request->receipt_no ?: ('RCPT-' . date('Y') . '-' . str_pad(ProductionReceipt::count() + 1, 4, '0', STR_PAD_LEFT)),
+                    'receipt_no' => $request->receipt_no ?: ($receipt->receipt_no ?? ('RCPT-' . date('Y') . '-' . str_pad(ProductionReceipt::count() + 1, 4, '0', STR_PAD_LEFT))),
                     'receipt_date' => date('Y-m-d', strtotime($request->receipt_date)),
                     'doc_no' => $request->doc_no,
                     'doc_date' => $request->doc_date ? date('Y-m-d', strtotime($request->doc_date)) : null,
@@ -186,6 +186,20 @@ class ProductionReceiptController extends Controller
                 $jobCardForArtResolution = null;
                 if ($request->job_card_id) {
                     $jobCardForArtResolution = JobCardEntry::with(['fabricDetails.quantities'])->find($request->job_card_id);
+                }
+
+                $hasQty = false;
+                if ($request->has('items') && is_array($request->items)) {
+                    foreach ($request->items as $itemData) {
+                        if (floatval($itemData['scan_qty'] ?? 0) > 0) {
+                            $hasQty = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!$hasQty) {
+                    throw new \Exception('Please enter Qty To Receive for at least one item.');
                 }
 
                 if ($request->has('items') && is_array($request->items)) {
@@ -240,16 +254,7 @@ class ProductionReceiptController extends Controller
                     addLog('create', 'Production Receipt', 'production_receipts', $receipt->id, null, $newData);
                 }
 
-                if ($id) {
-                    $existingEntry = StockEntry::withTrashed()
-                        ->where('reference_document', $receipt->receipt_no)
-                        ->where('entry_type', 'Finished Goods')
-                        ->first();
-                    if ($existingEntry) {
-                        StockEntryItem::withTrashed()->where('stock_entry_id', $existingEntry->id)->forceDelete();
-                        $existingEntry->forceDelete();
-                    }
-                }
+
 
                 if ($newData['status'] == 'Posted') {
                     $this->createStockEntry($receipt, $request->store_location_id);
@@ -338,22 +343,45 @@ class ProductionReceiptController extends Controller
 
     private function createStockEntry($receipt, $storeLocationId)
     {
-        $lastEntry = StockEntry::latest('id')->first();
-        $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
-        $stockEntryNo = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+        $stockEntry = StockEntry::where('reference_document', $receipt->receipt_no)
+            ->where('entry_type', 'Finished Goods')
+            ->first();
 
-        $stockEntry = StockEntry::create([
-            'stock_entry_no' => $stockEntryNo,
-            'stock_date' => $receipt->receipt_date,
-            'entry_type' => 'Finished Goods',
-            'to_store_location_id' => $storeLocationId,
-            'remarks' => $receipt->remarks,
-            'reference_document' => $receipt->receipt_no,
-            'status' => 'Posted',
-            'color' => $receipt->color,
-            'created_by' => Auth::id(),
-            'price' => $receipt->items->sum('total_value'),
-        ]);
+        if ($stockEntry) {
+            $hasIssuedStock = StockEntryItem::where('stock_entry_id', $stockEntry->id)
+                ->where('qty_out', '>', 0)
+                ->exists();
+
+            if ($hasIssuedStock) {
+                throw new \Exception('Cannot update Stock Entry because some items have already been issued/sold from this stock.');
+            }
+
+            $stockEntry->update([
+                'stock_date' => $receipt->receipt_date,
+                'to_store_location_id' => $storeLocationId,
+                'remarks' => $receipt->remarks,
+                'price' => $receipt->items->sum('total_value'),
+                'updated_by' => Auth::id(),
+            ]);
+
+            StockEntryItem::where('stock_entry_id', $stockEntry->id)->forceDelete();
+        } else {
+            $lastEntry = StockEntry::latest('id')->first();
+            $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+            $stockEntryNo = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+            $stockEntry = StockEntry::create([
+                'stock_entry_no' => $stockEntryNo,
+                'stock_date' => $receipt->receipt_date,
+                'entry_type' => 'Finished Goods',
+                'to_store_location_id' => $storeLocationId,
+                'remarks' => $receipt->remarks,
+                'reference_document' => $receipt->receipt_no,
+                'status' => 'Posted',
+                'created_by' => Auth::id(),
+                'price' => $receipt->items->sum('total_value'),
+            ]);
+        }
 
         $fitId = null;
         if ($receipt->job_card_id) {
@@ -556,9 +584,11 @@ class ProductionReceiptController extends Controller
             }
         }
         
+        $fallbackStyleCode = '';
         $fallbackStyleName = '';
         if ($allPOItems) {
             $fabricPoItem = $allPOItems->where('store_category_id', 1)->whereNotNull('style_id')->first() ?: $allPOItems->whereNotNull('style_id')->first();
+            $fallbackStyleCode = $fabricPoItem && $fabricPoItem->style ? $fabricPoItem->style->code : '';
             $fallbackStyleName = $fabricPoItem && $fabricPoItem->style ? $fabricPoItem->style->style_name : '';
         }
 
@@ -692,7 +722,7 @@ class ProductionReceiptController extends Controller
             ];
         };
 
-        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleName, $artColorMap) {
+        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap) {
             if ($qty > 0) {
                 $sizeVariant = $size . ' - ' . $sleeve;
                 $itemKey = $jobCard->item_id ?? '0';
@@ -708,11 +738,12 @@ class ProductionReceiptController extends Controller
                     $brandCode = ($jobCard->brand ? $jobCard->brand->code : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->code : ''));
                     $brandName = ($jobCard->brand ? $jobCard->brand->brand_name : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->brand_name : ''));
                     
+                    $styleCode = ($jobCard->item && $jobCard->item->style ? $jobCard->item->style->code : $fallbackStyleCode);
                     $styleName = ($jobCard->item && $jobCard->item->style ? $jobCard->item->style->style_name : $fallbackStyleName);
 
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
-                        'item_code' => trim($brandCode . ' - ' . $styleName . ' - ' . $sleeve, ' - '),
+                        'item_code' => trim($brandCode . ' - ' . $styleCode . ' - ' . $sleeve, ' - '),
                         'service_name' => $serviceName,
                         'sleeve' => $sleeve,
                         'size' => $size,

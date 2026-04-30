@@ -38,14 +38,11 @@
                 <div class="card-body p-4">
                     <div class="row g-4 text-break">
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Customer / Retailer</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Customer</div>
                             <div class="fw-bold text-dark">
                                 @if($salesOrder->customer)
                                     {{ $salesOrder->customer->name }}
                                     <span class="text-primary small">({{ $salesOrder->customer->code }})</span>
-                                @elseif($salesOrder->retailer)
-                                    {{ $salesOrder->retailer->name }}
-                                    <span class="text-primary small">({{ $salesOrder->retailer->code }})</span>
                                 @else
                                     N/A
                                 @endif

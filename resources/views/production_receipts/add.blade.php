@@ -250,7 +250,12 @@
             var index = $(this).data('index');
             var item = itemDataStore[index];
             if (!item || !item.consumption_details) {
-                alert('No consumption details found for this item.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No consumption details found for this item.',
+                    confirmButtonColor: '#8c57ff',
+                });
                 return;
             }
 
@@ -317,7 +322,12 @@
             var availableBalance = parseFloat(row.find('.scan-qty').data('max')) || 0;
             
             if (scanQty > availableBalance) {
-                alert('Qty To Receive cannot exceed Available Balance (' + availableBalance.toFixed(2) + ')');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Limit Exceeded',
+                    text: 'Qty To Receive cannot exceed Available Balance (' + availableBalance.toFixed(2) + ')',
+                    confirmButtonColor: '#8c57ff',
+                });
                 scanQty = availableBalance;
                 row.find('.scan-qty').val(scanQty.toFixed(2));
             }
@@ -393,9 +403,32 @@
                 },
                 error: function(xhr) {
                     console.error('Error fetching job card details:', xhr);
-                    alert('Error loading job card details');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error loading job card details',
+                        confirmButtonColor: '#8c57ff',
+                    });
                 }
             });
+        });
+
+        $('form').on('submit', function(e) {
+            let totalScanQty = 0;
+            $('.scan-qty').each(function() {
+                totalScanQty += parseFloat($(this).val()) || 0;
+            });
+            
+            if (totalScanQty <= 0) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please enter Qty To Receive for at least one item.',
+                    confirmButtonColor: '#8c57ff',
+                });
+                return false;
+            }
         });
 
         if ($('#job_card_id').val()) {
