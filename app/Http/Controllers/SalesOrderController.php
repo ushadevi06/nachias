@@ -739,15 +739,9 @@ class SalesOrderController extends Controller
     {
         $code = $request->code;
         $soId = $request->so_id;
-        $exactMatch = DB::table('stock_entry_items')
-            ->where('sku', $code)
-            ->where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at')
-            ->first();
+        $exactMatch = DB::table('stock_entry_items')->where('sku', $code)->where('stock_type', 'finished_goods')->whereNull('deleted_at')->first();
 
-        $query = DB::table('stock_entry_items')
-            ->where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at');
+        $query = DB::table('stock_entry_items')->where('stock_type', 'finished_goods')->whereNull('deleted_at');
 
         if ($exactMatch) {
             $query->where('finished_item_code', $exactMatch->finished_item_code);
@@ -771,12 +765,7 @@ class SalesOrderController extends Controller
                 $sizeStock[$si->size] = (float)$si->balance;
             }
 
-            $itemPrice = DB::table('item_prices')
-                ->where('finished_item_code', $target->finished_item_code)
-                ->where('status', 'Active')
-                ->whereNull('deleted_at')
-                ->orderBy('effective_from', 'desc')
-                ->first();
+            $itemPrice = DB::table('item_prices')->where('finished_item_code', $target->finished_item_code)->where('status', 'Active')->whereNull('deleted_at')->orderBy('effective_from', 'desc')->first();
 
             $finalMrp = $itemPrice ? $itemPrice->selling_price : ($item ? $item->mrp : $target->price);
             $finalPrice = $itemPrice ? $itemPrice->unit_price : $target->price;

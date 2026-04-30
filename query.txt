@@ -73,8 +73,8 @@ ALTER TABLE sales_orders ADD COLUMN orderaxe_id VARCHAR(255) NULL;
 ALTER TABLE sales_orders
 ADD COLUMN other_charges DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER tax_amount;
 
-ALTER TABLE sales_orders
-ADD COLUMN sales_discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER commission_amount;
+  ALTER TABLE sales_orders
+  ADD COLUMN sales_discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER commission_amount;
 
 
 -- sales_order_items
