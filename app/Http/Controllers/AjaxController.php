@@ -245,4 +245,25 @@ class AjaxController extends Controller
             'sales_discount' => (float)$customer->sales_discount
         ]);
     }
+
+    public function searchRawMaterials(Request $request)
+    {
+        $search = $request->q;
+        $materials = RawMaterial::active()
+            ->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('code', 'like', "%$search%");
+            })
+            ->limit(20)
+            ->get(['id', 'name', 'code']);
+
+        $formatted = $materials->map(function($m) {
+            return [
+                'id' => $m->id,
+                'text' => $m->name . " (" . $m->code . ")"
+            ];
+        });
+
+        return response()->json(['results' => $formatted]);
+    }
 }

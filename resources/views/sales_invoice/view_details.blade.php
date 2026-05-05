@@ -14,6 +14,9 @@
                         <a href="{{ url('sales_invoices/print/' . $invoice->id) }}" class="btn btn-primary" target="_blank">
                             <i class="ri ri-printer-line back-arrow"></i>Print
                         </a>
+                        <a href="{{ url('sales_invoices/print-sticker/' . $invoice->id) }}" class="btn btn-info" target="_blank" style="background-color: #00bcd4; border-color: #00bcd4;">
+                            <i class="ri ri-printer-line back-arrow"></i>Print Sticker
+                        </a>
                         <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
                             <i class="ri ri-arrow-left-line back-arrow"></i>Back
                         </a>
@@ -45,7 +48,7 @@
 
                             <div class="col-md-4">
                                 <label class="detail-title">Linked SO No:</label>
-                                <div class="text-muted">{{ $invoice->saleOrder ? $invoice->saleOrder->so_no : 'N/A' }}</div>
+                                <div class="text-muted">{{ $invoice->salesOrder ? $invoice->salesOrder->so_no : 'N/A' }}</div>
                             </div>
 
                             <div class="col-md-4">
@@ -111,7 +114,7 @@
                                                     </td>
                                                     <td>{{ $item->color ? $item->color->color_name : '-' }}</td>
                                                     <td>{{ $item->art_no ?? '-' }}</td>
-                                                    <td>{{ $item->uom ? $item->uom->uom_code : '-' }}</td>
+                                                    <td>{{ $item->uom_id ?? '-' }}</td>
                                                     <td>{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                                                     <td class="text-end">{{ number_format($item->quantity, 2) }}</td>
                                                     <td class="text-end">₹{{ number_format($item->mrp ?? 0, 2) }}</td>
@@ -241,8 +244,7 @@
                                         <div class="summary-right border rounded p-3 h-100">
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Invoice Status:</label>
-                                                <div class="text-right"><span
-                                                        class="badge bg-primary">{{ $invoice->invoice_status }}</span></div>
+                                                <div class="text-right"><span class="badge bg-primary">{{ $invoice->invoice_status }}</span></div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Payment Mode:</label>

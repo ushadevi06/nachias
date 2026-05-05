@@ -13,6 +13,7 @@ class OperationStage extends Model
     protected $fillable = [
         'operation_stage_name',
         'working_days',
+        'cost',
         'status',
         'created_by',
         'updated_by',

@@ -678,13 +678,13 @@
                                 <div class="row g-4">
                                     <div class="col-12">
                                         @php
-$currentStatus = old('status', $purchaseOrder->status ?? 'Draft');
-$disabledStatuses = match ($currentStatus) {
-'Approved' => ['Draft'],
-'Dispatched' => ['Draft', 'Approved'],
-'Received' => ['Draft', 'Approved', 'Dispatched'],
-default => [],
-};
+                                            $currentStatus = old('status', $purchaseOrder->status ?? 'Draft');
+                                            $disabledStatuses = match ($currentStatus) {
+                                            'Approved' => ['Draft'],
+                                            'Dispatched' => ['Draft', 'Approved'],
+                                            'Received' => ['Draft', 'Approved', 'Dispatched'],
+                                            default => [],
+                                            };
                                         @endphp
                                         <div class="form-floating form-floating-outline">
                                             <select id="status" name="status"
@@ -744,13 +744,13 @@ default => [],
                                             <div id="attachment-list" class="mt-3 d-flex flex-wrap gap-3">
                                                 @if($purchaseOrder && $purchaseOrder->additional_attachments)
                                                     @php
-$attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
+                                                        $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
                                                     @endphp
                                                     @foreach($attachments as $attachment)
                                                         @php
-    $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
-    $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp']);
-    $fileUrl = url('uploads/purchase_orders/' . $attachment);
+                                                            $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
+                                                            $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp']);
+                                                            $fileUrl = url('uploads/purchase_orders/' . $attachment);
                                                         @endphp
                                                         <div class="attachment-item position-relative border rounded p-1 bg-white shadow-sm" style="width: 100px; height: 100px;" title="{{ $attachment }}">
                                                             @if($isImage)

@@ -67,9 +67,12 @@ class PermissionSeeder extends Seeder
             /* Item Setup */
             'store-categories' => ['create', 'edit', 'delete', 'view'],
             'raw-materials' => ['create', 'edit', 'delete', 'view'],
+            'standard-consumption' => ['create', 'edit', 'delete', 'view'],
             'brand-categories' => ['create', 'edit', 'delete', 'view'],
+
             'brands' => ['create', 'edit', 'delete', 'view'],
             'items' => ['create', 'edit', 'delete', 'view'],
+            'item-prices' => ['create', 'edit', 'delete', 'view'],
 
             /* Purchase */
             'purchase-order' => ['create', 'edit', 'view', 'view_details'],

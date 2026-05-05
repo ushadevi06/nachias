@@ -13,6 +13,8 @@ use App\Models\Color;
 use App\Models\Setting;
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
+use App\Models\StoreType;
+use App\Models\SalesAgent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -81,8 +83,8 @@ class SalesInvoiceController extends Controller
                 <div class="status_msg_' . $inv->id . ' mt-1" style="font-size:10px;"></div>';
 
                 $action = '<div class="button-box">
-                    <a href="' . url('sales_invoices/view/' . $inv->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                    <a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                    <a href="' . url('sales_invoices/view/' . $inv->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a>
+                    <a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>
                 </div>';
 
                 $data[] = [
@@ -128,7 +130,6 @@ class SalesInvoiceController extends Controller
                 'invoice_status' => 'required|in:Draft,Unpaid/Credit,Paid,Partially Paid',
                 'payment_mode' => 'nullable',
                 'items' => 'required|array|min:1',
-                'items.*.item_id' => 'required',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'nullable|numeric|min:0',
                 'items.*.mrp' => 'required|numeric|min:0',
@@ -143,7 +144,6 @@ class SalesInvoiceController extends Controller
                 '*.regex'         => 'This field is an invalid format.',
                 '*.min'           => 'This field must be at least :min characters.',
                 '*.max'           => 'This field must be at most :max characters.',
-                'items.*.item_id.required' => 'This field is required.',
                 'items.*.quantity.required' => 'This field is required.',
                 'items.*.rate.nullable' => 'This field is optional.',
                 'extra_input' => 'nullable|min:3|max:100',
@@ -152,9 +152,10 @@ class SalesInvoiceController extends Controller
             DB::beginTransaction();
             try {
                 $invoiceData = $request->only([
-                    'inv_no', 'so_id', 'customer_id', 'delivery_address', 'remarks',
+                    'inv_no', 'so_id', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
                     'invoice_status', 'payment_mode', 'extra_input', 'due_date',
-                    'notes', 'sub_total', 'discount_percent', 'discount', 'total', 'other_state',
+                    'notes', 'transporter_name', 'lr_no', 'sub_total', 'discount_percent', 'discount', 
+                    'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
                     'other_charges', 'round_off_type', 'round_off',
                     'grand_total', 'due_amount'
@@ -211,8 +212,7 @@ class SalesInvoiceController extends Controller
                         ['id' => $item['id'] ?? null],
                         [
                             'sales_invoice_id' => $invoice->id,
-                            'brand_id' => $item['brand_id'] ?? null,
-                            'item_id' => $item['item_id'],
+                            'sku' => $item['sku'] ?? null,
                             'uom_id' => $item['uom_id'] ?? null,
                             'quantity' => $item['quantity'] ?? 0,
                             'rate' => $item['rate'] ?? 0,
@@ -255,6 +255,8 @@ class SalesInvoiceController extends Controller
         $saleOrders = SalesOrder::where('status', 'Approved')->whereNotIn('id', $usedSoIds)->orderBy('id', 'desc')->get();
         $brandCategories = BrandCategory::active()->get();
         $uoms = Uom::active()->get();
+        $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
+        $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
         
         $nextInvNumber = '';
         if (!$id) {
@@ -262,7 +264,7 @@ class SalesInvoiceController extends Controller
             $nextInvNumber = 'SINV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
         }
 
-        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber'));
+        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent'));
     }
 
     public function view($id)
@@ -345,12 +347,13 @@ class SalesInvoiceController extends Controller
                 'item_name' => $itemName ?: '',
                 'item_code' => $item->item ? $item->item->code : '',
                 'uom_id' => $item->uom_id,
-                'uom_code' => $item->uom ? $item->uom->uom_code : '',
+                'uom_code' => $item->uom_id ?: '',
                 'qty' => $item->qty,
                 'rate' => $item->rate,
                 'mrp' => $item->mrp ?? 0,
                 'amount' => $item->amount,
                 'art_no' => $item->art_no,
+                'sku' => $item->sku,
                 'size_id' => $item->size_id,
                 'size_name' => $item->size ? $item->size->size : '',
                 'color_id' => $item->color_id,
@@ -369,6 +372,9 @@ class SalesInvoiceController extends Controller
         return response()->json([
             'success' => true,
             'customer_id' => $so->customer_id,
+            'store_id' => $so->store_id,
+            'agent_id' => $so->agent_id,
+            'commission_percent' => $so->commission_percent,
             'billing_address' => $billingAddress,
             'shipping_address' => $so->shipping_address,
             'other_state' => $so->other_state ? 'yes' : 'no',
@@ -532,5 +538,13 @@ class SalesInvoiceController extends Controller
         $is_print = true;
 
         return view('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords', 'is_print'));
+    }
+    public function printSticker($id)
+    {
+        $invoice = SalesInvoice::with(['customer.state', 'customer.city', 'customer.place'])->findOrFail($id);
+        $totalPcs = $invoice->items->sum('quantity');
+        $setting = Setting::with(['state', 'city'])->first();
+        $is_print = true;
+        return view('sales_invoice.sticker', compact('invoice', 'totalPcs', 'setting', 'is_print'));
     }
 }

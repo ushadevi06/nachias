@@ -142,7 +142,7 @@
                 @php
                     $artNo = $item->art_no;
                     $qtyConsumed = $item->qty_used + $item->qty_adjusted + $item->qty_wastage;
-                    $qtyPerPc = $item->produced_qty > 0 ? $item->qty_used / $item->produced_qty : 0;
+                    $qtyPerPc = $item->produced_qty > 0 ? ($item->qty_used + $item->qty_wastage) / $item->produced_qty : 0;
                     $costPerPc = $qtyPerPc * $item->unit_price;
                     $lineCost = $costPerPc * $item->produced_qty;
                     
@@ -181,7 +181,7 @@
                 <td class="text-end">{{ number_format($totalQtyUsed, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyAdjusted, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyBalance, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalQtyUsed / $totalQtyProduced, 4) : '-' }}</td>
+                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format(($totalQtyUsed + $totalQtyWastage) / $totalQtyProduced, 4) : '-' }}</td>
                 <td class="text-end">-</td>
                 <td class="text-end">{{ number_format($totalCost, 2) }}</td>
                 <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td>

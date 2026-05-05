@@ -199,12 +199,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="transporter_name" name="transporter_name" placeholder="Transporter Name" value="{{ old('transporter_name', $salesOrder->transporter_name ?? '') }}">
-                                    <label for="transporter_name">Transporter Name</label>
-                                </div>
-                            </div>
+
 
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
@@ -370,9 +365,10 @@
                                                     <div class="form-floating form-floating-outline">
                                                         @php 
                                                             $itemFinishedCode = $item->stockEntryItem ? $item->stockEntryItem->finished_item_code : ($item->item->code ?? '');
+                                                            $stockItemKey = $item->sku ?: $itemFinishedCode;
                                                         @endphp
                                                         <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $itemFinishedCode }}" autocomplete="off">
-                                                        <input type="hidden" name="items[{{ $index }}][stock_item_key]" class="stock-item-select" value="{{ $itemFinishedCode }}">
+                                                        <input type="hidden" name="items[{{ $index }}][stock_item_key]" class="stock-item-select" value="{{ $stockItemKey }}">
                                                         <label>Stock Item*</label>
                                                     </div>
                                                     <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $item->item_id }}">
@@ -1232,20 +1228,28 @@ $(document).ready(function () {
             displayName += ' - ' + res.item_name;
         }
         $row.find('.stock-item-autocomplete').val(displayName);
-        $row.find('.stock-item-select').val(res.finished_item_code);
+        $row.find('.stock-item-select').val(res.sku || res.finished_item_code);
         $row.find('input[name*="[item_id]"]').val(res.item_id);
         $row.find('input[name*="[brand_cat_id]"]').val(res.brand_cat_id);
         $row.find('.stock-entry-item-id').val(res.stock_entry_item_id);
         $row.find('.sku-input').val(res.sku);
-        $row.find('select[name*="[color_id]"]').val(res.color_id).trigger('change');
+        
+        if ($row.find('select[name*="[color_id]"]').val() != res.color_id) {
+            $row.find('select[name*="[color_id]"]').val(res.color_id).trigger('change');
+        }
+        
         $row.find('.sleeve-input').val(res.sleeve_type);
         $row.find('.art-no-input').val(res.art_no);
         
         let mrp = parseFloat(res.mrp || 0);
         let price = parseFloat(res.price || 0);
         
-        $row.find('.mrp-input').val(mrp.toFixed(2));
-        $row.find('.rate-input').val(price.toFixed(2));
+        if (!$row.find('.mrp-input').val() || parseFloat($row.find('.mrp-input').val()) == 0) {
+            $row.find('.mrp-input').val(mrp.toFixed(2));
+        }
+        if (!$row.find('.rate-input').val() || parseFloat($row.find('.rate-input').val()) == 0) {
+            $row.find('.rate-input').val(price.toFixed(2));
+        }
         
         const sizeList = ['36', '38', '40', '42', '44'];
         let sizeOpts = `<option value="">Select Size</option>`;
@@ -1256,7 +1260,7 @@ $(document).ready(function () {
         $sizeSelect.html(sizeOpts);
         
         $row.data('size-stock', res.size_stock);
-        if (res.size) {
+        if (res.size && $sizeSelect.val() != res.size) {
             $sizeSelect.val(res.size).trigger('change');
         }
         

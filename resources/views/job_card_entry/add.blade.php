@@ -70,7 +70,7 @@
                             <div class="card-header-box">
                                 <h4>{{ $jobCard ? 'Edit' : 'Add' }} Job Card Entry</h4>
                             </div>
-                            <div class="row g-4">
+                            <div class="row g-4">   
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
                                         <select id="brand" name="brand_id" class="form-select select2" data-placeholder="Select Brand">
@@ -373,6 +373,15 @@
                                         </select>
                                         <label for="status">Status *</label>
                                     </div>
+                                    <script>
+                                        document.addEventListener('DOMContentLoaded', function() {
+                                            setTimeout(() => {
+                                                if ($('#status').hasClass('select2-hidden-accessible')) {
+                                                    $('#status').val('{{ old('status', $jobCard ? $jobCard->status : '') }}').trigger('change');
+                                                }
+                                            }, 500);
+                                        });
+                                    </script>
                                     @error('status') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="col-md-6 col-xl-4">
@@ -381,6 +390,21 @@
                                         <label for="remarks">Remarks</label>
                                     </div>
                                     @error('remarks') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline text-black">
+                                        <input type="file" class="form-control" id="attachment" name="attachment" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv">
+                                        @if($jobCard && $jobCard->attachment)
+                                            <div class="mt-2 d-flex align-items-center gap-2">
+                                                <a href="{{ url($jobCard->attachment) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <i class="ri ri-attachment-line me-1"></i> View Attachment
+                                                </a>
+                                            </div>
+                                        @endif
+                                        <label for="formFile" class="form-label">Reference Document</label>
+                                        <small class="text-muted d-block mt-1">Max file size: 5MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX, XLS, XLSX, CSV</small>
+                                        @error('attachment') <span class="text-danger">{{ $message }}</span> @enderror
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -391,7 +415,8 @@
                                 <h4 class="mb-0">Item Details</h4>
                             </div>
                             <div id="item-details-table-wrapper" class="table-responsive d-none">
-                                <table class="table table-bordered table-sm align-middle" id="item-details-table">
+                                <h6 class="text-primary mt-2">Fabric</h6>
+                                <table class="table table-bordered table-sm align-middle mb-4" id="item-details-fabric-table">
                                     <thead class="bg-primary">
                                         <tr>
                                             <th class="text-center" style="width: 50px;">S.No</th>
@@ -401,7 +426,22 @@
                                             <th class="text-center" style="width: 150px;">Quantity Remaining</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="item-details-tbody">
+                                    <tbody id="item-details-fabric-tbody">
+                                    </tbody>
+                                </table>
+                                
+                                <h6 class="text-primary mt-2">Accessories</h6>
+                                <table class="table table-bordered table-sm align-middle" id="item-details-accessories-table">
+                                    <thead class="bg-primary">
+                                        <tr>
+                                            <th class="text-center" style="width: 50px;">S.No</th>
+                                            <th>Raw Material Name</th>
+                                            <th class="text-center" style="width: 150px;">Total Quantity</th>
+                                            <th class="text-center" style="width: 180px;">Quantity Used</th>
+                                            <th class="text-center" style="width: 150px;">Quantity Remaining</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="item-details-accessories-tbody">
                                     </tbody>
                                 </table>
                             </div>
@@ -508,6 +548,7 @@
                                         <tr>
                                             <th>Stage *</th>
                                             <th>Issue Unit (Plant) *</th>
+                                            <th>Rate *</th>
                                             <th>Issue Date *</th>
                                             <th>Deadline Date *</th>
                                             <th>Remarks</th>
@@ -516,7 +557,7 @@
                                     </thead>
                                     <tbody>
                                         @php
-    $existingStages = old('production_stages', $jobCard ? $jobCard->operations->toArray() : []);
+                                            $existingStages = old('production_stages', $jobCard ? $jobCard->operations->toArray() : []);
                                         @endphp
                                         @if(!empty($existingStages))
                                             @foreach($existingStages as $index => $stage)
@@ -525,10 +566,14 @@
                                                         <select name="production_stages[{{ $index }}][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
                                                             <option value="">Select Stage</option>
                                                             @foreach($operationStages as $os)
-                                                                <option value="{{ $os->id }}" {{ ($stage['stage_id'] ?? $stage['operation_stage_id'] ?? '') == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
+                                                                <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ ($stage['stage_id'] ?? $stage['operation_stage_id'] ?? '') == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
                                                             @endforeach
                                                         </select>
                                                         @error('production_stages.' . $index . '.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" name="production_stages[{{ $index }}][rate]" class="form-control stage-rate" value="{{ $stage['rate'] ?? '' }}" step="0.01" placeholder="0.00">
+                                                        @error('production_stages.' . $index . '.rate') <span class="text-danger small">{{ $message }}</span> @enderror
                                                     </td>
                                                     <td>
                                                         <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
@@ -576,7 +621,7 @@
                                                     <select name="production_stages[0][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
                                                         <option value="">Select Stage</option>
                                                         @foreach($operationStages as $os)
-                                                            <option value="{{ $os->id }}">{{ $os->operation_stage_name }}</option>
+                                                            <option value="{{ $os->id }}" data-cost="{{ $os->cost }}">{{ $os->operation_stage_name }}</option>
                                                         @endforeach
                                                     </select>
                                                     @error('production_stages.0.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
@@ -589,6 +634,10 @@
                                                         @endforeach
                                                     </select>
                                                     @error('production_stages.0.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="number" name="production_stages[0][rate]" class="form-control stage-rate" value="" step="0.01" placeholder="0.00">
+                                                    @error('production_stages.0.rate') <span class="text-danger small">{{ $message }}</span> @enderror
                                                 </td>
                                                 <td>
                                                     <input type="text" name="production_stages[0][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
@@ -676,13 +725,13 @@
                                             <td><strong>QTY - F/S</strong></td>
                                             @foreach($sizes as $idx => $s)
                                                 @php
-        $val = '';
-        foreach ($matrixItems as $item) {
-            if (($item['size'] ?? '') == $s) {
-                $val = $item['qty_fs'] ?? '';
-                break;
-            }
-        }
+                                                    $val = '';
+                                                    foreach ($matrixItems as $item) {
+                                                        if (($item['size'] ?? '') == $s) {
+                                                            $val = $item['qty_fs'] ?? '';
+                                                            break;
+                                                        }
+                                                    }
                                                 @endphp
                                                 <td>
                                                     <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
@@ -1606,45 +1655,57 @@
                 }
                 if (window._initialStockEntries && window._initialStockEntries.length > 0) {
                     window._initialStockEntries.forEach(function (entry) {
-                        if (!selectedIds.includes(entry.id)) {
-                            selectedIds.push(entry.id);
+                        if (!selectedIds.includes(String(entry.id))) {
+                            selectedIds.push(String(entry.id));
                         }
                         if ($tags.find(`[data-id="${entry.id}"]`).length === 0) {
                             const removeButton = hasTasks ? '' : `<button type="button" class="btn-close btn-close-white ms-1" style="font-size:8px;" data-remove="${entry.id}" title="Remove"></button>`;
                             const $tag = $(`
                                 <span class="badge bg-primary d-inline-flex align-items-center gap-1 px-2 py-1 fs-6"
-                                      data-id="${entry.id}" style="cursor:default; max-width:300px; white-space:normal;">
+                                      data-id="${entry.id}" style="cursor:default; max-width:300px; white-space:normal; text-align:left;">
                                     <span style="font-size:11px; line-height:1.3;">${entry.text}</span>
                                     ${removeButton}
                                 </span>`);
                             $tags.append($tag);
                         }
                     });
-                    if (selectedIds.length > 0) {
-                        const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
-                        $.get(detailsUrl, { ids: selectedIds, job_card_id: jobCardId }, function (data) {
-                            currentArtNumbers = data.art_numbers;
-                            currentArtData    = data.art_data;
-                            if (!isEditMode && $('#fabric-details-body tr').length === 0) {
-                                $('#fabric-details-card').removeClass('d-none');
+                }
+
+                if (selectedIds.length > 0) {
+                    const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
+                    $.get(detailsUrl, { ids: selectedIds, job_card_id: jobCardId }, function (data) {
+                        currentArtNumbers = data.art_numbers;
+                        currentArtData    = data.art_data;
+
+                        if (typeof renderItemDetailsTable === "function") {
+                            renderItemDetailsTable(currentArtData);
+                        }
+
+                        // Check if we already restored data from old() validation failure
+                        const isRestoredFromOld = (oldFabrics && Object.keys(oldFabrics).length > 0);
+                        
+                        if (!isRestoredFromOld) {
+                            if (window._initialStockEntries && window._initialStockEntries.length > 0) {
                                 renderFabricDetails();
-                                if (typeof renderItemDetailsTable === "function") {
-                                    renderItemDetailsTable(currentArtData);
-                                }
-                                renderCuttingSizeTable(currentSizes, currentRatios);
-                                updateQuantityRowVisibility();
-                            } else {
-                                renderFabricDetails();
-                                if (typeof renderItemDetailsTable === "function") {
-                                    renderItemDetailsTable(currentArtData);
-                                }
-                                renderCuttingSizeTable(currentSizes, currentRatios);
-                                syncMatrixWithMasterTable(false);
                                 renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
                                 updateQuantityRowVisibility();
+                                calculateMatrixTotals(true);
+                            } else {
+                                if (!isEditMode && $('#fabric-details-body tr').length === 0) {
+                                    $('#fabric-details-card').removeClass('d-none');
+                                    renderFabricDetails();
+                                    renderCuttingSizeTable(currentSizes, currentRatios);
+                                    updateQuantityRowVisibility();
+                                } else {
+                                    renderFabricDetails(); 
+                                    renderCuttingSizeTable(currentSizes, currentRatios); 
+                                    syncMatrixWithMasterTable(false);
+                                    renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
+                                    updateQuantityRowVisibility();
+                                }
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             })();
 
@@ -1715,8 +1776,16 @@
                 $thead.append(headHtml);
 
                 artNumbers.forEach((art, index) => {
-                    const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).trim() == String(art).trim()) : null;
-                    const oldRow = oldMatrix && oldMatrix.length > 0 ? (oldMatrix.find(r => String(r.art_no).trim() == String(art).trim()) || oldMatrix[index]) : null;
+                    art = String(art).trim();
+                    const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).trim() == art) : null;
+                    
+                    let oldRow = null;
+                    if (oldMatrix && oldMatrix.length > 0) {
+                        oldRow = Object.values(oldMatrix).find(r => String(r.art_no).trim() == art);
+                        if (!oldRow && oldMatrix[index]) {
+                            oldRow = oldMatrix[index];
+                        }
+                    }
 
                     let uom = (articleUoms[art] || 'PCS').toUpperCase();
                     let artName = '';
@@ -1743,9 +1812,10 @@
                     const widthDisplay = artWidth ? artWidth : '-';
 
                     const isTaskReadOnly = hasTasks ? 'readonly tabindex="-1"' : '';
-                    const readonlyAttr = (catId != 1) ? 'readonly tabindex="-1"' : isTaskReadOnly;
-                    const rowClass = (catId != 1) ? 'cat2-row' : 'cat1-row';
-                    const styleAttr = (catId != 1) ? 'style="display: none;"' : '';
+                    const isFabric = (catId == 1);
+                    const readonlyAttr = (!isFabric) ? 'readonly tabindex="-1"' : isTaskReadOnly;
+                    const rowClass = (!isFabric) ? 'cat2-row' : 'cat1-row';
+                    const styleAttr = (!isFabric) ? 'style="display: none;"' : '';
 
                     let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" data-index="${index}" ${styleAttr}>
                                     <td>
@@ -1795,7 +1865,7 @@
                     </tr>`;
                 $tfoot.append(footHtml);
 
-                calculateMatrixTotals();
+                calculateMatrixTotals(true);
             }
 
             $(document).on('input', '.qty-input', function() {
@@ -1936,10 +2006,22 @@
                 calculateMatrixTotals();
             }
 
+            if (currentArtNumbers && currentArtNumbers.length > 0) {
+                $('#fabric-details-card').removeClass('d-none');
+                renderFabricDetails();
+                if (typeof renderItemDetailsTable === "function") {
+                    renderItemDetailsTable(currentArtData);
+                }
+            }
+
             renderSleeveInstanceList();
             renderCuttingSizeTable(currentSizes, currentRatios);
-            syncMatrixWithMasterTable(false); 
+            syncMatrixWithMasterTable(true); 
             updateQuantityRowVisibility();
+
+            if (sleeveInstances && sleeveInstances.length > 0) {
+                $('#article-matrix-card').removeClass('d-none');
+            }
 
             $('#processGroupTable tbody tr').on('click', function() {
                 $(this).find('input[type="radio"]').prop('checked', true);
@@ -2124,12 +2206,27 @@
                 currentArtNumbers.forEach((art, index) => {
                     let uom = '';
                     let catId = 0;
+                    let artName = '';
                     if (currentArtData && currentArtData.length > 0) {
                         const d = currentArtData.find(d => d.art_no == art);
                         if (d) {
                             uom = d.uom_code || '';
                             catId = d.store_category_id || 0;
+                            artName = d.art_name || '';
                         }
+                    }
+
+                    const isAllowed = (catId == 1) || 
+                                      (artName && /BUTTONS|LABEL/i.test(artName));
+                    if (!isAllowed) {
+                        let extraHtml = `
+                            <input type="hidden" name="fabrics[${index}][store_category_id]" value="${catId}">
+                            <input type="hidden" name="fabrics[${index}][art_no]" value="${art}">
+                            <input type="hidden" name="fabrics[${index}][mtr]" value="${captured.mtr[art] || ''}">
+                            <input type="hidden" name="fabrics[${index}][total_qty]" class="total-qty-hidden" data-art="${art}" value="">
+                        `;
+                        $('#stock-entry-hidden-inputs').append(extraHtml);
+                        return; 
                     }
 
                     let existingImagesHtml = '';
@@ -2164,10 +2261,15 @@
                     </th>`;
                     artRow += `<td class="fw-bold">ART NO</td><td><input type="text" name="fabrics[${index}][art_no]" class="form-control form-control-sm text-center art-no-input" value="${art}" readonly></td>`;
 
-                    let vWidth = captured.width[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['width']) || '';
-                    let vMtr = captured.mtr[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['mtr']) || '';
-                    let vInOut = captured.in_out[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['in_out']) || '';
-                    let vNPatti = captured.n_patti[art] || (oldFabrics && oldFabrics[index] && oldFabrics[index]['n_patti']) || '';
+                    let oldF = null;
+                    if (oldFabrics && Object.keys(oldFabrics).length > 0) {
+                        oldF = Object.values(oldFabrics).find(f => String(f.art_no).trim() == art);
+                    }
+
+                    let vWidth = captured.width[art] || (oldF ? oldF.width : '') || (oldFabrics && oldFabrics[index] && oldFabrics[index]['width']) || '';
+                    let vMtr = captured.mtr[art] || (oldF ? oldF.mtr : '') || (oldFabrics && oldFabrics[index] && oldFabrics[index]['mtr']) || '';
+                    let vInOut = captured.in_out[art] || (oldF ? oldF.in_out : '') || (oldFabrics && oldFabrics[index] && oldFabrics[index]['in_out']) || '';
+                    let vNPatti = captured.n_patti[art] || (oldF ? oldF.n_patti : '') || (oldFabrics && oldFabrics[index] && oldFabrics[index]['n_patti']) || '';
 
                     if (!vWidth && currentArtData && currentArtData.length > 0) {
                         const d = currentArtData.find(d => d.art_no == art);
@@ -2188,7 +2290,6 @@
                     if (!vNPatti) vNPatti = 'WHITE';
 
                     if (vMtr !== '' && vMtr !== undefined) {
-                        // Keep preserved value
                     } else if (currentArtData && currentArtData.length > 0) {
                         const d = currentArtData.find(d => d.art_no == art);
                         if (d) {
@@ -2319,9 +2420,9 @@
                                 if (captured.consumptions[art] && captured.consumptions[art][sz]) {
                                     vSzFs = captured.consumptions[art][sz]['fs'] || '';
                                     vSzHs = captured.consumptions[art][sz]['hs'] || '';
-                                } else if (oldFabrics && oldFabrics[index] && oldFabrics[index]['consumptions'] && oldFabrics[index]['consumptions'][sz]) {
-                                    vSzFs = oldFabrics[index]['consumptions'][sz]['fs_cons'] || '';
-                                    vSzHs = oldFabrics[index]['consumptions'][sz]['hs_cons'] || '';
+                                } else if (oldF && oldF['consumptions'] && oldF['consumptions'][sz]) {
+                                    vSzFs = oldF['consumptions'][sz]['fs_cons'] || '';
+                                    vSzHs = oldF['consumptions'][sz]['hs_cons'] || '';
                                 }
 
                                 if (!vSzFs && isEditMode && existingMatrix && existingMatrix.length > 0) {
@@ -2958,6 +3059,9 @@
                         </select>
                     </td>
                     <td>
+                        <input type="number" name="production_stages[${stageRowIndex}][rate]" class="form-control stage-rate" value="" step="0.01" placeholder="0.00">
+                    </td>
+                    <td>
                         <input type="text" name="production_stages[${stageRowIndex}][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
                     </td>
                     <td>
@@ -2986,23 +3090,23 @@
                 stageRowIndex++;
             });
 
+            $(document).on('change', '.stage-select', function() {
+                const $row = $(this).closest('tr');
+                const selectedOption = $(this).find('option:selected');
+                const cost = selectedOption.data('cost');
+                if (cost !== undefined && cost !== '') {
+                    $row.find('.stage-rate').val(parseFloat(cost).toFixed(2));
+                }
+                
+                // Trigger issue date change to recalculate deadline if date exists
+                $row.find('.issue-date').trigger('change');
+            });
+
             $(document).on('click', '.remove-stage-row', function() {
                 if ($('#production-stages-table tbody tr').length > 1) {
                     $(this).closest('tr').remove();
                 } else {
                     alert('At least one row is required.');
-                }
-            });
-
-            $(document).on('change', '.stage-select', function() {
-                let $row = $(this).closest('tr');
-                let stageId = $(this).val();
-                let $issueDate = $row.find('.issue-date');
-
-                if (stageId) {
-                    if ($issueDate.val()) {
-                        $issueDate.trigger('change');
-                    }
                 }
             });
 
@@ -3062,15 +3166,17 @@
 
             function renderItemDetailsTable(artData) {
                 const $wrapper = $('#item-details-table-wrapper');
-                const $tbody = $('#item-details-tbody');
+                const $fabricTbody = $('#item-details-fabric-tbody');
+                const $accTbody = $('#item-details-accessories-tbody');
                 const $msg = $('#no-materials-msg');
                 const currentManualUsed = {};
-                $tbody.find('.item-used-input').each(function() {
+                $wrapper.find('.item-used-input').each(function() {
                     const art = $(this).data('art');
                     if (art) currentManualUsed[art] = $(this).val();
                 });
 
-                $tbody.empty();
+                $fabricTbody.empty();
+                $accTbody.empty();
 
                 if (!artData || artData.length === 0) {
                     $wrapper.addClass('d-none');
@@ -3082,9 +3188,13 @@
                 $wrapper.removeClass('d-none');
                 $msg.addClass('d-none');
 
+                let fabricIndex = 0;
+                let accIndex = 0;
+
                 artData.forEach((item, index) => {
                     const total = parseFloat(item.mtr) || 0;
                     const artNo = item.art_no;
+                    const categoryId = item.store_category_id || 2; 
 
                     let oldVal = '';
                     if (oldFabrics && oldFabrics.length > 0) {
@@ -3106,9 +3216,12 @@
                     $(`.used-qty-hidden[data-art="${artNo}"]`).val(used.toFixed(2));
                     $(`.remaining-qty-hidden[data-art="${artNo}"]`).val(remaining.toFixed(2));
 
+                    const isFabric = (categoryId == 1);
+                    const sNo = (isFabric) ? ++fabricIndex : ++accIndex;
+
                     const row = `
                         <tr data-art="${artNo}">
-                            <td class="text-center">${index + 1}</td>
+                            <td class="text-center">${sNo}</td>
                             <td class="fw-bold">${item.art_name || ''} <br> <small class="text-muted">${artNo}</small></td>
                             <td class="text-center item-total-qty">${total.toFixed(2)}</td>
                             <td>
@@ -3121,8 +3234,20 @@
                             <td class="text-center item-remaining-qty fw-bold ${remaining < -0.001 ? 'text-danger' : 'text-success'}">${remaining.toFixed(2)}</td>
                         </tr>
                     `;
-                    $tbody.append(row);
+                    
+                    if (isFabric) {
+                        $fabricTbody.append(row);
+                    } else {
+                        $accTbody.append(row);
+                    }
                 });
+
+                if (fabricIndex === 0) {
+                    $fabricTbody.append(`<tr><td colspan="5" class="text-center text-muted">No Fabric Items</td></tr>`);
+                }
+                if (accIndex === 0) {
+                    $accTbody.append(`<tr><td colspan="5" class="text-center text-muted">No Accessories Items</td></tr>`);
+                }
             }
 
             $(document).on('input', '.item-used-input', function() {

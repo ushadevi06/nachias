@@ -18,6 +18,7 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FinishedGoodsStockExport;
 use App\Exports\BarcodeExport;
+use App\Exports\RawMaterialStockExport;
 
 class StockEntryController extends Controller
 {
@@ -601,5 +602,14 @@ class StockEntryController extends Controller
         }
 
         return Excel::download(new BarcodeExport, 'barcode_export_' . date('Ymd_His') . '.xlsx');
+    }
+
+    public function exportRawMaterials()
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+            return unauthorizedRedirect();
+        }
+
+        return Excel::download(new RawMaterialStockExport, 'raw_material_stock_' . date('Ymd_His') . '.xlsx');
     }
 }

@@ -835,7 +835,7 @@ class SalesOrderController extends Controller
             $formattedResults[] = [
                 'id' => $item->finished_item_code,
                 'label' => $label,
-                'value' => $item->finished_item_code,
+                'value' => $item->sku ?: $item->finished_item_code,
                 'sku' => $item->sku,
                 'item_name' => $item->item_name,
                 'brand_name' => $item->brand_name,

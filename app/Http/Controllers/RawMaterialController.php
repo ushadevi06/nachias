@@ -70,10 +70,8 @@ class RawMaterialController extends Controller
                     'DT_RowIndex' => $count++,
                     'category'    => '<span class="badge bg-light-primary">' .
                         ($material->storeCategory->category_name ?? '-') . '</span>',
-                    'name'        => $material->name,
+                    'name'        => $material->name . ' (' . $material->code . ')',
                     'uom'         => $material->uom->uom_code ?? '-',
-                    'size_width'  => $material->size_width ?? '-',
-                    'min_stock'   => $material->min_stock,
                     'created_by'  => createdByName($material->created_by),
                     'status'      => $status,
                     'action'      => $action,
@@ -110,13 +108,10 @@ class RawMaterialController extends Controller
                 'store_category_id' => 'required|exists:store_categories,id',
                 'code' => 'required|string|min:3|max:50|unique:raw_materials,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'name' => 'required|string|min:3|max:150',
-                'supplier_design_name' => 'nullable|string|min:3|max:150',
-                'size_width' => 'nullable|numeric|min:0|max:100',
                 'uom_id' => 'required|exists:uoms,id',
                 'material_type' => 'nullable|string|max:100',
                 'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1024',
                 'specification' => 'nullable|string|min:5|max:255',
-                'min_stock' => 'nullable|numeric|min:0',
                 'status' => 'required|in:Active,Inactive',
             ];
 
@@ -134,12 +129,9 @@ class RawMaterialController extends Controller
                 'store_category_id' => $request->store_category_id,
                 'code' => $request->code,
                 'name' => $request->name,
-                'supplier_design_name' => $request->supplier_design_name,
-                'size_width' => $request->size_width,
                 'uom_id' => $request->uom_id,
                 'material_type' => $request->material_type,
                 'specification' => $request->specification,
-                'min_stock' => $request->min_stock ?? 0,
                 'status' => $request->status,
             ];
 

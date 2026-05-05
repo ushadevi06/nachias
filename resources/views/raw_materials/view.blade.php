@@ -45,8 +45,6 @@
                                     <th>Store Category</th>
                                     <th>Name</th>
                                     <th>UOM</th>
-                                    <th>Width</th>
-                                    <th>Min Stock</th>
                                     <th>Created By</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -93,12 +91,6 @@
                 },
                 {
                     data: 'uom'
-                },
-                {
-                    data: 'size_width'
-                },
-                {
-                    data: 'min_stock'
                 },
                 {
                     data: 'created_by'

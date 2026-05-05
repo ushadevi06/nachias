@@ -27,6 +27,7 @@
                                     <th>S.NO</th>
                                     <th>Operation Stage name</th>
                                     <th>Working Days</th>
+                                    <th>Cost</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -62,6 +63,7 @@
                 { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                 { data: 'operation_stage_name', name: 'operation_stage_name' },
                 { data: 'working_days', name: 'working_days' },
+                { data: 'cost', name: 'cost' },
                 { data: 'status', name: 'status', orderable: false, searchable: false },
                 { data: 'action', name: 'action', orderable: false, searchable: false },
             ]

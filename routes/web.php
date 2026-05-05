@@ -25,7 +25,9 @@ use App\Http\Controllers\ShippingMethodController;
 use App\Http\Controllers\TransportModeController;
 use App\Http\Controllers\StoreCategoryController;
 use App\Http\Controllers\RawMaterialController;
+use App\Http\Controllers\StandardConsumptionController;
 use App\Http\Controllers\BrandCategoryController;
+
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\GrnEntryController;
 use App\Http\Controllers\StockEntryController;
@@ -112,7 +114,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/raw-materials-by-category/{categoryId}', [AjaxController::class, 'getRawMaterialsByCategory']);
     Route::get('/get_charges', [AjaxController::class, 'getCharges']);
     Route::get('get-materials-by-category/{category_id}', [AjaxController::class, 'getMaterialsByCategory']);
+    Route::get('ajax/search_raw_materials', [AjaxController::class, 'searchRawMaterials']);
     Route::get('get-employees-by-plant/{plantId?}/{stageId?}', [AjaxController::class, 'getEmployeesByPlant']);
+
     Route::get('get-service-providers-by-stage/{stageId}', [AjaxController::class, 'getServiceProvidersByStage']);
     Route::get('get-services-by-stage/{stageId}', [AjaxController::class, 'getServicesByStage']);
     Route::get('get-item-details/{id}', [AjaxController::class, 'getItemDetails']);
@@ -373,6 +377,12 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('raw_materials/delete/{id}', [RawMaterialController::class, 'destroy']);
     Route::post('raw_materials/status/{id}', [RawMaterialController::class, 'updateStatus']);
 
+    /* Standard Consumption */
+    Route::get('standard_consumptions', [StandardConsumptionController::class, 'index']);
+    Route::match(['GET', 'POST'], 'standard_consumptions/add/{id?}', [StandardConsumptionController::class, 'add']);
+    Route::get('standard_consumptions/delete/{id}', [StandardConsumptionController::class, 'destroy']);
+    Route::post('standard_consumptions/status/{id}', [StandardConsumptionController::class, 'updateStatus']);
+
     /* Brand Category */
     Route::get('brand_categories', [BrandCategoryController::class, 'index']);
     Route::match(['GET', 'POST'], 'brand_categories/add/{id?}', [BrandCategoryController::class, 'add']);
@@ -433,6 +443,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_orders/sync-orderaxe', [SalesOrderController::class, 'syncOrderaxe']);
     Route::get('stock_entries/export-finished-goods', [StockEntryController::class, 'exportFinishedGoods']);
     Route::get('stock_entries/export-barcode', [StockEntryController::class, 'exportBarcode']);
+    Route::get('stock_entries/export-raw-materials', [StockEntryController::class, 'exportRawMaterials']);
     Route::delete('sales_orders/delete-charge/{id}', [SalesOrderController::class, 'deleteCharge']);
 
     /* Sales Invoice */
@@ -444,6 +455,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/download/{id}', [SalesInvoiceController::class, 'downloadPdf']);
     Route::post('sales_invoices/status/{id}', [SalesInvoiceController::class, 'updateStatus']);
     Route::get('sales_invoices/get-sale-order-details/{id}', [SalesInvoiceController::class, 'getSaleOrderDetails']);
+    Route::get('sales_invoices/print-sticker/{id}', [SalesInvoiceController::class, 'printSticker']);
 
     /* Credit Notes */
     Route::get('credit_notes', [CreditNoteController::class, 'index']);
@@ -482,6 +494,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/view-item/{id}', [JobCardEntryController::class, 'view_jc_item']);
     Route::post('job_card_entries/issue-items/{id}', [JobCardEntryController::class, 'issue_items'])->name('job_card_entries.issue_items');
     Route::get('job_card_entries/fabric-consumption-pdf/{id}', [JobCardEntryController::class, 'fabricConsumptionPdf'])->name('job_card_entries.fabric_consumption_pdf');
+    Route::get('job_card_entries/accessories-consumption-pdf/{id}', [JobCardEntryController::class, 'accessoriesConsumptionPdf'])->name('job_card_entries.accessories_consumption_pdf');
     Route::get('job_card_entries/work-order-pdf/{id}', [JobCardEntryController::class, 'workOrderPdf'])->name('job_card_entries.work_order_pdf');
     Route::get('job_card_entries/view-details-pdf/{id}', [JobCardEntryController::class, 'viewDetailsPdf'])->name('job_card_entries.view_details_pdf');
     Route::get('job_card_entries/print/{id}', [JobCardEntryController::class, 'print_details'])->name('job_card_entries.print');

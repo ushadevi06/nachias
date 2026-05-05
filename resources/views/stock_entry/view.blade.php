@@ -18,6 +18,9 @@
                     <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary" id="export-barcode-btn" style="display: none;">
                         <i class="icon-base ri ri-file-excel-line"></i> Export Barcode
                     </a>
+                    <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success" id="export-raw-materials-btn">
+                        <i class="icon-base ri ri-file-excel-line"></i> Export Raw Materials
+                    </a>
                 </div>
             </div>
              <div class="col-lg-12">
@@ -172,6 +175,7 @@
                 $('#add-stock-entry-btn').hide();
                 $('#export-finished-goods-btn').show();
                 $('#export-barcode-btn').show();
+                $('#export-raw-materials-btn').hide();
                 table.column(1).visible(false);
                 $(table.column(3).header()).text('Job Card No.');
                 table.column(4).visible(true);
@@ -184,6 +188,7 @@
                 $('#add-stock-entry-btn').show();
                 $('#export-finished-goods-btn').hide();
                 $('#export-barcode-btn').hide();
+                $('#export-raw-materials-btn').show();
                 table.column(1).visible(true);
                 $(table.column(3).header()).text('GRN No.');
                 table.column(4).visible(true);

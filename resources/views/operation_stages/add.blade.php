@@ -35,6 +35,15 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
+                                    <input type="number" step="0.01" min="0" class="form-control @error('cost') is-invalid @enderror" id="cost" placeholder="Enter Cost" name="cost" value="{{ old('cost', $operationStage->cost ?? 0) }}">
+                                    <label for="cost">Cost</label>
+                                </div>
+                                @error('cost')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-12">
+                                <div class="form-floating form-floating-outline">
                                     <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
                                         <option value="Active" {{ old('status', $operationStage->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>

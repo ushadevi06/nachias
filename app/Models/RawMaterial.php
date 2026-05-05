@@ -15,19 +15,20 @@ class RawMaterial extends Model
         'store_category_id',
         'code',
         'name',
-        'supplier_design_name',
-        'supplier_design_name',
-        'size_width',
         'uom_id',
         'material_type',
         'reference_image',
         'specification',
-        'min_stock',
         'status',
         'created_by',
     ];
 
     protected $dates = ['deleted_at'];
+
+    public function standardConsumption()
+    {
+        return $this->hasOne(StandardConsumption::class, 'raw_material_id');
+    }
 
     public function storeCategory()
     {

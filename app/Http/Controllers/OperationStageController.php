@@ -39,6 +39,7 @@ class OperationStageController extends Controller
                     'DT_RowIndex' => $count++,
                     'operation_stage_name' => $stage->operation_stage_name,
                     'working_days' => $stage->working_days ?? 0,
+                    'cost' => $stage->cost ?? 0.00,
                     'status' => $status,
                     'action' => $action,
                 ];
@@ -78,6 +79,7 @@ class OperationStageController extends Controller
                         ->whereNull('deleted_at')
                 ],
                 'working_days' => 'nullable|integer|min:0|max:999',
+                'cost' => 'nullable|numeric|min:0',
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
@@ -90,6 +92,7 @@ class OperationStageController extends Controller
             $data = [
                 'operation_stage_name' => $request->operation_stage_name,
                 'working_days' => $request->working_days ?? 0,
+                'cost' => $request->cost ?? 0,
                 'status' => $request->status
             ];
             if ($id) {
