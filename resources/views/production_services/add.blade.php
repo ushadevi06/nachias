@@ -62,6 +62,20 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
+                            <div class="col-md-3">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number"
+                                           class="form-control @error('cost') is-invalid @enderror"
+                                           id="cost" name="cost"
+                                           placeholder="Enter Cost"
+                                           min="0" step="0.01"
+                                           value="{{ old('cost', $service->cost ?? '') }}">
+                                    <label for="cost">Cost </label>
+                                </div>
+                                @error('cost')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
                             <!-- Quantity Calculation Logic -->
                             <div class="col-12 mt-4">

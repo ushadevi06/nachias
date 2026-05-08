@@ -133,6 +133,7 @@ class SalesInvoiceController extends Controller
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.rate' => 'nullable|numeric|min:0',
                 'items.*.mrp' => 'required|numeric|min:0',
+                'no_of_box' => 'nullable|integer|min:1',
                 'signature_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'attachment_file' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
             ], [
@@ -154,7 +155,8 @@ class SalesInvoiceController extends Controller
                 $invoiceData = $request->only([
                     'inv_no', 'so_id', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
                     'invoice_status', 'payment_mode', 'extra_input', 'due_date',
-                    'notes', 'transporter_name', 'lr_no', 'sub_total', 'discount_percent', 'discount', 
+                    'notes', 'transporter_name', 'lr_no',
+                    'no_of_box', 'sub_total', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
                     'other_charges', 'round_off_type', 'round_off',
@@ -543,8 +545,9 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::with(['customer.state', 'customer.city', 'customer.place'])->findOrFail($id);
         $totalPcs = $invoice->items->sum('quantity');
+        $boxCount = (int) ($invoice->no_of_box ?: 1);
         $setting = Setting::with(['state', 'city'])->first();
         $is_print = true;
-        return view('sales_invoice.sticker', compact('invoice', 'totalPcs', 'setting', 'is_print'));
+        return view('sales_invoice.sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
     }
 }

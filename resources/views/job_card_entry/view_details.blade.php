@@ -34,7 +34,20 @@
                     $trimmedArt = trim($detail->art_no);
                     return ($artCategoryMap[$trimmedArt] ?? 1) == 1;
                 });
+                $fabricImageMap = [];
+                foreach ($fabricDetails as $detail) {
+                    $imageFile = trim((string) ($detail->grn_image ?? ''));
+                    $imageUrl = '';
 
+                    if ($imageFile !== '') {
+                        $imagePath = public_path('uploads/grn_items/' . $imageFile);
+                        if (file_exists($imagePath)) {
+                            $imageUrl = url('uploads/grn_items/' . $imageFile);
+                        }
+                    }
+
+                    $fabricImageMap[trim((string) $detail->art_no)] = $imageUrl;
+                }
                 $issueDate = $jobCard->job_card_date ? \Carbon\Carbon::parse($jobCard->job_card_date) : null;
                 $deliveryDate = $jobCard->delivery_date ? \Carbon\Carbon::parse($jobCard->delivery_date) : null;
 
@@ -226,7 +239,7 @@
                                     {{-- Row 4 --}}
                                     <tr>
                                         <td class="fw-bold p-3">WITHIN DAYS</td>
-                                        <td class="p-3">14</td>
+                                        <td class="p-3">{{ $withinDays ?? '' }}</td>
                                         <td colspan="4" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING SIZE RATIO</td>
                                         <td colspan="2" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING MARK</td>  
                                         <td class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">H.O / D.C /DATE</td>

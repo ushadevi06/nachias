@@ -86,3 +86,8 @@ ADD COLUMN uom_id VARCHAR(255) NULL;
 
 ALTER TABLE sales_order_items
 ADD COLUMN sku VARCHAR(255) NULL AFTER stock_entry_item_id;
+
+
+
+08-05:
+ALTER TABLE `production_services` ADD `cost` DECIMAL(10,2) NULL AFTER `status`;

@@ -26,6 +26,7 @@
                                     <th>Service Code</th>
                                     <th>Production Stage</th>
                                     <th>Applies To</th>
+                                    <th>Cost</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -58,6 +59,15 @@
                 { data: 'service_code' },
                 { data: 'operation_stage' },
                 { data: 'applies_to' },
+                {
+                    data: 'cost',
+                    render: function (data) {
+                        if (data === null || data === '' || data === '-' || isNaN(parseFloat(data))) {
+                            return '&mdash;';
+                        }
+                        return '&#8377; ' + parseFloat(data).toFixed(2);
+                    }
+                },
                 {
                     data: 'status',
                     orderable: false,

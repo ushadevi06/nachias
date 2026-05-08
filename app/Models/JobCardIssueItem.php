@@ -28,6 +28,8 @@ class JobCardIssueItem extends Model
         'cost_per_pc',
         'created_by',
         'updated_by',
+        'barcode_no',
+        'qrcode_data',
     ];
 
     public function jobCard()

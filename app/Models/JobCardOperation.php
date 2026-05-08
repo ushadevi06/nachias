@@ -10,7 +10,7 @@ class JobCardOperation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'job_card_entry_id', 'operation_stage_id', 'service_provider_id', 'employee_id', 'assigned_date', 'deadline_date', 'received_by', 'remarks'
+        'job_card_entry_id', 'operation_stage_id', 'service_provider_id', 'employee_id', 'assigned_date', 'deadline_date', 'received_by', 'remarks', 'rate', 'total_cost'
     ];
 
     public function jobCardEntry()

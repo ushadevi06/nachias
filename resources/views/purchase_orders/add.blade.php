@@ -1397,6 +1397,33 @@
             initSelect2Fields();
             calculateTotals();
             toggleStyleFabricFields();
+
+            // Set up date dependency for Purchase Order
+            setTimeout(function() {
+                const refPicker = document.querySelector("#reference_date")?._flatpickr;
+                const duePicker = document.querySelector("#due_date")?._flatpickr;
+                
+                if (refPicker && duePicker) {
+                    const originalOnChange = refPicker.config.onChange;
+                    refPicker.set('onChange', function(selectedDates, dateStr, instance) {
+                        if (typeof originalOnChange === 'function') {
+                            originalOnChange(selectedDates, dateStr, instance);
+                        }
+                        duePicker.set('minDate', dateStr);
+                        
+                        // If due date is now before the new min date, clear it or adjust it
+                        const currentDueDate = duePicker.selectedDates[0];
+                        if (currentDueDate && selectedDates[0] && currentDueDate < selectedDates[0]) {
+                            duePicker.clear();
+                        }
+                    });
+                    
+                    // Initial sync
+                    if (refPicker.selectedDates.length > 0) {
+                        duePicker.set('minDate', refPicker.input.value);
+                    }
+                }
+            }, 1000); // Wait for datepicker-init.js to finish
         });
     </script>
 @endsection

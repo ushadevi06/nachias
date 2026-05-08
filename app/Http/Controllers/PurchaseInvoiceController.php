@@ -586,6 +586,7 @@ class PurchaseInvoiceController extends Controller
 
             return [
                 'id' => $item->id,
+                'store_category_id' => $item->store_category_id,
                 'store_category_name' => $item->storeCategory->category_name ?? '-',
                 'raw_material_id' => $item->raw_material_id,
                 'raw_material_name' => $item->rawMaterial->name,

@@ -55,6 +55,7 @@ class ProductionServiceController extends Controller
                     'service_name' => $row->service_name,
                     'operation_stage' => $row->operationStage ? $row->operationStage->operation_stage_name : '-',
                     'applies_to'   => $row->applies_to,
+                    'cost' => $row->cost !== null ? number_format($row->cost, 2) : '-',
                     'status'       => $status,
                     'action'       => $action,
                 ];
@@ -85,6 +86,7 @@ class ProductionServiceController extends Controller
                 'service_name' => 'required|string|max:50|unique:production_services,service_name,' . $id . ',id,deleted_at,NULL',
                 'service_code' => 'required|string|max:75|unique:production_services,service_code,' . $id . ',id,deleted_at,NULL',
                 'operation_stage_id' => 'required|exists:operation_stages,id',
+                'cost' => 'nullable|numeric|min:0',
                 'status'       => 'required|in:Active,Inactive',
                 'applies_to'   => 'required|in:ALL,Full Sleeve,Half Sleeve,Both',
                 'base_quantity_source' => 'required|in:Total Qty,FS Qty,HS Qty',
@@ -92,13 +94,18 @@ class ProductionServiceController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'cost.numeric' => 'Cost must be a valid number.',
+                'cost.min' => 'Cost must be 0 or greater.',
             ];
             $request->validate($rules, $messages);
 
             $data = $request->only([
-                'service_name', 'service_code', 'operation_stage_id', 'status',
+                'service_name', 'service_code', 'operation_stage_id', 'status', 'cost',
                 'applies_to', 'base_quantity_source'
             ]);
+            if (empty($data['cost'])) {
+                $data['cost'] = null;
+            }
 
             if ($id) {
                 $data['updated_by'] = auth()->id();

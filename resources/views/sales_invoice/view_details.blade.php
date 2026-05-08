@@ -60,6 +60,10 @@
                                 <label class="detail-title">Remarks:</label>
                                 <div class="text-muted">{{ $invoice->remarks ?? 'N/A' }}</div>
                             </div>
+                            <div class="col-md-4">
+                                <label class="detail-title">No of Box:</label>
+                                <div class="text-muted">{{ $invoice->no_of_box ?: 1 }}</div>
+                            </div>
 
                             <div class="col-lg-12">
                                 <hr>
@@ -91,23 +95,23 @@
                                                     <td>{{ $index + 1 }}</td>
                                                      <td>
                                                         @php
-                                                            $brandName = '';
-                                                            $itemName = '';
-                                                            if ($item->item) {
-                                                                $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : 'N/A'));
-                                                                $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
-                                                            } elseif ($item->stockEntryItem) {
-                                                                if ($item->stockEntryItem->item) {
-                                                                    $seItem = $item->stockEntryItem->item;
-                                                                    $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : 'N/A'));
-                                                                    $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
-                                                                } else {
-                                                                    $brandName = $item->stockEntryItem->finished_item_code;
-                                                                }
-                                                            } else {
-                                                                $brandName = $item->brandCategory ? $item->brandCategory->name : 'N/A';
-                                                                $itemName = $item->item ? $item->item->name : 'N/A';
-                                                            }
+    $brandName = '';
+    $itemName = '';
+    if ($item->item) {
+        $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : 'N/A'));
+        $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+    } elseif ($item->stockEntryItem) {
+        if ($item->stockEntryItem->item) {
+            $seItem = $item->stockEntryItem->item;
+            $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : 'N/A'));
+            $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+        } else {
+            $brandName = $item->stockEntryItem->finished_item_code;
+        }
+    } else {
+        $brandName = $item->brandCategory ? $item->brandCategory->name : 'N/A';
+        $itemName = $item->item ? $item->item->name : 'N/A';
+    }
                                                         @endphp
                                                         <div class="fw-bold">{{ $brandName }}</div>
                                                         <small class="text-muted">{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</small>
@@ -269,9 +273,9 @@
                                                 <div class="text-muted">
                                                     @if($invoice->signature_file)
                                                         @php
-                                                            $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
-                                                            $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                            $sigUrl = asset($invoice->signature_file);
+    $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
+    $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+    $sigUrl = asset($invoice->signature_file);
                                                         @endphp
                                                         <div
                                                             class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
@@ -302,9 +306,9 @@
                                                 <div class="text-muted">
                                                     @if($invoice->attachment_file)
                                                         @php
-                                                            $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
-                                                            $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                            $attUrl = asset($invoice->attachment_file);
+    $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
+    $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+    $attUrl = asset($invoice->attachment_file);
                                                         @endphp
                                                         <div
                                                             class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">

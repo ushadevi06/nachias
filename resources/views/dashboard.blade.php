@@ -107,7 +107,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <p class="text-muted small fw-bold mb-1">Total Stock</p>
+                                <p class="text-muted small fw-bold mb-1">Finished Stock</p>
                                 <h4 class="mb-0 fw-bold">{{ number_format($total_stock) }}</h4>
                                 <span class="text-muted small">Items in Hand</span>
                             </div>
@@ -206,7 +206,7 @@
                         <h6 class="mb-0 fw-bold text-primary"><i class="ri ri-team-line me-2"></i>Debtors Outstanding & Aging Report</h6>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>
@@ -249,7 +249,7 @@
                         <h6 class="mb-0 fw-bold text-danger"><i class="ri ri-store-line me-2"></i>Creditors Outstanding & Aging Report</h6>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>

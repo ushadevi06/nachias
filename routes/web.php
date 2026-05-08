@@ -491,7 +491,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/get_items_by_store_category', [JobCardEntryController::class, 'getItemsByStoreCategory']);
     Route::get('job_card_entries/get_items_by_brand_category', [JobCardEntryController::class, 'getItemsByBrandCategory']);
     Route::delete('job_card_entries/delete-image/{id}', [JobCardEntryController::class, 'deleteImage']);
-    Route::get('job_card_entries/view-item/{id}', [JobCardEntryController::class, 'view_jc_item']);
+    Route::get('job_card_entries/view-item/{id}', [JobCardEntryController::class, 'view_jc_item'])->name('job_card_entries.view-item');
     Route::post('job_card_entries/issue-items/{id}', [JobCardEntryController::class, 'issue_items'])->name('job_card_entries.issue_items');
     Route::get('job_card_entries/fabric-consumption-pdf/{id}', [JobCardEntryController::class, 'fabricConsumptionPdf'])->name('job_card_entries.fabric_consumption_pdf');
     Route::get('job_card_entries/accessories-consumption-pdf/{id}', [JobCardEntryController::class, 'accessoriesConsumptionPdf'])->name('job_card_entries.accessories_consumption_pdf');
@@ -500,6 +500,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/print/{id}', [JobCardEntryController::class, 'print_details'])->name('job_card_entries.print');
     Route::get('job_card_entries/download/{id}', [JobCardEntryController::class, 'download_details'])->name('job_card_entries.download');
     Route::get('job_card_entries/costing-analysis/{id}', [JobCardEntryController::class, 'costing_analysis'])->name('job_card_entries.costing_analysis');
+    Route::get('job_card_entries/print-label/{id}', [JobCardEntryController::class, 'printLabel'])->name('job_card_entries.print_label');
+    Route::get('job_card_entries/get-sizes/{id}', [JobCardEntryController::class, 'getSizes'])->name('job_card_entries.get_sizes');
+    Route::get('job_card_entries/barcode-matrix/{id}', [JobCardEntryController::class, 'barcodeMatrix'])->name('job_card_entries.barcode_matrix');
+    Route::get('job_card_entries/barcode-preview/{id}', [JobCardEntryController::class, 'barcodePreview'])->name('job_card_entries.barcode_preview');
 
     /* Task Management */
     Route::get('task_management', [TaskManagementController::class, 'index']);

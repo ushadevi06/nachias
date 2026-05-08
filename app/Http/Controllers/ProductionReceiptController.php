@@ -398,26 +398,39 @@ class ProductionReceiptController extends Controller
                     $parts = explode(' - ', $item->size_variant);
                     $sleevePart = trim($parts[1]);
                     $sleeve = ($sleevePart == 'F/S') ? 'Full' : (($sleevePart == 'H/S') ? 'Half' : $sleevePart);
-                    if (!str_contains($itemCode, $sleevePart)) {
-                        $itemCode = trim($parts[0]) . ' - ' . $sleevePart;
-                    }
                 }
-                preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $item->art_no, $matches);
-                $numericBase = $matches[2] ?? '';
-                $suffix = $matches[3] ?? '1';
-                $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
-                $formattedSize = str_pad(trim((string)$item->size), 2, '0', STR_PAD_LEFT);
-                
-                $sleeveCode = '00';
-                if (isset($sleevePart)) {
-                    if ($sleevePart == 'F/S') $sleeveCode = '01';
-                    elseif ($sleevePart == 'H/S') $sleeveCode = '02';
+
+                // --- Look up barcode from barcode_masters (generated during Job Card issue) ---
+                $sleeveTypeShort = ($sleeve == 'Full') ? 'F/S' : (($sleeve == 'Half') ? 'H/S' : $sleeve);
+                $barcodeMaster = \App\Models\BarcodeMaster::where('art_no', $item->art_no)
+                    ->where('size', $item->size)
+                    ->where('sleeve_type', $sleeveTypeShort)
+                    ->first();
+
+                if ($barcodeMaster) {
+                    $sku = $barcodeMaster->barcode_no;
+                    $itemCode = $barcodeMaster->item_code ?: $itemCode;
+                    $barcodeMasterId = $barcodeMaster->id;
                 } else {
-                    if ($sleeve == 'Full') $sleeveCode = '01';
-                    elseif ($sleeve == 'Half') $sleeveCode = '02';
+                    // Fallback: generate barcode if not found in barcode_masters
+                    // (e.g., if issue was done before barcode_masters feature was added)
+                    preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $item->art_no, $matches);
+                    $numericBase = $matches[2] ?? '';
+                    $suffix = $matches[3] ?? '1';
+                    $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
+                    $formattedSize = str_pad(trim((string)$item->size), 2, '0', STR_PAD_LEFT);
+                    $sleeveCode = '00';
+                    if (isset($sleevePart)) {
+                        if ($sleevePart == 'F/S') $sleeveCode = '01';
+                        elseif ($sleevePart == 'H/S') $sleeveCode = '02';
+                    } else {
+                        if ($sleeve == 'Full') $sleeveCode = '01';
+                        elseif ($sleeve == 'Half') $sleeveCode = '02';
+                    }
+                    $sku = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+                    $barcodeMasterId = null;
                 }
-                
-                $sku = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+                // --- End barcode lookup ---
 
                 $itemModel = Item::with('fabricType')->find($item->item_id);
 
@@ -463,6 +476,7 @@ class ProductionReceiptController extends Controller
                     'qrcode' => json_encode($qrData),
                     'sleeve_type' => $sleeve,
                     'fit_id' => $fitId,
+                    'barcode_master_id' => $barcodeMasterId ?? null,
                 ]);
             }
         }

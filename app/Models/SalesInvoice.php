@@ -32,6 +32,7 @@ class SalesInvoice extends Model
         'discount',
         'transporter_name',
         'lr_no',
+        'no_of_box',
         'commission_percent',
         'commission_amount',
         'total',

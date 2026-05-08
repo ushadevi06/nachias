@@ -156,7 +156,7 @@
                 {data: 'stock_entry_no', name: 'stock_entry_no'},
                 {data: 'stock_date', name: 'stock_date'},
                 {data: 'grn_no', name: 'grn_no'},
-                {data: 'item_name', name: 'item_name'},
+                {data: 'item_name', name: 'item_name', visible: false},
                 {data: 'fabric_type', name: 'fabric_type', visible: false},
                 {data: 'sleeve_type', name: 'sleeve_type', visible: false},
                 {data: 'size', name: 'size', visible: false},
@@ -191,7 +191,7 @@
                 $('#export-raw-materials-btn').show();
                 table.column(1).visible(true);
                 $(table.column(3).header()).text('GRN No.');
-                table.column(4).visible(true);
+                table.column(4).visible(false);
                 table.column(5).visible(false);
                 table.column(6).visible(false);
                 table.column(7).visible(false);

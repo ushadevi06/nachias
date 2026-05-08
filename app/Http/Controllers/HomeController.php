@@ -15,6 +15,7 @@ use App\Models\ProductionService;
 use App\Models\Ticket;
 use App\Models\DocumentRepository;
 use App\Models\ProcessSchedule;
+use App\Models\JobCardOperation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,7 @@ class HomeController extends Controller
         $monthStart = Carbon::now()->startOfMonth();
         $yearStart = Carbon::now()->startOfYear();
 
+        /*  Sales & Order Dashboard */
         $sales_today = SalesInvoice::whereDate('inv_date', $today)->sum('grand_total');
         $sales_month = SalesInvoice::whereBetween('inv_date', [$monthStart, Carbon::now()])->sum('grand_total');
         $sales_year = SalesInvoice::whereBetween('inv_date', [$yearStart, Carbon::now()])->sum('grand_total');
@@ -36,9 +38,10 @@ class HomeController extends Controller
 
         $orders_today = SalesOrder::whereDate('so_date', $today)->count();
         $orders_month = SalesOrder::whereBetween('so_date', [$monthStart, Carbon::now()])->count();
-        $total_stock = StockEntryItem::sum('qty_in') - StockEntryItem::sum('qty_out');
+        $total_stock = StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
         $urgent_orders = SalesOrder::where('status', 'Pending')->count();
 
+        /* Accounts & Financial Dashboard */
         $total_sales_value = SalesInvoice::whereNull('deleted_at')->sum('grand_total');
         $sales_return = CreditNote::whereNull('deleted_at')->sum('grand_total');
         $bill_discount = SalesInvoice::whereNull('deleted_at')->sum('discount');
@@ -51,7 +54,8 @@ class HomeController extends Controller
         $total_purchase = PurchaseInvoice::whereNull('deleted_at')->sum('grand_total');
         $purchase_return = DebitNote::whereNull('deleted_at')->sum('grand_total');
         $total_creditors = PurchaseInvoice::whereNull('deleted_at')->sum('due_amount');
-
+        
+        /* Debtors Outstanding & Aging Report */
         $debtors_aging = DB::table('sales_invoices')
             ->join('customers', 'sales_invoices.customer_id', '=', 'customers.id')
             ->join('zones', 'customers.zone_id', '=', 'zones.id')
@@ -67,7 +71,8 @@ class HomeController extends Controller
                 DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) BETWEEN 61 AND 90 THEN sales_invoices.due_amount ELSE 0 END) as bucket_90'),
                 DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) > 90 THEN sales_invoices.due_amount ELSE 0 END) as bucket_above_90')
             )->groupBy('zones.id', 'zones.zone_name')->get();
-
+        
+        /* Creditors Outstanding & Aging Report */
         $creditors_aging = DB::table('purchase_invoices')
             ->join('suppliers', 'purchase_invoices.supplier_id', '=', 'suppliers.id')
             ->whereNull('purchase_invoices.deleted_at')
@@ -84,13 +89,26 @@ class HomeController extends Controller
 
         $collection_performance = $total_sales_value > 0 ? round((($total_sales_value - $total_debtors) / $total_sales_value) * 100) : 0;
 
+        /* Item-wise Stock Value */
         $fabric_value = StockEntryItem::where('store_category_id', 1)->whereNull('deleted_at')->sum(DB::raw('(qty_in - COALESCE(qty_out, 0)) * price'));
 
         $accessories_value = StockEntryItem::where('store_category_id', 2)->whereNull('deleted_at')->sum(DB::raw('(qty_in - COALESCE(qty_out, 0)) * price'));
 
-        $wip_value = JobCardIssueItem::join('job_card_entries', 'job_card_issue_items.job_card_entry_id', '=', 'job_card_entries.id')->whereNotIn('job_card_entries.status', ['Production Completed', 'Closed'])->whereNull('job_card_issue_items.deleted_at')->sum('job_card_issue_items.total_cost');
+        $activeJobCardIds = JobCardEntry::whereNotIn('status', ['Production Completed', 'Closed'])->pluck('id');
 
-        $wip_cost_breakdown = JobCardIssueItem::join('job_card_entries', 'job_card_issue_items.job_card_entry_id', '=', 'job_card_entries.id')->whereNotIn('job_card_entries.status', ['Production Completed', 'Closed'])->whereNull('job_card_issue_items.deleted_at')->select('job_card_entries.job_card_no', DB::raw('SUM(job_card_issue_items.total_cost) as total_cost'))->groupBy('job_card_entries.id', 'job_card_entries.job_card_no')->get();
+        $wip_material_cost = JobCardIssueItem::whereIn('job_card_entry_id', $activeJobCardIds)->join('stock_entry_items', 'job_card_issue_items.stock_entry_item_id', '=', 'stock_entry_items.id')->whereNull('job_card_issue_items.deleted_at')->sum(DB::raw('job_card_issue_items.qty_issue * stock_entry_items.price'));
+
+        $wip_process_cost = JobCardOperation::whereIn('job_card_entry_id', $activeJobCardIds)->sum('total_cost');
+
+        $wip_value = $wip_material_cost + $wip_process_cost;
+
+        $wip_cost_breakdown = JobCardIssueItem::whereIn('job_card_entry_id', $activeJobCardIds)
+            ->join('job_card_entries', 'job_card_issue_items.job_card_entry_id', '=', 'job_card_entries.id')
+            ->join('stock_entry_items', 'job_card_issue_items.stock_entry_item_id', '=', 'stock_entry_items.id')
+            ->whereNull('job_card_issue_items.deleted_at')
+            ->select('job_card_entries.job_card_no', DB::raw('SUM(job_card_issue_items.qty_issue * stock_entry_items.price) as total_cost'))
+            ->groupBy('job_card_entries.id', 'job_card_entries.job_card_no')
+            ->get();
 
         $finished_goods_value = StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->sum(DB::raw('(qty_in - COALESCE(qty_out, 0)) * price'));
 
@@ -237,6 +255,7 @@ class HomeController extends Controller
             }
         }
 
+        /* Production WIP (Unit Wise) */
         $production_wip = collect(array_values($groupedRows))->filter(function($row) {
             return $row->inward > 0 || $row->outward > 0 || $row->wip > 0;
         })->values();

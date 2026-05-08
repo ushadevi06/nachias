@@ -177,8 +177,8 @@
                                         <th>Supplier Design Name</th>
                                         <th>Brand</th>
                                         <th>HSN Code</th>
-                                        <th>Fabric Width</th>
-                                        <th>Fabric Type</th>
+                                        <th class="col-fabric">Fabric Width</th>
+                                        <th class="col-fabric">Fabric Type</th>
                                         <th>Ordered Qty</th>
                                         <th>Balanced Qty</th>
                                         <th>Invoiced Qty <span class="text-danger">*</span></th>
@@ -203,6 +203,7 @@
                                                     <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $item['qty_ordered'] ?? 0 }}" class="qty-ordered-val">
                                                     <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $item['qty_invoiced'] ?? 0 }}" class="qty-invoiced-val">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $item['fabric_type_name'] ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][store_category_id]" value="{{ $item['store_category_id'] ?? 0 }}">
                                                 </td>
                                                 <td>{{ $item['store_category_name'] ?? '-' }}</td>
                                                 <td>{{ $item['raw_material_name'] ?? '-' }}</td>
@@ -223,7 +224,7 @@
                                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                                     @enderror
                                                 </td>
-                                                <td>
+                                                <td class="fabric-only-cell">
                                                     <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
                                                         <option value="">Select Width</option>
                                                         @foreach($fabricSizes as $size)
@@ -233,7 +234,7 @@
                                                         @endforeach
                                                     </select>
                                                 </td>
-                                                <td>{{ $item['fabric_type_name'] ?? '-' }}</td>
+                                                <td class="fabric-only-cell">{{ $item['fabric_type_name'] ?? '-' }}</td>
                                                 <td class="qty-ordered-display">{{ $item['qty_ordered'] ?? 0 }}</td>
                                                 <td class="balanced-qty-display">
                                                     {{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}
@@ -279,6 +280,7 @@
                                                     <input type="hidden" name="items[{{ $index }}][brand_name]" value="{{ $invItem->brand->brand_name ?? $invItem->purchaseOrderItem->brand->brand_name ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_width]" value="{{ $invItem->fabricWidth->width ?? $invItem->purchaseOrderItem->fabricWidth->width ?? '-' }}">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][store_category_id]" value="{{ $invItem->purchaseOrderItem->store_category_id ?? 0 }}">
                                                 </td>
 
                                                 <td>{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}</td>
@@ -305,12 +307,12 @@
                                                     @enderror
                                                 </td>
 
-                                                <td>
+                                                <td class="fabric-only-cell">
                                                     <select name="items[{{ $index }}][fabric_width_id]" class="select2 form-select form-select-sm">
                                                         <option value="">Select Width</option>
                                                         @foreach($fabricSizes as $size)
                                                             @php
-        $selectedWidthId = $invItem->fabric_width_id ?? $invItem->purchaseOrderItem->fabric_width_id ?? null;
+                                                                $selectedWidthId = $invItem->fabric_width_id ?? $invItem->purchaseOrderItem->fabric_width_id ?? null;
                                                             @endphp
                                                             <option value="{{ $size->id }}" {{ $selectedWidthId == $size->id ? 'selected' : '' }}>
                                                                 {{ $size->width }}
@@ -319,7 +321,7 @@
                                                     </select>
                                                 </td>
 
-                                                <td>{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
+                                                <td class="fabric-only-cell">{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
 
                                                 <td class="qty-ordered-display">{{ $invItem->qty_ordered }}</td>
                                                 <td class="balanced-qty-display">{{ $balancedQty }}</td>
@@ -860,7 +862,35 @@ else
 @endsection
 @section('scripts')
     <script>
+        @php
+            // Determine if any existing item (edit/old mode) is from Fabric Store (id=1)
+            $hasFabricItems = false;
+            if (isset($invoice) && $invoice && $invoice->items->count()) {
+                $hasFabricItems = $invoice->items->contains(function($invItem) {
+                    return ($invItem->purchaseOrderItem->store_category_id ?? 0) == 1;
+                });
+            } elseif (old('items')) {
+                foreach (old('items') as $oldItem) {
+                    if (($oldItem['store_category_id'] ?? 0) == 1) {
+                        $hasFabricItems = true;
+                        break;
+                    }
+                }
+            }
+        @endphp
+
+        function toggleFabricColumns(hasFabric) {
+            if (hasFabric) {
+                $('.col-fabric').show();
+                $('.fabric-only-cell').show();
+            } else {
+                $('.col-fabric').hide();
+                $('.fabric-only-cell').hide();
+            }
+        }
+
         $(document).ready(function () {
+            toggleFabricColumns({{ $hasFabricItems ? 'true' : 'false' }});
             $('.select2').select2({
                 width: '100%',
                 dropdownParent: $('body')
@@ -987,6 +1017,7 @@ else
                                                 <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
                                                 <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
                                                 <input type="hidden" name="items[${index}][store_category_name]" value="${item.store_category_name}">
+                                                <input type="hidden" name="items[${index}][store_category_id]" value="${item.store_category_id || 0}">
                                                 <input type="hidden" name="items[${index}][brand_name]" value="${item.brand_name}">
                                                 <input type="hidden" name="items[${index}][fabric_width]" value="${item.fabric_width}">
                                                 <input type="hidden" name="items[${index}][fabric_type_name]" value="${item.fabric_type_name || '-'}">
@@ -1003,8 +1034,8 @@ else
                                                     placeholder="Enter HSN"
                                                     readonly>
                                             </td>
-                                            <td>${itemWidthSelect}</td>
-                                            <td>${item.fabric_type_name || '-'}</td>
+                                            <td class="fabric-only-cell">${itemWidthSelect}</td>
+                                            <td class="fabric-only-cell">${item.fabric_type_name || '-'}</td>
 
                                             <!-- Ordered Qty -->
                                             <td class="qty-ordered-display">${item.qty_ordered}</td>
@@ -1039,6 +1070,9 @@ else
                                 $('#items_tbody .select2').select2({
                                     width: '100%'
                                 });
+                                // Show/hide fabric columns based on store category
+                                let hasFabric = response.items.some(i => parseInt(i.store_category_id) === 1);
+                                toggleFabricColumns(hasFabric);
                                 $('.item-row').each(function () {
                                     let $row = $(this);
                                     let qty = parseFloat($row.find('.item-quantity').val()) || 0;
@@ -1088,6 +1122,7 @@ else
                         }
                     });
                 } else {
+                    toggleFabricColumns(false);
                     $('#items_tbody').html('<tr><td colspan="13" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
                     $('#purchase_order_no').val('');
                     $('#supplier_id').val('');

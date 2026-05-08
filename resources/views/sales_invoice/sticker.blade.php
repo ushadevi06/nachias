@@ -174,7 +174,7 @@
             <div class="row">
                 <span class="lbl">NO OF BOX</span>
                 <span class="eq">=</span>
-                <span class="val-box">1</span>
+                <span class="val-box">{{ $boxCount }}</span>
             </div>
             <div class="disclaimer">*THE ORIGINAL INVOICE FOR YOUR PURCHASE WILL BE SECURELY PLACED INSIDE THE CARTON IN A CASINO ENVELOPE</div>
         </div>

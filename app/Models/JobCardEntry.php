@@ -24,8 +24,7 @@ class JobCardEntry extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_no', 'reference_no', 'purchase_order_id', 'stock_entry_ids', 'service_provider_id', 'issue_store_id', 'receipt_store_id',
-        'brand_id', 'season_id', 'process_group_id', 'job_card_date', 'delivery_date', 'washing', 'width', 'mrp',
+        'job_card_no', 'reference_no', 'purchase_order_id', 'stock_entry_ids', 'service_provider_id', 'issue_store_id', 'receipt_store_id', 'brand_id', 'season_id', 'process_group_id', 'job_card_date', 'delivery_date', 'no_of_days','washing', 'width', 'mrp',
         'fs_qty', 'hs_qty', 'receipt_store', 'fit_id', 'patti_type_id', 'collar_type_id',
         'cuff_type_id', 'pocket_type_id', 'bottom_cut_id', 'cutting_master_id',
         'cutting_date', 'cutting_issue_unit', 'price_fs', 'price_hs',

@@ -1,6 +1,7 @@
 @extends('layouts.common')
 @section('title', 'View Job Card Item - ' . env('WEBSITE_NAME'))
 @section('content')
+
 <div class="container-xxl section-padding">
     <div class="row g-4">
         <div class="col-lg-12 text-end">
@@ -131,7 +132,7 @@
                                 <table class="table table-hover table-bordered table-sm align-middle text-nowrap" id="main-items-table">
                                     <thead class="bg-primary">
                                         <tr>
-                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Unit Price</th><th>Status</th>
+                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Remaining Qty</th><th>Unit Price</th><th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -165,9 +166,19 @@
                                                         data-average="{{ $savedItem->average ?? '0.00' }}" 
                                                         data-produced-qty="{{ $produced_qty }}" 
                                                         data-row-qty="{{ $total_qty }}" 
+                                                        data-category="fabric"
                                                         title="Edit">
                                                         <i class="ri ri-edit-line"></i>
                                                     </button>
+                                                    @if($savedItem)
+                                                        <a href="{{ route('job_card_entries.barcode_matrix', $savedItem->id) }}" class="btn btn-sm btn-icon text-success" title="Print Barcode">
+                                                            <i class="ri ri-barcode-line"></i>
+                                                        </a>
+                                                    @else
+                                                        <button type="button" class="btn btn-sm btn-icon print-barcode-btn text-success d-none" data-id="" title="Print Barcode">
+                                                            <i class="ri ri-barcode-line"></i>
+                                                        </button>
+                                                    @endif
                                                 </td>
                                                 <td>{{ $lineNum++ }}</td>
                                                 <td>{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
@@ -181,6 +192,14 @@
                                                 <td><p class="mb-0 col-qty-used text-end">{{ $savedItem->qty_used ?? '0.00' }}</p></td>
                                                 <td><p class="mb-0 col-qty-adjusted text-end">{{ $savedItem->qty_adjusted ?? '0.00' }}</p></td>
                                                 <td><p class="mb-0 col-produced-qty text-end">{{ $produced_qty }}</p></td>
+                                                @php
+                                                    $issue = $savedItem->qty_issue ?? $item->mtr;
+                                                    $used = $savedItem->qty_used ?? 0;
+                                                    $wastage = $savedItem->qty_wastage ?? 0;
+                                                    $adjusted = $savedItem->qty_adjusted ?? 0;
+                                                    $remaining = ($issue + $adjusted) - $used - $wastage;
+                                                @endphp
+                                                <td><p class="mb-0 col-qty-remaining text-end text-success fw-bold">{{ number_format($remaining, 2, '.', '') }}</p></td>
                                                 <td><p class="mb-0 col-unit-price text-end">{{ (isset($savedItem->unit_price) && $savedItem->unit_price > 0) ? number_format($savedItem->unit_price, 2, '.', '') : (isset($artPriceMap[$item->art_no]) ? number_format($artPriceMap[$item->art_no], 2, '.', '') : '0.00') }}</p></td>
                                                 <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
                                             </tr>
@@ -204,10 +223,11 @@
                                             <th>Qty/UOM</th>
                                             <th>UOM</th>
                                             <th>Qty to Issue</th>
-                                            <th>Qty Wastage</th>
+                                            <th style="display:none;">Qty Wastage</th>
                                             <th>Qty Used</th>
                                             <th>Qty Adjusted</th>
                                             <th>Produced Qty</th>
+                                            <th>Remaining Qty</th>
                                             <th>Unit Price</th>
                                             <th>Status</th>
                                         </tr>
@@ -249,9 +269,11 @@
                                                         data-std-fs="{{ $fsCons }}"
                                                         data-std-hs="{{ $hsCons }}"
                                                         data-calc-qty="{{ $calcQty }}"
+                                                        data-category="accessory"
                                                         title="Edit">
                                                         <i class="ri ri-edit-line"></i>
                                                     </button>
+                                                    {{-- Barcode Printing removed for Accessories as per user request --}}
                                                 </td>
                                                 <td>{{ $lineNumAcc++ }}</td>
                                                 <td>{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
@@ -269,10 +291,18 @@
                                                 <td class="text-center text-primary fw-bold">{{ $item->mtr > 0 ? number_format($item->mtr, 2) : ($calcQty > 0 ? number_format($calcQty, 2) : '-') }}</td>
                                                 <td>{{ $uomName }}</td>
                                                 <td class="text-end col-qty-issue">{{ number_format($defaultQty, 2) }}</td>
-                                                <td class="text-end col-qty-wastage">{{ number_format($savedItem->qty_wastage ?? 0, 2) }}</td>
+                                                <td class="text-end col-qty-wastage" style="display:none;">{{ number_format($savedItem->qty_wastage ?? 0, 2) }}</td>
                                                 <td class="text-center fw-bold col-qty-used">{{ $savedItem->qty_used ?? $defaultQty }}</td>
                                                 <td class="text-end col-qty-adjusted">{{ number_format($savedItem->qty_adjusted ?? 0, 2) }}</td>
                                                 <td class="text-end col-produced-qty">{{ number_format($jobCard->grand_total_qty, 2) }}</td>
+                                                @php
+                                                    $issueAcc = $defaultQty;
+                                                    $usedAcc = $savedItem->qty_used ?? $defaultQty;
+                                                    $wastageAcc = $savedItem->qty_wastage ?? 0;
+                                                    $adjustedAcc = $savedItem->qty_adjusted ?? 0;
+                                                    $remainingAcc = ($issueAcc + $adjustedAcc) - $usedAcc - $wastageAcc;
+                                                @endphp
+                                                <td class="text-end col-qty-remaining text-success fw-bold">{{ number_format($remainingAcc, 2, '.', '') }}</td>
                                                 <td class="text-end col-unit-price">{{ number_format($unitPrice, 2) }}</td>
                                                 <td><span class="badge {{ ($savedItem && $savedItem->qty_used > 0) ? 'bg-label-success' : 'bg-label-info' }} status-badge">{{ ($savedItem && $savedItem->qty_used > 0) ? 'COMPLETED' : 'OPEN' }}</span></td>
                                             </tr>
@@ -344,10 +374,16 @@
                                     <label>Used</label>
                                 </div>
                             </div>
+                            <div class="col-md-3" id="modal_wastage_wrapper">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" step="0.01" id="modal_qty_wastage" class="form-control fw-bold text-danger" placeholder="Wastage">
+                                    <label>Wastage</label>
+                                </div>
+                            </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" id="modal_qty_wastage" class="form-control bg-white fw-bold text-danger" readonly>
-                                    <label>Wastage</label>
+                                    <input type="number" step="0.01" id="modal_qty_remaining" class="form-control bg-light fw-bold text-success" readonly placeholder="Remaining">
+                                    <label>Remaining Stock</label>
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -377,15 +413,20 @@
             </div>
             <div class="modal-footer border-top p-3">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <i class="ri-close-line me-1"></i> Close
+                    <i class="ri ri-close-line me-1"></i> Close
                 </button>
                 <button type="button" class="btn btn-primary px-4" id="updateItemData">
-                    <i class="ri-checkbox-circle-line me-1"></i> Update Data
+                    <i class="ri ri-checkbox-circle-line me-1"></i> Update Data
                 </button>
             </div>
         </div>
     </div>
 </div>
+<style>
+    swal2-container {
+        z-index: 99999 !important;
+    }
+</style>
 <script>
 $(document).ready(function() {
     let currentRow;
@@ -436,6 +477,14 @@ $(document).ready(function() {
         const unitPrice = button.attr('data-unit-price') || currentRow.find('.col-unit-price').text() || '0.00';
         $('#modal_unit_price').val(unitPrice);
         
+        const category = button.attr('data-category') || 'fabric';
+        if (category === 'accessory') {
+            $('#modal_wastage_wrapper').hide();
+            $('#modal_qty_wastage').val('0.00');
+        } else {
+            $('#modal_wastage_wrapper').show();
+        }
+
         calculateAll();
         $('#editItemModal').modal('show');
     });
@@ -447,8 +496,9 @@ $(document).ready(function() {
         const producedQty = parseFloat($('#modal_produced_qty').val()) || 1;
         let qtyUsed = parseFloat($('#modal_qty_used').val()) || 0;
 
-        const wastage = qtyIssue - qtyUsed; 
-        $('#modal_qty_wastage').val(wastage.toFixed(2));
+        const wastage = parseFloat($('#modal_qty_wastage').val()) || 0;
+        const remaining = totalIssuedGlobal - qtyUsed - wastage;
+        $('#modal_qty_remaining').val(remaining.toFixed(2));
 
         const unitPrice = parseFloat($('#modal_unit_price').val()) || 0;
         const totalCost = qtyIssue * unitPrice;
@@ -456,6 +506,23 @@ $(document).ready(function() {
 
         const costPerPc = producedQty > 0 ? (totalCost / producedQty) : 0;
         $('#modal_cost_per_pc').val(costPerPc.toFixed(2));
+
+        const matrixId = $('#modal_row_index').val();
+        const $btn = $('.edit-item-btn').filter(function() { return $(this).attr('data-matrix-id') == matrixId; });
+        const calcQty = parseFloat($btn.attr('data-calc-qty')) || 0;
+        
+        $('#std-cons-warning').remove();
+        $('#modal_qty_used').removeClass('is-invalid');
+
+        if (calcQty > 0) {
+            if (qtyUsed > (calcQty + 0.001)) {
+                $('#modal_qty_used').addClass('is-invalid');
+                $('#modal_qty_used').after(`<div id="std-cons-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">Exceeds standard requirement (${calcQty.toFixed(2)}). The remaining will save into remaining stock.</div>`);
+            } else if ((qtyUsed + qtyAdjusted) < (calcQty - 0.001)) {
+                const shortage = calcQty - (qtyUsed + qtyAdjusted);
+                $('#modal_qty_used').after(`<div id="std-cons-warning" class="text-warning d-block" style="font-size: 10px; font-weight: bold;"><i class="ri-error-warning-line"></i> Shortage: ${shortage.toFixed(2)} units below plan.</div>`);
+            }
+        }
     }
 
     /* $('#modal_qty_issue').css('cursor', 'pointer').attr('title', 'Click to calculate based on sleeve meter');
@@ -490,7 +557,7 @@ $(document).ready(function() {
         }
     }); */
 
-    $('#modal_qty_used, #modal_qty_issue, #modal_qty_adjusted, #modal_unit_price').on('input', function() { calculateAll(); });
+    $('#modal_qty_used, #modal_qty_issue, #modal_qty_adjusted, #modal_qty_wastage, #modal_unit_price').on('input', function() { calculateAll(); });
 
     $('#updateItemData').on('click', function() {
         if (currentRow) {
@@ -499,6 +566,45 @@ $(document).ready(function() {
             const was = $('#modal_qty_wastage').val();
             const use = $('#modal_qty_used').val();
             const pro = $('#modal_produced_qty').val();
+
+            // Strict Validation for Standard Consumption
+            const $btnRef = $('.edit-item-btn').filter(function() { return $(this).attr('data-matrix-id') == matrixId; });
+            const calcQty = parseFloat($btnRef.attr('data-calc-qty')) || 0;
+
+            if (calcQty > 0 && parseFloat(use) > (calcQty + 0.001)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Requirement Exceeded',
+                    html: `Used quantity (<b>${use}</b>) exceeds the standard requirement (<b>${calcQty.toFixed(2)}</b>).<br><br>Please enter <b>${calcQty.toFixed(2)}</b> in <b>Used</b> and the remaining will save into remaining stock.`,
+                    confirmButtonColor: '#6200ee'
+                });
+                return false;
+            }
+
+            // Smart Validation for Shortage
+            const totalRecorded = parseFloat(use) + parseFloat(adj);
+            if (calcQty > 0 && totalRecorded < (calcQty - 0.001)) {
+                const deficit = (calcQty - totalRecorded).toFixed(2);
+                Swal.fire({
+                    icon: 'question',
+                    title: 'Shortage Detected',
+                    html: `You are <b>${deficit}</b> units below the plan.<br><br>Would you like to automatically move this to the <b>Adjusted</b> field and save?`,
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Fix & Save',
+                    cancelButtonText: 'No, I\'ll fix it',
+                    confirmButtonColor: '#6200ee',
+                    cancelButtonColor: '#757575'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const newAdj = (parseFloat(adj) + parseFloat(deficit)).toFixed(2);
+                        $('#modal_qty_adjusted').val(newAdj);
+                        calculateAll();
+                        // Trigger the click again now that it's fixed
+                        $('#updateItemData').click();
+                    }
+                });
+                return false;
+            }
             
             let formData = {};
             formData['_token'] = '{{ csrf_token() }}';
@@ -508,6 +614,7 @@ $(document).ready(function() {
                 'qty_adjusted': adj,
                 'qty_wastage': was,
                 'qty_used': use,
+                'balance': $('#modal_qty_remaining').val(),
                 'produced_qty': pro,
                 'unit_price': $('#modal_unit_price').val(),
                 'total_cost': $('#modal_total_cost').val(),
@@ -516,7 +623,7 @@ $(document).ready(function() {
 
             const btn = $(this);
             const originalText = btn.html();
-            btn.prop('disabled', true).html('<i class="ri-loader-4-line ri-spin me-1"></i> Saving...');
+            btn.prop('disabled', true).html('<i class="ri ri-loader-4-line ri-spin me-1"></i> Saving...');
 
             $.ajax({
                 url: "{{ route('job_card_entries.issue_items', $jobCard->id) }}",
@@ -529,6 +636,13 @@ $(document).ready(function() {
                         currentRow.find('.col-qty-wastage').text(was);
                         currentRow.find('.col-qty-used').text(use);
                         currentRow.find('.col-produced-qty').text(pro);
+                        
+                        const issue_val = parseFloat($('#modal_qty_issue').val()) || 0;
+                        const adj_val = parseFloat(adj) || 0;
+                        const use_val = parseFloat(use) || 0;
+                        const was_val = parseFloat(was) || 0;
+                        const rem_val = (issue_val + adj_val) - use_val - was_val;
+                        currentRow.find('.col-qty-remaining').text(rem_val.toFixed(2));
 
                         if (response.updated_items && response.updated_items[matrixId]) {
                             var itemData = response.updated_items[matrixId];
@@ -537,6 +651,11 @@ $(document).ready(function() {
                             // currentRow.find('.col-cost-per-pc').text(parseFloat(itemData.cost_per_pc).toFixed(2));
                             currentRow.find('.status-badge').removeClass('bg-label-info').addClass('bg-label-success').text('COMPLETED');
                             
+                            if (itemData.id) {
+                                const printUrl = "{{ url('job_card_entries/print-label') }}/" + itemData.id;
+                                currentRow.find('.print-barcode-btn').attr('href', printUrl).removeClass('d-none');
+                            }
+
                             if (response.total_price !== undefined) {
                                 $('#summary-price-fs').text(parseFloat(response.total_price).toLocaleString(undefined, {minimumFractionDigits: 2}));
                             }

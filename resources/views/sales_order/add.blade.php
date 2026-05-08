@@ -1111,16 +1111,36 @@ $(document).ready(function () {
     }
 
     function initStockItemAutocomplete($el) {
+        const isGlobalSearch = $el.attr('id') === 'global_item_search';
+
         $el.autocomplete({
             source: function(request, response) {
                 $.getJSON("{{ url('sales_orders/search-stock-items') }}", {
                     term: request.term
-                }, response);
+                }, function(data) {
+                    const results = Array.isArray(data) ? data : [];
+
+                    if (isGlobalSearch && request.term && results.length === 0) {
+                        response([{
+                            label: 'Barcode not found',
+                            value: '',
+                            noResult: true
+                        }]);
+                        return;
+                    }
+
+                    response(results);
+                });
             },
             minLength: 1,
             select: function(event, ui) {
                 let $this = $(this);
                 let $row = $this.closest('.item-row');
+
+                if (ui.item && ui.item.noResult) {
+                    event.preventDefault();
+                    return false;
+                }
                 
                 if (ui.item) {
                     if ($row.length) {
@@ -1148,6 +1168,12 @@ $(document).ready(function () {
                 return false;
             }
         }).autocomplete("instance")._renderItem = function(ul, item) {
+            if (item.noResult) {
+                return $("<li>")
+                    .append(`<div class="ui-menu-item-wrapper text-danger fw-bold">Barcode not found</div>`)
+                    .appendTo(ul);
+            }
+
             let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
             return $("<li>")
                 .append(`<div class="ui-menu-item-wrapper">
@@ -1179,6 +1205,7 @@ $(document).ready(function () {
             }
         });
     }
+
 
     initStockItemAutocomplete($('#global_item_search'));
     
