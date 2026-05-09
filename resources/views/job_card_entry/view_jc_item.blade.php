@@ -20,9 +20,11 @@
             </a>
             @endif
 
-            <a href="{{ route('job_card_entries.costing_analysis', $jobCard->id) }}" class="btn btn-success me-2">
+            @if(auth()->id() == 1 || auth()->user()->can('costing-analysis-pdf job-card'))
+            <a href="{{ route('job_card_entries.costing_analysis', $jobCard->id) }}" target="_blank" class="btn btn-success me-2">
                 <i class="ri ri-funds-line me-1"></i> Costing Analysis
             </a>
+            @endif
             
             <a href="{{ url('job_card_entries') }}" class="btn btn-secondary"><i class="ri ri-arrow-left-line me-1"></i> Back to List</a>
 
@@ -501,7 +503,7 @@ $(document).ready(function() {
         $('#modal_qty_remaining').val(remaining.toFixed(2));
 
         const unitPrice = parseFloat($('#modal_unit_price').val()) || 0;
-        const totalCost = qtyIssue * unitPrice;
+        const totalCost = totalIssuedGlobal * unitPrice;
         $('#modal_total_cost').val(totalCost.toFixed(2));
 
         const costPerPc = producedQty > 0 ? (totalCost / producedQty) : 0;
@@ -581,7 +583,6 @@ $(document).ready(function() {
                 return false;
             }
 
-            // Smart Validation for Shortage
             const totalRecorded = parseFloat(use) + parseFloat(adj);
             if (calcQty > 0 && totalRecorded < (calcQty - 0.001)) {
                 const deficit = (calcQty - totalRecorded).toFixed(2);
@@ -599,7 +600,6 @@ $(document).ready(function() {
                         const newAdj = (parseFloat(adj) + parseFloat(deficit)).toFixed(2);
                         $('#modal_qty_adjusted').val(newAdj);
                         calculateAll();
-                        // Trigger the click again now that it's fixed
                         $('#updateItemData').click();
                     }
                 });

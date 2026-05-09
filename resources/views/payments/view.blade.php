@@ -68,8 +68,15 @@
 <script>
     $(function() {
         var table = $('#payments_table').DataTable({
+            responsive: true,
+            paging: true,
+            autoWidth: false,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
             processing: true,
-            serverSide: true, 
+            serverSide: false, 
             ajax: {
                 url: "{{ url('payments') }}",
                 data: function(d) {

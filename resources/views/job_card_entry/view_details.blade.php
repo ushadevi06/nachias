@@ -239,7 +239,7 @@
                                     {{-- Row 4 --}}
                                     <tr>
                                         <td class="fw-bold p-3">WITHIN DAYS</td>
-                                        <td class="p-3">{{ $withinDays ?? '' }}</td>
+                                        <td class="p-3">{{ $jobCard->no_of_days ?? '' }}</td>
                                         <td colspan="4" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING SIZE RATIO</td>
                                         <td colspan="2" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING MARK</td>  
                                         <td class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">H.O / D.C /DATE</td>

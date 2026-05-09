@@ -113,7 +113,7 @@
                 @if($loop->first || $fields[$loop->index - 1] == 'header' || $fields[$loop->index - 1] == 'mfg' || $fields[$loop->index - 1] == 'footer' || $fields[$loop->index - 1] == 'mrp')
                 <div class="content-area">
                     <div class="logo-box">
-                        <img src="{{ asset('assets/images/fav.jpeg') }}" style="width: 100%; height: 100%; object-fit: contain;">
+                        <img src="{{ url('assets/images/fav.jpeg') }}" style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
                     <table class="data-table">
                 @endif

@@ -91,3 +91,124 @@ ADD COLUMN sku VARCHAR(255) NULL AFTER stock_entry_item_id;
 
 08-05:
 ALTER TABLE `production_services` ADD `cost` DECIMAL(10,2) NULL AFTER `status`;
+
+ALTER TABLE `job_card_entries`
+ADD COLUMN `no_of_days` INT UNSIGNED NULL AFTER `delivery_date`;
+
+
+ALTER TABLE `job_card_issue_items`
+ADD COLUMN `barcode_no` VARCHAR(255) NULL AFTER `cost_per_pc`,
+ADD COLUMN `qrcode_data` TEXT NULL AFTER `barcode_no`;
+
+
+
+CREATE TABLE `barcode_masters` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `barcode_no` VARCHAR(255) NOT NULL UNIQUE,
+    `art_no` VARCHAR(255) NULL,
+    `item_name` VARCHAR(255) NULL,
+    `sleeve_type` VARCHAR(255) NULL,
+    `size` VARCHAR(255) NULL,
+    `brand_id` BIGINT UNSIGNED NULL,
+    `lot_no` VARCHAR(255) NULL,
+    `color_id` BIGINT UNSIGNED NULL,
+    `fabric_type_id` BIGINT UNSIGNED NULL,
+    `created_at` TIMESTAMP NULL DEFAULT NULL,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL,
+    PRIMARY KEY (`id`)
+);
+
+
+ALTER TABLE barcode_masters
+ADD COLUMN item_code VARCHAR(255) NULL AFTER barcode_no;
+
+
+ALTER TABLE barcode_masters
+ADD COLUMN quantity DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER size;
+
+
+ALTER TABLE barcode_masters
+ADD COLUMN style_id BIGINT UNSIGNED NULL AFTER brand_id;
+
+
+ALTER TABLE stock_entry_items;
+
+
+ALTER TABLE job_card_entries
+ADD COLUMN attachment VARCHAR(255) NULL AFTER status;
+
+
+ALTER TABLE operation_stages
+ADD COLUMN cost DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER working_days;
+
+
+ALTER TABLE sales_invoices
+ADD COLUMN store_id BIGINT UNSIGNED NULL AFTER customer_id,
+ADD COLUMN agent_id BIGINT UNSIGNED NULL AFTER store_id,
+ADD COLUMN commission_percent DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER discount,
+ADD COLUMN commission_amount DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER commission_percent;
+
+
+ALTER TABLE sales_invoices
+ADD COLUMN transporter_name VARCHAR(255) NULL AFTER due_date,
+ADD COLUMN lr_no VARCHAR(255) NULL AFTER transporter_name;
+
+ALTER TABLE sales_invoices
+ADD COLUMN no_of_box INT UNSIGNED NULL AFTER lr_no;
+
+ALTER TABLE sales_invoice_items
+DROP COLUMN brand_id,
+DROP COLUMN item_id,
+ADD COLUMN sku VARCHAR(255) NULL AFTER sales_invoice_id;
+
+
+
+ALTER TABLE sales_invoice_items
+MODIFY COLUMN uom_id VARCHAR(255) NULL;
+
+
+ALTER TABLE raw_materials
+ADD COLUMN standard_consumption_qty DECIMAL(10,4) NULL DEFAULT 0 AFTER min_stock,
+DROP COLUMN supplier_design_name;
+
+
+CREATE TABLE standard_consumptions (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    raw_material_id BIGINT UNSIGNED NOT NULL,
+    fs_qty DECIMAL(10,4) NOT NULL DEFAULT 0,
+    hs_qty DECIMAL(10,4) NOT NULL DEFAULT 0,
+    created_by BIGINT UNSIGNED NULL,
+    updated_by BIGINT UNSIGNED NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    CONSTRAINT standard_consumptions_raw_material_id_foreign
+        FOREIGN KEY (raw_material_id)
+        REFERENCES raw_materials(id)
+        ON DELETE CASCADE
+);
+
+
+ALTER TABLE raw_materials
+DROP COLUMN standard_consumption_qty;
+
+
+ALTER TABLE standard_consumptions
+ADD COLUMN status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active' AFTER hs_qty;
+
+
+ALTER TABLE standard_consumptions 
+MODIFY fs_qty DOUBLE NOT NULL DEFAULT 0;
+
+ALTER TABLE standard_consumptions 
+MODIFY hs_qty DOUBLE NOT NULL DEFAULT 0;
+
+
+ALTER TABLE job_card_operations
+ADD COLUMN rate DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER remarks,
+ADD COLUMN total_cost DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER rate;
+
+ALTER TABLE job_card_fabric_details
+ADD COLUMN grn_image VARCHAR(255) NULL AFTER remaining_qty;
+
+

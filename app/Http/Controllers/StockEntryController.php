@@ -515,7 +515,7 @@ class StockEntryController extends Controller
                 'category' => $category,
                 'material' => $material,
                 'art_no' => $item->art_no ?: '-',
-                'current_qty' => $item->qty_in,
+                'current_qty' => $item->qty_in - $item->qty_out,
             ];
         });
 
@@ -537,9 +537,10 @@ class StockEntryController extends Controller
             foreach ($request->adjustments as $adj) {
                 $item = StockEntryItem::findOrFail($adj['item_id']);
 
-                $previousQtyIn = $item->qty_in;
-                $newQtyIn = $previousQtyIn + $adj['qty_to_add'];
-                $item->qty_in = $newQtyIn;
+                $previousAvailable = $item->qty_in - $item->qty_out;
+                $newAvailable = $previousAvailable + $adj['qty_to_add'];
+                
+                $item->qty_in = $item->qty_in + $adj['qty_to_add'];
                 $item->save();
 
                 $count = StockEntryAdjustment::count();
@@ -550,8 +551,8 @@ class StockEntryController extends Controller
                     'stock_entry_item_id' => $item->id,
                     'raw_material_id' => $item->raw_material_id,
                     'qty' => $adj['qty_to_add'],
-                    'previous_stock' => $previousQtyIn,
-                    'new_stock' => $newQtyIn,
+                    'previous_stock' => $previousAvailable,
+                    'new_stock' => $newAvailable,
                     'approved_by' => $adj['approved_by'],
                     'reason' => $adj['reason'],
                     'status' => 'Posted',

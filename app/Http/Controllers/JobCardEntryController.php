@@ -307,6 +307,7 @@ class JobCardEntryController extends Controller
                     'receipt_store_id' => $request->receipt_store_id,
                     'job_card_date' => date('Y-m-d', strtotime($request->issue_date)),
                     'delivery_date' => $request->delivery_date ? date('Y-m-d', strtotime($request->delivery_date)) : null,
+                    'no_of_days' => $request->no_of_days,
                     'washing' => $request->washing,
                     'width' => $request->width,
                     'season_id' => $request->season_id,
@@ -647,6 +648,11 @@ class JobCardEntryController extends Controller
         }
 
         $jobCard = $id ? JobCardEntry::with(['cuttingSizeRatios', 'images', 'sizeRatio', 'fabricDetails.quantities', 'fabricDetails.consumptions', 'fabricDetails.layMarks', 'issueItems', 'sleeveMeters', 'operations'])->findOrFail($id) : null;
+
+        $grnImageMap = [];
+        if ($jobCard && $jobCard->fabricDetails->isNotEmpty()) {
+            $grnImageMap = $this->getGrnImageMapForArtNos($jobCard->fabricDetails->pluck('art_no')->all());
+        }
         $allPurchaseOrders = PurchaseOrder::with(['items'])->orderBy('id', 'desc')->get();
         $purchaseOrders = $allPurchaseOrders->filter(function ($po) use ($jobCard) {
             if ($jobCard && $po->id == $jobCard->purchase_order_id) {
@@ -699,8 +705,10 @@ class JobCardEntryController extends Controller
             }
         }
         $hasTasks = $jobCard ? $jobCard->tasks()->exists() : false;
+        $hasIssuedItems = $jobCard ? $jobCard->issueItems()->exists() : false;
         return view('job_card_entry/add', compact(
             'jobCard',
+            'grnImageMap',
             'purchaseOrders',
             'brands',
             'seasons',
@@ -719,6 +727,7 @@ class JobCardEntryController extends Controller
             'operationStages',
             'stageTaskStatus',
             'hasTasks',
+            'hasIssuedItems',
             'colors'
         ));
     }
@@ -933,7 +942,8 @@ class JobCardEntryController extends Controller
                         $qtyIssue = floatval($itemData['qty_issue'] ?? 0);
                         $qtyUsed = floatval($itemData['qty_used'] ?? 0);
                         $qtyAdjusted = floatval($itemData['qty_adjusted'] ?? 0);
-                        $totalToDeduct = $qtyUsed + $qtyAdjusted;
+                        $qtyWastage = floatval($itemData['qty_wastage'] ?? 0);
+                        $totalToDeduct = $qtyUsed + $qtyAdjusted + $qtyWastage;
                         $totalIssuedFabric += $qtyIssue;
 
                         $existingItem = $existingItems->first(function ($item) use ($matrixId) {
@@ -1008,10 +1018,13 @@ class JobCardEntryController extends Controller
                                 $remainingToDeduct = round($remainingToDeduct - $take, 4);
                             }
 
+                            /* 
                             if ($remainingToDeduct > 0.001) {
                                 throw new \Exception("Insufficient stock for Art No: $artNo. Shortage: " . $remainingToDeduct);
                             }
-                            $unitPrice = ($totalToDeduct > 0) ? ($weightedCost / $totalToDeduct) : 0;
+                            */
+                            $actualDeducted = round($totalToDeduct - $remainingToDeduct, 4);
+                            $unitPrice = ($actualDeducted > 0) ? ($weightedCost / $actualDeducted) : 0;
                         }
 
                         if (isset($itemData['is_manual_price']) && $itemData['is_manual_price'] == 1 && isset($itemData['unit_price'])) {
@@ -1437,7 +1450,7 @@ class JobCardEntryController extends Controller
 
         $groupedItems = $filteredItems->groupBy('art_no');
 
-        $artData = collect($finalArtNos)->map(function ($artNo) use ($groupedItems, $issuedQtys) {
+        /* $artData = collect($finalArtNos)->map(function ($artNo) use ($groupedItems, $issuedQtys) {
             $items = $groupedItems->get($artNo) ?? collect();
             $firstItem = $items->first();
             
@@ -1450,8 +1463,9 @@ class JobCardEntryController extends Controller
                 $uomCode = $rawMaterial->uom->uom_code;
             }
 
-            $netQty = $items->sum(function ($item) {
-                return ($item->qty_in ?? 0) - ($item->qty_out ?? 0);
+            $isEdit = request()->job_card_id ? true : false;
+            $netQty = $items->sum(function ($item) use ($isEdit) {
+                return $isEdit ? ($item->qty_in ?? 0) : (($item->qty_in ?? 0) - ($item->qty_out ?? 0));
             });
 
             $alreadyIssued = (float) ($issuedQtys[$artNo] ?? 0);
@@ -1459,8 +1473,9 @@ class JobCardEntryController extends Controller
             return [
                 'art_no' => $artNo,
                 'art_name' => $rawMaterial ? $rawMaterial->name : null,
-                'mtr' => $netQty + $alreadyIssued,
+                'mtr' => $netQty,
                 'already_issued' => $alreadyIssued,
+                'total_available' => $isEdit ? $netQty : ($netQty + $alreadyIssued),
                 'uom_code' => $uomCode,
                 'store_category_id' => $rawMaterial ? $rawMaterial->store_category_id : 1,
                 'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
@@ -1470,6 +1485,48 @@ class JobCardEntryController extends Controller
                 'hs_cons' => $rawMaterial && $rawMaterial->standardConsumption ? $rawMaterial->standardConsumption->hs_qty : null,
             ];
         })->values();
+
+        return response()->json([
+            'art_data' => $artData,
+            'art_numbers' => $artData->pluck('art_no'),
+        ]); */
+        $artData = collect($finalArtNos)->map(function ($artNo) use ($groupedItems, $issuedQtys) {
+            $items = $groupedItems->get($artNo) ?? collect();
+            $firstItem = $items->first();
+
+            $rawMaterial = $firstItem ? $firstItem->rawMaterial : RawMaterial::where('code', $artNo)->first();
+
+            $uomCode = null;
+            if ($firstItem && $firstItem->uom) {
+                $uomCode = $firstItem->uom->uom_code;
+            } elseif ($rawMaterial && $rawMaterial->uom) {
+                $uomCode = $rawMaterial->uom->uom_code;
+            }
+
+            $isEdit = request()->job_card_id ? true : false;
+            $netQty = $items->sum(function ($item) use ($isEdit) {
+                return $isEdit ? ($item->qty_in ?? 0) : (($item->qty_in ?? 0) - ($item->qty_out ?? 0));
+            });
+
+            $alreadyIssued = (float) ($issuedQtys[$artNo] ?? 0);
+
+            return [
+                'art_no' => $artNo,
+                'art_name' => $rawMaterial ? $rawMaterial->name : null,
+                'mtr' => $netQty,
+                'already_issued' => $alreadyIssued,
+                'total_available' => $isEdit ? $netQty : ($netQty + $alreadyIssued),
+                'uom_code' => $uomCode,
+                'store_category_id' => $rawMaterial ? $rawMaterial->store_category_id : 1,
+                'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
+                'fabric_type_id' => $firstItem ? ($firstItem->fabric_type_id ?? ($firstItem->grnEntryItem->fabric_type_id ?? null)) : null,
+                'width' => $firstItem && $firstItem->grnEntryItem && $firstItem->grnEntryItem->purchaseInvoiceItem && $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth ? $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth->width : null,
+                'fs_cons' => $rawMaterial && $rawMaterial->standardConsumption ? $rawMaterial->standardConsumption->fs_qty : null,
+                'hs_cons' => $rawMaterial && $rawMaterial->standardConsumption ? $rawMaterial->standardConsumption->hs_qty : null,
+            ];
+        })->values();
+
+        $artData = $this->attachGrnImagesToArtData($artData);
 
         return response()->json([
             'art_data' => $artData,
@@ -1551,6 +1608,8 @@ class JobCardEntryController extends Controller
                 ];
             })->unique('art_no')->values();
         }
+        $artData = $this->attachGrnImagesToArtData($artData);
+
 
         return response()->json([
             'po' => $po,
@@ -1583,15 +1642,15 @@ class JobCardEntryController extends Controller
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $po->id)->pluck('id');
         $grnIds = GrnEntry::whereIn('purchase_invoice_id', $invoiceIds)->pluck('id');
 
-        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)->with(['purchaseInvoiceItem.rawMaterial', 'purchaseInvoiceItem.fabricWidth', 'grnEntry', 'stockEntryItems'])->get()->groupBy('art_no')->map(function ($items, $artNo) use ($issuedQtys) {
+        $artData = GrnEntryItem::whereIn('grn_entry_id', $grnIds)->with(['purchaseInvoiceItem.rawMaterial', 'purchaseInvoiceItem.fabricWidth', 'grnEntry', 'stockEntryItems'])->get()->groupBy('art_no')->map(function ($items, $artNo) use ($issuedQtys, $jobCardId) {
             $firstItem = $items->first();
             $rawMaterial = $firstItem->purchaseInvoiceItem->rawMaterial ?? null;
             $catId = $rawMaterial ? $rawMaterial->store_category_id : 1;
 
             $netStock = $items->flatMap(function ($item) {
                 return $item->stockEntryItems;
-            })->sum(function ($stockItem) {
-                return $stockItem->qty_in - ($stockItem->qty_out ?? 0);
+            })->sum(function ($stockItem) use ($jobCardId) {
+                return $jobCardId ? ($stockItem->qty_in ?? 0) : (($stockItem->qty_in ?? 0) - ($stockItem->qty_out ?? 0));
             });
 
             $alreadyIssued = (float) ($issuedQtys[$artNo] ?? 0);
@@ -1599,8 +1658,9 @@ class JobCardEntryController extends Controller
             return [
                 'art_no' => $artNo,
                 'art_name' => $rawMaterial->name ?? ($firstItem->fabricType->name ?? null),
-                'mtr' => (float) $netStock + $alreadyIssued,
+                'mtr' => (float) $netStock,
                 'already_issued' => $alreadyIssued,
+                'total_available' => $jobCardId ? (float) $netStock : ((float) $netStock + $alreadyIssued),
                 'store_category_id' => $catId,
                 'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                 'grn_no' => $firstItem->grnEntry->grn_number ?? null,
@@ -1646,6 +1706,7 @@ class JobCardEntryController extends Controller
                 ];
             })->unique('art_no')->values();
         }
+        $artData = $this->attachGrnImagesToArtData($artData);
 
         return response()->json(['art_data' => $artData]);
     }
@@ -2015,14 +2076,18 @@ class JobCardEntryController extends Controller
                 $totalActual = $totalFsCons + $totalHsCons;
 
                 if ($totalActual > 0) {
-                    $stockItem = \DB::table('stock_entry_items')
-                        ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
-                        ->where('grn_entry_items.art_no', $artNo)
-                        ->select('stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')
-                        ->first();
+                    $stockItem = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('grn_entry_items.art_no', $artNo)->select('stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')->first();
 
                     $rawMaterialId = $stockItem->raw_material_id ?? null;
                     $uomId = $stockItem->uom_id ?? null;
+
+                    if (!$rawMaterialId && $artNo) {
+                        $rm = RawMaterial::where('code', $artNo)->orWhere('name', $artNo)->first();
+                        if ($rm) {
+                            $rawMaterialId = $rm->id;
+                            $uomId = $uomId ?? $rm->uom_id;
+                        }
+                    }
 
                     $sleeveType = 'All';
                     if ($totalFsCons > 0 && $totalHsCons == 0)
@@ -2030,24 +2095,26 @@ class JobCardEntryController extends Controller
                     elseif ($totalHsCons > 0 && $totalFsCons == 0)
                         $sleeveType = 'H/S';
 
-                    ProductionStageConsumable::create([
-                        'job_card_id' => $jobCard->id,
-                        'production_stage_id' => $stageId,
-                        'stage' => $stageName,
-                        'art_no' => $artNo,
-                        'item_type' => 'Consumable',
-                        'raw_material_id' => $rawMaterialId,
-                        'planned_qty' => $jobCard->grand_total_qty,
-                        'fs_qty' => $totalFsCons,
-                        'hs_qty' => $totalHsCons,
-                        'total_qty' => $totalActual,
-                        'actual_qty' => $totalActual,
-                        'uom_id' => $uomId,
-                        'sleeve_type' => $sleeveType,
-                        'status' => 'Active',
-                        'remarks' => "Derived from Job Card Fabric Details. Article: {$artNo}",
-                        'created_by' => auth()->id()
-                    ]);
+                    if ($rawMaterialId) {
+                        ProductionStageConsumable::create([
+                            'job_card_id' => $jobCard->id,
+                            'production_stage_id' => $stageId,
+                            'stage' => $stageName,
+                            'art_no' => $artNo,
+                            'item_type' => 'Consumable',
+                            'raw_material_id' => $rawMaterialId,
+                            'planned_qty' => $jobCard->grand_total_qty,
+                            'fs_qty' => $totalFsCons,
+                            'hs_qty' => $totalHsCons,
+                            'total_qty' => $totalActual,
+                            'actual_qty' => $totalActual,
+                            'uom_id' => $uomId,
+                            'sleeve_type' => $sleeveType,
+                            'status' => 'Active',
+                            'remarks' => "Derived from Job Card Fabric Details. Article: {$artNo}",
+                            'created_by' => auth()->id()
+                        ]);
+                    }
                 }
             }
 
@@ -2063,30 +2130,44 @@ class JobCardEntryController extends Controller
                         $stockInfo = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('stock_entry_items.id', $issueItem->stock_entry_item_id)->select('grn_entry_items.art_no', 'stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')->first();
                     }
 
+                    $issueArtNo = $stockInfo->art_no ?? null;
+                    $issueRawMaterialId = $stockInfo->raw_material_id ?? ($issueItem->raw_material_id ?? null);
+                    $issueUomId = $stockInfo->uom_id ?? null;
+
+                    if (!$issueRawMaterialId && $issueArtNo) {
+                        $rm = \App\Models\RawMaterial::where('code', $issueArtNo)->orWhere('name', $issueArtNo)->first();
+                        if ($rm) {
+                            $issueRawMaterialId = $rm->id;
+                            $issueUomId = $issueUomId ?? $rm->uom_id;
+                        }
+                    }
+
                     $sleeveType = 'All';
                     if ($fsCons > 0 && $hsCons == 0)
                         $sleeveType = 'F/S';
                     elseif ($hsCons > 0 && $fsCons == 0)
                         $sleeveType = 'H/S';
 
-                    ProductionStageConsumable::create([
-                        'job_card_id' => $jobCard->id,
-                        'production_stage_id' => $stageId,
-                        'stage' => $stageName,
-                        'art_no' => $stockInfo->art_no ?? null,
-                        'item_type' => 'Consumable',
-                        'raw_material_id' => $stockInfo->raw_material_id ?? null,
-                        'planned_qty' => $jobCard->grand_total_qty,
-                        'fs_qty' => $fsCons,
-                        'hs_qty' => $hsCons,
-                        'total_qty' => $totalConsumption,
-                        'actual_qty' => $totalConsumption,
-                        'uom_id' => $stockInfo->uom_id ?? null,
-                        'sleeve_type' => $sleeveType,
-                        'status' => 'Active',
-                        'remarks' => "Derived from Job Card Issue Items.",
-                        'created_by' => auth()->id()
-                    ]);
+                    if ($issueRawMaterialId) {
+                        ProductionStageConsumable::create([
+                            'job_card_id' => $jobCard->id,
+                            'production_stage_id' => $stageId,
+                            'stage' => $stageName,
+                            'art_no' => $issueArtNo,
+                            'item_type' => 'Consumable',
+                            'raw_material_id' => $issueRawMaterialId,
+                            'planned_qty' => $jobCard->grand_total_qty,
+                            'fs_qty' => $fsCons,
+                            'hs_qty' => $hsCons,
+                            'total_qty' => $totalConsumption,
+                            'actual_qty' => $totalConsumption,
+                            'uom_id' => $issueUomId,
+                            'sleeve_type' => $sleeveType,
+                            'status' => 'Active',
+                            'remarks' => "Derived from Job Card Issue Items.",
+                            'created_by' => auth()->id()
+                        ]);
+                    }
                 }
             }
         }
@@ -2300,7 +2381,7 @@ class JobCardEntryController extends Controller
 
         $labelData = [
             'id' => $id,
-            'product_name' => $jobCard->item->name ?? 'Produ',
+            'product_name' => $jobCard->item->name ?? 'SHIRTS',
             'brand_name' => $jobCard->brand->brand_name ?? '-',
             'design' => $artNo,
             'color' => $issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-',
@@ -2416,7 +2497,7 @@ class JobCardEntryController extends Controller
 
         $items = GrnEntryItem::whereNotNull('image')
             ->where('image', '!=', '')
-            ->whereIn('art_no', $normalizedArtNos->all())
+            ->whereIn(DB::raw('TRIM(art_no)'), $normalizedArtNos->all())
             ->orderByDesc('id')
             ->get(['art_no', 'image']);
 

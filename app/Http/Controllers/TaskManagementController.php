@@ -198,6 +198,7 @@ class TaskManagementController extends Controller
                 'assignments.*.issued_to.required' => 'This field is required.',
                 'assignments.*.issue_date.required' => 'This field is required.',
                 'assignments.*.issue_qty.required' => 'This field is required.',
+                'issue_store.required' => 'This field is required.',
                 'assignments.*.issue_qty.min' => 'Issue Qty must be at least 1',
             ]);
 
