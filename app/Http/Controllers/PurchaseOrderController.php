@@ -222,7 +222,6 @@ class PurchaseOrderController extends Controller
                 'existing_additional_attachments' => 'nullable|array',
                 'round_off_type' => 'nullable|in:Add,Less',
                 'round_off' => 'nullable|numeric|min:0',
-                'is_self_closed' => 'nullable|boolean',
             ];
 
             $messages = [
@@ -396,7 +395,7 @@ class PurchaseOrderController extends Controller
 
         $purchaseCommissionAgents = PurchaseCommissionAgent::active()->get();
         $suppliers = Supplier::active()->get();
-        $storeTypes = StoreType::get();
+        $storeTypes = StoreType::active()->get();
         $storeCategories = StoreCategory::active()->get();
         $uoms = Uom::active()->get();
         $colors = Color::active()->get();

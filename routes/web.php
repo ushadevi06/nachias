@@ -342,19 +342,17 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Purchase Order */
     Route::get('/purchase_orders', [PurchaseOrderController::class, 'index'])->name('purchase_orders.index');
-    Route::get('/purchase_orders/add/{id?}', [PurchaseOrderController::class, 'add'])->name('purchase_orders.add');
-    Route::post('/purchase_orders/add/{id?}', [PurchaseOrderController::class, 'add']);
+    Route::match(['GET','POST'],'purchase_orders/add/{id?}', [PurchaseOrderController::class, 'add']);
     Route::get('/purchase_orders/view/{id}', [PurchaseOrderController::class, 'view'])->name('purchase_orders.view');
     Route::get('purchase_orders/download-pdf/{id}', [PurchaseOrderController::class, 'downloadPdf']);
     Route::get('purchase_orders/print/{id}', [PurchaseOrderController::class, 'print']);
     Route::get('/purchase_orders/delete/{id}', [PurchaseOrderController::class, 'destroy'])->name('purchase_orders.delete');
     Route::post('/purchase_orders/status/{id}', [PurchaseOrderController::class, 'updateStatus'])->name('purchase_orders.status');
-    Route::post('/purchase_orders/toggle-self-close/{id}', [PurchaseOrderController::class, 'toggleSelfClose'])->name('purchase_orders.toggle_self_close');
+    Route::post('/purchase_orders/toggle-self-close/{id}', [PurchaseOrderController::class, 'toggleSelfClose']);
 
     /* Purchase Invoice */
     Route::get('purchase_invoices', [PurchaseInvoiceController::class, 'index']);
-    Route::get('purchase_invoices/add/{id?}', [PurchaseInvoiceController::class, 'add']);
-    Route::post('purchase_invoices/add/{id?}', [PurchaseInvoiceController::class, 'add']);
+    Route::match(['GET','POST'],'purchase_invoices/add/{id?}',[PurchaseInvoiceController::class, 'add']);
     Route::get('purchase_invoices/view/{id}', [PurchaseInvoiceController::class, 'view']);
     Route::get('purchase_invoices/delete/{id}', [PurchaseInvoiceController::class, 'destroy']);
     Route::post('purchase_invoices/update-status/{id}', [PurchaseInvoiceController::class, 'updateStatus']);
@@ -363,7 +361,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('purchase_invoices/download-pdf/{id}', [PurchaseInvoiceController::class, 'downloadPdf']);
     Route::get('purchase_invoices/print/{id}', [PurchaseInvoiceController::class, 'print']);
     Route::delete('purchase_invoices/delete-charge/{id}', [PurchaseInvoiceController::class, 'deleteCharge']);
-    Route::get('purchase_invoices/payment-history/{id}', [PurchaseInvoiceController::class, 'getPaymentHistory']);
 
     /* Raw Material Category */
     Route::get('store_categories', [StoreCategoryController::class, 'index']);

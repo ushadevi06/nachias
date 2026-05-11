@@ -87,6 +87,7 @@
                                 <tr>
                                     <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="60">S.No</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold">Grn Image</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Style</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Color</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Width</th>
@@ -102,7 +103,7 @@
                             <tbody>
                                 @if($grn->grnEntryItems->isEmpty())
                                     <tr>
-                                        <td colspan="12" class="text-center py-5 text-muted">No items found</td>
+                                        <td colspan="13" class="text-center py-5 text-muted">No items found</td>
                                     </tr>
                                 @else
                                     @foreach($grn->grnEntryItems as $index => $item)
@@ -159,6 +160,15 @@
                                             <div class="small text-muted mt-1">[{{ $brandName }}]</div>
                                             <div class="small text-muted">{{ $item->fabricType->fabric_type ?? '' }}</div>
                                             <span class="badge {{ $qcBadgeClass }} x-small" style="font-size: 10px;">{{ $item->quality_check_status ?? 'N/A' }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($item->image)
+                                                <a href="{{ url('uploads/grn_items/' . $item->image) }}" target="_blank">
+                                                    <img src="{{ url('uploads/grn_items/' . $item->image) }}" alt="GRN Item Image" class="img-fluid border rounded" style="max-width: 70px; max-height: 70px;">
+                                                </a>
+                                            @else
+                                                <span class="text-muted small">No Image</span>
+                                            @endif
                                         </td>
                                         <td class="text-center small fw-bold">{{ $styleName }}</td>
                                         <td class="text-center">

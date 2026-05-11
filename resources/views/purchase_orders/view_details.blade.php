@@ -83,7 +83,7 @@
                                 <div class="fw-bold text-dark">{{ number_format($purchaseOrder->commission, 2) }}%</div>
                             </div>
                             <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Store / Unit</div>
+                                <div class="mb-1 text-muted text-uppercase small fw-bold">Store Type</div>
                                 <div class="fw-bold text-dark">{{ $purchaseOrder->storeType->store_type_name ?? '-' }}</div>
                             </div>
                             <div class="col-md-3">
@@ -261,6 +261,14 @@
                                             class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount, 2) }}</span>
                                     </div>
                                 @endif
+                                @if($purchaseOrder->commission > 0)
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted small uppercase">Commission Amount
+                                            ({{ number_format($purchaseOrder->commission, 2) }}%)</span>
+                                        {{-- <span class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount * ($purchaseOrder->commission / 100), 2) }}</span> --}}
+                                        <span class="fw-bold text-dark">₹{{ number_format(($purchaseOrder->sub_total * $purchaseOrder->commission/100),2) }}</span>
+                                    </div>
+                                @endif
 
                                 @if($purchaseOrder->other_state)
                                     <div class="d-flex justify-content-between mb-2">
@@ -294,14 +302,6 @@
                                 @endif
 
                                 <div class="p-3 rounded-3 mt-4 border-start border-primary border-4">
-                                    @if($purchaseOrder->commission > 0)
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span class="text-muted small uppercase">Commission Amount
-                                                ({{ number_format($purchaseOrder->commission, 2) }}%)</span>
-                                            <span
-                                                class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount * ($purchaseOrder->commission / 100), 2) }}</span>
-                                        </div>
-                                    @endif
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="fw-bold text-primary small uppercase">Grand Total</span>
                                         <span

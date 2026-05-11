@@ -39,6 +39,8 @@ class PurchaseOrder extends Model
         'total_amount',
         'additional_attachments',
         'is_self_closed',
+        'created_by',
+        'updated_by',
     ];
 
 

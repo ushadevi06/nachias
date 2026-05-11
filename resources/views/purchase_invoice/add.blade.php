@@ -49,8 +49,7 @@
                                     @if(isset($invoice))
                                         <input type="hidden" name="purchase_order_id" value="{{ $invoice->purchase_order_id }}">
                                     @endif
-                                    <label for="purchase_order">Purchase Order No <span
-                                            class="text-danger">*</span></label>
+                                    <label for="purchase_order">Purchase Order No <span class="text-danger">*</span></label>
                                 </div>
                                 @error('purchase_order_id')
                                     <div class="text-danger mt-1">{{ $message }}</div>
@@ -293,7 +292,7 @@
                                                         <option value="">Select Brand</option>
                                                         @foreach($brands as $brand)
                                                             @php
-        $selectedBrandId = $invItem->brand_id ?? $invItem->purchaseOrderItem->brand_id ?? null;
+                                                                $selectedBrandId = $invItem->brand_id ?? $invItem->purchaseOrderItem->brand_id ?? null;
                                                             @endphp
                                                             <option value="{{ $brand->id }}" {{ $selectedBrandId == $brand->id ? 'selected' : '' }}>
                                                                 {{ $brand->brand_name }}
@@ -419,30 +418,30 @@
 
                                 <tbody id="added_charges_list">
                                     @php
-$oldCharges = old('charges');
-$chargesToLoop = [];
+                                        $oldCharges = old('charges');
+                                        $chargesToLoop = [];
 
-if ($oldCharges && isset($oldCharges['charge_id'])) {
-foreach ($oldCharges['charge_id'] as $index => $id) {
-    $chargesToLoop[] = (object) [
-        'charge_id' => $id,
-        'charge_name' => $oldCharges['name'][$index] ?? '',
-        'charge_amount' => $oldCharges['amount'][$index] ?? 0,
-        'id' => null
-    ];
-}
-} else {
-$chargesToLoop = $charges;
-}
+                                        if ($oldCharges && isset($oldCharges['charge_id'])) {
+                                        foreach ($oldCharges['charge_id'] as $index => $id) {
+                                            $chargesToLoop[] = (object) [
+                                                'charge_id' => $id,
+                                                'charge_name' => $oldCharges['name'][$index] ?? '',
+                                                'charge_amount' => $oldCharges['amount'][$index] ?? 0,
+                                                'id' => null
+                                            ];
+                                        }
+                                        } else {
+                                        $chargesToLoop = $charges;
+                                        }
                                     @endphp
 
                                     @foreach($chargesToLoop as $charge)
                                         @php
-$chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
-$chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
-$chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
-$taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
-$invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ?? null);
+                                            $chargeId = is_array($charge) ? ($charge['charge_id'] ?? '') : $charge->charge_id;
+                                            $chargeName = is_array($charge) ? ($charge['name'] ?? '') : ($charge->charge_name ?? $charge->name ?? '');
+                                            $chargeAmount = is_array($charge) ? ($charge['amount'] ?? 0) : ($charge->charge_amount ?? $charge->amount ?? 0);
+                                            $taxType = is_array($charge) ? ($charge['tax_type'] ?? 'Post-GST') : ($charge->tax_type ?? 'Post-GST');
+                                            $invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ?? null);
                                         @endphp
 
                                         <tr class="charge-row" data-charge-id="{{ $chargeId }}"
@@ -485,7 +484,7 @@ $invoiceChargeId = is_array($charge) ? ($charge['id'] ?? null) : ($charge->id ??
                                         <h5 class="mb-3 fw-semibold">Invoice Details</h5>
                                         <div class="form-floating form-floating-outline mb-2">
                                             @php
-$currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
+                                            $currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
                                             @endphp
 
                                             <select id="invoice_status" name="invoice_status"
@@ -494,16 +493,16 @@ $currentStatus = old('invoice_status', $invoice->invoice_status ?? '');
                                                 <option value="">Select Invoice Status</option>
                                                 @foreach (['Draft', 'Unpaid/Credit', 'Partially Paid', 'Paid'] as $status)
                                                     @php
-$disabled = false;
-if ($currentStatus === 'Unpaid/Credit') {
-    $disabled = ($status === 'Draft');
-}
-if ($currentStatus === 'Partially Paid') {
-    $disabled = in_array($status, ['Draft', 'Unpaid/Credit']);
-}
-if ($currentStatus === 'Paid') {
-    $disabled = ($status !== 'Paid');
-}
+                                                        $disabled = false;
+                                                        if ($currentStatus === 'Unpaid/Credit') {
+                                                            $disabled = ($status === 'Draft');
+                                                        }
+                                                        if ($currentStatus === 'Partially Paid') {
+                                                            $disabled = in_array($status, ['Draft', 'Unpaid/Credit']);
+                                                        }
+                                                        if ($currentStatus === 'Paid') {
+                                                            $disabled = ($status !== 'Paid');
+                                                        }
                                                     @endphp
                                                     <option value="{{ $status }}" {{ $currentStatus === $status ? 'selected' : '' }} {{ $disabled ? 'disabled' : '' }}>
                                                         {{ $status }}
@@ -567,10 +566,10 @@ if ($currentStatus === 'Paid') {
                                                 @if(!empty($invoice->auth_signature))
                                                     <div class="mt-2 preview-container">
                                                         @php
-$attachment = $invoice->auth_signature;
-$extension = pathinfo($attachment, PATHINFO_EXTENSION);
-$isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-$url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
+                                                            $attachment = $invoice->auth_signature;
+                                                            $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                                            $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                            $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
                                                         @endphp
 
                                                         <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative"
@@ -778,8 +777,7 @@ $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
                                     <div class="d-flex justify-content-between py-2 border-bottom">
                                         <span>Post-GST Charges:</span>
                                         <strong id="post_gst_total_display">{{ number_format($postGstTotal, 2) }}</strong>
-                                        <input type="hidden" name="other_charges" id="other_charges_input"
-                                            value="{{ $postGstTotal }}">
+                                        <input type="hidden" name="other_charges" id="other_charges_input" value="{{ $postGstTotal }}">
                                     </div>
                                     @error('other_charges')
                                         <div class="text-danger mt-1">{{ $message }}</div>
@@ -806,13 +804,9 @@ $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
                                     @error('grand_total')
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
-
                                     <input type="hidden" id="paid_so_far_input" value="{{ $paid_so_far ?? 0 }}">
-
                                     <input type="hidden" name="received_amount" id="received_amount_input" value="{{ isset($invoice) ? 0 : ($receivedAmt ?? 0) }}">
-
                                     <input type="hidden" name="due_amount" id="due_amount_input" value="{{ $dueAmount }}">
-
                                     <div class="text-end mt-4">
                                         <button type="submit" class="btn btn-primary">Submit</button>
                                         <a href="{{ url('purchase_invoices') }}" class="btn btn-secondary">Cancel</a>
@@ -827,43 +821,9 @@ $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
     </div>
 </div>
 
-{{-- Payment History Modal --}}
-@if(isset($invoice))
-    <div class="modal fade" id="paymentHistoryModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Payment Transaction History - {{ $invoice->invoice_no }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Date & Time</th>
-                                    <th class="text-end">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody id="payment_history_body">
-                            </tbody>
-                            <tfoot>
-                                <tr class="fw-bold bg-light">
-                                    <td colspan="1" class="text-end">Total Received:</td>
-                                    <td class="text-end" id="history_total_paid">₹0.00</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-@endif
-
 @endsection
 @section('scripts')
-    <style>
+<style>
     .purchase-items-scroll {
         overflow-x: auto;
         overflow-y: visible;
@@ -883,1037 +843,1019 @@ $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
     .purchase-items-table .item-hsn {
         min-width: 140px;
     }
-.purchase-items-table .invoice-qty-column {
-    min-width: 230px;
-    width: 230px;
-}
+    .purchase-items-table .invoice-qty-column {
+        min-width: 230px;
+        width: 230px;
+    }
 
-.purchase-items-table .invoice-qty-column .item-quantity {
-    max-width: 160px;
-}
+    .purchase-items-table .invoice-qty-column .item-quantity {
+        max-width: 160px;
+    }
 </style>
-    <script>
-        @php
-            // Determine if any existing item (edit/old mode) is from Fabric Store (id=1)
-            $hasFabricItems = false;
-            if (isset($invoice) && $invoice && $invoice->items->count()) {
-                $hasFabricItems = $invoice->items->contains(function($invItem) {
-                    return ($invItem->purchaseOrderItem->store_category_id ?? 0) == 1;
-                });
-            } elseif (old('items')) {
-                foreach (old('items') as $oldItem) {
-                    if (($oldItem['store_category_id'] ?? 0) == 1) {
-                        $hasFabricItems = true;
-                        break;
-                    }
+<script>
+    @php
+        $hasFabricItems = false;
+        if (isset($invoice) && $invoice && $invoice->items->count()) {
+            $hasFabricItems = $invoice->items->contains(function($invItem) {
+                return ($invItem->purchaseOrderItem->store_category_id ?? 0) == 1;
+            });
+        } elseif (old('items')) {
+            foreach (old('items') as $oldItem) {
+                if (($oldItem['store_category_id'] ?? 0) == 1) {
+                    $hasFabricItems = true;
+                    break;
                 }
             }
-        @endphp
+        }
+    @endphp
 
-        function toggleFabricColumns(hasFabric) {
-            if (hasFabric) {
-                $('.col-fabric').show();
-                $('.fabric-only-cell').show();
+    function toggleFabricColumns(hasFabric) {
+        if (hasFabric) {
+            $('.col-fabric').show();
+            $('.fabric-only-cell').show();
+        } else {
+            $('.col-fabric').hide();
+            $('.fabric-only-cell').hide();
+        }
+    }
+
+    $(document).ready(function () {
+        toggleFabricColumns({{ $hasFabricItems ? 'true' : 'false' }});
+        $('.select2').select2({
+            width: '100%',
+            dropdownParent: $('body')
+        });
+
+        function toggleTransactionId() {
+            const mode = $('#payment_mode').val();
+            const $div = $('#transaction_id_div');
+            const $label = $('#transaction_id_label');
+            const $input = $('#transaction_id');
+
+            if (mode === 'Cheque') {
+                $div.removeClass('d-none');
+                $label.text('Cheque Number');
+                $input.attr('placeholder', 'Enter Cheque Number');
+            } else if (mode === 'UPI') {
+                $div.removeClass('d-none');
+                $label.text('UPI ID / Transaction ID');
+                $input.attr('placeholder', 'Enter UPI ID / Transaction ID');
             } else {
-                $('.col-fabric').hide();
-                $('.fabric-only-cell').hide();
+                $div.addClass('d-none');
             }
         }
 
-        $(document).ready(function () {
-            toggleFabricColumns({{ $hasFabricItems ? 'true' : 'false' }});
-            $('.select2').select2({
-                width: '100%',
-                dropdownParent: $('body')
-            });
-
-            function toggleTransactionId() {
-                const mode = $('#payment_mode').val();
-                const $div = $('#transaction_id_div');
-                const $label = $('#transaction_id_label');
-                const $input = $('#transaction_id');
-
-                if (mode === 'Cheque') {
-                    $div.removeClass('d-none');
-                    $label.text('Cheque Number');
-                    $input.attr('placeholder', 'Enter Cheque Number');
-                } else if (mode === 'UPI') {
-                    $div.removeClass('d-none');
-                    $label.text('UPI ID / Transaction ID');
-                    $input.attr('placeholder', 'Enter UPI ID / Transaction ID');
-                } else {
-                    $div.addClass('d-none');
-                }
-            }
-
-            $('#payment_mode').on('change', function () {
-                toggleTransactionId();
-            });
-
+        $('#payment_mode').on('change', function () {
             toggleTransactionId();
+        });
 
-            function updateSelectAllState() {
-                let allChecked = $('.item-checkbox').length > 0 && $('.item-checkbox:not(:checked)').length === 0;
-                $('#select_all_items').prop('checked', allChecked);
+        toggleTransactionId();
+
+        function updateSelectAllState() {
+            let allChecked = $('.item-checkbox').length > 0 && $('.item-checkbox:not(:checked)').length === 0;
+            $('#select_all_items').prop('checked', allChecked);
+        }
+
+        $('.item-checkbox').each(function () {
+            toggleItemFields($(this));
+        });
+        updateSelectAllState();
+        $('#purchase_order').on('change', function () {
+            let poId = $(this).val();
+            if (poId) {
+                $.ajax({
+                    url: "{{ url('purchase_invoices/get-po-details') }}/" + poId,
+                    type: "GET",
+                    success: function (response) {
+                        if (response.success) {
+                            $('#purchase_order_no').val(response.po_number);
+                            $('#po_reference').val(response.po_number);
+                            $('#supplier_id').val(response.supplier_id);
+                            $('#supplier_name').val(response.supplier_name);
+                            $('#supplier_name_hidden').val(response.supplier_name);
+
+                            $('#discount_input').val(response.discount_percent);
+                            $('#commission_input').val(response.commission);
+                            $('#commission_percent_display').text(parseFloat(response.commission || 0).toFixed(2));
+                            $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
+                            $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
+
+                            if (response.round_off) {
+                                $('#round_off_input').val(parseFloat(response.round_off).toFixed(2)).trigger('change');
+                            }
+                            if (response.round_off_type) {
+                                $(`input[name="round_off_type"][value="${response.round_off_type}"]`).prop('checked', true).trigger('change');
+                            }
+
+                            let companyStateId = "{{ $web_settings->state_id }}";
+                            if (response.supplier_state_id) {
+                                if (response.supplier_state_id == companyStateId) {
+                                    $('input[name="other_state"][value="N"]').prop('checked', true).trigger('change');
+                                    $('#cgst_percent').val(response.cgst_percent);
+                                    $('#sgst_percent').val(response.sgst_percent);
+                                    $('#igst_percent').val(0);
+                                } else {
+                                    $('input[name="other_state"][value="Y"]').prop('checked', true).trigger('change');
+                                    $('#igst_percent').val(response.igst_percent);
+                                    $('#cgst_percent').val(0);
+                                    $('#sgst_percent').val(0);
+                                }
+                            }
+
+                            let itemsHtml = "";
+
+                            let brandOptions = '<option value="">Select Brand</option>';
+                            if (response.all_brands) {
+                                response.all_brands.forEach(function(b) {
+                                    brandOptions += `<option value="${b.id}">${b.name}</option>`;
+                                });
+                            }
+
+                            let widthOptions = '<option value="">Select Width</option>';
+                            if (response.all_fabric_widths) {
+                                response.all_fabric_widths.forEach(function(f) {
+                                    widthOptions += `<option value="${f.id}">${f.name}</option>`;
+                                });
+                            }
+
+                            response.items.forEach(function (item, index) {
+                                const balancedQty = item.qty_ordered - item.qty_invoiced;
+                                let itemBrandSelect = `<select name="items[${index}][brand_id]" class="select2 form-select form-select-sm">${brandOptions}</select>`;
+                                let itemWidthSelect = `<select name="items[${index}][fabric_width_id]" class="select2 form-select form-select-sm">${widthOptions}</select>`;
+
+                                let brandSelectObj = $(itemBrandSelect);
+                                brandSelectObj.find(`option[value="${item.brand_id}"]`).attr('selected', 'selected');
+                                itemBrandSelect = brandSelectObj.prop('outerHTML');
+
+                                let widthSelectObj = $(itemWidthSelect);
+                                widthSelectObj.find(`option[value="${item.fabric_width_id}"]`).attr('selected', 'selected');
+                                itemWidthSelect = widthSelectObj.prop('outerHTML');
+
+                                itemsHtml += `
+                                    <tr class="item-row">
+                                        <td>
+                                            <input type="checkbox" name="items[${index}][selected]" class="form-check-input item-checkbox" value="1">
+                                            <input type="hidden" name="items[${index}][purchase_order_item_id]" value="${item.id}">
+                                            <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
+                                            <input type="hidden" name="items[${index}][raw_material_name]" value="${item.raw_material_name}">
+                                            <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
+                                            <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code}">
+                                            <input type="hidden" name="items[${index}][rate]" value="${item.rate}" class="item-rate">
+                                            <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
+                                            <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
+                                            <input type="hidden" name="items[${index}][store_category_name]" value="${item.store_category_name}">
+                                            <input type="hidden" name="items[${index}][store_category_id]" value="${item.store_category_id || 0}">
+                                            <input type="hidden" name="items[${index}][brand_name]" value="${item.brand_name}">
+                                            <input type="hidden" name="items[${index}][fabric_width]" value="${item.fabric_width}">
+                                            <input type="hidden" name="items[${index}][fabric_type_name]" value="${item.fabric_type_name || '-'}">
+                                        </td>
+                                        <td>${item.store_category_name}</td>
+                                        <td>${item.raw_material_name}</td>
+                                        <td>${item.art_no || '-'}</td>
+                                        <td>${itemBrandSelect}</td>
+                                        <td class="hsn-column">
+                                            <input type="text" name="items[${index}][hsn_code]" class="form-control form-control-sm item-hsn" value="${item.hsn_code || ''}" placeholder="Enter HSN" readonly>
+                                        </td>
+                                        <td class="fabric-only-cell">${itemWidthSelect}</td>
+                                        <td class="fabric-only-cell">${item.fabric_type_name || '-'}</td>
+
+                                        <!-- Ordered Qty -->
+                                        <td class="qty-ordered-display">${item.qty_ordered}</td>
+
+                                        <!-- Balanced Qty -->
+                                        <td class="balanced-qty-display">${balancedQty.toFixed(2)}</td>
+
+                                        <!-- Invoiced Qty (Input Field) -->
+                                        <td class="invoice-qty-column">
+                                            <input type="number" name="items[${index}][quantity]" class="form-control form-control-sm item-quantity received-qty-input" step="0.01" value="${balancedQty}" readonly placeholder="0.00" data-max-qty="${balancedQty}" data-ordered-qty="${item.qty_ordered}">
+                                                <small class="text-secondary">
+                                                Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max: ${(item.qty_ordered * 1.5).toFixed(2)}).
+                                            </small>
+                                        </td>
+
+                                        <td>${item.uom_code}</td>
+                                        <td class="rate-display">${parseFloat(item.rate).toFixed(2)}</td>
+                                        <td class="item-amount">0.00</td>
+
+                                    </tr>`;
+                            });
+
+                            $('#items_tbody').html(itemsHtml);
+                            $('#items_tbody .select2').select2({
+                                width: '100%'
+                            });
+                            let hasFabric = response.items.some(i => parseInt(i.store_category_id) === 1);
+                            toggleFabricColumns(hasFabric);
+                            $('.item-row').each(function () {
+                                let $row = $(this);
+                                let qty = parseFloat($row.find('.item-quantity').val()) || 0;
+                                let rate = parseFloat($row.find('.item-rate').val()) || 0;
+                                let amount = qty * rate;
+                                $row.find('.item-amount').text(amount.toFixed(2));
+                            });
+
+                            $('#select_all_items').prop('checked', false);
+
+                            $('#subtotal').text('0.00');
+                            $('#sub_total_input').val('0');
+                            $('#discount_value').text('0.00');
+                            $('#discount_amount_input').val('0');
+                            $('#total').text('0.00');
+                            $('#taxable_amount_input').val('0');
+                            $('#tax_amount').text('0.00');
+                            $('#tax_amount_input').val('0');
+                            $('#other_charges').text('0.00');
+                            $('#other_charges_input').val('0');
+                            $('#grand_total').text('0.00');
+                            $('#grand_total_input').val('0');
+                            $('#due_amount').text('0.00');
+                            $('#due_amount_input').val('0');
+                            $('#cgst_amt').text('0.00');
+                            $('#sgst_amt').text('0.00');
+                            $('#igst_amt').text('0.00');
+
+                            setTimeout(() => {
+                                $('.item-row').each(function () {
+                                    let $row = $(this);
+                                    let checkbox = $row.find('.item-checkbox');
+
+                                    toggleItemFields(checkbox);
+
+                                    if (!checkbox.is(':checked')) {
+                                        $row.find('.item-amount').text('0.00');
+                                    }
+                                });
+
+                                calculateTotals();
+                            }, 200);
+                        }
+                    },
+                    error: function () {
+                        alert("Failed to load purchase order details");
+                    }
+                });
+            } else {
+                toggleFabricColumns(false);
+                $('#items_tbody').html('<tr><td colspan="13" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
+                $('#purchase_order_no').val('');
+                $('#supplier_id').val('');
+                $('#purchase_commission_agent_id').val('');
+                $('#purchase_commission_agent_name').val('');
+                $('#select_all_items').prop('checked', false);
+                calculateTotals();
+            }
+        });
+
+        $(document).on('input', '.received-qty-input', function () {
+            const $row = $(this).closest('tr');
+            const receivedQty = parseFloat($(this).val()) || 0;
+            const orderedQty = parseFloat($row.find('.qty-ordered-val').val()) || 0;
+            const invoicedQty = parseFloat($row.find('.qty-invoiced-val').val()) || 0;
+            const rate = parseFloat($row.find('.item-rate').val()) || 0;
+
+            const balancedQty = Math.max(0, orderedQty - invoicedQty - receivedQty);
+            $row.find('.balanced-qty-display').text(balancedQty.toFixed(2));
+
+            const maxTotalQty = orderedQty * 1.5;
+            const maxQty = maxTotalQty - invoicedQty;
+
+            if (receivedQty > maxQty) {
+                $(this).addClass('is-invalid');
+                if (!$(this).next('.invalid-feedback').length) {
+                    $(this).after('<div class="invalid-feedback d-block">Received quantity cannot exceed ' + maxQty.toFixed(2) + ' (Order + 50% Tolerance)</div>');
+                }
+            } else {
+                $(this).removeClass('is-invalid');
+                $(this).next('.invalid-feedback').remove();
             }
 
+            const amount = receivedQty * rate;
+            $row.find('.item-amount').text(amount.toFixed(2));
+
+            if (typeof calculateTotals === 'function') {
+                calculateTotals();
+            }
+        });
+
+        $('#select_all_items').on('change', function () {
+            $('.item-checkbox').prop('checked', $(this).is(':checked'));
             $('.item-checkbox').each(function () {
                 toggleItemFields($(this));
             });
-            updateSelectAllState();
-            $('#purchase_order').on('change', function () {
-                let poId = $(this).val();
-                if (poId) {
-                    $.ajax({
-                        url: "{{ url('purchase_invoices/get-po-details') }}/" + poId,
-                        type: "GET",
-                        success: function (response) {
-                            if (response.success) {
-                                $('#purchase_order_no').val(response.po_number);
-                                $('#po_reference').val(response.po_number);
-                                $('#supplier_id').val(response.supplier_id);
-                                $('#supplier_name').val(response.supplier_name);
-                                $('#supplier_name_hidden').val(response.supplier_name);
+            calculateTotals();
+        });
 
-                                $('#discount_input').val(response.discount_percent);
-                                $('#commission_input').val(response.commission);
-                                $('#commission_percent_display').text(parseFloat(response.commission || 0).toFixed(2));
-                                $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
-                                $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
+        function toggleItemFields($checkbox) {
+            let $row = $checkbox.closest('tr');
+            let $hsnInput = $row.find('.item-hsn');
+            let $qtyInput = $row.find('.item-quantity');
+            let isEditMode = $('#isEditMode').val() == '1';
 
-                                if (response.round_off) {
-                                    $('#round_off_input').val(parseFloat(response.round_off).toFixed(2)).trigger('change');
-                                }
-                                if (response.round_off_type) {
-                                    $(`input[name="round_off_type"][value="${response.round_off_type}"]`).prop('checked', true).trigger('change');
-                                }
+            if ($checkbox.is(':checked')) {
+                $hsnInput.prop('readonly', false);
+                $qtyInput.prop('readonly', false);
+            } else {
+                $hsnInput.prop('readonly', true);
+                $qtyInput.prop('readonly', true);
+                $hsnInput.removeClass('is-invalid');
+                $qtyInput.removeClass('is-invalid');
+                $hsnInput.next('.invalid-feedback').remove();
+                $qtyInput.next('.invalid-feedback').remove();
+            }
+        }
 
-                                let companyStateId = "{{ $web_settings->state_id }}";
-                                if (response.supplier_state_id) {
-                                    if (response.supplier_state_id == companyStateId) {
-                                        $('input[name="other_state"][value="N"]').prop('checked', true).trigger('change');
-                                        $('#cgst_percent').val(response.cgst_percent);
-                                        $('#sgst_percent').val(response.sgst_percent);
-                                        $('#igst_percent').val(0);
-                                    } else {
-                                        $('input[name="other_state"][value="Y"]').prop('checked', true).trigger('change');
-                                        $('#igst_percent').val(response.igst_percent);
-                                        $('#cgst_percent').val(0);
-                                        $('#sgst_percent').val(0);
-                                    }
-                                }
 
-                                let itemsHtml = "";
+        $(document).on('input', '.item-quantity', function () {
+            let $input = $(this);
+            let row = $input.closest('tr');
+            let qty = parseFloat($input.val()) || 0;
+            let orderedQty = parseFloat(row.find('.qty-ordered-val').val()) || 0;
+            let invoicedQty = parseFloat(row.find('.qty-invoiced-val').val()) || 0;
+            let rate = parseFloat(row.find('.item-rate').val()) || 0;
+            let checkbox = row.find('.item-checkbox');
 
-                                let brandOptions = '<option value="">Select Brand</option>';
-                                if (response.all_brands) {
-                                    response.all_brands.forEach(function(b) {
-                                        brandOptions += `<option value="${b.id}">${b.name}</option>`;
-                                    });
-                                }
+            $input.removeClass('is-invalid');
+            $input.next('.invalid-feedback').remove();
 
-                                let widthOptions = '<option value="">Select Width</option>';
-                                if (response.all_fabric_widths) {
-                                    response.all_fabric_widths.forEach(function(f) {
-                                        widthOptions += `<option value="${f.id}">${f.name}</option>`;
-                                    });
-                                }
-
-                                response.items.forEach(function (item, index) {
-                                    const balancedQty = item.qty_ordered - item.qty_invoiced;
-                                    
-                                    let itemBrandSelect = `<select name="items[${index}][brand_id]" class="select2 form-select form-select-sm">${brandOptions}</select>`;
-                                    let itemWidthSelect = `<select name="items[${index}][fabric_width_id]" class="select2 form-select form-select-sm">${widthOptions}</select>`;
-
-                                    let brandSelectObj = $(itemBrandSelect);
-                                    brandSelectObj.find(`option[value="${item.brand_id}"]`).attr('selected', 'selected');
-                                    itemBrandSelect = brandSelectObj.prop('outerHTML');
-
-                                    let widthSelectObj = $(itemWidthSelect);
-                                    widthSelectObj.find(`option[value="${item.fabric_width_id}"]`).attr('selected', 'selected');
-                                    itemWidthSelect = widthSelectObj.prop('outerHTML');
-
-                                    itemsHtml += `
-                                        <tr class="item-row">
-                                            <td>
-                                                <input type="checkbox" name="items[${index}][selected]" 
-                                                    class="form-check-input item-checkbox" value="1">
-
-                                                <input type="hidden" name="items[${index}][purchase_order_item_id]" value="${item.id}">
-                                                <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
-                                                <input type="hidden" name="items[${index}][raw_material_name]" value="${item.raw_material_name}">
-                                                <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
-                                                <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code}">
-                                                <input type="hidden" name="items[${index}][rate]" value="${item.rate}" class="item-rate">
-                                                <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
-                                                <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
-                                                <input type="hidden" name="items[${index}][store_category_name]" value="${item.store_category_name}">
-                                                <input type="hidden" name="items[${index}][store_category_id]" value="${item.store_category_id || 0}">
-                                                <input type="hidden" name="items[${index}][brand_name]" value="${item.brand_name}">
-                                                <input type="hidden" name="items[${index}][fabric_width]" value="${item.fabric_width}">
-                                                <input type="hidden" name="items[${index}][fabric_type_name]" value="${item.fabric_type_name || '-'}">
-                                            </td>
-                                            <td>${item.store_category_name}</td>
-                                            <td>${item.raw_material_name}</td>
-                                            <td>${item.art_no || '-'}</td>
-                                            <td>${itemBrandSelect}</td>
-                                            <td class="hsn-column">
-                                                <input type="text" 
-                                                    name="items[${index}][hsn_code]"
-                                                    class="form-control form-control-sm item-hsn" 
-                                                    value="${item.hsn_code || ''}"
-                                                    placeholder="Enter HSN"
-                                                    readonly>
-                                            </td>
-                                            <td class="fabric-only-cell">${itemWidthSelect}</td>
-                                            <td class="fabric-only-cell">${item.fabric_type_name || '-'}</td>
-
-                                            <!-- Ordered Qty -->
-                                            <td class="qty-ordered-display">${item.qty_ordered}</td>
-
-                                            <!-- Balanced Qty -->
-                                            <td class="balanced-qty-display">${balancedQty.toFixed(2)}</td>
-
-                                            <!-- Invoiced Qty (Input Field) -->
-                                            <td class="invoice-qty-column">
-                                                <input type="number" 
-                                                    name="items[${index}][quantity]"
-                                                    class="form-control form-control-sm item-quantity received-qty-input" 
-                                                    step="0.01"
-                                                    value="${balancedQty}"
-                                                    readonly
-                                                    placeholder="0.00"
-                                                    data-max-qty="${balancedQty}"
-                                                    data-ordered-qty="${item.qty_ordered}">
-                                                    <small class="text-secondary">
-                                                    Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max: ${(item.qty_ordered * 1.5).toFixed(2)}).
-                                                </small>
-                                            </td>
-
-                                            <td>${item.uom_code}</td>
-                                            <td class="rate-display">${parseFloat(item.rate).toFixed(2)}</td>
-                                            <td class="item-amount">0.00</td>
-
-                                        </tr>`;
-                                });
-
-                                $('#items_tbody').html(itemsHtml);
-                                $('#items_tbody .select2').select2({
-                                    width: '100%'
-                                });
-                                // Show/hide fabric columns based on store category
-                                let hasFabric = response.items.some(i => parseInt(i.store_category_id) === 1);
-                                toggleFabricColumns(hasFabric);
-                                $('.item-row').each(function () {
-                                    let $row = $(this);
-                                    let qty = parseFloat($row.find('.item-quantity').val()) || 0;
-                                    let rate = parseFloat($row.find('.item-rate').val()) || 0;
-                                    let amount = qty * rate;
-                                    $row.find('.item-amount').text(amount.toFixed(2));
-                                });
-
-                                $('#select_all_items').prop('checked', false);
-
-                                $('#subtotal').text('0.00');
-                                $('#sub_total_input').val('0');
-                                $('#discount_value').text('0.00');
-                                $('#discount_amount_input').val('0');
-                                $('#total').text('0.00');
-                                $('#taxable_amount_input').val('0');
-                                $('#tax_amount').text('0.00');
-                                $('#tax_amount_input').val('0');
-                                $('#other_charges').text('0.00');
-                                $('#other_charges_input').val('0');
-                                $('#grand_total').text('0.00');
-                                $('#grand_total_input').val('0');
-                                $('#due_amount').text('0.00');
-                                $('#due_amount_input').val('0');
-                                $('#cgst_amt').text('0.00');
-                                $('#sgst_amt').text('0.00');
-                                $('#igst_amt').text('0.00');
-
-                                setTimeout(() => {
-                                    $('.item-row').each(function () {
-                                        let $row = $(this);
-                                        let checkbox = $row.find('.item-checkbox');
-
-                                        toggleItemFields(checkbox);
-
-                                        if (!checkbox.is(':checked')) {
-                                            $row.find('.item-amount').text('0.00');
-                                        }
-                                    });
-
-                                    calculateTotals();
-                                }, 200);
-                            }
-                        },
-                        error: function () {
-                            alert("Failed to load purchase order details");
-                        }
-                    });
-                } else {
-                    toggleFabricColumns(false);
-                    $('#items_tbody').html('<tr><td colspan="13" class="text-center text-muted">Please select a Purchase Order to load items</td></tr>');
-                    $('#purchase_order_no').val('');
-                    $('#supplier_id').val('');
-                    $('#purchase_commission_agent_id').val('');
-                    $('#purchase_commission_agent_name').val('');
-                    $('#select_all_items').prop('checked', false);
-                    calculateTotals();
-                }
-            });
-
-            $(document).on('input', '.received-qty-input', function () {
-                const $row = $(this).closest('tr');
-                const receivedQty = parseFloat($(this).val()) || 0;
-                const orderedQty = parseFloat($row.find('.qty-ordered-val').val()) || 0;
-                const invoicedQty = parseFloat($row.find('.qty-invoiced-val').val()) || 0;
-                const rate = parseFloat($row.find('.item-rate').val()) || 0;
-
-                const balancedQty = Math.max(0, orderedQty - invoicedQty - receivedQty);
-                $row.find('.balanced-qty-display').text(balancedQty.toFixed(2));
-
-                const maxTotalQty = orderedQty * 1.5;
-                const maxQty = maxTotalQty - invoicedQty;
-
-                if (receivedQty > maxQty) {
-                    $(this).addClass('is-invalid');
-                    if (!$(this).next('.invalid-feedback').length) {
-                        $(this).after('<div class="invalid-feedback d-block">Received quantity cannot exceed ' + maxQty.toFixed(2) + ' (Order + 50% Tolerance)</div>');
-                    }
-                } else {
-                    $(this).removeClass('is-invalid');
-                    $(this).next('.invalid-feedback').remove();
-                }
-
-                const amount = receivedQty * rate;
-                $row.find('.item-amount').text(amount.toFixed(2));
-
-                if (typeof calculateTotals === 'function') {
-                    calculateTotals();
-                }
-            });
-
-            $('#select_all_items').on('change', function () {
-                $('.item-checkbox').prop('checked', $(this).is(':checked'));
-                $('.item-checkbox').each(function () {
-                    toggleItemFields($(this));
-                });
+            if (!checkbox.is(':checked')) {
+                row.find('.item-amount').text('0.00');
                 calculateTotals();
-            });
+                return;
+            }
 
-            function toggleItemFields($checkbox) {
-                let $row = $checkbox.closest('tr');
-                let $hsnInput = $row.find('.item-hsn');
-                let $qtyInput = $row.find('.item-quantity');
-                let isEditMode = $('#isEditMode').val() == '1';
+            const maxTotalQty = orderedQty * 1.5;
+            let oldQty = 0;
+            let isEditMode = $('#isEditMode').val() == '1';
+            if (isEditMode) {
+            }
+            let maxAllowed = maxTotalQty - invoicedQty;
+            if (isEditMode) {
+                maxAllowed = maxTotalQty;
+            }
+            console.log(maxTotalQty,invoicedQty,maxAllowed);
+            if (qty > maxAllowed && !isEditMode) {
+                $input.addClass('is-invalid');
+                $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${maxAllowed.toFixed(2)} (Order + 50% Tolerance minus already invoiced)</div>`);
+                row.find('.item-amount').text('0.00');
+                calculateTotals();
+                return;
+            } else if (qty > maxTotalQty) {
+                $input.addClass('is-invalid');
+                $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${(maxTotalQty).toFixed(2)} (Total Order + 50% Tolerance)</div>`);
+                row.find('.item-amount').text('0.00');
+                calculateTotals();
+                return;
+            }
 
-                if ($checkbox.is(':checked')) {
-                    $hsnInput.prop('readonly', false);
-                    $qtyInput.prop('readonly', false);
-                } else {
-                    $hsnInput.prop('readonly', true);
-                    $qtyInput.prop('readonly', true);
-                    $hsnInput.removeClass('is-invalid');
-                    $qtyInput.removeClass('is-invalid');
-                    $hsnInput.next('.invalid-feedback').remove();
-                    $qtyInput.next('.invalid-feedback').remove();
+            let amount = qty * rate;
+            row.find('.item-amount').text(amount.toFixed(2));
+
+            calculateTotals();
+        });
+
+
+        $(document).on('change', '.item-checkbox', function () {
+            toggleItemFields($(this));
+            updateSelectAllState();
+            calculateTotals();
+        });
+
+        $('#select_all_charges').on('change', function () {
+            $('.charge-checkbox').prop('checked', $(this).is(':checked'));
+            calculateTotals();
+        });
+
+        $(document).on('input change', '.charge-checkbox, .charge-amount', function () {
+            calculateTotals();
+        });
+
+        $('#discount_input').on('input', function () {
+            calculateSummaryOnly();
+        });
+
+        $('#commission_input').on('input', function () {
+            calculateSummaryOnly();
+        });
+
+        $('input[name="other_state"]').on('change', function () {
+            if ($(this).val() === 'Y') {
+                $('#igst_div').show();
+                $('#cgst_sgst_div').hide();
+                if (parseFloat($('#igst_percent').val()) == 0) {
+                    $('#igst_percent').val("{{ $web_settings->igst }}");
+                }
+            } else {
+                $('#igst_div').hide();
+                $('#cgst_sgst_div').show();
+                if (parseFloat($('#cgst_percent').val()) == 0) {
+                    $('#cgst_percent').val("{{ $web_settings->cgst }}");
+                }
+                if (parseFloat($('#sgst_percent').val()) == 0) {
+                    $('#sgst_percent').val("{{ $web_settings->sgst }}");
                 }
             }
 
+            calculateTaxOnly();
+        });
 
-            $(document).on('input', '.item-quantity', function () {
-                let $input = $(this);
-                let row = $input.closest('tr');
-                let qty = parseFloat($input.val()) || 0;
-                let orderedQty = parseFloat(row.find('.qty-ordered-val').val()) || 0;
-                let invoicedQty = parseFloat(row.find('.qty-invoiced-val').val()) || 0;
-                let rate = parseFloat(row.find('.item-rate').val()) || 0;
-                let checkbox = row.find('.item-checkbox');
 
-                $input.removeClass('is-invalid');
-                $input.next('.invalid-feedback').remove();
+        $('#igst_percent, #cgst_percent, #sgst_percent').on('input', function () {
+            calculateTotals();
+        });
 
-                if (!checkbox.is(':checked')) {
-                    row.find('.item-amount').text('0.00');
-                    calculateTotals();
-                    return;
-                }
+        $('#received_amount_input, #round_off_input, .round-off-type-radio').on('input change', function () {
+            if (this.id === 'round_off_input') {
+                let val = parseFloat($(this).val());
+                if (val < 0) $(this).val(Math.abs(val));
+            }
+            calculateSummaryOnly();
+        });
 
-                const maxTotalQty = orderedQty * 1.5;
-                let oldQty = 0;
-                let isEditMode = $('#isEditMode').val() == '1';
-                if (isEditMode) {
-                }
-                let maxAllowed = maxTotalQty - invoicedQty;
-                if (isEditMode) {
-                    maxAllowed = maxTotalQty;
-                }
+        function calculateGrandTotalOnly() {
+            let grandTotal = parseFloat($('#grand_total_input').val()) || 0;
 
-                if (qty > maxAllowed && !isEditMode) {
-                    $input.addClass('is-invalid');
-                    $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${maxAllowed.toFixed(2)} (Order + 50% Tolerance minus already invoiced)</div>`);
-                    row.find('.item-amount').text('0.00');
-                    calculateTotals();
-                    return;
-                } else if (qty > maxTotalQty) {
-                    $input.addClass('is-invalid');
-                    $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${(maxTotalQty).toFixed(2)} (Total Order + 50% Tolerance)</div>`);
-                    row.find('.item-amount').text('0.00');
-                    calculateTotals();
-                    return;
-                }
+            let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
+            let newPayment = parseFloat($('#received_amount_input').val()) || 0;
+            let dueAmount = grandTotal - paidSoFar - newPayment;
+
+            $('#due_amount').text(dueAmount.toFixed(2));
+            $('#due_amount_input').val(dueAmount.toFixed(2));
+        }
+
+
+        function calculateTotals() {
+            let subTotal = 0;
+            $('.item-row').each(function () {
+                let $row = $(this);
+                let isChecked = $row.find('.item-checkbox').is(':checked');
+
+                if (!isChecked) return;
+
+                let qty = parseFloat($row.find('.item-quantity').val()) || 0;
+                let rate = parseFloat($row.find('.item-rate').val()) || 0;
 
                 let amount = qty * rate;
-                row.find('.item-amount').text(amount.toFixed(2));
-
-                calculateTotals();
+                $row.find('.item-amount').text(amount.toFixed(2));
+                subTotal += amount;
             });
 
+            $('#subtotal').text(subTotal.toFixed(2));
+            $('#sub_total_input').val(subTotal.toFixed(2));
 
-            $(document).on('change', '.item-checkbox', function () {
-                toggleItemFields($(this));
-                updateSelectAllState();
-                calculateTotals();
-            });
+            let discountPercent = parseFloat($('#discount_input').val()) || 0;
+            let discountAmount = (subTotal * discountPercent) / 100;
 
-            $('#select_all_charges').on('change', function () {
-                $('.charge-checkbox').prop('checked', $(this).is(':checked'));
-                calculateTotals();
-            });
+            $('#discount_value').text(discountAmount.toFixed(2));
+            $('#discount_amount_input').val(discountAmount.toFixed(2));
 
-            $(document).on('input change', '.charge-checkbox, .charge-amount', function () {
-                calculateTotals();
-            });
+            let commissionPercent = parseFloat($('#commission_input').val()) || 0;
+            let commissionAmount = (subTotal * commissionPercent) / 100;
+            $('#commission_value').text(commissionAmount.toFixed(2));
+            $('#commission_amount_input').val(commissionAmount.toFixed(2));
 
-            $('#discount_input').on('input', function () {
-                calculateSummaryOnly();
-            });
+            let itemTotal = subTotal - discountAmount - commissionAmount;
 
-            $('#commission_input').on('input', function () {
-                calculateSummaryOnly();
-            });
-
-            $('input[name="other_state"]').on('change', function () {
-                if ($(this).val() === 'Y') {
-                    $('#igst_div').show();
-                    $('#cgst_sgst_div').hide();
-                    if (parseFloat($('#igst_percent').val()) == 0) {
-                        $('#igst_percent').val("{{ $web_settings->igst }}");
-                    }
+            let preGstCharges = 0;
+            let postGstCharges = 0;
+            $('.charge-row').each(function () {
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                if (taxType === 'Pre-GST') {
+                    preGstCharges += amount;
                 } else {
-                    $('#igst_div').hide();
-                    $('#cgst_sgst_div').show();
-                    if (parseFloat($('#cgst_percent').val()) == 0) {
-                        $('#cgst_percent').val("{{ $web_settings->cgst }}");
-                    }
-                    if (parseFloat($('#sgst_percent').val()) == 0) {
-                        $('#sgst_percent').val("{{ $web_settings->sgst }}");
-                    }
+                    postGstCharges += amount;
                 }
-
-                calculateTaxOnly();
             });
 
+            let taxableAmount = itemTotal + preGstCharges;
+            $('#total').text(taxableAmount.toFixed(2));
+            $('#taxable_amount_input').val(taxableAmount.toFixed(2));
 
-            $('#igst_percent, #cgst_percent, #sgst_percent').on('input', function () {
-                calculateTotals();
-            });
+            let taxAmount = 0;
 
-            $('#received_amount_input, #round_off_input, .round-off-type-radio').on('input change', function () {
-                if (this.id === 'round_off_input') {
-                    let val = parseFloat($(this).val());
-                    if (val < 0) $(this).val(Math.abs(val));
-                }
-                calculateSummaryOnly();
-            });
+            if ($('input[name="other_state"]:checked').val() === 'Y') {
+                let igstPercent = parseFloat($('#igst_percent').val()) || 0;
+                let igstAmount = (taxableAmount * igstPercent) / 100;
 
-            function calculateGrandTotalOnly() {
-                let grandTotal = parseFloat($('#grand_total_input').val()) || 0;
+                $('#igst_amt').text(igstAmount.toFixed(2));
+                $('#igst_amount_input').val(igstAmount.toFixed(2));
 
-                let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
-                let newPayment = parseFloat($('#received_amount_input').val()) || 0;
-                let dueAmount = grandTotal - paidSoFar - newPayment;
+                $('#cgst_amt').text("0.00");
+                $('#sgst_amt').text("0.00");
 
-                $('#due_amount').text(dueAmount.toFixed(2));
-                $('#due_amount_input').val(dueAmount.toFixed(2));
+                taxAmount = igstAmount;
+
+            } else {
+                let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
+                let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
+
+                let cgstAmount = (taxableAmount * cgstPercent) / 100;
+                let sgstAmount = (taxableAmount * sgstPercent) / 100;
+
+                $('#cgst_amt').text(cgstAmount.toFixed(2));
+                $('#sgst_amt').text(sgstAmount.toFixed(2));
+
+                $('#cgst_amount_input').val(cgstAmount.toFixed(2));
+                $('#sgst_amount_input').val(sgstAmount.toFixed(2));
+
+                $('#igst_amt').text("0.00");
+
+                taxAmount = cgstAmount + sgstAmount;
             }
 
+            $('#tax_amount').text(taxAmount.toFixed(2));
+            $('#tax_amount_input').val(taxAmount.toFixed(2));
 
-            function calculateTotals() {
-                let subTotal = 0;
-                $('.item-row').each(function () {
-                    let $row = $(this);
-                    let isChecked = $row.find('.item-checkbox').is(':checked');
+            let totalOtherCharges = preGstCharges + postGstCharges;
 
-                    if (!isChecked) return;
+            $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
+            $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
 
-                    let qty = parseFloat($row.find('.item-quantity').val()) || 0;
-                    let rate = parseFloat($row.find('.item-rate').val()) || 0;
+            $('#post_gst_total_display').text(postGstCharges.toFixed(2));
+            $('#other_charges_input').val(postGstCharges.toFixed(2));
 
-                    let amount = qty * rate;
-                    $row.find('.item-amount').text(amount.toFixed(2));
-                    subTotal += amount;
-                });
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
 
-                $('#subtotal').text(subTotal.toFixed(2));
-                $('#sub_total_input').val(subTotal.toFixed(2));
+            let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let finalTotal = 0;
 
-                let discountPercent = parseFloat($('#discount_input').val()) || 0;
-                let discountAmount = (subTotal * discountPercent) / 100;
+            if (roundOffType === 'Add') {
+                finalTotal = totalBeforeRoundOff + roundOffAmount;
+            } else {
+                finalTotal = totalBeforeRoundOff - roundOffAmount;
+            }
 
-                $('#discount_value').text(discountAmount.toFixed(2));
-                $('#discount_amount_input').val(discountAmount.toFixed(2));
+            $('#grand_total').text(finalTotal.toFixed(2));
+            $('#grand_total_input').val(finalTotal.toFixed(2));
 
-                let commissionPercent = parseFloat($('#commission_input').val()) || 0;
-                let commissionAmount = (subTotal * commissionPercent) / 100;
-                $('#commission_value').text(commissionAmount.toFixed(2));
-                $('#commission_amount_input').val(commissionAmount.toFixed(2));
+            let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
+            let dueAmount = finalTotal - receivedAmount;
 
-                let itemTotal = subTotal - discountAmount - commissionAmount;
+            $('#due_amount').text(dueAmount.toFixed(2));
+            $('#due_amount_input').val(dueAmount.toFixed(2));
+        }
 
-                let preGstCharges = 0;
-                let postGstCharges = 0;
-                $('.charge-row').each(function () {
-                    let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-                    let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
-                    if (taxType === 'Pre-GST') {
-                        preGstCharges += amount;
+        function refreshChargeDropdownState() {
+            let selectedChargeIds = [];
+            $('#added_charges_list tr').each(function () {
+                let id = $(this).data('charge-id');
+                if (id) selectedChargeIds.push(id.toString());
+            });
+
+            $('#charges_select option').each(function () {
+                let optionId = $(this).val();
+                if (optionId) {
+                    if (selectedChargeIds.includes(optionId.toString())) {
+                        $(this).prop('disabled', true);
                     } else {
-                        postGstCharges += amount;
+                        $(this).prop('disabled', false);
                     }
-                });
-
-                let taxableAmount = itemTotal + preGstCharges;
-                $('#total').text(taxableAmount.toFixed(2));
-                $('#taxable_amount_input').val(taxableAmount.toFixed(2));
-
-                let taxAmount = 0;
-
-                if ($('input[name="other_state"]:checked').val() === 'Y') {
-                    let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                    let igstAmount = (taxableAmount * igstPercent) / 100;
-
-                    $('#igst_amt').text(igstAmount.toFixed(2));
-                    $('#igst_amount_input').val(igstAmount.toFixed(2));
-
-                    $('#cgst_amt').text("0.00");
-                    $('#sgst_amt').text("0.00");
-
-                    taxAmount = igstAmount;
-
-                } else {
-                    let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
-                    let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-
-                    let cgstAmount = (taxableAmount * cgstPercent) / 100;
-                    let sgstAmount = (taxableAmount * sgstPercent) / 100;
-
-                    $('#cgst_amt').text(cgstAmount.toFixed(2));
-                    $('#sgst_amt').text(sgstAmount.toFixed(2));
-
-                    $('#cgst_amount_input').val(cgstAmount.toFixed(2));
-                    $('#sgst_amount_input').val(sgstAmount.toFixed(2));
-
-                    $('#igst_amt').text("0.00");
-
-                    taxAmount = cgstAmount + sgstAmount;
                 }
+            });
 
-                $('#tax_amount').text(taxAmount.toFixed(2));
-                $('#tax_amount_input').val(taxAmount.toFixed(2));
+            $('#charges_select').select2('destroy').select2({
+                width: '100%',
+                dropdownParent: $('body')
+            });
+        }
 
-                let totalOtherCharges = preGstCharges + postGstCharges;
+        function loadCharges() {
+            $.ajax({
+                url: "{{ url('get_charges') }}",
+                type: "GET",
+                success: function (data) {
+                    let select = $('#charges_select');
+                    select.empty();
+                    select.append('<option value="">Select Charge</option>');
 
-                $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
-                $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
-
-                $('#post_gst_total_display').text(postGstCharges.toFixed(2));
-                $('#other_charges_input').val(postGstCharges.toFixed(2));
-
-                let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
-
-                let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
-                let roundOffType = $('input[name="round_off_type"]:checked').val();
-                let finalTotal = 0;
-
-                if (roundOffType === 'Add') {
-                    finalTotal = totalBeforeRoundOff + roundOffAmount;
-                } else {
-                    finalTotal = totalBeforeRoundOff - roundOffAmount;
+                    data.forEach(function (charge) {
+                        select.append(`<option value="${charge.id}">${charge.charge_name}</option>`);
+                    });
+                    refreshChargeDropdownState();
                 }
+            });
+        }
+        loadCharges();
+        $('#add_charge_btn').click(function () {
+            let chargeId = $('#charges_select').val();
+            let chargeText = $('#charges_select option:selected').text();
+            let amount = parseFloat($('#charge_amount').val());
+            let taxType = $('#charge_tax_type').val();
 
-                $('#grand_total').text(finalTotal.toFixed(2));
-                $('#grand_total_input').val(finalTotal.toFixed(2));
-
-                let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
-                let dueAmount = finalTotal - receivedAmount;
-
-                $('#due_amount').text(dueAmount.toFixed(2));
-                $('#due_amount_input').val(dueAmount.toFixed(2));
+            if (!chargeId) {
+                alert("Please select a charge");
+                return;
             }
 
-            function refreshChargeDropdownState() {
-                let selectedChargeIds = [];
-                $('#added_charges_list tr').each(function () {
-                    let id = $(this).data('charge-id');
-                    if (id) selectedChargeIds.push(id.toString());
-                });
+            if (!amount || amount <= 0) {
+                alert("Please enter a valid amount");
+                return;
+            }
 
-                $('#charges_select option').each(function () {
-                    let optionId = $(this).val();
-                    if (optionId) {
-                        if (selectedChargeIds.includes(optionId.toString())) {
-                            $(this).prop('disabled', true);
-                        } else {
-                            $(this).prop('disabled', false);
-                        }
+            $('#charges_table').removeClass('d-none');
+
+            let row = `
+                        <tr class="charge-row" data-charge-id="${chargeId}" data-tax-type="${taxType}">
+                            <td>
+                                ${chargeText}
+                                <input type="hidden" name="charges[charge_id][]" value="${chargeId}">
+                                <input type="hidden" name="charges[name][]" value="${chargeText}">
+                            </td>
+                            <td>
+                                ${taxType}
+                                <input type="hidden" name="charges[tax_type][]" value="${taxType}">
+                            </td>
+                            <td>
+                                ${amount.toFixed(2)}
+                                <input type="hidden" name="charges[amount][]" value="${amount.toFixed(2)}">
+                            </td>
+                            <td class="d-flex align-items-center">
+                                <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
+                                    <i class="ri ri-pencil-line"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
+                                    <i class="ri ri-delete-bin-line"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+
+            $('#added_charges_list').append(row);
+
+            $('#charges_select').val('').trigger('change');
+            $('#charge_amount').val('');
+
+            calculateChargesOnly();
+            refreshChargeDropdownState();
+        });
+
+        $(document).on('click', '.edit-charge', function () {
+            let $row = $(this).closest('tr');
+            let chargeId = $row.data('charge-id');
+            let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
+            let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Post-GST';
+
+            // Populate inputs
+            $('#charges_select').val(chargeId).trigger('change');
+            $('#charge_amount').val(amount.toFixed(2));
+            $('#charge_tax_type').val(taxType).trigger('change');
+
+            // Remove the row
+            $row.remove();
+
+            // Recalculate and refresh
+            if ($('#added_charges_list tr').length === 0) {
+                $('#charges_table').addClass('d-none');
+            }
+            calculateChargesOnly();
+            refreshChargeDropdownState();
+        });
+
+
+        $(document).on("click", ".remove-charge", function () {
+            let $row = $(this).closest('tr');
+            let chargeId = $row.data('charge-id');
+            let invoiceChargeId = $row.data('invoice-charge-id');
+
+            if (invoiceChargeId) {
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "Do you really want to delete this charge?",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#8c57ff",
+                    cancelButtonColor: "#ff4c51",
+                    confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Deleting...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        $.ajax({
+                            url: "{{ url('purchase_invoices/delete-charge') }}/" + invoiceChargeId,
+                            type: "DELETE",
+                            data: {
+                                _token: "{{ csrf_token() }}"
+                            },
+                            success: function (response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Deleted!',
+                                        text: 'Charge has been deleted.',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    });
+
+                                    $row.remove();
+
+                                    if ($('#added_charges_list tr').length === 0) {
+                                        $('#charges_table').addClass('d-none');
+                                    }
+
+                                    calculateTotals();
+                                    refreshChargeDropdownState();
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error!',
+                                        text: response.message || 'Failed to delete charge'
+                                    });
+                                }
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: 'Failed to delete charge: ' + (xhr.responseJSON?.message || 'Unknown error')
+                                });
+                            }
+                        });
                     }
                 });
-
+            } else {
+                $('#charges_select').find('option[value="' + chargeId + '"]').prop('disabled', false);
                 $('#charges_select').select2('destroy').select2({
                     width: '100%',
                     dropdownParent: $('body')
                 });
-            }
 
-            function loadCharges() {
-                $.ajax({
-                    url: "{{ url('get_charges') }}",
-                    type: "GET",
-                    success: function (data) {
-                        let select = $('#charges_select');
-                        select.empty();
-                        select.append('<option value="">Select Charge</option>');
-
-                        data.forEach(function (charge) {
-                            select.append(`<option value="${charge.id}">${charge.charge_name}</option>`);
-                        });
-                        refreshChargeDropdownState();
-                    }
-                });
-            }
-            loadCharges();
-            $('#add_charge_btn').click(function () {
-                let chargeId = $('#charges_select').val();
-                let chargeText = $('#charges_select option:selected').text();
-                let amount = parseFloat($('#charge_amount').val());
-                let taxType = $('#charge_tax_type').val();
-
-                if (!chargeId) {
-                    alert("Please select a charge");
-                    return;
-                }
-
-                if (!amount || amount <= 0) {
-                    alert("Please enter a valid amount");
-                    return;
-                }
-
-                $('#charges_table').removeClass('d-none');
-
-                let row = `
-                            <tr class="charge-row" data-charge-id="${chargeId}" data-tax-type="${taxType}">
-                                <td>
-                                    ${chargeText}
-                                    <input type="hidden" name="charges[charge_id][]" value="${chargeId}">
-                                    <input type="hidden" name="charges[name][]" value="${chargeText}">
-                                </td>
-                                <td>
-                                    ${taxType}
-                                    <input type="hidden" name="charges[tax_type][]" value="${taxType}">
-                                </td>
-                                <td>
-                                    ${amount.toFixed(2)}
-                                    <input type="hidden" name="charges[amount][]" value="${amount.toFixed(2)}">
-                                </td>
-                                <td class="d-flex align-items-center">
-                                    <button type="button" class="btn btn-outline-success btn-sm edit-charge me-1" title="Edit Charge">
-                                        <i class="ri ri-pencil-line"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-charge" title="Delete Charge">
-                                        <i class="ri ri-delete-bin-line"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-
-                $('#added_charges_list').append(row);
-
-                $('#charges_select').val('').trigger('change');
-                $('#charge_amount').val('');
-
-                calculateChargesOnly();
-                refreshChargeDropdownState();
-            });
-
-            $(document).on('click', '.edit-charge', function () {
-                let $row = $(this).closest('tr');
-                let chargeId = $row.data('charge-id');
-                let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
-                let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Post-GST';
-
-                // Populate inputs
-                $('#charges_select').val(chargeId).trigger('change');
-                $('#charge_amount').val(amount.toFixed(2));
-                $('#charge_tax_type').val(taxType).trigger('change');
-
-                // Remove the row
                 $row.remove();
 
-                // Recalculate and refresh
                 if ($('#added_charges_list tr').length === 0) {
                     $('#charges_table').addClass('d-none');
                 }
-                calculateChargesOnly();
-                refreshChargeDropdownState();
-            });
 
-
-            $(document).on("click", ".remove-charge", function () {
-                let $row = $(this).closest('tr');
-                let chargeId = $row.data('charge-id');
-                let invoiceChargeId = $row.data('invoice-charge-id');
-
-                if (invoiceChargeId) {
-                    Swal.fire({
-                        title: "Are you sure?",
-                        text: "Do you really want to delete this charge?",
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#8c57ff",
-                        cancelButtonColor: "#ff4c51",
-                        confirmButtonText: "Yes, delete it!"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            Swal.fire({
-                                title: 'Deleting...',
-                                allowOutsideClick: false,
-                                didOpen: () => {
-                                    Swal.showLoading();
-                                }
-                            });
-
-                            $.ajax({
-                                url: "{{ url('purchase_invoices/delete-charge') }}/" + invoiceChargeId,
-                                type: "DELETE",
-                                data: {
-                                    _token: "{{ csrf_token() }}"
-                                },
-                                success: function (response) {
-                                    if (response.success) {
-                                        Swal.fire({
-                                            icon: 'success',
-                                            title: 'Deleted!',
-                                            text: 'Charge has been deleted.',
-                                            timer: 1500,
-                                            showConfirmButton: false
-                                        });
-
-                                        $row.remove();
-
-                                        if ($('#added_charges_list tr').length === 0) {
-                                            $('#charges_table').addClass('d-none');
-                                        }
-
-                                        calculateTotals();
-                                        refreshChargeDropdownState();
-                                    } else {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Error!',
-                                            text: response.message || 'Failed to delete charge'
-                                        });
-                                    }
-                                },
-                                error: function (xhr) {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error!',
-                                        text: 'Failed to delete charge: ' + (xhr.responseJSON?.message || 'Unknown error')
-                                    });
-                                }
-                            });
-                        }
-                    });
-                } else {
-                    $('#charges_select').find('option[value="' + chargeId + '"]').prop('disabled', false);
-                    $('#charges_select').select2('destroy').select2({
-                        width: '100%',
-                        dropdownParent: $('body')
-                    });
-
-                    $row.remove();
-
-                    if ($('#added_charges_list tr').length === 0) {
-                        $('#charges_table').addClass('d-none');
-                    }
-
-                    calculateTotals();
-                    refreshChargeDropdownState();
-                }
-            });
-
-            function updateOtherCharges() {
-                let total = 0;
-
-                $('#added_charges_list tr').each(function () {
-                    let amt = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-                    total += amt;
-                });
-
-                $('#other_charges').text(total.toFixed(2));
-                $('#other_charges_input').val(total.toFixed(2));
-            }
-
-            function calculateTaxOnly() {
-
-                let itemTotal = (parseFloat($('#sub_total_input').val()) || 0) - (parseFloat($('#discount_amount_input').val()) || 0);
-
-                let preGstCharges = 0;
-                let postGstCharges = 0;
-                $('.charge-row').each(function () {
-                    let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-                    let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
-                    if (taxType === 'Pre-GST') {
-                        preGstCharges += amount;
-                    } else {
-                        postGstCharges += amount;
-                    }
-                });
-
-                let taxableAmount = itemTotal + preGstCharges;
-                $('#total').text(taxableAmount.toFixed(2));
-                $('#taxable_amount_input').val(taxableAmount.toFixed(2));
-
-                let taxAmount = 0;
-
-                if ($('input[name="other_state"]:checked').val() === 'Y') {
-
-                    let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                    let igstAmount = (taxableAmount * igstPercent) / 100;
-
-                    $('#igst_amt').text(igstAmount.toFixed(2));
-                    $('#igst_amount_input').val(igstAmount.toFixed(2));
-
-                    $('#cgst_amt').text('0.00');
-                    $('#sgst_amt').text('0.00');
-
-                    taxAmount = igstAmount;
-
-                } else {
-
-                    let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
-                    let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
-                    let cgstAmount = (taxableAmount * cgstPercent) / 100;
-                    let sgstAmount = (taxableAmount * sgstPercent) / 100;
-                    $('#cgst_amt').text(cgstAmount.toFixed(2));
-                    $('#sgst_amt').text(sgstAmount.toFixed(2));
-                    $('#cgst_amount_input').val(cgstAmount.toFixed(2));
-                    $('#sgst_amount_input').val(sgstAmount.toFixed(2));
-                    $('#igst_amt').text('0.00');
-                    taxAmount = cgstAmount + sgstAmount;
-                }
-
-                let totalOtherCharges = preGstCharges + postGstCharges;
-
-                $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
-                $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
-
-                $('#post_gst_total_display').text(postGstCharges.toFixed(2));
-                $('#other_charges_input').val(postGstCharges.toFixed(2));
-
-                let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
-
-                let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
-                let roundOffType = $('input[name="round_off_type"]:checked').val();
-                let finalTotal = 0;
-
-                if (roundOffType === 'Add') {
-                    finalTotal = totalBeforeRoundOff + roundOffAmount;
-                } else {
-                    finalTotal = totalBeforeRoundOff - roundOffAmount;
-                }
-
-                $('#grand_total').text(finalTotal.toFixed(2));
-                $('#grand_total_input').val(finalTotal.toFixed(2));
-
-                let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
-                let dueAmount = finalTotal - receivedAmount;
-
-                $('#due_amount').text(dueAmount.toFixed(2));
-                $('#due_amount_input').val(dueAmount.toFixed(2));
-            }
-
-
-            function calculateChargesOnly() {
                 calculateTotals();
+                refreshChargeDropdownState();
+            }
+        });
+
+        function updateOtherCharges() {
+            let total = 0;
+
+            $('#added_charges_list tr').each(function () {
+                let amt = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                total += amt;
+            });
+
+            $('#other_charges').text(total.toFixed(2));
+            $('#other_charges_input').val(total.toFixed(2));
+        }
+
+        function calculateTaxOnly() {
+
+            let itemTotal = (parseFloat($('#sub_total_input').val()) || 0) - (parseFloat($('#discount_amount_input').val()) || 0);
+
+            let preGstCharges = 0;
+            let postGstCharges = 0;
+            $('.charge-row').each(function () {
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                if (taxType === 'Pre-GST') {
+                    preGstCharges += amount;
+                } else {
+                    postGstCharges += amount;
+                }
+            });
+
+            let taxableAmount = itemTotal + preGstCharges;
+            $('#total').text(taxableAmount.toFixed(2));
+            $('#taxable_amount_input').val(taxableAmount.toFixed(2));
+
+            let taxAmount = 0;
+
+            if ($('input[name="other_state"]:checked').val() === 'Y') {
+
+                let igstPercent = parseFloat($('#igst_percent').val()) || 0;
+                let igstAmount = (taxableAmount * igstPercent) / 100;
+
+                $('#igst_amt').text(igstAmount.toFixed(2));
+                $('#igst_amount_input').val(igstAmount.toFixed(2));
+
+                $('#cgst_amt').text('0.00');
+                $('#sgst_amt').text('0.00');
+
+                taxAmount = igstAmount;
+
+            } else {
+
+                let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
+                let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
+                let cgstAmount = (taxableAmount * cgstPercent) / 100;
+                let sgstAmount = (taxableAmount * sgstPercent) / 100;
+                $('#cgst_amt').text(cgstAmount.toFixed(2));
+                $('#sgst_amt').text(sgstAmount.toFixed(2));
+                $('#cgst_amount_input').val(cgstAmount.toFixed(2));
+                $('#sgst_amount_input').val(sgstAmount.toFixed(2));
+                $('#igst_amt').text('0.00');
+                taxAmount = cgstAmount + sgstAmount;
             }
 
-            function calculateItemSubtotal() {
-                let subTotal = 0;
+            let totalOtherCharges = preGstCharges + postGstCharges;
 
-                $('.item-row').each(function () {
-                    let $row = $(this);
-                    let isChecked = $row.find('.item-checkbox').is(':checked');
+            $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
+            $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
 
-                    if (!isChecked) return;
+            $('#post_gst_total_display').text(postGstCharges.toFixed(2));
+            $('#other_charges_input').val(postGstCharges.toFixed(2));
 
-                    let qty = parseFloat($row.find('.item-quantity').val()) || 0;
-                    let rate = parseFloat($row.find('.item-rate').val()) || 0;
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
 
-                    let amount = qty * rate;
-                    $row.find('.item-amount').text(amount.toFixed(2));
+            let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let finalTotal = 0;
 
-                    subTotal += amount;
-                });
-
-                $('#subtotal').text(subTotal.toFixed(2));
-                $('#sub_total_input').val(subTotal.toFixed(2));
+            if (roundOffType === 'Add') {
+                finalTotal = totalBeforeRoundOff + roundOffAmount;
+            } else {
+                finalTotal = totalBeforeRoundOff - roundOffAmount;
             }
 
-            function calculateSummaryOnly() {
-                let subTotal = parseFloat($('#sub_total_input').val()) || 0;
+            $('#grand_total').text(finalTotal.toFixed(2));
+            $('#grand_total_input').val(finalTotal.toFixed(2));
 
-                let discountPercent = parseFloat($('#discount_input').val()) || 0;
-                let discountAmount = (subTotal * discountPercent) / 100;
+            let receivedAmount = parseFloat($('#received_amount_input').val()) || 0;
+            let dueAmount = finalTotal - receivedAmount;
 
-                $('#discount_value').text(discountAmount.toFixed(2));
-                $('#discount_amount_input').val(discountAmount.toFixed(2));
+            $('#due_amount').text(dueAmount.toFixed(2));
+            $('#due_amount_input').val(dueAmount.toFixed(2));
+        }
 
-                let commissionPercent = parseFloat($('#commission_input').val()) || 0;
-                let commissionAmount = (subTotal * commissionPercent) / 100;
-                $('#commission_value').text(commissionAmount.toFixed(2));
-                $('#commission_amount_input').val(commissionAmount.toFixed(2));
 
-                let itemTotal = subTotal - discountAmount - commissionAmount;
+        function calculateChargesOnly() {
+            calculateTotals();
+        }
 
-                let preGstCharges = 0;
-                let postGstCharges = 0;
-                $('.charge-row').each(function () {
-                    let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-                    let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
-                    if (taxType === 'Pre-GST') {
-                        preGstCharges += amount;
-                    } else {
-                        postGstCharges += amount;
+        function calculateItemSubtotal() {
+            let subTotal = 0;
+
+            $('.item-row').each(function () {
+                let $row = $(this);
+                let isChecked = $row.find('.item-checkbox').is(':checked');
+
+                if (!isChecked) return;
+
+                let qty = parseFloat($row.find('.item-quantity').val()) || 0;
+                let rate = parseFloat($row.find('.item-rate').val()) || 0;
+
+                let amount = qty * rate;
+                $row.find('.item-amount').text(amount.toFixed(2));
+
+                subTotal += amount;
+            });
+
+            $('#subtotal').text(subTotal.toFixed(2));
+            $('#sub_total_input').val(subTotal.toFixed(2));
+        }
+
+        function calculateSummaryOnly() {
+            let subTotal = parseFloat($('#sub_total_input').val()) || 0;
+
+            let discountPercent = parseFloat($('#discount_input').val()) || 0;
+            let discountAmount = (subTotal * discountPercent) / 100;
+
+            $('#discount_value').text(discountAmount.toFixed(2));
+            $('#discount_amount_input').val(discountAmount.toFixed(2));
+
+            let commissionPercent = parseFloat($('#commission_input').val()) || 0;
+            let commissionAmount = (subTotal * commissionPercent) / 100;
+            $('#commission_value').text(commissionAmount.toFixed(2));
+            $('#commission_amount_input').val(commissionAmount.toFixed(2));
+
+            let itemTotal = subTotal - discountAmount - commissionAmount;
+
+            let preGstCharges = 0;
+            let postGstCharges = 0;
+            $('.charge-row').each(function () {
+                let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
+                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                if (taxType === 'Pre-GST') {
+                    preGstCharges += amount;
+                } else {
+                    postGstCharges += amount;
+                }
+            });
+
+            let taxableAmount = itemTotal + preGstCharges;
+            $('#total').text(taxableAmount.toFixed(2));
+            $('#taxable_amount_input').val(taxableAmount.toFixed(2));
+
+            let taxAmount = 0;
+
+            if ($('input[name="other_state"]:checked').val() === 'Y') {
+                let igstPercent = parseFloat($('#igst_percent').val()) || 0;
+                taxAmount = (taxableAmount * igstPercent) / 100;
+                $('#igst_amt').text(taxAmount.toFixed(2));
+            } else {
+                let cgst = (taxableAmount * (parseFloat($('#cgst_percent').val()) || 0)) / 100;
+                let sgst = (taxableAmount * (parseFloat($('#sgst_percent').val()) || 0)) / 100;
+                taxAmount = cgst + sgst;
+                $('#cgst_amt').text(cgst.toFixed(2));
+                $('#sgst_amt').text(sgst.toFixed(2));
+            }
+
+            $('#tax_amount').text(taxAmount.toFixed(2));
+            $('#tax_amount_input').val(taxAmount.toFixed(2));
+
+            let totalOtherCharges = preGstCharges + postGstCharges;
+
+            $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
+            $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
+
+            $('#post_gst_total_display').text(postGstCharges.toFixed(2));
+            $('#other_charges_input').val(postGstCharges.toFixed(2));
+
+            let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
+
+            let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
+            let roundOffType = $('input[name="round_off_type"]:checked').val();
+            let finalTotal = 0;
+
+            if (roundOffType === 'Add') {
+                finalTotal = totalBeforeRoundOff + roundOffAmount;
+            } else {
+                finalTotal = totalBeforeRoundOff - roundOffAmount;
+            }
+
+            $('#grand_total').text(finalTotal.toFixed(2));
+            $('#grand_total_input').val(finalTotal.toFixed(2));
+
+            let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
+            let newPayment = parseFloat($('#received_amount_input').val()) || 0;
+            let due = finalTotal - paidSoFar - newPayment;
+
+            $('#due_amount').text(due.toFixed(2));
+            $('#due_amount_input').val(due.toFixed(2));
+        }
+
+        @if(isset($invoice))
+            $('#view_history_btn').click(function (e) {
+                e.preventDefault();
+                let invoiceId = "{{ $invoice->id }}";
+                $('#payment_history_body').html('<tr><td colspan="2" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading history...</td></tr>');
+                $('#paymentHistoryModal').modal('show');
+
+                $.ajax({
+                    url: "{{ url('purchase_invoices/payment-history') }}/" + invoiceId,
+                    type: "GET",
+                    success: function (response) {
+                        if (response.success) {
+                            let html = "";
+                            let total = 0;
+                            response.payments.forEach(function (payment) {
+                                let date = new Date(payment.payment_date);
+                                let formattedDate = date.toLocaleString('en-IN', {
+                                    day: '2-digit', month: '2-digit', year: 'numeric',
+                                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                    hour12: true
+                                });
+                                html += `
+                                        <tr>
+                                            <td>${formattedDate}</td>
+                                            <td class="text-end fw-bold">₹${parseFloat(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                        </tr>`;
+                                total += parseFloat(payment.amount);
+                            });
+
+                            if (response.payments.length === 0) {
+                                html = '<tr><td colspan="2" class="text-center py-3 text-muted">No transaction logs found</td></tr>';
+                            }
+
+                            $('#payment_history_body').html(html);
+                            $('#history_total_paid').text('₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
+                        }
+                    },
+                    error: function () {
+                        $('#payment_history_body').html('<tr><td colspan="2" class="text-center text-danger py-3">Error loading history</td></tr>');
                     }
                 });
-
-                let taxableAmount = itemTotal + preGstCharges;
-                $('#total').text(taxableAmount.toFixed(2));
-                $('#taxable_amount_input').val(taxableAmount.toFixed(2));
-
-                let taxAmount = 0;
-
-                if ($('input[name="other_state"]:checked').val() === 'Y') {
-                    let igstPercent = parseFloat($('#igst_percent').val()) || 0;
-                    taxAmount = (taxableAmount * igstPercent) / 100;
-                    $('#igst_amt').text(taxAmount.toFixed(2));
-                } else {
-                    let cgst = (taxableAmount * (parseFloat($('#cgst_percent').val()) || 0)) / 100;
-                    let sgst = (taxableAmount * (parseFloat($('#sgst_percent').val()) || 0)) / 100;
-                    taxAmount = cgst + sgst;
-                    $('#cgst_amt').text(cgst.toFixed(2));
-                    $('#sgst_amt').text(sgst.toFixed(2));
-                }
-
-                $('#tax_amount').text(taxAmount.toFixed(2));
-                $('#tax_amount_input').val(taxAmount.toFixed(2));
-
-                let totalOtherCharges = preGstCharges + postGstCharges;
-
-                $('#pre_gst_total_display').text(preGstCharges.toFixed(2));
-                $('#pre_gst_total_input').val(preGstCharges.toFixed(2));
-
-                $('#post_gst_total_display').text(postGstCharges.toFixed(2));
-                $('#other_charges_input').val(postGstCharges.toFixed(2));
-
-                let totalBeforeRoundOff = parseFloat((taxableAmount + taxAmount + postGstCharges).toFixed(2));
-
-                let roundOffAmount = parseFloat($('#round_off_input').val()) || 0;
-                let roundOffType = $('input[name="round_off_type"]:checked').val();
-                let finalTotal = 0;
-
-                if (roundOffType === 'Add') {
-                    finalTotal = totalBeforeRoundOff + roundOffAmount;
-                } else {
-                    finalTotal = totalBeforeRoundOff - roundOffAmount;
-                }
-
-                $('#grand_total').text(finalTotal.toFixed(2));
-                $('#grand_total_input').val(finalTotal.toFixed(2));
-
-                let paidSoFar = parseFloat($('#paid_so_far_input').val()) || 0;
-                let newPayment = parseFloat($('#received_amount_input').val()) || 0;
-                let due = finalTotal - paidSoFar - newPayment;
-
-                $('#due_amount').text(due.toFixed(2));
-                $('#due_amount_input').val(due.toFixed(2));
-            }
-
-            @if(isset($invoice))
-                $('#view_history_btn').click(function (e) {
-                    e.preventDefault();
-                    let invoiceId = "{{ $invoice->id }}";
-                    $('#payment_history_body').html('<tr><td colspan="2" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading history...</td></tr>');
-                    $('#paymentHistoryModal').modal('show');
-
-                    $.ajax({
-                        url: "{{ url('purchase_invoices/payment-history') }}/" + invoiceId,
-                        type: "GET",
-                        success: function (response) {
-                            if (response.success) {
-                                let html = "";
-                                let total = 0;
-                                response.payments.forEach(function (payment) {
-                                    let date = new Date(payment.payment_date);
-                                    let formattedDate = date.toLocaleString('en-IN', {
-                                        day: '2-digit', month: '2-digit', year: 'numeric',
-                                        hour: '2-digit', minute: '2-digit', second: '2-digit',
-                                        hour12: true
-                                    });
-                                    html += `
-                                            <tr>
-                                                <td>${formattedDate}</td>
-                                                <td class="text-end fw-bold">₹${parseFloat(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                            </tr>`;
-                                    total += parseFloat(payment.amount);
-                                });
-
-                                if (response.payments.length === 0) {
-                                    html = '<tr><td colspan="2" class="text-center py-3 text-muted">No transaction logs found</td></tr>';
-                                }
-
-                                $('#payment_history_body').html(html);
-                                $('#history_total_paid').text('₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
-                            }
-                        },
-                        error: function () {
-                            $('#payment_history_body').html('<tr><td colspan="2" class="text-center text-danger py-3">Error loading history</td></tr>');
-                        }
-                    });
-                });
-            @endif
-
-            $(document).on('change', 'input[name="round_off_type"]', function () {
-                calculateSummaryOnly();
             });
+        @endif
 
-            $('form.common-form').on('submit', function (e) {
-                let hasSelectedItems = $('.item-checkbox:checked').length > 0;
-                if (!hasSelectedItems && $('#purchase_order').val()) {
-                    e.preventDefault();
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Validation Error',
-                        text: 'Please select at least one item from the Item Details section before submitting.',
-                        confirmButtonColor: '#8c57ff'
-                    });
-                    return false;
-                }
-            });
+        $(document).on('change', 'input[name="round_off_type"]', function () {
+            calculateSummaryOnly();
         });
-    </script>
+
+        $('form.common-form').on('submit', function (e) {
+            let hasSelectedItems = $('.item-checkbox:checked').length > 0;
+            if (!hasSelectedItems && $('#purchase_order').val()) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Validation Error',
+                    text: 'Please select at least one item from the Item Details section before submitting.',
+                    confirmButtonColor: '#8c57ff'
+                });
+                return false;
+            }
+        });
+    });
+</script>
 @endsection
