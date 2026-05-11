@@ -592,6 +592,7 @@
 
             $(document).on('click', '.add-split-row', function() {
                 let originalRow = $(this).closest('.item-row');
+                let selectedFabricTypeId = originalRow.find('input[name*="[fabric_type_id]"]').val() || originalRow.find('.fabric-type-cell select').val() || '';
                 $('.item-row').each(function() {
                     let idx = parseInt($(this).attr('data-index'));
                     if (idx > maxIndex) maxIndex = idx;
@@ -627,6 +628,9 @@
                 newRow.find('.select2-container').remove();
                 newRow.find('.select2').removeClass('select2-hidden-accessible').removeAttr('data-select2-id').find('option').removeAttr('data-select2-id');
                 newRow.find('.variants-data-container').empty();
+                newRow.find('input[name*="[fabric_type_id]"]').val(selectedFabricTypeId);
+                newRow.find('.fabric-type-cell select').val(selectedFabricTypeId).attr('data-val', selectedFabricTypeId);
+
                 newRow.find('.btn-variants').prop('disabled', true);
                 newRow.find('.split-summary-area').empty();
                 newRow.find('.add-split-row').removeClass('btn-outline-info add-split-row').addClass('btn-outline-danger remove-split-row').attr('title', 'Remove this split row').html('<i class="ri ri-subtract-line"></i>');
@@ -660,6 +664,7 @@
 
                 newRow.insertAfter(lastRowInGroup);
                 initSelect2();
+                newRow.find('.fabric-type-cell select').val(selectedFabricTypeId).trigger('change.select2');
                 updateGroupBalances(piId);
                 validateForm();
                 updateSerialNumbers();

@@ -78,7 +78,7 @@
 
         .mfg-lot { font-size: 8.5pt; font-weight: bold; line-height: 1.4; margin-top: 1mm; }
 
-        .qr-section { width: 18mm; text-align: center; }
+        .qr-section { width: 17mm; text-align: center; }
         .sku-text { font-size: 9pt; font-weight: bold; margin-top: 1mm; letter-spacing: 0.2px; }
 
         /* Footer */

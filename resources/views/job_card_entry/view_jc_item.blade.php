@@ -463,6 +463,8 @@ $(document).ready(function() {
         const qtyAdjusted = button.attr('data-qty-adjusted') || currentRow.find('.col-qty-adjusted').text() || '0.00';
         const qtyWastage = button.attr('data-qty-wastage') || currentRow.find('.col-qty-wastage').text() || '0.00';
         const qtyUsed = button.attr('data-qty-used') || currentRow.find('.col-qty-used').text() || '0.00';
+        console.log(button.attr('data-produced-qty'));
+        console.log(currentRow.find('.col-qty-used').text());
         const producedQty = button.attr('data-produced-qty') || currentRow.find('.col-produced-qty').text() || '0.00';
 
         $('#modal_store').val(store);

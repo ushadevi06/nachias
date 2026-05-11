@@ -96,8 +96,14 @@
             <form id="formAdjustment" autocomplete="off">
                 @csrf
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="input-group input-group-merge">
+                            <span class="input-group-text" id="basic-addon-search31"><i class="ri-search-line"></i></span>
+                            <input type="text" id="adjustment-search" class="form-control" placeholder="Search by Category, Material or Art No..." aria-label="Search..." aria-describedby="basic-addon-search31">
+                        </div>
+                    </div>
                     <div class="table-responsive">
-                        <table class="table table-bordered table-sm">
+                        <table class="table table-bordered table-sm" id="adjustment-table">
                             <thead class="bg-light">
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="check-all"></th>
@@ -222,6 +228,7 @@
         let btn = $(this);
         let entryId = btn.data('entry-id');
         let $body = $('#adjustment-items-body');
+        $('#adjustment-search').val('');
         $body.html('<tr><td colspan="8" class="text-center"><span class="spinner-border spinner-border-sm" role="status"></span> Loading items...</td></tr>');
         $('#check-all').prop('checked', false);
         $('#modalAdjustment').modal('show');
@@ -254,7 +261,7 @@
     });
 
     $(document).on('change', '#check-all', function() {
-        $('.item-check').prop('checked', $(this).prop('checked')).trigger('change');
+        $('.item-check:visible').prop('checked', $(this).prop('checked')).trigger('change');
     });
 
     $(document).on('change', '.item-check', function() {
@@ -323,6 +330,30 @@
                 btn.prop('disabled', false).html('Adjust Stock');
             }
         });
+    });
+
+    $(document).on('keyup', '#adjustment-search', function() {
+        let value = $(this).val().toLowerCase();
+        let $rows = $('#adjustment-items-body tr:not(.no-result-row)');
+        let matchCount = 0;
+
+        $rows.each(function() {
+            let category = $(this).find('td:nth-child(2)').text().toLowerCase();
+            let material = $(this).find('td:nth-child(3)').text().toLowerCase();
+            let artNo = $(this).find('td:nth-child(4)').text().toLowerCase();
+            
+            if (category.indexOf(value) > -1 || material.indexOf(value) > -1 || artNo.indexOf(value) > -1) {
+                $(this).show();
+                matchCount++;
+            } else {
+                $(this).hide();
+            }
+        });
+
+        $('#adjustment-items-body .no-result-row').remove();
+        if (matchCount === 0 && $rows.length > 0) {
+            $('#adjustment-items-body').append('<tr class="no-result-row"><td colspan="8" class="text-center fw-bold py-3 text-danger">Raw Material Not Found</td></tr>');
+        }
     });
     
 </script>

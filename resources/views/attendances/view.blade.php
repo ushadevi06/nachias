@@ -328,11 +328,9 @@
         fetchHolidays();
         function fetchHolidays() {
             const monthKey = attendanceDate.value.slice(0, 7);
-
-            fetch(`/holidays/${monthKey}`)
+            fetch(`${APP_URL}/holidays/${monthKey}`)
                 .then(res => res.json())
                 .then(data => {
-
                     // 🔹 Store in main config (for summary etc.)
                     declaredHolidaysByMonth[monthKey] = {
                         label: formatMonthYear(monthKey),
@@ -342,17 +340,13 @@
                             name: item.name
                         }))
                     };
-
                     // ✅ IMPORTANT: Sync selection state
                     selectedHolidayDates = data.map(item => item.date);
-
                     selectedHolidayNames = {};
                     data.forEach(item => {
                         selectedHolidayNames[item.date] = item.name;
                     });
-
                     activeHolidayMonthKey = monthKey;
-
                     renderHolidayPanel(); // re-render UI
                 });
         }
@@ -586,7 +580,7 @@
         }
 
         function populateStaffEmployeeOptions() {
-            fetch('/get-employees')
+            fetch(`${APP_URL}/get-employees`)
             .then(res => res.json())
             .then(data => {
                 if (!data.length) {
@@ -751,7 +745,7 @@
             staffReportGenerateButton.disabled = true;
             staffReportGenerateButton.innerHTML =
                 '<span class="spinner-border spinner-border-sm"></span> Loading...';
-            fetch('/staff-report', {
+            fetch(`${APP_URL}/staff-report`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1235,7 +1229,7 @@
                 <span class="spinner-border spinner-border-sm me-2"></span>
                 Saving...
             `;
-            fetch('/holidays/save', {
+            fetch(`${APP_URL}/holidays/save`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1372,7 +1366,7 @@
             syncButton.disabled = true;
             syncButtonLabel.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Syncing...';
 
-            fetch('/sync-attendance', {
+            fetch(`${APP_URL}/sync-attendance`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
