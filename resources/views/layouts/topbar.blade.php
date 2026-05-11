@@ -715,7 +715,7 @@ $isSuper = $user->id == 1;
                                             @if($isSuper || $user->can('view overtime-bonus'))
                                                 <li class="menu-item {{ request()->is('overtime*') ? 'active' : '' }}">
                                                     <a href="{{ url('overtime') }}" class="menu-link">
-                                                        <div>Overtime / Bonus</div>
+                                                        <div>Overtime</div>
                                                     </a>
                                                 </li>
                                             @endif

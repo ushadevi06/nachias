@@ -8,74 +8,72 @@
             <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
         </a>
     </div>
+    <div class="col-lg-12">
+        @include('flash_messages')
+    </div>
     <div class="card">
         <div class="card-body">
             <div class="card-datatable">
-                <table class="datatables-products table">
+                <table class="table nowrap w-100" id="leavesTable">
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Leave ID</th>
+                            {{-- <th>Leave ID</th> --}}
                             <th>Employee</th>
                             <th>Leave Type</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
+                            <th>Date</th>
+                            {{-- <th>End Date</th> --}}
                             <th>Approval Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>LV001</td>
-                            <td>Ramesh Kumar <span class="mini-title">(EMP001)</span></td>
-                            <td>Casual</td>
-                            <td>29-09-2025</td>
-                            <td>30-09-2025</td>
-                            <td><span class="badge bg-warning">Pending</span></td>
-                            <td>
-                                <div class="button-box">
-                                    <a href="{{ url('view_leave') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                    <a href="{{ url('add_leave') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                    <a href="javascript:;" class="btn btn-edit"><i class="icon-base ri ri-checkbox-circle-line"></i></a>
-                                    <a href="javascript:;" class="btn btn-delete delete-btn"><i class="icon-base ri ri-close-circle-line"></i></a>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>LV002</td>
-                            <td>Karthick <span class="mini-title">(EMP002)</span></td>
-                            <td>Sick</td>
-                            <td>26-09-2025</td>
-                            <td>26-09-2025</td>
-                            <td><span class="badge bg-success">Approved</span></td>
-                            <td>
-                                <div class="button-box">
-                                    <a href="{{ url('view_leave') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                    <a href="{{ url('add_leave') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>LV003</td>
-                            <td>Akash Mehta <span class="mini-title">(EMP003)</span></td>
-                            <td>Paid</td>
-                            <td>01-10-2025</td>
-                            <td>03-10-2025</td>
-                            <td><span class="badge bg-danger">Rejected</span></td>
-                            <td>
-                                <div class="button-box">
-                                    <a href="{{ url('view_leave') }}" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>
-                                    <a href="{{ url('add_leave') }}" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+$(function () {
+    let table = $('#leavesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: "{{ url('leave') }}",
+            data: function (d) {
+                d.status = $('#status').val();
+                d.date_range = $('#date_range').val();
+            }
+        },
+        columns: [
+            { data: 'DT_RowIndex' },
+            // { data: 'leave_id' },
+            { data: 'employee' },
+            { data: 'leave_type' },
+            { data: 'start_date' },
+            // { data: 'end_date' },
+            { data: 'status', orderable: false, searchable: false },
+            { data: 'action', orderable: false, searchable: false }
+        ]
+    });
+
+    $('#filterBtn').click(function () {
+        table.ajax.reload();
+    });
+
+    $('#resetBtn').click(function () {
+        $('#status').val('');
+        $('#date_range').val('');
+        table.ajax.reload();
+    });
+
+    // Date picker
+    $('#date_range').flatpickr({
+        mode: 'range',
+        dateFormat: 'd-m-Y'
+    });
+});
+</script>
 @endsection

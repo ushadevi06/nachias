@@ -399,6 +399,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Item Price */
     Route::get('item_prices', [ItemPriceController::class, 'index']);
+
     Route::match(['get', 'post'], 'item_prices/add/{id?}', [ItemPriceController::class, 'add']);
     Route::get('item_prices/delete/{id}', [ItemPriceController::class, 'destroy']);
     Route::post('item_prices/status/{id}', [ItemPriceController::class, 'updateStatus']);
@@ -599,17 +600,23 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /*  Attendance  */
     Route::get('attendances', [AttendanceController::class, 'index']);
-    Route::get('view_attendance', [AttendanceController::class, 'view']);
+    Route::get('view_attendance/{id}', [AttendanceController::class, 'view']);
+    Route::post('/sync-attendance', [AttendanceController::class, 'sync']);
+    Route::post('/holidays/save', [AttendanceController::class, 'saveHolidays']);
+    Route::get('/holidays/{month}', [AttendanceController::class, 'getHolidays']);
+    Route::post('/staff-report', [AttendanceController::class, 'getStaffReport']);
+    Route::get('/get-employees', [AttendanceController::class, 'getEmployees']);
 
     /*  Leave  */
     Route::get('leave', [LeaveController::class, 'index']);
     Route::get('add_leave', [LeaveController::class, 'add']);
-    Route::get('view_leave', [LeaveController::class, 'view']);
+    Route::post('/leaves/add/{id?}', [LeaveController::class, 'add']);
+    Route::get('view_leave/{id}', [LeaveController::class, 'view']);
 
     /* Overtime */
     Route::get('overtime', [OvertimeController::class, 'index']);
-    Route::get('add_overtime', [OvertimeController::class, 'add']);
-    Route::get('view_overtime', [OvertimeController::class, 'view']);
+    Route::get('edit_overtime/{date}', [OvertimeController::class, 'edit'])->name('edit_overtime');
+    Route::get('view_overtime/{date}/{emp_code}', [OvertimeController::class, 'view'])->name('view_overtime');
 
     /* Salary Calculation */
     Route::get('salary_calculation', [SalaryController::class, 'index']);

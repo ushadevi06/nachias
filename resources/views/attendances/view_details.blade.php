@@ -18,12 +18,34 @@
         <div class="col-lg-4">
             <div class="card shadow-sm border-0">
                 <div class="card-body text-center">
-                    <div class="avatar rounded-circle bg-primary text-white mx-auto mb-3" style="width:64px;height:64px;display:grid;place-items:center;">
-                        RK
+                    <div class="avatar rounded-circle bg-primary text-white mx-auto mb-3 d-flex align-items-center justify-content-center" style="width:64px;height:64px;">
+                        @php 
+                            $profileImagePath = $attendance->profile_image
+                                ? public_path('uploads/employee/' . $attendance->user_id . '/' . $attendance->profile_image)
+                                : null;
+                            $profileImageUrl = ($attendance->profile_image && file_exists($profileImagePath))
+                                ? url('uploads/employee/' . $attendance->user_id . '/' . $attendance->profile_image)
+                                : url('assets/images/user.jpg'); 
+                        @endphp
+                        <img src="{{ $profileImageUrl }}" 
+                            alt="alt" 
+                            class="rounded-circle"
+                            style="width:60px;height:60px;object-fit:cover;">
                     </div>
-                    <h5 class="mb-1">Ramesh Kumar</h5>
-                    <p class="text-muted mb-3">Employee Code: <strong>EMP001</strong></p>
-                    <span class="badge bg-success py-2 px-3">Present</span>
+                    <h5 class="mb-1">{{ $attendance->name }}</h5>
+                    <p class="text-muted mb-3">Employee Code: <strong>{{ $attendance->emp_id }}</strong></p>
+                    <span class="badge 
+                        @if($attendance->status === 'Present') bg-success
+                        @elseif($attendance->status === 'Late') bg-danger
+                        @elseif($attendance->status === 'Overtime') bg-warning text-dark
+                        @elseif($attendance->status === 'Absent') bg-danger
+                        @elseif($attendance->status === 'Punch Out Missing') bg-danger
+                        @elseif($attendance->status === 'Holiday') bg-primary
+                        @elseif($attendance->status === 'Week Off') bg-secondary
+                        @else bg-secondary
+                        @endif py-2 px-3">
+                        {{ $attendance->status }}
+                    </span>
                 </div>
             </div>
         </div>
@@ -35,7 +57,7 @@
                         <div class="col-sm-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <div class="text-muted small mb-1">Attendance Date</div>
-                                <div class="fw-semibold">27-09-2025</div>
+                                <div class="fw-semibold">{{ date('d-m-Y', strtotime($attendance->date)) }}</div>
                             </div>
                         </div>
                         <div class="col-sm-6">
@@ -47,27 +69,38 @@
                         <div class="col-sm-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <div class="text-muted small mb-1">In Time</div>
-                                <div class="fw-semibold">09:06 AM</div>
+                                <div class="fw-semibold">{{ date('h:i A', strtotime($attendance->in_time)) }}</div>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <div class="text-muted small mb-1">Out Time</div>
-                                <div class="fw-semibold">06:30 PM</div>
+                                <div class="fw-semibold">{{ date('h:i A', strtotime($attendance->out_time)) }}</div>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <div class="text-muted small mb-1">Total Hours</div>
-                                <div class="fw-semibold">9.0 hrs</div>
+                                <div class="fw-semibold">{{ $attendance->work_hours }} hrs</div>
                             </div>
                         </div>
-                        <div class="col-sm-6">
+                        {{-- <div class="col-sm-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <div class="text-muted small mb-1">Status</div>
-                                <div><span class="badge bg-success">Present</span></div>
+                                <div><span class="badge 
+                                    @if($attendance->status === 'Present') bg-success
+                                    @elseif($attendance->status === 'Late') bg-danger
+                                    @elseif($attendance->status === 'Overtime') bg-warning text-dark
+                                    @elseif($attendance->status === 'Absent') bg-danger
+                                    @elseif($attendance->status === 'Punch Out Missing') bg-danger
+                                    @elseif($attendance->status === 'Holiday') bg-primary
+                                    @elseif($attendance->status === 'Week Off') bg-secondary
+                                    @else bg-secondary
+                                    @endif">
+                                    {{ $attendance->status }}
+                                </span></div>
                             </div>
-                        </div>
+                        </div> --}}
                         <div class="col-12">
                             <div class="border rounded p-3 bg-white">
                                 <div class="text-muted small mb-1">Notes</div>

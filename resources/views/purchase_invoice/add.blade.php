@@ -165,8 +165,8 @@
                         @error('items')
                             <div class="alert alert-danger mt-2">{{ $message }}</div>
                         @enderror
-                        <div id="item-rows" class="table-responsive">
-                            <table class="table table-bordered align-middle">
+                        <div id="item-rows" class="table-responsive purchase-items-scroll">
+                            <table class="table table-bordered align-middle purchase-items-table">
                                 <thead>
                                     <tr>
                                         <th width="50px">
@@ -176,12 +176,12 @@
                                         <th>Raw Material</th>
                                         <th>Supplier Design Name</th>
                                         <th>Brand</th>
-                                        <th>HSN Code</th>
+                                        <th class="hsn-column">HSN Code</th>
                                         <th class="col-fabric">Fabric Width</th>
                                         <th class="col-fabric">Fabric Type</th>
                                         <th>Ordered Qty</th>
                                         <th>Balanced Qty</th>
-                                        <th>Invoiced Qty <span class="text-danger">*</span></th>
+                                        <th class="invoice-qty-column">Invoiced Qty <span class="text-danger">*</span></th>
                                         <th>UOM</th>
                                         <th>Rate</th>
                                         <th>Amount</th>
@@ -239,12 +239,14 @@
                                                 <td class="balanced-qty-display">
                                                     {{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}
                                                 </td>
-                                                <td>
+                                                
+                                                <td class="invoice-qty-column">
                                                     <input type="number" name="items[{{ $index }}][quantity]"
                                                         class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror"
                                                         value="{{ $item['quantity'] ?? '' }}" step="0.01"
                                                         data-max-qty="{{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}"
                                                         {{ isset($item['selected']) ? '' : 'readonly' }}>
+
                                                     <small class="text-secondary">
                                                         Note: Invoiced quantity should not exceed 50% of ordered quantity.
                                                     </small>
@@ -263,7 +265,7 @@
                                     @elseif(isset($invoice) && $invoice && $invoice->items->count())
                                         @foreach($invoice->items as $index => $invItem)
                                             @php
-    $balancedQty = $invItem->qty_ordered - $invItem->qty_invoiced;
+                                                $balancedQty = $invItem->qty_ordered - $invItem->qty_invoiced;
                                             @endphp
                                             <tr class="item-row">
                                                 <td>
@@ -326,7 +328,7 @@
                                                 <td class="qty-ordered-display">{{ $invItem->qty_ordered }}</td>
                                                 <td class="balanced-qty-display">{{ $balancedQty }}</td>
 
-                                                <td>
+                                                <td class="invoice-qty-column">
                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control form-control-sm item-quantity received-qty-input @error('items.' . $index . '.quantity') is-invalid @enderror" value="{{ $invItem->quantity }}" step="0.01" data-max-qty="{{ $balancedQty }}">
                                                     <small class="text-secondary">
                                                         Note: Invoiced quantity can exceed ordered quantity by up to 50% (Max:
@@ -598,10 +600,10 @@ $url = url('uploads/purchase_invoices/' . $invoice->auth_signature);
                                                 @if(!empty($invoice->attachments))
                                                     <div class="mt-2 preview-container">
                                                         @php
-$attachment = $invoice->attachments;
-$extension = pathinfo($attachment, PATHINFO_EXTENSION);
-$isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-$url = url('uploads/purchase_invoices/' . $invoice->attachments);
+                                                        $attachment = $invoice->attachments;
+                                                        $extension = pathinfo($attachment, PATHINFO_EXTENSION);
+                                                        $isImage = in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                                        $url = url('uploads/purchase_invoices/' . $invoice->attachments);
                                                         @endphp
 
                                                         @error('attachments')
@@ -630,35 +632,35 @@ $url = url('uploads/purchase_invoices/' . $invoice->attachments);
                                 </div>
                             </div>
                             @php
-$subTotal = old('sub_total', $invoice->sub_total ?? 0);
-$discountPercent = old('discount_percent', $invoice->discount_percent ?? 0);
-$discountAmount = old('discount_amount', $invoice->discount_amount ?? 0);
-$taxableAmount = old('taxable_amount', $invoice->taxable_amount ?? 0);
-$otherState = old('other_state', isset($invoice) && $invoice->other_state ? 'Y' : 'N');
-$igstPercent = old('igst_percent', $invoice->igst_percent ?? $web_settings->igst);
-$igstAmount = old('igst_amount', $invoice->igst_amount ?? 0);
-$cgstPercent = old('cgst_percent', $invoice->cgst_percent ?? $web_settings->cgst);
-$cgstAmount = old('cgst_amount', $invoice->cgst_amount ?? 0);
-$sgstPercent = old('sgst_percent', $invoice->sgst_percent ?? $web_settings->sgst);
-$sgstAmount = old('sgst_amount', $invoice->sgst_amount ?? 0);
-$taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
-$otherCharges = old('other_charges', $invoice->other_charges ?? 0);
-$roundOff = old('round_off', $invoice->round_off ?? 0);
-$roundOffType = old('round_off_type', $invoice->round_off_type ?? 'Add');
-$grandTotal = old('grand_total', $invoice->grand_total ?? 0);
-$receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
-$dueAmount = old('due_amount', $invoice->due_amount ?? 0);
+                                $subTotal = old('sub_total', $invoice->sub_total ?? 0);
+                                $discountPercent = old('discount_percent', $invoice->discount_percent ?? 0);
+                                $discountAmount = old('discount_amount', $invoice->discount_amount ?? 0);
+                                $taxableAmount = old('taxable_amount', $invoice->taxable_amount ?? 0);
+                                $otherState = old('other_state', isset($invoice) && $invoice->other_state ? 'Y' : 'N');
+                                $igstPercent = old('igst_percent', $invoice->igst_percent ?? $web_settings->igst);
+                                $igstAmount = old('igst_amount', $invoice->igst_amount ?? 0);
+                                $cgstPercent = old('cgst_percent', $invoice->cgst_percent ?? $web_settings->cgst);
+                                $cgstAmount = old('cgst_amount', $invoice->cgst_amount ?? 0);
+                                $sgstPercent = old('sgst_percent', $invoice->sgst_percent ?? $web_settings->sgst);
+                                $sgstAmount = old('sgst_amount', $invoice->sgst_amount ?? 0);
+                                $taxAmount = old('tax_amount', $invoice->tax_amount ?? 0);
+                                $otherCharges = old('other_charges', $invoice->other_charges ?? 0);
+                                $roundOff = old('round_off', $invoice->round_off ?? 0);
+                                $roundOffType = old('round_off_type', $invoice->round_off_type ?? 'Add');
+                                $grandTotal = old('grand_total', $invoice->grand_total ?? 0);
+                                $receivedAmt = old('received_amount', $invoice->received_amount ?? 0);
+                                $dueAmount = old('due_amount', $invoice->due_amount ?? 0);
 
-$preGstTotal = 0;
-$postGstTotal = 0;
-foreach ($chargesToLoop as $c) {
-$amt = is_array($c) ? ($c['amount'] ?? 0) : ($c->charge_amount ?? 0);
-$type = is_array($c) ? ($c['tax_type'] ?? 'Post-GST') : ($c->tax_type ?? 'Post-GST');
-if ($type === 'Pre-GST')
-    $preGstTotal += $amt;
-else
-    $postGstTotal += $amt;
-}
+                                $preGstTotal = 0;
+                                $postGstTotal = 0;
+                                foreach ($chargesToLoop as $c) {
+                                $amt = is_array($c) ? ($c['amount'] ?? 0) : ($c->charge_amount ?? 0);
+                                $type = is_array($c) ? ($c['tax_type'] ?? 'Post-GST') : ($c->tax_type ?? 'Post-GST');
+                                if ($type === 'Pre-GST')
+                                    $preGstTotal += $amt;
+                                else
+                                    $postGstTotal += $amt;
+                                }
                             @endphp
 
                             <div class="col-lg-6">
@@ -861,6 +863,35 @@ else
 
 @endsection
 @section('scripts')
+    <style>
+    .purchase-items-scroll {
+        overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .purchase-items-table {
+        min-width: 1600px;
+        table-layout: auto;
+    }
+
+    .purchase-items-table .hsn-column {
+        min-width: 170px;
+        width: 170px;
+    }
+
+    .purchase-items-table .item-hsn {
+        min-width: 140px;
+    }
+.purchase-items-table .invoice-qty-column {
+    min-width: 230px;
+    width: 230px;
+}
+
+.purchase-items-table .invoice-qty-column .item-quantity {
+    max-width: 160px;
+}
+</style>
     <script>
         @php
             // Determine if any existing item (edit/old mode) is from Fabric Store (id=1)
@@ -1026,7 +1057,7 @@ else
                                             <td>${item.raw_material_name}</td>
                                             <td>${item.art_no || '-'}</td>
                                             <td>${itemBrandSelect}</td>
-                                            <td>
+                                            <td class="hsn-column">
                                                 <input type="text" 
                                                     name="items[${index}][hsn_code]"
                                                     class="form-control form-control-sm item-hsn" 
@@ -1044,7 +1075,7 @@ else
                                             <td class="balanced-qty-display">${balancedQty.toFixed(2)}</td>
 
                                             <!-- Invoiced Qty (Input Field) -->
-                                            <td>
+                                            <td class="invoice-qty-column">
                                                 <input type="number" 
                                                     name="items[${index}][quantity]"
                                                     class="form-control form-control-sm item-quantity received-qty-input" 

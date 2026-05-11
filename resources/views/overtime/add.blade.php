@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'Add Overtime / Bouns - ' . env('WEBSITE_NAME'))
+@section('title', 'Add Overtime - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">

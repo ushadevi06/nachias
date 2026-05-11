@@ -38,14 +38,14 @@
                             </div>
                             <div class="col-sm-6 col-md-3">
                                 <div class="alert alert-info py-2 mb-0">
-                                    Select a device and click <strong>Sync Attendance</strong> to populate today's mock records.
+                                    Select a device and click <strong>Sync Attendance</strong> to populate records.
                                 </div>
                             </div>
                         </div>
                     </form>
 
                     <div class="row mt-4 g-3 align-items-center">
-                        <div class="col-md-8">
+                        <div class="col-md-10">
                             <ul class="nav nav-tabs" role="tablist">
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link active" id="viewAllButton" type="button" role="tab" aria-selected="true">All Attendance</button>
@@ -69,16 +69,16 @@
                             <span class="ms-3 text-muted small d-inline-block" id="viewModeLabel">Showing all attendance records</span>
                             <div id="holidaySummary" class="text-muted small mt-3"></div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-2">
                             <div class="small text-muted">Last Synced Time</div>
                             <div id="lastSyncedText" class="fw-semibold">{{ $lastSynced ?? 'Not synced yet' }}</div>
                         </div>
-                        <div class="col-md-4 offset-md-8 text-md-end">
+                        {{-- <div class="col-md-4 offset-md-8 text-md-end">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-white border-end-0"><i class="ri ri-search-line"></i></span>
                                 <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Search employee or code...">
                             </div>
-                        </div>
+                        </div> --}}
                     </div>
                 </div>
             </div>
@@ -88,7 +88,6 @@
             <div class="card shadow-sm border-0">
                 <div class="card-body">
                     <div id="statusMessage" class="alert d-none mb-4" role="alert"></div>
-
                     <div class="table-responsive">
                         <table class="table table-striped table-hover align-middle mb-0" id="attendanceTable">
                             <thead class="table-light">
@@ -110,7 +109,7 @@
 
                     <div id="noDataMessage" class="text-center py-5 text-muted">
                         <div class="mb-2"><strong>No Data</strong></div>
-                        <div>Click <strong>Sync Attendance</strong> to load mock biometric records.</div>
+                        <div>Click <strong>Sync Attendance</strong> to load biometric records.</div>
                     </div>
 
                     <div id="holidayPanel" class="d-none">
@@ -238,7 +237,7 @@
                                 <div class="small text-muted">Filtered Period</div>
                                 <div class="fw-semibold" id="staffReportRangeLabel">Select a month and employee to view report.</div>
                             </div>
-                            <div class="small text-muted" id="staffReportSummary">No employee selected.</div>
+                            <div class="small text-muted" id="staffReportSummary"></div>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm table-striped align-middle mb-0" id="staffReportTable">
@@ -248,7 +247,7 @@
                                         <th scope="col">Date</th>
                                         <th scope="col">Employee</th>
                                         <th scope="col">Employee Code</th>
-                                        <th scope="col">Device</th>
+                                        {{-- <th scope="col">Device</th> --}}
                                         <th scope="col">In Time</th>
                                         <th scope="col">Out Time</th>
                                         <th scope="col">Hours</th>
@@ -274,7 +273,7 @@
         const noDataMessage = document.getElementById('noDataMessage');
         const statusMessage = document.getElementById('statusMessage');
         const lastSyncedText = document.getElementById('lastSyncedText');
-        const searchInput = document.getElementById('searchInput');
+        // const searchInput = document.getElementById('searchInput');
         const syncButton = document.getElementById('syncButton');
         const syncButtonLabel = document.getElementById('syncButtonLabel');
         const attendanceDate = document.getElementById('attendanceDate');
@@ -325,127 +324,38 @@
         const cancelHolidayEditButton = document.getElementById('cancelHolidayEditButton');
         let attendanceDataTable = null;
         let attendanceRecords = [];
-        const declaredHolidaysByMonth = {
-            '2026-04': {
-                label: 'April 2026',
-                description: '4 Sunday Holidays + 1 Tamil New Year',
-                holidays: [{ 
-                        date: '2026-04-05',
-                        name: 'Sunday Holiday'
-                    },
-                    {
-                        date: '2026-04-12',
-                        name: 'Sunday Holiday'
-                    },
-                    {
-                        date: '2026-04-14',
-                        name: 'Tamil New Year'
-                    },
-                    {
-                        date: '2026-04-19',
-                        name: 'Sunday Holiday'
-                    },
-                    {
-                        date: '2026-04-26',
-                        name: 'Sunday Holiday'
-                    }
-                ]
-            }
-        };
-        const masterAttendance = {
-            '192.168.203': [{
-                    name: 'Ramesh Kumar',
-                    code: 'EMP001',
-                    date: '',
-                    inTime: '09:05 AM',
-                    outTime: '06:10 PM',
-                    hours: '9.1',
-                    status: 'Present'
-                },
-                {
-                    name: 'Nisha Gupta',
-                    code: 'EMP007',
-                    date: '',
-                    inTime: '09:12 AM',
-                    outTime: '-',
-                    hours: '-',
-                    status: 'Punch Out Missing'
-                },
-                {
-                    name: 'Karthick',
-                    code: 'EMP002',
-                    date: '',
-                    inTime: '09:35 AM',
-                    outTime: '05:55 PM',
-                    hours: '8.3',
-                    status: 'Late'
-                },
-                {
-                    name: 'Akash Mehta',
-                    code: 'EMP003',
-                    date: '',
-                    inTime: '08:50 AM',
-                    outTime: '07:15 PM',
-                    hours: '10.4',
-                    status: 'Overtime'
-                },
-                {
-                    name: 'Sunita Reddy',
-                    code: 'EMP006',
-                    date: '',
-                    inTime: '-',
-                    outTime: '-',
-                    hours: '-',
-                    status: 'Absent'
-                }
-            ],
-            '192.168.204': [{
-                    name: 'Ramesh Kumar',
-                    code: 'EMP001',
-                    date: '',
-                    inTime: '09:10 AM',
-                    outTime: '06:05 PM',
-                    hours: '8.9',
-                    status: 'Present'
-                },
-                {
-                    name: 'Nisha Gupta',
-                    code: 'EMP007',
-                    date: '',
-                    inTime: '09:15 AM',
-                    outTime: '-',
-                    hours: '-',
-                    status: 'Punch Out Missing'
-                },
-                {
-                    name: 'Karthick',
-                    code: 'EMP002',
-                    date: '',
-                    inTime: '09:20 AM',
-                    outTime: '06:00 PM',
-                    hours: '8.7',
-                    status: 'Late'
-                },
-                {
-                    name: 'Akash Mehta',
-                    code: 'EMP003',
-                    date: '',
-                    inTime: '08:40 AM',
-                    outTime: '07:00 PM',
-                    hours: '10.3',
-                    status: 'Overtime'
-                },
-                {
-                    name: 'Sunita Reddy',
-                    code: 'EMP006',
-                    date: '',
-                    inTime: '-',
-                    outTime: '-',
-                    hours: '-',
-                    status: 'Absent'
-                }
-            ]
-        };
+        let declaredHolidaysByMonth = {};
+        fetchHolidays();
+        function fetchHolidays() {
+            const monthKey = attendanceDate.value.slice(0, 7);
+
+            fetch(`/holidays/${monthKey}`)
+                .then(res => res.json())
+                .then(data => {
+
+                    // 🔹 Store in main config (for summary etc.)
+                    declaredHolidaysByMonth[monthKey] = {
+                        label: formatMonthYear(monthKey),
+                        description: 'Saved Holidays',
+                        holidays: data.map(item => ({
+                            date: item.date,
+                            name: item.name
+                        }))
+                    };
+
+                    // ✅ IMPORTANT: Sync selection state
+                    selectedHolidayDates = data.map(item => item.date);
+
+                    selectedHolidayNames = {};
+                    data.forEach(item => {
+                        selectedHolidayNames[item.date] = item.name;
+                    });
+
+                    activeHolidayMonthKey = monthKey;
+
+                    renderHolidayPanel(); // re-render UI
+                });
+        }
         let currentView = 'all';
         let activeHolidayMonthKey = attendanceDate.value.slice(0, 7);
         let holidayYearRangeStart = null;
@@ -676,11 +586,27 @@
         }
 
         function populateStaffEmployeeOptions() {
-            const options = ['<option value="">Choose employee</option>'];
-            getEmployeeDirectory().forEach(employee => {
-                options.push(`<option value="${employee.code}">${employee.name} (${employee.code})</option>`);
+            fetch('/get-employees')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.length) {
+                    staffReportEmployee.innerHTML = '<option>No employees found</option>';
+                    return;
+                }
+                const options = ['<option value="">Choose employee</option>'];
+                data.forEach(employee => {
+                    options.push(
+                        `<option value="${employee.code}">
+                            ${employee.name} (${employee.code})
+                        </option>`
+                    );
+                });
+                staffReportEmployee.innerHTML = options.join('');
+            })
+            .catch(err => {
+                console.error(err);
+                showStatus('danger', 'Failed to load employees');
             });
-            staffReportEmployee.innerHTML = options.join('');
         }
 
         function updateStaffReportRangeFields() {
@@ -797,8 +723,8 @@
         }
 
         function updateStaffReportSummary(records, employeeCode, monthValue) {
-            if (!employeeCode || !monthValue) {
-                staffReportSummary.textContent = 'No employee selected.';
+            if (!monthValue) {
+                staffReportSummary.textContent = 'Month not selected.';
                 return;
             }
 
@@ -806,38 +732,112 @@
             const presentCount = records.filter(item => item.status === 'Present').length;
             const lateCount = records.filter(item => item.status === 'Late').length;
             const absentCount = records.filter(item => item.status === 'Absent').length;
-            staffReportSummary.textContent = `${employee ? employee.name : employeeCode}: ${records.length} day(s), ${presentCount} present, ${lateCount} late, ${absentCount} absent.`;
+            // staffReportSummary.textContent = `${employee ? employee.name : employeeCode}: ${records.length} day(s), ${presentCount} present, ${lateCount} late, ${absentCount} absent.`;
         }
 
         function loadStaffReport() {
             const employeeCode = staffReportEmployee.value;
             const monthValue = staffReportMonth.value;
             updateStaffReportRangeFields();
-
-            if (!employeeCode || !monthValue) {
-                staffReportRecords = [];
+            if (!monthValue) {
+                if ($.fn.DataTable.isDataTable('#staffReportTable')) {
+                    $('#staffReportTable').DataTable().clear().destroy();
+                }
                 staffReportBody.innerHTML = '';
                 staffReportNoData.style.display = 'block';
-                updateStaffReportSummary([], employeeCode, monthValue);
+                staffReportSummary.textContent = 'Month not selected.';
                 return;
             }
-
-            staffReportRecords = generateStaffReportRecords(employeeCode, monthValue);
-            staffReportBody.innerHTML = renderStaffReportRows(staffReportRecords);
-            staffReportNoData.style.display = staffReportRecords.length ? 'none' : 'block';
-            updateStaffReportSummary(staffReportRecords, employeeCode, monthValue);
+            staffReportGenerateButton.disabled = true;
+            staffReportGenerateButton.innerHTML =
+                '<span class="spinner-border spinner-border-sm"></span> Loading...';
+            fetch('/staff-report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN':
+                        document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    emp_code: employeeCode,
+                    month: monthValue
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if ($.fn.DataTable.isDataTable('#staffReportTable')) {
+                    $('#staffReportTable').DataTable().clear().destroy();
+                }
+                if (!data.length) {
+                    staffReportBody.innerHTML = '';
+                    staffReportNoData.style.display = 'block';
+                    staffReportSummary.textContent = 'No records found.';
+                    return;
+                }
+                staffReportNoData.style.display = 'none';
+                staffReportBody.innerHTML = data.map((record, index) => `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${formatDate(record.date)}</td>
+                        <td>${record.employee}</td>
+                        <td>${record.code}</td>
+                        <td>
+                            ${
+                                record.in_time
+                                ? new Date(record.in_time).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })
+                                : '-'
+                            }
+                        </td>
+                        <td>
+                            ${
+                                record.out_time
+                                ? new Date(record.out_time).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })
+                                : '-'
+                            }
+                        </td>
+                        <td>${record.hours ?? '-'}</td>
+                        <td>
+                            <span class="${getBadgeClass(record.status)}">
+                                ${record.status}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+                initStaffReportDataTable();
+                const present =
+                    data.filter(x => x.status === 'Present').length;
+                const late =
+                    data.filter(x => x.status === 'Late').length;
+                const absent =
+                    data.filter(x => x.status === 'Absent').length;
+                // staffReportSummary.textContent = `${data[0].employee}: ${data.length} days, ` + `${present} present, ${late} late, ${absent} absent.`;
+            })
+            .catch(err => {
+                console.error(err);
+                showStatus(
+                    'danger',
+                    'Failed to load staff report'
+                );
+            })
+            .finally(() => {
+                staffReportGenerateButton.disabled = false;
+                staffReportGenerateButton.textContent = 'Generate';
+            });
         }
-
         function renderStaffReportPanel() {
             staffReportMonth.value = staffReportMonth.value || attendanceDate.value.slice(0, 7);
             updateStaffReportRangeFields();
             loadStaffReport();
         }
-
         let selectedHolidayDates = [];
         let selectedHolidayNames = {};
         let currentEditingDate = null;
-
         function resetHolidaySelectionState(rows) {
             selectedHolidayDates = rows.map(item => item.date);
             selectedHolidayNames = {};
@@ -845,7 +845,6 @@
                 selectedHolidayNames[item.date] = item.name;
             });
         }
-
         function updateSelectedHolidayCount() {
             selectedHolidayCount.textContent = `${selectedHolidayDates.length} date(s) selected`;
         }
@@ -998,7 +997,7 @@
                             <td>${hours}</td>
                             <td><span class="${getBadgeClass(item.status)}">${item.status}</span></td>
                             <td>
-                                <a href="{{ url('view_attendance') }}" class="btn btn-sm btn-light text-primary" title="View details">
+                                <a href="{{ url('view_attendance/${item.id}') }}" class="btn btn-sm btn-light text-primary" title="View details">
                                     <i class="ri ri-eye-line"></i>
                                 </a>
                             </td>
@@ -1012,13 +1011,30 @@
                 $('#attendanceTable').DataTable().destroy();
             }
         }
-
+        let staffReportDataTable = null;
+        function initStaffReportDataTable() {
+            if ($.fn.DataTable.isDataTable('#staffReportTable')) {
+                $('#staffReportTable').DataTable().clear().destroy();
+            }
+            $('#staffReportTable tbody').off();
+            staffReportDataTable = $('#staffReportTable').DataTable({
+                destroy: true,
+                paging: true,
+                searching: true,
+                info: false,
+                lengthChange: false,
+                pageLength: 10,
+                responsive: true,
+                autoWidth: false,
+                dom: 'rtip'
+            });
+        }
         function initDataTable() {
             if (!$.fn.DataTable) return;
             destroyDataTable();
             attendanceDataTable = $('#attendanceTable').DataTable({
                 paging: true,
-                searching: false,
+                searching: true,
                 info: false,
                 lengthChange: false,
                 pageLength: 5,
@@ -1032,10 +1048,10 @@
         }
 
         function getCurrentRecords() {
-            const selectedHoliday = isDeclaredHoliday(attendanceDate.value);
+            /* const selectedHoliday = isDeclaredHoliday(attendanceDate.value);
             if (selectedHoliday && (currentView === 'absent' || currentView === 'missing')) {
                 return [];
-            }
+            } */
             if (currentView === 'absent') {
                 return attendanceRecords.filter(item => item.status === 'Absent');
             }
@@ -1086,9 +1102,9 @@
             attendanceBody.innerHTML = renderRows(records);
             initDataTable();
 
-            if (attendanceDataTable && searchInput.value.trim()) {
+           /*  if (attendanceDataTable && searchInput.value.trim()) {
                 attendanceDataTable.search(searchInput.value.trim()).draw();
-            }
+            } */
         }
 
         function setActiveView(view) {
@@ -1121,7 +1137,7 @@
 
         function resetAttendancePage() {
             attendanceRecords = [];
-            searchInput.value = '';
+            // searchInput.value = '';
             deviceSelect.value = '';
             attendanceDate.value = new Date().toISOString().slice(0, 10);
             lastSyncedText.textContent = 'Not synced yet';
@@ -1158,14 +1174,15 @@
 
         resetButton.addEventListener('click', resetAttendancePage);
 
-        attendanceDate.addEventListener('change', function() {
+        attendanceDate.addEventListener('change', function () {
+            fetchHolidays();
+
             updateHolidayBanner();
+
             if (!staffReportMonth.value) {
                 staffReportMonth.value = attendanceDate.value.slice(0, 7);
             }
-            if (currentView === 'holiday') {
-                renderHolidayPanel();
-            }
+
             if (currentView === 'staff') {
                 renderStaffReportPanel();
             }
@@ -1201,11 +1218,43 @@
             }
         });
 
-        saveSelectedHolidaysButton.addEventListener('click', function() {
+        /* saveSelectedHolidaysButton.addEventListener('click', function() {
             saveSelectedHolidaysForMonth();
             showStatus('success', 'Selected holidays saved for the month.');
             renderHolidayPanel();
             updateHolidayBanner();
+        }); */
+        saveSelectedHolidaysButton.addEventListener('click', function () {
+            const holidays = selectedHolidayDates.map(date => ({
+                date: date,
+                name: selectedHolidayNames[date] || 'Declared Holiday'
+            }));
+            saveSelectedHolidaysButton.disabled = true;
+            const originalText = saveSelectedHolidaysButton.innerHTML;
+            saveSelectedHolidaysButton.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Saving...
+            `;
+            fetch('/holidays/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ holidays })
+            })
+            .then(res => res.json())
+            .then(() => {
+                showStatus('success', 'Holidays saved to database');
+                fetchHolidays(); // reload
+            }).catch(err => {
+                console.error(err);
+                showStatus('danger', 'Failed to save holidays');
+            })
+            .finally(() => {
+                saveSelectedHolidaysButton.disabled = false;
+                saveSelectedHolidaysButton.innerHTML = originalText;
+            });
         });
 
         refreshHolidaysButton.addEventListener('click', function() {
@@ -1233,6 +1282,7 @@
             updateAttendanceDateForMonth(nextDate.getFullYear(), nextDate.getMonth());
             updateHolidayBanner();
             renderHolidayPanel();
+            fetchHolidays();
         });
 
         holidayTodayButton.addEventListener('click', function() {
@@ -1303,43 +1353,59 @@
         });
 
         staffReportGenerateButton.addEventListener('click', function() {
-            loadStaffReport();
+            console.log("show report clicked.");
+            console.log(currentView);
+            
+            if (currentView === 'staff') {
+                loadStaffReport();
+            }
         });
-
-        syncButton.addEventListener('click', function() {
+        syncButton.addEventListener('click', function () {
             const device = deviceSelect.value;
+            const date = attendanceDate.value;
+
             if (!device) {
                 showStatus('warning', 'Please select a device before syncing.');
                 return;
             }
 
             syncButton.disabled = true;
-            syncButtonLabel.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Syncing...';
-            attendanceBody.innerHTML = '';
-            destroyDataTable();
-            noDataMessage.style.display = 'block';
+            syncButtonLabel.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Syncing...';
 
-            setTimeout(() => {
-                attendanceRecords = masterAttendance[device].map(item => ({
-                    ...item,
-                    date: formatDate(attendanceDate.value)
-                }));
-                updateHolidayBanner();
-                lastSyncedText.textContent = new Date().toLocaleString('en-GB', {
-                    hour12: true
-                });
+            fetch('/sync-attendance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    device: device,
+                    date: date
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
+                attendanceRecords = res.data;
+                lastSyncedText.textContent = res.time;
                 showStatus('success', 'Attendance synced successfully.');
+                setActiveView('all');
+
+            })
+            .catch(err => {
+                console.error(err);
+                showStatus('danger', 'Failed to sync attendance.');
+            })
+            .finally(() => {
                 syncButton.disabled = false;
                 syncButtonLabel.textContent = 'Sync Attendance';
-                setActiveView('all');
-            }, 2200);
+            });
         });
 
-        searchInput.addEventListener('input', function() {
+        /* searchInput.addEventListener('input', function() {
             if (attendanceDataTable) {
                 attendanceDataTable.search(this.value.trim()).draw();
             }
-        });
+        }); */
 
         populateStaffEmployeeOptions();
         staffReportMonth.value = attendanceDate.value.slice(0, 7);
