@@ -106,18 +106,6 @@
                                     </div>
                                     <div class="col-md-6 col-xl-4">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control" id="transporter_name" name="transporter_name" placeholder="Transporter Name" value="{{ old('transporter_name', isset($invoice) ? $invoice->transporter_name : '') }}">
-                                            <label for="transporter_name">Transporter Name</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-xl-4">
-                                        <div class="form-floating form-floating-outline">
-                                            <input type="text" class="form-control" id="lr_no" name="lr_no" placeholder="LR No" value="{{ old('lr_no', isset($invoice) ? $invoice->lr_no : '') }}">
-                                            <label for="lr_no">LR No</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-xl-4">
-                                        <div class="form-floating form-floating-outline">
                                             <input type="number" min="1" step="1" class="form-control @error('no_of_box') is-invalid @enderror"
                                                 id="no_of_box" name="no_of_box" placeholder="No Of Box"
                                                 value="{{ old('no_of_box', isset($invoice) ? $invoice->no_of_box : '') }}">
@@ -157,6 +145,7 @@
                                                 <th style="width: 15%;">Stock Item</th>
                                                 <th style="width: 10%;">Color</th>
                                                 <th style="width: 10%;">Art No</th>
+                                                <th style="width: 8%;">HSN Code</th>
                                                 <th style="width: 8%;">UOM</th>
                                                 <th style="width: 8%;">Size</th>
                                                 <th style="width: 8%;">Quantity *</th>
@@ -168,82 +157,82 @@
                                         </thead>
                                         <tbody id="item-rows">
                                             @php
-    $items = old('items');
-    if (!$items && isset($invoice)) {
-        $items = $invoice->items->map(function ($item) use ($invoice) {
-            $brandName = '';
-            $itemName = '';
-            $sleeveType = $item->sleeve_type;
+                                                $items = old('items');
+                                                if (!$items && isset($invoice)) {
+                                                    $items = $invoice->items->map(function ($item) use ($invoice) {
+                                                        $brandName = '';
+                                                        $itemName = '';
+                                                        $sleeveType = $item->sleeve_type;
 
-            if ($item->item) {
-                if ($item->item->brand) {
-                    $brandName = $item->item->brand->brand_name;
-                } elseif ($item->brandCategory) {
-                    $brandName = $item->brandCategory->name;
-                }
+                                                        if ($item->item) {
+                                                            if ($item->item->brand) {
+                                                                $brandName = $item->item->brand->brand_name;
+                                                            } elseif ($item->brandCategory) {
+                                                                $brandName = $item->brandCategory->name;
+                                                            }
 
-                if ($item->item->style) {
-                    $itemName = $item->item->style->style_name;
-                } else {
-                    $itemName = $item->item->name;
-                }
-            } elseif ($item->stockEntryItem) {
-                if ($item->stockEntryItem->item) {
-                    $seItem = $item->stockEntryItem->item;
-                    if ($seItem->brand) {
-                        $brandName = $seItem->brand->brand_name;
-                    } elseif ($seItem->brandCategory) {
-                        $brandName = $seItem->brandCategory->name;
-                    }
+                                                            if ($item->item->style) {
+                                                                $itemName = $item->item->style->style_name;
+                                                            } else {
+                                                                $itemName = $item->item->name;
+                                                            }
+                                                        } elseif ($item->stockEntryItem) {
+                                                            if ($item->stockEntryItem->item) {
+                                                                $seItem = $item->stockEntryItem->item;
+                                                                if ($seItem->brand) {
+                                                                    $brandName = $seItem->brand->brand_name;
+                                                                } elseif ($seItem->brandCategory) {
+                                                                    $brandName = $seItem->brandCategory->name;
+                                                                }
 
-                    if ($seItem->style) {
-                        $itemName = $seItem->style->style_name;
-                    } else {
-                        $itemName = $seItem->name;
-                    }
-                } else {
-                    $brandName = $item->stockEntryItem->finished_item_code;
-                }
+                                                                if ($seItem->style) {
+                                                                    $itemName = $seItem->style->style_name;
+                                                                } else {
+                                                                    $itemName = $seItem->name;
+                                                                }
+                                                            } else {
+                                                                $brandName = $item->stockEntryItem->finished_item_code;
+                                                            }
 
-                if (empty($sleeveType)) {
-                    $sleeveType = $item->stockEntryItem->sleeve_type;
-                }
-            }
-            $maxQty = null;
-            if (isset($invoice->so_id)) {
-                $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
-                    ->where('stock_entry_item_id', $item->stock_entry_item_id)
-                    ->first();
-                if ($soItem) {
-                    $maxQty = $soItem->qty;
-                }
-            }
+                                                            if (empty($sleeveType)) {
+                                                                $sleeveType = $item->stockEntryItem->sleeve_type;
+                                                            }
+                                                        }
+                                                        $maxQty = null;
+                                                        if (isset($invoice->so_id)) {
+                                                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                                                                ->where('stock_entry_item_id', $item->stock_entry_item_id)
+                                                                ->first();
+                                                            if ($soItem) {
+                                                                $maxQty = $soItem->qty;
+                                                            }
+                                                        }
 
-            return [
-                'brand_id' => $item->brand_id,
-                'brand_name' => $brandName ?: '',
-                'item_id' => $item->item_id,
-                'item_name' => $itemName ?: '',
-                'sleeve_type' => $sleeveType ?: '',
-                'color_id' => $item->color_id,
-                'color_name' => $item->color ? $item->color->color_name : '',
-                'size' => $item->size,
-                'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
-                'art_no' => $item->art_no,
-                'hsn_sac' => $item->hsn_sac,
-                'uom_id' => $item->uom_id,
-                'uom_code' => $item->uom_id ?: '',
-                'quantity' => $item->quantity,
-                'max_qty' => $maxQty,
-                'rate' => $item->rate,
-                'mrp' => $item->mrp,
-                'amount' => $item->amount,
-                'sku' => $item->sku,
-                'stock_entry_item_id' => $item->stock_entry_item_id,
-                'id' => $item->id,
-            ];
-        })->toArray();
-    }
+                                                        return [
+                                                            'brand_id' => $item->brand_id,
+                                                            'brand_name' => $brandName ?: '',
+                                                            'item_id' => $item->item_id,
+                                                            'item_name' => $itemName ?: '',
+                                                            'sleeve_type' => $sleeveType ?: '',
+                                                            'color_id' => $item->color_id,
+                                                            'color_name' => $item->color ? $item->color->color_name : '',
+                                                            'size' => $item->size,
+                                                            'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
+                                                            'art_no' => $item->art_no,
+                                                            'hsn_sac' => $item->hsn_sac,
+                                                            'uom_id' => $item->uom_id,
+                                                            'uom_code' => $item->uom_id ?: '',
+                                                            'quantity' => $item->quantity,
+                                                            'max_qty' => $maxQty,
+                                                            'rate' => $item->rate,
+                                                            'mrp' => $item->mrp,
+                                                            'amount' => $item->amount,
+                                                            'sku' => $item->sku,
+                                                            'stock_entry_item_id' => $item->stock_entry_item_id,
+                                                            'id' => $item->id,
+                                                        ];
+                                                    })->toArray();
+                                                }
                                             @endphp
                                             @if($items)
                                                 @foreach($items as $index => $row)
@@ -270,6 +259,13 @@
                                                     <td>
                                                         <span class="art-no-text">{{ $row->art_no ?? '' }}</span>
                                                         <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="form-control form-control-sm hsn-sac" 
+                                                            name="items[{{ $index }}][hsn_sac]" 
+                                                            value="{{ $row->hsn_sac ?? '' }}" 
+                                                            placeholder="HSN Code"
+                                                            style="width: 90px;">
                                                     </td>
                                                     <td>
                                                         <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
@@ -392,9 +388,9 @@
                                                     <label for="signature_file">Authorized Signature / Stamp Upload</label>
                                                     @if(isset($invoice) && $invoice->signature_file)
                                                         @php
-        $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
-        $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-        $sigUrl = asset($invoice->signature_file);
+                                                            $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
+                                                            $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                            $sigUrl = asset($invoice->signature_file);
                                                         @endphp
                                                         <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                             @if($isSigImage)
@@ -421,9 +417,9 @@
                                                     <label for="attachment_file">Attachments</label>
                                                     @if(isset($invoice) && $invoice->attachment_file)
                                                         @php
-        $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
-        $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-        $attUrl = asset($invoice->attachment_file);
+                                                            $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
+                                                            $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                            $attUrl = asset($invoice->attachment_file);
                                                         @endphp
                                                         <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
                                                             @if($isAttImage)
@@ -448,7 +444,7 @@
                                                 <h6 class="fw-bold mb-2">Show in Customer Invoice PDF</h6>
                                                 <div class="row">
                                                     @php
-    $selected_fields = old('show_fields', isset($invoice->show_fields) ? $invoice->show_fields : ['amount', 'discount', 'tax', 'subtotal', 'grandtotal']);
+                                                        $selected_fields = old('show_fields', isset($invoice->show_fields) ? $invoice->show_fields : ['amount', 'discount', 'tax', 'subtotal', 'grandtotal']);
                                                     @endphp
                                                     <div class="col-md-6 col-lg-4">
                                                         <div class="form-check">
@@ -613,8 +609,77 @@
                                     </div>
                                 </div>
                             </div>
+                        <div class="card mb-4 mt-4">
+                            <div class="card-body">
+                                <div class="card-header-box">
+                                    <h5>Transport & E-Way Bill Details</h5>
+                                </div>
+                                <div class="row g-4">
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" class="form-control" id="transporter_name" name="transporter_name" placeholder="Transporter Name" value="{{ old('transporter_name', isset($invoice) ? $invoice->transporter_name : '') }}">
+                                            <label for="transporter_name">Transporter Name</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" class="form-control" id="transporter_id" name="transporter_id" placeholder="Transporter GSTIN" value="{{ old('transporter_id', isset($invoice) ? $invoice->transporter_id : '') }}">
+                                            <label for="transporter_id">Transporter GSTIN / ID</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <select name="transport_mode" id="transport_mode" class="form-select select2">
+                                                <option value="1" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '1') == '1' ? 'selected' : '' }}>Road</option>
+                                                <option value="2" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '2' ? 'selected' : '' }}>Rail</option>
+                                                <option value="3" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '3' ? 'selected' : '' }}>Air</option>
+                                                <option value="4" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '4' ? 'selected' : '' }}>Ship</option>
+                                            </select>
+                                            <label for="transport_mode">Transport Mode</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" class="form-control" id="vehicle_no" name="vehicle_no" placeholder="Vehicle No" value="{{ old('vehicle_no', isset($invoice) ? $invoice->vehicle_no : '') }}">
+                                            <label for="vehicle_no">Vehicle No</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <select name="veh_type" id="veh_type" class="form-select select2">
+                                                <option value="R" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : 'R') == 'R' ? 'selected' : '' }}>Regular</option>
+                                                <option value="O" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : '') == 'O' ? 'selected' : '' }}>ODC (Over Dimensional Cargo)</option>
+                                            </select>
+                                            <label for="veh_type">Vehicle Type</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="number" class="form-control" id="transport_distance" name="transport_distance" placeholder="Distance (in km)" value="{{ old('transport_distance', isset($invoice) ? $invoice->transport_distance : '') }}">
+                                            <label for="transport_distance">Distance (in km)</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" class="form-control" id="tran_doc_no" name="tran_doc_no" placeholder="Transport Doc No / LR No" value="{{ old('tran_doc_no', isset($invoice) ? $invoice->tran_doc_no : (isset($invoice) ? $invoice->lr_no : '')) }}">
+                                            <label for="tran_doc_no">Transport Doc No / LR No</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-xl-3">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="text" class="form-control due_date" id="tran_doc_date" name="tran_doc_date" placeholder="Transport Doc Date" value="{{ old('tran_doc_date', isset($invoice) ? ($invoice->tran_doc_date ? \Carbon\Carbon::parse($invoice->tran_doc_date)->format('d-m-Y') : '') : '') }}">
+                                            <label for="tran_doc_date">Transport Doc Date</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="text-end mt-4">
+                            @if(isset($invoice) && $invoice->irn)
+                                <button type="button" class="btn btn-secondary" disabled title="E-Invoice Already Generated"><i class="ri ri-checkbox-circle-line"></i> E-Invoice Generated</button>
+                            @else
+                                <button type="button" class="btn btn-info" id="einvoice-generate"><i class="ri ri-receipt-line"></i> Generate E-Invoice</button>
+                            @endif
                             <button type="submit" class="btn btn-primary">Submit</button>
                             <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
                         </div>
@@ -655,6 +720,13 @@
                                     $('#agent_id').val(data.agent_id).trigger('change');
                                     $('#commission_percent').val(data.commission_percent);
                                     $('#address').val(data.shipping_address);
+                                    $('#transporter_name').val(data.transporter_name);
+                                    if(data.transport_gst_no) {
+                                        $('#transporter_id').val(data.transport_gst_no);
+                                    }
+                                    if(data.transport_mode_id) {
+                                        $('#transport_mode').val(data.transport_mode_id).trigger('change');
+                                    }
                                     if (data.other_state == 'yes') {
                                         $('#other_state_yes').prop('checked', true);
                                         $('#igst_section').show();
@@ -745,6 +817,13 @@
                             <td>
                                 <span class="art-no-text">${matchedItem.art_no || ''}</span>
                                 <input type="hidden" name="items[${index}][art_no]" class="art-no" value="${matchedItem.art_no || ''}">
+                            </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm hsn-sac" 
+                                    name="items[${index}][hsn_sac]" 
+                                    value="${matchedItem.hsn_sac || ''}" 
+                                    placeholder="HSN Code"
+                                    style="width: 90px;">
                             </td>
                             <td>
                                 <span class="uom-text">${matchedItem.uom_code}</span>
@@ -1064,8 +1143,6 @@
                     calculateTotals();
                 });
 
-
-
                 $('#item-rows').on('input', '.qty, .mrp, .rate', function() {
                     var row = $(this).closest('.item-row');
                     var qtyInput = row.find('.qty');
@@ -1095,6 +1172,70 @@
                         alert('Please correct the quantities before saving. Some items exceed the ordered quantity.');
                         return false;
                     }
+                });
+
+                $('#einvoice-generate').on('click', function() {
+                    var invoiceId = "{{ isset($invoice) ? $invoice->id : '' }}";
+                    if (!invoiceId) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Wait!',
+                            text: 'Please save the invoice first to generate an E-Invoice.'
+                        });
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "Do you want to generate an E-Invoice for this Sales Invoice?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, generate it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            var btn = $(this);
+                            btn.prop('disabled', true).text('Generating...');
+                            
+                            Swal.fire({
+                                title: 'Generating...',
+                                text: 'Please wait while we generate the E-Invoice.',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading()
+                                }
+                            });
+
+                            $.ajax({
+                                url: "{{ url('sales_invoices/generate-einvoice') }}/" + invoiceId,
+                                type: "POST",
+                                data: {
+                                    _token: "{{ csrf_token() }}"
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Success!',
+                                            text: response.message,
+                                            timer: 2000,
+                                            showConfirmButton: false
+                                        }).then(() => {
+                                            location.reload();
+                                        });
+                                    } else {
+                                        Swal.fire('Error!', response.message, 'error');
+                                        btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                                    btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
+                                }
+                            });
+                        }
+                    });
                 });
             });
         </script>

@@ -54,6 +54,7 @@
                         <div class="small text-muted" id="otFilterCount"></div>
                     </div>
                     <div class="card-datatable">
+                        <div id="statusMessage" class="alert d-none mb-4" role="alert"></div>
                         <table class="table nowrap w-100" id="otTable">
                             <thead>
                                 <tr>
@@ -63,11 +64,53 @@
                                     <th>Employee</th>
                                     <th>In Time</th>
                                     <th>Out Time</th>
+                                    <th>OT Hours</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="editOtModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Overtime</h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="ot_attendance_id">
+                        <div class="mb-3">
+                            <label>In Time</label>
+                            <input
+                                type="time"
+                                class="form-control"
+                                id="ot_in_time">
+                            <span class="text-danger small error-text" id="ot_in_time_error"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label>Out Time</label>
+                            <input
+                                type="time"
+                                class="form-control"
+                                id="ot_out_time">
+                            <span class="text-danger small error-text" id="ot_out_time_error"></span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Close
+                        </button>
+                        <button type="button" class="btn btn-primary" id="saveOtBtn">
+                            Save
+                        </button>
                     </div>
                 </div>
             </div>
@@ -78,6 +121,7 @@
 @section('scripts')
 <script>
 $(function () {
+    const statusMessage = document.getElementById('statusMessage');
     let table = $('#otTable').DataTable({
         processing: true,
         serverSide: true,
@@ -113,6 +157,7 @@ $(function () {
             { data: 'employee' },
             { data: 'in_time' },
             { data: 'out_time' },
+            { data: 'ot_hours' },
             { data: 'action', orderable: false, searchable: false }
         ]
     });
@@ -127,6 +172,101 @@ $(function () {
         dateFormat: 'd-m-Y',
         allowInput: true
     });
+    $(document).on('click', '.editOtBtn', function () {
+        $('#ot_attendance_id').val($(this).data('id'));
+        $('#ot_in_time').val($(this).data('in'));
+        $('#ot_out_time').val($(this).data('out'));
+        $('#editOtModal').modal('show');
+    });
+    $('#saveOtBtn').on('click', function () {
+        $('.error-text').text('');
+        $('#ot_in_time').removeClass('is-invalid');
+        $('#ot_out_time').removeClass('is-invalid');
+        let inTime = $('#ot_in_time').val().trim();
+        let outTime = $('#ot_out_time').val().trim();
+        let hasError = false;
+        if (!inTime) {
+            $('#ot_in_time_error')
+                .text('In time is required');
+            $('#ot_in_time')
+                .addClass('is-invalid');
+            hasError = true;
+        }
+        if (!outTime) {
+            $('#ot_out_time_error')
+                .text('Out time is required');
+            $('#ot_out_time')
+                .addClass('is-invalid');
+            hasError = true;
+        }
+        if (inTime && outTime && outTime < inTime) {
+            $('#ot_out_time_error')
+                .text(
+                    'Out time must be greater than in time'
+                );
+            $('#ot_out_time')
+                .addClass('is-invalid');
+            hasError = true;
+        }
+        if (hasError) {
+            return;
+        }
+        fetch(`${APP_URL}/update-overtime`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN':
+                    document.querySelector(
+                        'meta[name="csrf-token"]'
+                    ).content
+            },
+            body: JSON.stringify({
+                id: $('#ot_attendance_id').val(),
+                in_time: inTime,
+                out_time: outTime,
+                status: status
+            })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                $('#editOtModal').modal('hide');
+                showStatus('success', res.message);
+                $('#otTable')
+                    .DataTable()
+                    .ajax.reload(null, false);
+            } else {
+                if (res.errors) {
+                    $.each(
+                        res.errors,
+                        function (key, value) {
+                            $('#' + key + '_error')
+                                .text(value[0]);
+                        }
+                    );
+                }
+                showStatus(
+                    'danger',
+                    res.message
+                );
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showStatus(
+                'danger',
+                'Update failed'
+            );
+        });
+    });
+    function showStatus(type, message) {
+        statusMessage.className = 'alert alert-' + type + ' mb-4';
+        statusMessage.textContent = message;
+        statusMessage.classList.remove('d-none');
+        setTimeout(() => {
+            statusMessage.classList.add('d-none');
+        }, 3000);
+    }
     $('#filter_from_date').on('change', function () {
         let fromDate = fromDatePicker.parseDate($(this).val(), "d-m-Y");
         if (fromDate) {

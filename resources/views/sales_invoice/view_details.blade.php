@@ -17,6 +17,11 @@
                         <a href="{{ url('sales_invoices/print-sticker/' . $invoice->id) }}" class="btn btn-info" target="_blank" style="background-color: #00bcd4; border-color: #00bcd4;">
                             <i class="ri ri-printer-line back-arrow"></i>Print Sticker
                         </a>
+                        @if(!$invoice->irn)
+                        <button type="button" class="btn btn-info" id="einvoice-generate"><i class="ri ri-receipt-line"></i> Generate E-Invoice</button>
+                        @else
+                        <button type="button" class="btn btn-warning" id="einvoice-cancel"><i class="ri ri-close-circle-line"></i> Cancel E-Invoice</button>
+                        @endif
                         <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
                             <i class="ri ri-arrow-left-line back-arrow"></i>Back
                         </a>
@@ -49,6 +54,16 @@
                             <div class="col-md-4">
                                 <label class="detail-title">Linked SO No:</label>
                                 <div class="text-muted">{{ $invoice->salesOrder ? $invoice->salesOrder->so_no : 'N/A' }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">IRN No:</label>
+                                <div class="text-muted" style="word-break: break-all;">{{ $invoice->irn ?? 'N/A' }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">E-Way Bill No:</label>
+                                <div class="text-muted">{{ $invoice->eway_bill_no ?? 'N/A' }}</div>
                             </div>
 
                             <div class="col-md-4">
@@ -344,5 +359,119 @@
             </div>
         </div>
     </div>
-    </div>
+@endsection
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        var invoiceId = "{{ $invoice->id }}";
+        
+        $('#einvoice-generate').on('click', function() {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to generate an E-Invoice for this Sales Invoice?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, generate it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var btn = $(this);
+                    btn.prop('disabled', true).text('Generating...');
+                    
+                    Swal.fire({
+                        title: 'Generating...',
+                        text: 'Please wait while we generate the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('sales_invoices/generate-einvoice') }}/" + invoiceId,
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success!',
+                                    text: response.message,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', response.message, 'error');
+                                btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
+                        }
+                    });
+                }
+            });
+        });
+
+        $('#einvoice-cancel').on('click', function() {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to cancel the E-Invoice? This action cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, cancel it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var btn = $(this);
+                    btn.prop('disabled', true).text('Canceling...');
+
+                    Swal.fire({
+                        title: 'Canceling...',
+                        text: 'Please wait while we cancel the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('sales_invoices/cancel-einvoice') }}/" + invoiceId,
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Canceled!',
+                                    text: response.message,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', response.message, 'error');
+                                btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i> Cancel E-Invoice');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i> Cancel E-Invoice');
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
 @endsection

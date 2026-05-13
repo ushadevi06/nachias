@@ -1,11 +1,11 @@
 @extends('layouts.common')
-@section('title', 'View Overtime / Late - ' . env('WEBSITE_NAME'))
+@section('title', 'View Overtime - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>View Overtime / Late</h4>
+                <h4>View Overtime</h4>
                 <a href="{{ url('overtime') }}" class="btn btn-outline-secondary"><i class="ri ri-arrow-left-line back-arrow"></i>Back</a>
             </div>
             <div class="card">
@@ -24,7 +24,6 @@
                                     <th>In Time</th>
                                     <th>Out Time</th>
                                     <th>OT Hours</th>
-                                    <th>Late Hours</th>
                                     {{-- <th>Remarks</th> --}}
                                 </tr>
                             </thead>
@@ -46,8 +45,7 @@
                                             ? \Carbon\Carbon::parse($record->out_time)->format('h:i A')
                                             : '-' }}
                                     </td>
-                                    <td>{{ number_format($otHours, 2) }}</td>
-                                    <td>{{ number_format($lateHours, 2) }}</td>
+                                    <td>{{ $otHours }}</td>
                                     {{-- <td>-</td> --}}
                                 </tr>
                             </tbody>

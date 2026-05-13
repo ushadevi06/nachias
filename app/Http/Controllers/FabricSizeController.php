@@ -110,8 +110,56 @@ class FabricSizeController extends Controller
             return unauthorizedRedirect();
         }
         $fabricSize = FabricSize::findOrFail($id);
+        $width = trim((string) $fabricSize->width);
+
+        $references = [
+            ['purchase_order_items', 'fabric_width_id', 'Purchase Order Items'],
+            ['purchase_invoice_items', 'fabric_width_id', 'Purchase Invoice Items'],
+        ];
+
+        foreach ($references as [$table, $column, $label]) {
+            if (!Schema::hasTable($table) || !Schema::hasColumn($table, $column)) {
+                continue;
+            }
+
+            $query = DB::table($table)->where($column, $id);
+            if (Schema::hasColumn($table, 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+
+            if ($query->exists()) {
+                return redirect('fabric-sizes')->with('danger', "This fabric size is currently referenced in {$label} and cannot be deleted.");
+            }
+        }
+
+        $widthBasedReferences = [
+            ['job_card_entries', 'width', 'Job Card Entries'],
+            ['job_card_fabric_details', 'width', 'Job Card Fabric Details'],
+        ];
+
+        if ($width !== '') {
+            foreach ($widthBasedReferences as [$table, $column, $label]) {
+                if (!Schema::hasTable($table) || !Schema::hasColumn($table, $column)) {
+                    continue;
+                }
+
+                $query = DB::table($table)->where($column, $width);
+                if (Schema::hasColumn($table, 'deleted_at')) {
+                    $query->whereNull('deleted_at');
+                }
+
+                if ($query->exists()) {
+                    return redirect('fabric-sizes')->with('danger', "This fabric size is currently referenced in {$label} and cannot be deleted.");
+                }
+            }
+        }
+
         $oldData = $fabricSize->toArray();
-        $fabricSize->delete();
+        try {
+            $fabricSize->delete();
+        } catch (QueryException $e) {
+            return redirect('fabric-sizes')->with('danger', 'This fabric size is in use and cannot be deleted.');
+        }
         addLog('delete', 'Fabric Size', 'fabric_sizes', $id, $oldData, null);
         return redirect('fabric-sizes')->with('success', 'Fabric Size deleted successfully');
     }

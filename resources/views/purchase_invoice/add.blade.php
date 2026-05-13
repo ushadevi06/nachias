@@ -372,7 +372,7 @@
                                     <select id="charges_select" class="select2 form-select @error('charges_select') is-invalid @enderror" data-placeholder="Select Charge">
                                         <option value="">Loading charges...</option>
                                     </select>
-                                    <label>Charges <span class="text-danger">*</span></label>
+                                    <label>Charges</label>
                                 </div>
                                 @error('charges_select')
                                     <div class="text-danger mt-1">{{ $message }}</div>

@@ -83,7 +83,51 @@
                 </div>
             </div>
         </div>
-
+        <div class="modal fade" id="editAttendanceModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5>Edit Attendance</h5>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="attendance_id">
+                        <div class="mb-3">
+                            <label>In Time</label>
+                            <input type="time"
+                                id="edit_in_time"
+                                class="form-control">
+                            <small class="text-danger error-text" id="in_time_error"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label>Out Time</label>
+                            <input type="time"
+                                id="edit_out_time"
+                                class="form-control">
+                            <small class="text-danger error-text" id="out_time_error"></small>
+                        </div>
+                        <div class="mb-3">
+                            <label>Status</label>
+                            <select id="edit_status" class="form-control">
+                                <option value="">Select Status</option>
+                                <option>Present</option>
+                                <option>Late</option>
+                                <option>Absent</option>
+                                <option>Punch Out Missing</option>
+                                <option>Overtime</option>
+                                <option>Holiday</option>
+                                <option>Week Off</option>
+                            </select>
+                            <small class="text-danger error-text" id="status_error"></small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-success" id="saveAttendanceBtn">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="col-12">
             <div class="card shadow-sm border-0">
                 <div class="card-body">
@@ -106,12 +150,10 @@
                             <tbody id="attendanceBody"></tbody>
                         </table>
                     </div>
-
                     <div id="noDataMessage" class="text-center py-5 text-muted">
                         <div class="mb-2"><strong>No Data</strong></div>
                         <div>Click <strong>Sync Attendance</strong> to load biometric records.</div>
                     </div>
-
                     <div id="holidayPanel" class="d-none">
                         <div class="border rounded p-3 mb-3 bg-light">
                             <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
@@ -205,7 +247,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div id="staffReportPanel" class="d-none">
                         <div class="border rounded p-3 mb-3 bg-light">
                             <div class="row g-3 align-items-end">
@@ -261,7 +302,6 @@
                             Select a month and employee to load staff-wise attendance records.
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -994,12 +1034,96 @@
                                 <a href="{{ url('view_attendance/${item.id}') }}" class="btn btn-sm btn-light text-primary" title="View details">
                                     <i class="ri ri-eye-line"></i>
                                 </a>
+                                <button class="btn btn-edit editAttendanceBtn"
+                                        data-id="${item.id}"
+                                        data-status="${item.status}"
+                                        data-in="${item.inTime}"
+                                        data-out="${item.outTime}">
+                                    <i class="icon-base ri ri-edit-box-line"></i>
+                                </button>
                             </td>
                         </tr>
                     `;
             }).join('');
         }
+        function formatTime(time) {
+            if (!time || time === '-') {
+                return '';
+            }
+            let date = new Date(`1970-01-01 ${time}`);
+            if (isNaN(date.getTime())) {
+                return '';
+            }
+            let hours = String(date.getHours()).padStart(2, '0');
+            let minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+        $(document).on('click', '.editAttendanceBtn', function () {
+            $('#attendance_id').val($(this).data('id'));
+            $('#edit_status').val($(this).data('status'));
+            $('#edit_in_time').val(formatTime($(this).data('in')));
+            $('#edit_out_time').val(formatTime($(this).data('out')));
+            $('#editAttendanceModal').modal('show');
+        });
+        $('#saveAttendanceBtn').on('click', function () {
+            let syncButton = document.getElementById('syncButton');
+            $('.error-text').text('');
+            $('#edit_in_time').removeClass('is-invalid');
+            $('#edit_out_time').removeClass('is-invalid');
+            $('#edit_status').removeClass('is-invalid');
+            let inTime = $('#edit_in_time').val().trim();
+            let outTime = $('#edit_out_time').val().trim();
+            let status = $('#edit_status').val().trim();
+            let hasError = false;
+            if (!inTime) {
+                $('#in_time_error').text('In time is required');
+                $('#edit_in_time').addClass('is-invalid');
+                hasError = true;
+            }
+            if (!status) {
+                $('#status_error').text('Status is required');
+                $('#edit_status').addClass('is-invalid');
+                hasError = true;
+            }
+            if (outTime && inTime && outTime < inTime) {
+                $('#out_time_error').text('Out time must be greater than in time');
+                $('#edit_out_time').addClass('is-invalid');
+                hasError = true;
+            }
+            if (hasError) {
+                return;
+            }
+            fetch(`${APP_URL}/attendance/update`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    id: $('#attendance_id').val(),
+                    in_time: inTime,
+                    out_time: outTime || null,
+                    status: status
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
 
+                if (res.success) {
+                    $('#editAttendanceModal').modal('hide');
+                    showStatus('success', res.message);
+                    syncButton.click();
+                } else {
+                    showStatus('danger', res.message);
+                }
+
+            })
+            .catch(err => {
+                console.error(err);
+                showStatus('danger', 'Update failed');
+            });
+
+        });
         function destroyDataTable() {
             if ($.fn.DataTable && $.fn.DataTable.isDataTable('#attendanceTable')) {
                 $('#attendanceTable').DataTable().destroy();

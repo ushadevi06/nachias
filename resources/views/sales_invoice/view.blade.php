@@ -144,6 +144,131 @@
                 }
             });
         });
+
+        $(document).on('click', '.einvoice-generate-btn', function() {
+            let invoiceId = $(this).data('id');
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to generate an E-Invoice for this Sales Invoice?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, generate it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let btn = $(this);
+                    let originalHtml = btn.html();
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    
+                    Swal.fire({
+                        title: 'Generating...',
+                        text: 'Please wait while we generate the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('sales_invoices/generate-einvoice') }}/" + invoiceId,
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                let msg = response.message;
+                                let isWarning = false;
+                                if (response.eway_bill && !response.eway_bill.success) {
+                                    msg += " However, E-Way Bill failed: " + response.eway_bill.message;
+                                    isWarning = true;
+                                }
+
+                                if (isWarning) {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Partial Success',
+                                        text: msg,
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success!',
+                                        text: msg,
+                                        timer: 3000,
+                                        showConfirmButton: false
+                                    });
+                                }
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire('Error!', response.message, 'error');
+                                btn.prop('disabled', false).html(originalHtml);
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            btn.prop('disabled', false).html(originalHtml);
+                        }
+                    });
+                }
+            });
+        });
+
+        $(document).on('click', '.einvoice-cancel-btn', function() {
+            let invoiceId = $(this).data('id');
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to cancel the E-Invoice? This action cannot be undone.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, cancel it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let btn = $(this);
+                    let originalHtml = btn.html();
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                    
+                    Swal.fire({
+                        title: 'Canceling...',
+                        text: 'Please wait while we cancel the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('sales_invoices/cancel-einvoice') }}/" + invoiceId,
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Canceled!',
+                                    text: response.message,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire('Error!', response.message, 'error');
+                                btn.prop('disabled', false).html(originalHtml);
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            btn.prop('disabled', false).html(originalHtml);
+                        }
+                    });
+                }
+            });
+        });
     });
 </script>
 @endsection

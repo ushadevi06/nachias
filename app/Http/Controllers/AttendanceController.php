@@ -19,7 +19,7 @@ class AttendanceController extends Controller
             <UserName>essl</UserName>
             <Password>essl</Password>
             <Location>Aeria HQ</Location>
-            <LogDate>' . $date . '</LogDate>
+            <LogDate>'.$date.'</LogDate>
             </GetDeviceLogs>
         </soap:Body>
         </soap:Envelope>';
@@ -28,9 +28,9 @@ class AttendanceController extends Controller
             'Content-Type' => 'text/xml; charset=utf-8',
             'SOAPAction' => '"http://tempuri.org/GetDeviceLogs"',
         ])
-            ->timeout(60) // avoid timeout
-            ->withBody($xml, 'text/xml; charset=utf-8')
-            ->post('http://ebioservernew.esslsecurity.com:99/webservice.asmx');
+        ->timeout(60) // avoid timeout
+        ->withBody($xml, 'text/xml; charset=utf-8')
+        ->post('http://ebioservernew.esslsecurity.com:99/webservice.asmx');
 
         // DEBUG once
         // dd($response->body());
@@ -42,7 +42,7 @@ class AttendanceController extends Controller
         // Extract without XML parser (SAFE way)
         preg_match('/<GetDeviceLogsResult>(.*?)<\/GetDeviceLogsResult>/s', $response->body(), $matches);
         // dd($matches);
-        return (object) [
+        return (object)[
             'GetDeviceLogsResult' => $matches[1] ?? ''
         ];
     }
@@ -61,7 +61,7 @@ class AttendanceController extends Controller
                 $logs[] = [
                     'datetime' => trim($cols[0]),
                     'emp_code' => trim($cols[1]),
-                    'device' => trim($cols[2]),
+                    'device'   => trim($cols[2]),
                 ];
             }
         }
@@ -74,7 +74,7 @@ class AttendanceController extends Controller
 
         foreach ($logs as $log) {
             $date = date('Y-m-d', strtotime($log['datetime']));
-            $emp = $log['emp_code'];
+            $emp  = $log['emp_code'];
 
             $grouped[$emp][$date][] = $log['datetime'];
         }
@@ -87,13 +87,37 @@ class AttendanceController extends Controller
         foreach ($grouped as $emp => $dates) {
             foreach ($dates as $date => $times) {
                 sort($times);
-                $in = $times[0] ?? null;
+                $in  = $times[0] ?? null;
                 $out = count($times) > 1 ? end($times) : null;
                 $hours = ($in && $out)
                     ? (strtotime($out) - strtotime($in)) / 3600
                     : 0;
-                $status = $this->getStatus($in, $out, $hours);
-                // Save to DB
+                $status = $this->getStatus($date, $in, $out, $hours);
+                $existingAttendance = DB::table('attendances')
+                    ->where('emp_code', $emp)
+                    ->where('date', $date)
+                    ->first();
+                if ($existingAttendance && $existingAttendance->is_manual) {
+                    $attendanceId = $existingAttendance->id;
+                    $name = DB::table('users')
+                        ->where('emp_id', $emp)
+                        ->value('name');
+                    $final[] = [
+                        'id' => $attendanceId,
+                        'name' => $name ?? 'Unknown',
+                        'code' => $emp,
+                        'date' => date('d-m-Y', strtotime($date)),
+                        'inTime' => $existingAttendance->in_time
+                            ? date('h:i A', strtotime($existingAttendance->in_time))
+                            : '-',
+                        'outTime' => $existingAttendance->out_time
+                            ? date('h:i A', strtotime($existingAttendance->out_time))
+                            : '-',
+                        'hours' => $existingAttendance->work_hours ?: '-',
+                        'status' => $existingAttendance->status
+                    ];
+                    continue;
+                }
                 DB::table('attendances')->updateOrInsert(
                     [
                         'emp_code' => $emp,
@@ -103,7 +127,8 @@ class AttendanceController extends Controller
                         'in_time' => $in,
                         'out_time' => $out,
                         'work_hours' => round($hours, 2),
-                        'status' => $status
+                        'status' => $status,
+                        'is_manual' => 0
                     ]
                 );
                 $name = DB::table('users')
@@ -118,16 +143,55 @@ class AttendanceController extends Controller
                     'name' => $name ?? 'Unknown',
                     'code' => $emp,
                     'date' => date('d-m-Y', strtotime($date)),
-                    'inTime' => $in ? date('h:i A', strtotime($in)) : '-',
-                    'outTime' => $out ? date('h:i A', strtotime($out)) : '-',
-                    'hours' => $hours ? round($hours, 2) : '-',
+                    'inTime' => $in
+                        ? date('h:i A', strtotime($in))
+                        : '-',
+                    'outTime' => $out
+                        ? date('h:i A', strtotime($out))
+                        : '-',
+                    'hours' => $hours
+                        ? round($hours, 2)
+                        : '-',
                     'status' => $status
                 ];
             }
         }
-        $allEmployees = DB::table('users')->where('id', '!=', 1)->pluck('emp_id')->toArray();
+        $allEmployees = DB::table('users')
+            ->where('id', '!=', 1)
+            ->pluck('emp_id')
+            ->toArray();
         foreach ($allEmployees as $emp) {
             if (!isset($grouped[$emp][$selectedDate])) {
+                $existingAttendance = DB::table('attendances')
+                    ->where('emp_code', $emp)
+                    ->where('date', $selectedDate)
+                    ->first();
+                if ($existingAttendance && $existingAttendance->is_manual) {
+                    $name = DB::table('users')
+                        ->where('emp_id', $emp)
+                        ->value('name');
+                    $final[] = [
+                        'id' => $existingAttendance->id,
+                        'name' => $name ?? 'Unknown',
+                        'code' => $emp,
+                        'date' => date('d-m-Y', strtotime($selectedDate)),
+                        'inTime' => $existingAttendance->in_time
+                            ? date('h:i A', strtotime($existingAttendance->in_time))
+                            : '-',
+                        'outTime' => $existingAttendance->out_time
+                            ? date('h:i A', strtotime($existingAttendance->out_time))
+                            : '-',
+                        'hours' => $existingAttendance->work_hours ?: '-',
+                        'status' => $existingAttendance->status
+                    ];
+                    continue;
+                }
+                $status = $this->getStatus(
+                    $selectedDate,
+                    null,
+                    null,
+                    0
+                );
                 DB::table('attendances')->updateOrInsert(
                     [
                         'emp_code' => $emp,
@@ -137,7 +201,8 @@ class AttendanceController extends Controller
                         'in_time' => null,
                         'out_time' => null,
                         'work_hours' => 0,
-                        'status' => 'Absent'
+                        'status' => $status,
+                        'is_manual' => 0
                     ]
                 );
                 $name = DB::table('users')
@@ -155,33 +220,42 @@ class AttendanceController extends Controller
                     'inTime' => '-',
                     'outTime' => '-',
                     'hours' => '-',
-                    'status' => 'Absent'
+                    'status' => $status
                 ];
             }
         }
         return $final;
     }
-    private function getStatus($inTime, $outTime, $hours)
+    private function getStatus($date, $inTime, $outTime, $hours)
     {
+        $isSunday = date('w', strtotime($date)) == 0;
+        $isHoliday = DB::table('declared_holidays')
+            ->whereDate('date', $date)
+            ->exists();
         if (!$inTime && !$outTime) {
+            if ($isHoliday) {
+                return 'Holiday';
+            }
+            if ($isSunday) {
+                return 'Week Off';
+            }
             return 'Absent';
         }
-
-        if ($inTime && !$outTime) {
-            return 'Missing Time Card';
+        if (($isSunday || $isHoliday) && ($inTime || $outTime)) {
+            return 'Overtime';
         }
-
-        $in = strtotime($inTime);
-        $late = strtotime(date('Y-m-d', strtotime($inTime)) . ' 09:05:00');
-
-        if ($in > $late) {
-            return 'Late';
-        }
-
         if ($hours > 9) {
             return 'Overtime';
         }
-
+        if ($inTime) {
+            $in = strtotime($inTime);
+            $late = strtotime(
+                date('Y-m-d', strtotime($inTime)) . ' 09:05:00'
+            );
+            if ($in > $late) {
+                return 'Late';
+            }
+        }
         return 'Present';
     }
     public function sync(Request $request)
@@ -267,7 +341,7 @@ class AttendanceController extends Controller
     public function getStaffReport(Request $request)
     {
         $empCode = $request->emp_code;
-        $month = $request->month;
+        $month   = $request->month;
         $query = DB::table('attendances')
             ->join('users', function ($join) {
                 $join->on(
@@ -291,7 +365,7 @@ class AttendanceController extends Controller
         if ($month) {
             $query->where('attendances.date', 'like', $month . '%');
         }
-        $records = $query->orderBy('attendances.date', 'desc')->get();
+        $records = $query->orderBy('attendances.date','desc')->get();
         return response()->json($records);
     }
     public function getEmployees()
@@ -299,13 +373,12 @@ class AttendanceController extends Controller
         $employees = DB::table('users')
             ->select('emp_id as code', 'name')
             ->where('id', '!=', 1)
-            ->orderBy('id', 'desc')
+            ->orderBy('id','desc')
             ->get();
 
         return response()->json($employees);
     }
-    public function edit()
-    {
+    public function edit() {
         return view('attendances/edit');
     }
     public function view($id)
@@ -333,5 +406,79 @@ class AttendanceController extends Controller
         }
 
         return view('attendances.view_details', compact('attendance'));
+    }
+    public function updateAttendance(Request $request)
+    {
+        $request->validate([
+            'id' => 'required',
+            'in_time' => 'nullable',
+            'out_time' => 'nullable',
+            'status' => 'nullable'
+        ]);
+        $attendance = DB::table('attendances')
+            ->where('id', $request->id)
+            ->first();
+        if (!$attendance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Attendance not found'
+            ]);
+        }
+        $date = $attendance->date;
+        $in = $request->in_time
+            ? $date . ' ' . date('H:i:s', strtotime($request->in_time))
+            : null;
+        $out = $request->out_time
+            ? $date . ' ' . date('H:i:s', strtotime($request->out_time))
+            : null;
+        $hours = 0;
+        if ($in && $out) {
+            $hours = round(
+                (strtotime($out) - strtotime($in)) / 3600,
+                2
+            );
+            if ($hours < 0) {
+                $hours = 0;
+            }
+        }
+        $status = 'Present';
+        if (!$in && !$out) {
+            $status = 'Absent';
+        } else {
+            $isSunday = date('w', strtotime($date)) == 0;
+            $isHoliday = DB::table('declared_holidays')
+                ->whereDate('date', $date)
+                ->exists();
+            if ($isSunday || $isHoliday) {
+                $status = 'Overtime';
+            } else if ($hours > 9) {
+                $status = 'Overtime';
+            } else if ($in) {
+                $inTimestamp = strtotime($in);
+                $lateTime = strtotime($date . ' 09:05:00');
+                if ($inTimestamp > $lateTime) {
+                    $status = 'Late';
+                } else {
+                    $status = 'Present';
+                }
+            }
+        }
+        DB::table('attendances')
+            ->where('id', $request->id)
+            ->update([
+                'in_time' => $in,
+                'out_time' => $out,
+                'work_hours' => $hours,
+                'status' => $status,
+                'is_manual' => 1,
+                'updated_by' => auth()->id(),
+                'manual_updated_at' => now(),
+                'updated_at' => now()
+            ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Attendance updated successfully',
+            'status' => $status
+        ]);
     }
 }

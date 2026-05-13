@@ -114,7 +114,16 @@
                                     @enderror
                                 </div>
                             </div>
-
+                            
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('zip_code') is-invalid @enderror" id="zip_code" placeholder="Enter Zip Code" name="zip_code" value="{{ old('zip_code', $setting->zip_code ?? '') }}">
+                                    <label for="zip_code">Zip Code *</label>
+                                    @error('zip_code')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
                             <div class="col-lg-12">
                                 <hr>
                             </div>

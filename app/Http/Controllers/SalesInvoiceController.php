@@ -82,9 +82,17 @@ class SalesInvoiceController extends Controller
                 </div>
                 <div class="status_msg_' . $inv->id . ' mt-1" style="font-size:10px;"></div>';
 
-                $action = '<div class="button-box">
+                $eInvoiceBtn = '';
+                if ($inv->irn) {
+                    $eInvoiceBtn = '<button type="button" class="btn btn-secondary" disabled title="E-Invoice Already Generated" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-checkbox-circle-line"></i></button>';
+                } else {
+                    $eInvoiceBtn = '<button type="button" class="btn btn-info einvoice-generate-btn" data-id="' . $inv->id . '" title="Generate E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
+                }
+
+                $action = '<div class="button-box d-flex align-items-center">
                     <a href="' . url('sales_invoices/view/' . $inv->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a>
                     <a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                    ' . $eInvoiceBtn . '
                 </div>';
 
                 $data[] = [
@@ -155,13 +163,19 @@ class SalesInvoiceController extends Controller
                 $invoiceData = $request->only([
                     'inv_no', 'so_id', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
                     'invoice_status', 'payment_mode', 'extra_input', 'due_date',
-                    'notes', 'transporter_name', 'lr_no',
-                    'no_of_box', 'sub_total', 'discount_percent', 'discount', 
+                    'notes', 'transporter_name', 'transporter_id', 'transport_mode',
+                    'vehicle_no', 'veh_type', 'transport_distance', 'tran_doc_no', 'tran_doc_date',
+                    'lr_no', 'no_of_box', 'sub_total', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
                     'other_charges', 'round_off_type', 'round_off',
                     'grand_total', 'due_amount'
                 ]);
+
+                if ($request->tran_doc_date) {
+                    $invoiceData['tran_doc_date'] = Carbon::createFromFormat('d-m-Y', $request->tran_doc_date)->format('Y-m-d');
+                }
+                $invoiceData['lr_no'] = $request->tran_doc_no ?? $request->lr_no; // Keep lr_no in sync
 
                 $invoiceData['inv_date'] = Carbon::createFromFormat('d-m-Y', $request->inv_date)->format('Y-m-d');
                 if ($request->due_date) {
@@ -233,7 +247,7 @@ class SalesInvoiceController extends Controller
                 $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
                 if (in_array($invoice->invoice_status, $activeStatuses)) {
                     $invoice->load('items');
-                    $this->applyStockDeduction($invoice);
+                    // $this->applyStockDeduction($invoice);
                 }
 
                 DB::commit();
@@ -355,6 +369,7 @@ class SalesInvoiceController extends Controller
                 'mrp' => $item->mrp ?? 0,
                 'amount' => $item->amount,
                 'art_no' => $item->art_no,
+                'hsn_sac' => $item->hsn_sac ?? null,
                 'sku' => $item->sku,
                 'size_id' => $item->size_id,
                 'size_name' => $item->size ? $item->size->size : '',
@@ -384,6 +399,9 @@ class SalesInvoiceController extends Controller
             'igst_percent' => $so->igst_percent,
             'cgst_percent' => $so->cgst_percent,
             'sgst_percent' => $so->sgst_percent,
+            'transporter_name' => $so->transporter_name,
+            'transport_gst_no' => $so->transport_gst_no,
+            'transport_mode_id' => $so->transport_mode_id,
             'items' => $items
         ]);
     }
@@ -405,9 +423,9 @@ class SalesInvoiceController extends Controller
         $isNowActive = in_array($newStatus, $activeStatuses);
 
         if (!$wasActive && $isNowActive) {
-            $this->applyStockDeduction($invoice);
+            // $this->applyStockDeduction($invoice);
         } elseif ($wasActive && !$isNowActive) {
-            $this->revertStockDeduction($invoice);
+            // $this->revertStockDeduction($invoice);
         }
 
         return response()->json(['success' => true, 'message' => 'Status updated successfully']);
@@ -549,5 +567,57 @@ class SalesInvoiceController extends Controller
         $setting = Setting::with(['state', 'city'])->first();
         $is_print = true;
         return view('sales_invoice.sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
+    }
+
+    public function generateEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+        if ($invoice->irn) {
+            return response()->json(['success' => false, 'message' => 'E-Invoice already generated']);
+        }
+
+        $transporterData = [];
+        if (!empty($invoice->vehicle_no)) {
+            $transporterData = [
+                'transport_distance' => $invoice->transport_distance,
+                'transport_mode' => $invoice->transport_mode,
+                'transporter_id' => $invoice->transporter_id,
+                'transporter_name' => $invoice->transporter_name,
+                'tran_doc_date' => $invoice->tran_doc_date ? Carbon::parse($invoice->tran_doc_date)->format('d/m/Y') : null,
+                'tran_doc_no' => $invoice->tran_doc_no,
+                'vehicle_no' => $invoice->vehicle_no,
+                'veh_type' => $invoice->veh_type,
+            ];
+        }
+
+        $result = $eInvoiceService->generateEInvoice($invoice, $transporterData);
+        return response()->json($result);
+    }
+
+    public function generateEWayBill(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+
+        if (empty($invoice->irn)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Generate E-Invoice first before E-Way Bill.'
+            ]);
+        }
+
+        $result = $eInvoiceService->generateEWayBill($invoice, $request->all());
+
+        return response()->json($result);
+    }
+
+    public function cancelEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+        if (!$invoice->irn) {
+            return response()->json(['success' => false, 'message' => 'No E-Invoice found to cancel']);
+        }
+
+        $result = $eInvoiceService->cancelEInvoice($invoice);
+        return response()->json($result);
     }
 }

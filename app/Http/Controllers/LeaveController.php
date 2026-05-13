@@ -35,20 +35,20 @@ class LeaveController extends Controller
                 $search = $request->input('search')['value'];
                 $query->where(function ($q) use ($search) {
                     $q->where('leave_type', 'like', "%{$search}%")
-                        ->orWhere('status', 'like', "%{$search}%")
-                        ->orWhereExists(function ($sub) use ($search) {
-                            $sub->select(DB::raw(1))
-                                ->from('users')
-                                ->whereRaw("
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhereExists(function ($sub) use ($search) {
+                        $sub->select(DB::raw(1))
+                            ->from('users')
+                            ->whereRaw("
                                 CONVERT(users.emp_id USING utf8mb4)
                                 =
                                 CONVERT(leaves.emp_code USING utf8mb4)
                             ")
-                                ->where(function ($q2) use ($search) {
-                                    $q2->where('name', 'like', "%{$search}%")
-                                        ->orWhere('emp_id', 'like', "%{$search}%");
-                                });
-                        });
+                            ->where(function ($q2) use ($search) {
+                                $q2->where('name', 'like', "%{$search}%")
+                                ->orWhere('emp_id', 'like', "%{$search}%");
+                            });
+                    });
                 });
             }
             $filteredRecords = $query->count();
@@ -90,7 +90,7 @@ class LeaveController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     // 'leave_id' => 'LV-' . $leave->id,
-                    'employee' => $leave->employee->name ? $leave->employee->name . ' (' . $leave->employee->emp_id . ')' : '-',
+                    'employee' => $leave->employee->name ? $leave->employee->name.' ('.$leave->employee->emp_id.')' : '-',
                     'leave_type' => $leave->leave_type,
                     'start_date' => Carbon::parse($leave->leave_date)->format('d-m-Y'),
                     // 'end_date' => Carbon::parse($leave->end_date)->format('d-m-Y'),
@@ -149,19 +149,27 @@ class LeaveController extends Controller
             DB::beginTransaction();
             try {
                 if ($id) {
+                    $leave = Leave::find($id);
+                    $oldData = $leave ? $leave->toArray() : [];
+                    $newData = [
+                        'status' => $request->status,
+                        'updated_by' => auth()->id()
+                    ];
                     Leave::where('id', $id)->update([
                         'status' => $request->status,
                         'updated_by' => auth()->id()
                     ]);
                     DB::commit();
+                    addLog('update', 'Leave', 'leaves', $id, $oldData, $newData);
                     return redirect('leave')->with('success', 'Leave approved successfully');
                 }
                 $dates = explode(' to ', $request->leave_days);
                 $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]));
-                $endDate = isset($dates[1])
-                    ? Carbon::createFromFormat('d-m-Y', trim($dates[1]))
+                $endDate = isset($dates[1]) 
+                    ? Carbon::createFromFormat('d-m-Y', trim($dates[1])) 
                     : $startDate;
                 $period = CarbonPeriod::create($startDate, $endDate);
+                $newData = [];
                 foreach ($period as $date) {
                     $exists = Leave::where('emp_code', $request->emp_code)
                         ->where('leave_date', $date->format('Y-m-d'))
@@ -173,18 +181,19 @@ class LeaveController extends Controller
                             'leave_days' => 'Leave already exists for ' . $date->format('d-m-Y') . ' (Pending/Approved)'
                         ]);
                     }
-                    Leave::create([
-                        'emp_code' => $request->emp_code,
+                    $leave = Leave::create([
+                        'emp_code'   => $request->emp_code,
                         'leave_type' => $request->leave_type,
                         'leave_date' => $date->format('Y-m-d'),
-                        'reason' => $request->reason,
-                        'status' => $request->status,
+                        'reason'     => $request->reason,
+                        'status'     => $request->status,
                         'created_by' => auth()->id()
                     ]);
+                    $newData[] = $leave->toArray();
                 }
 
                 DB::commit();
-
+                addLog('create', 'Leave', 'leaves', $request->id, null, $newData);
                 return redirect('leave')->with('success', 'Leave applied successfully');
 
             } catch (\Exception $e) {
@@ -196,12 +205,12 @@ class LeaveController extends Controller
         }
         $leaveEntry = $leaveEntry ?? null;
         // dd($leaveEntry);
-        $employees = User::where('id', '!=', 1)->where('status', 'Active')->get();
+        $employees = User::where('id','!=',1)->where('status','Active')->get();
         return view('leaves/add', compact('employees', 'leaveEntry'));
-    }
+    } 
     public function view($id)
     {
         $leave = Leave::with('employee')->findOrFail($id);
         return view('leaves/view_details', compact('leave'));
     }
-}
+} 

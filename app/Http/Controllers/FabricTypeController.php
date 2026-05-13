@@ -115,28 +115,61 @@ class FabricTypeController extends Controller
         return view('fabric_type.add', compact('fabricType'));
     }
 
+
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete fabric-type')) {
             return unauthorizedRedirect();
         }
+
         $fabricType = FabricType::findOrFail($id);
+        $fabricTypeName = trim((string) $fabricType->fabric_type);
+        $normalizedFabricTypeName = mb_strtoupper($fabricTypeName);
+        $matchingFabricTypeIds = FabricType::withTrashed()
+            ->whereRaw('UPPER(TRIM(fabric_type)) = ?', [$normalizedFabricTypeName])
+            ->pluck('id');
+
         $references = [
+            [PurchaseOrderItem::class, 'fabric_type_id', 'Purchase Order Items'],
             [Item::class, 'fabric_type_id', 'Items'],
+            [GrnEntryItem::class, 'fabric_type_id', 'GRN Entry Items'],
+            [JobCardEntry::class, 'fabric_type_id', 'Job Card Entries'],
+            [StockEntryItem::class, 'fabric_type_id', 'Stock Entry Items'],
+            [BarcodeMaster::class, 'fabric_type_id', 'Barcode Masters'],
         ];
+
         foreach ($references as [$model, $column, $label]) {
-            if ($model::where($column, $id)->exists()) {
-                session()->flash('danger', "This fabric type is currently referenced in {$label} and cannot be deleted.");
-                return redirect('fabric_type');
+            if ($model::whereIn($column, $matchingFabricTypeIds)->exists()) {
+                return redirect('fabric_type')->with('danger', "This fabric type is currently referenced in {$label} and cannot be deleted.");
             }
         }
 
+        if ($fabricTypeName !== '' && RawMaterial::whereRaw('UPPER(TRIM(material_type)) = ?', [$normalizedFabricTypeName])->exists()) {
+            return redirect('fabric_type')->with('danger', 'This fabric type is in use and cannot be deleted.');
+        }
+
+        if ($fabricTypeName !== '' && DB::table('purchase_order_items as poi')
+                ->join('raw_materials as rm', 'rm.id', '=', 'poi.raw_material_id')
+                ->whereNull('poi.deleted_at')
+                ->whereNull('rm.deleted_at')
+                ->whereRaw('UPPER(TRIM(rm.material_type)) = ?', [$normalizedFabricTypeName])
+                ->exists()
+        ) {
+            return redirect('fabric_type')->with('danger', 'This fabric type is in use and cannot be deleted.');
+        }
+
         $oldData = $fabricType->toArray();
-        $fabricType->delete();
+
+        try {
+            $fabricType->delete();
+        } catch (QueryException $e) {
+            return redirect('fabric_type')->with('danger', 'This fabric type is in use and cannot be deleted.');
+        }
+
         addLog('delete', 'Fabric Type', 'fabric_types', $id, $oldData, null);
+
         return redirect('fabric_type')->with('success', 'Fabric Type deleted successfully');
     }
-
     public function updateStatus(Request $request, $id)
     {
         $fabricType = FabricType::findOrFail($id);

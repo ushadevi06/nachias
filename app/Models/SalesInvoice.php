@@ -31,6 +31,9 @@ class SalesInvoice extends Model
         'discount_percent',
         'discount',
         'transporter_name',
+        'tran_doc_no',
+        'tran_doc_date',
+        'veh_type',
         'lr_no',
         'no_of_box',
         'commission_percent',
@@ -52,6 +55,17 @@ class SalesInvoice extends Model
         'due_amount',
         'created_by',
         'updated_by',
+        'irn',
+        'ack_no',
+        'ack_date',
+        'signed_qr_code',
+        'eway_bill_no',
+        'eway_bill_date',
+        'eway_bill_valid_till',
+        'vehicle_no',
+        'transporter_id',
+        'transport_mode',
+        'transport_distance',
     ];
 
     protected $casts = [
@@ -59,6 +73,9 @@ class SalesInvoice extends Model
         'due_date' => 'date',
         'other_state' => 'boolean',
         'show_fields' => 'array',
+        'ack_date' => 'datetime',
+        'eway_bill_date' => 'datetime',
+        'eway_bill_valid_till' => 'datetime',
     ];
 
     public function salesOrder()

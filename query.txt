@@ -212,3 +212,4 @@ ALTER TABLE job_card_fabric_details
 ADD COLUMN grn_image VARCHAR(255) NULL AFTER remaining_qty;
 
 
+ALTER TABLE `settings` ADD `zip_code` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL AFTER `address`;

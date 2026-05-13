@@ -18,6 +18,7 @@ class Setting extends Model
         'state_id',
         'city_id',
         'address',
+        'zip_code',
         'cgst',
         'sgst',
         'igst',

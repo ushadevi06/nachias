@@ -149,6 +149,9 @@ class SalesOrderController extends Controller
         $charges = collect();
         if ($id) {
             $salesOrder = SalesOrder::with(['items', 'charges'])->findOrFail($id);
+            if ($salesOrder->status !== 'Draft') {
+                return redirect('sales_orders')->with('error', 'Only Draft Sales Orders can be edited.');
+            }
             $charges = $salesOrder->charges;
         }
 
@@ -428,7 +431,7 @@ class SalesOrderController extends Controller
                 DB::commit();
 
                 if ($isNewApproval) {
-                    $this->adjustStock($salesOrder->id);
+                    // $this->adjustStock($salesOrder->id);
                 }
 
                 addLog($id ? 'update' : 'create', 'Sale Order', 'sales_orders', $salesOrder->id, null, $salesOrder->toArray());
@@ -578,9 +581,9 @@ class SalesOrderController extends Controller
             if ($newStatus === 'Approved' && $oldStatus !== 'Approved') {
                 $salesOrder->approved_by = auth()->id();
                 $salesOrder->approved_date = now();
-                $this->adjustStock($id);
+                // $this->adjustStock($id);
             } elseif ($newStatus === 'Cancelled' && $oldStatus === 'Approved') {
-                $this->adjustStock($id, true); 
+                // $this->adjustStock($id, true); 
             }
 
             $salesOrder->save();

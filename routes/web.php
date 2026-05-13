@@ -454,6 +454,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('sales_invoices/status/{id}', [SalesInvoiceController::class, 'updateStatus']);
     Route::get('sales_invoices/get-sale-order-details/{id}', [SalesInvoiceController::class, 'getSaleOrderDetails']);
     Route::get('sales_invoices/print-sticker/{id}', [SalesInvoiceController::class, 'printSticker']);
+    Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
+    Route::post('sales_invoices/generate-ewaybill/{id}', [SalesInvoiceController::class, 'generateEWayBill']);
+    Route::post('sales_invoices/cancel-einvoice/{id}', [SalesInvoiceController::class, 'cancelEInvoice']);
 
     /* Credit Notes */
     Route::get('credit_notes', [CreditNoteController::class, 'index']);
@@ -597,12 +600,15 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /*  Attendance  */
     Route::get('attendances', [AttendanceController::class, 'index']);
+    Route::get('view_attendance', [AttendanceController::class, 'view']);
+    /* new */
     Route::get('view_attendance/{id}', [AttendanceController::class, 'view']);
     Route::post('/sync-attendance', [AttendanceController::class, 'sync']);
     Route::post('/holidays/save', [AttendanceController::class, 'saveHolidays']);
-    Route::get('/holidays/{month}', [AttendanceController::class, 'getHolidays']);
+    Route::get('holidays/{month}', [AttendanceController::class, 'getHolidays']);
     Route::post('/staff-report', [AttendanceController::class, 'getStaffReport']);
     Route::get('/get-employees', [AttendanceController::class, 'getEmployees']);
+    Route::post('/attendance/update', [AttendanceController::class, 'updateAttendance']);
 
     /*  Leave  */
     Route::get('leave', [LeaveController::class, 'index']);
@@ -612,8 +618,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Overtime */
     Route::get('overtime', [OvertimeController::class, 'index']);
-    Route::get('edit_overtime/{date}', [OvertimeController::class, 'edit'])->name('edit_overtime');
-    Route::get('view_overtime/{date}/{emp_code}', [OvertimeController::class, 'view'])->name('view_overtime');
+    Route::get('edit_overtime/{date}', [OvertimeController::class, 'edit'])
+        ->name('edit_overtime');  /* {department} */
+    Route::get('view_overtime/{date}/{emp_code}', [OvertimeController::class, 'view'])
+        ->name('view_overtime');  /* {department} */
+    Route::post('update-overtime', [OvertimeController::class, 'update'])->name('update_overtime');
 
     /* Salary Calculation */
     Route::get('salary_calculation', [SalaryController::class, 'index']);
