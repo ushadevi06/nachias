@@ -39,7 +39,7 @@ class OperationStageController extends Controller
                     'DT_RowIndex' => $count++,
                     'operation_stage_name' => $stage->operation_stage_name,
                     'working_days' => $stage->working_days ?? 0,
-                    'cost' => $stage->cost ?? 0.00,
+                    'cost' => isset($stage->cost) ? number_format($stage->cost, 2) : '0.00',
                     'status' => $status,
                     'action' => $action,
                 ];

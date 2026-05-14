@@ -69,21 +69,15 @@ class SalesOrderController extends Controller
                     $selected = $so->status === $status ? 'selected' : '';
                     $disabled = '';
 
-                    // Transition Logic based on user requirements
                     if ($so->status === 'Draft') {
-                        // Draft can go to Pending, Approved, Rejected
                         if (!in_array($status, ['Draft', 'Pending', 'Approved', 'Rejected'])) $disabled = 'disabled';
                     } elseif ($so->status === 'Pending') {
-                        // Pending can go to Approved, Rejected, Draft
                         if (!in_array($status, ['Pending', 'Approved', 'Rejected', 'Draft'])) $disabled = 'disabled';
                     } elseif ($so->status === 'Approved') {
-                        // Approved is locked. Can only go to Cancelled or Dispatched
                         if (!in_array($status, ['Approved', 'Cancelled', 'Dispatched'])) $disabled = 'disabled';
                     } elseif ($so->status === 'Rejected') {
-                        // Rejected can go back to Draft
                         if (!in_array($status, ['Rejected', 'Draft'])) $disabled = 'disabled';
                     } elseif ($so->status === 'Cancelled' || $so->status === 'Dispatched') {
-                        // Cancelled/Dispatched are final
                         if ($status !== $so->status) $disabled = 'disabled';
                     }
 
@@ -107,9 +101,9 @@ class SalesOrderController extends Controller
                         $action .= '<a href="' . url('sales_orders/add/' . $so->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                     }
                 }
-                if (auth()->id() == 1 || auth()->user()->can('delete sales-order')) {
-                    $action .= '<a href="' . url('sales_orders/delete/' . $so->id) . '" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                }
+                // if (auth()->id() == 1 || auth()->user()->can('delete sales-order')) {
+                //     $action .= '<a href="' . url('sales_orders/delete/' . $so->id) . '" class="btn btn-delete delete-btn"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                // }
                 $action .= '</div>';
 
                 $data[] = [
@@ -431,7 +425,7 @@ class SalesOrderController extends Controller
                 DB::commit();
 
                 if ($isNewApproval) {
-                    // $this->adjustStock($salesOrder->id);
+                    $this->adjustStock($salesOrder->id);
                 }
 
                 addLog($id ? 'update' : 'create', 'Sale Order', 'sales_orders', $salesOrder->id, null, $salesOrder->toArray());
@@ -581,9 +575,9 @@ class SalesOrderController extends Controller
             if ($newStatus === 'Approved' && $oldStatus !== 'Approved') {
                 $salesOrder->approved_by = auth()->id();
                 $salesOrder->approved_date = now();
-                // $this->adjustStock($id);
+                $this->adjustStock($id);
             } elseif ($newStatus === 'Cancelled' && $oldStatus === 'Approved') {
-                // $this->adjustStock($id, true); 
+                $this->adjustStock($id, true); 
             }
 
             $salesOrder->save();

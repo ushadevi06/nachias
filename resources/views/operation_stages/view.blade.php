@@ -63,7 +63,7 @@
                 { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                 { data: 'operation_stage_name', name: 'operation_stage_name' },
                 { data: 'working_days', name: 'working_days' },
-                { data: 'cost', name: 'cost' },
+                { data: 'cost', name: 'cost', defaultContent: '0.00' },
                 { data: 'status', name: 'status', orderable: false, searchable: false },
                 { data: 'action', name: 'action', orderable: false, searchable: false },
             ]

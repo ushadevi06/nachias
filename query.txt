@@ -213,3 +213,21 @@ ADD COLUMN grn_image VARCHAR(255) NULL AFTER remaining_qty;
 
 
 ALTER TABLE `settings` ADD `zip_code` VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL AFTER `address`;
+
+ALTER TABLE `sales_invoices`
+    ADD COLUMN `tran_doc_no` VARCHAR(255) NULL AFTER `transporter_name`,
+    ADD COLUMN `tran_doc_date` VARCHAR(255) NULL AFTER `tran_doc_no`,
+    ADD COLUMN `veh_type` VARCHAR(255) NULL AFTER `tran_doc_date`;
+
+ALTER TABLE `sales_invoices`
+    ADD COLUMN `irn` VARCHAR(64) NULL AFTER `invoice_status`,
+    ADD COLUMN `ack_no` VARCHAR(255) NULL AFTER `irn`,
+    ADD COLUMN `ack_date` DATETIME NULL AFTER `ack_no`,
+    ADD COLUMN `signed_qr_code` TEXT NULL AFTER `ack_date`,
+    ADD COLUMN `eway_bill_no` VARCHAR(255) NULL AFTER `signed_qr_code`,
+    ADD COLUMN `eway_bill_date` DATETIME NULL AFTER `eway_bill_no`,
+    ADD COLUMN `eway_bill_valid_till` DATETIME NULL AFTER `eway_bill_date`,
+    ADD COLUMN `vehicle_no` VARCHAR(255) NULL AFTER `eway_bill_valid_till`,
+    ADD COLUMN `transporter_id` VARCHAR(255) NULL AFTER `vehicle_no`,
+    ADD COLUMN `transport_mode` VARCHAR(255) NULL AFTER `transporter_id`,
+    ADD COLUMN `transport_distance` INT NULL AFTER `transport_mode`;

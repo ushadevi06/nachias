@@ -24,13 +24,23 @@ class AttendanceController extends Controller
         </soap:Body>
         </soap:Envelope>';
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'text/xml; charset=utf-8',
-            'SOAPAction' => '"http://tempuri.org/GetDeviceLogs"',
+        $response = Http::withOptions([
+            'verify' => false,
+            'connect_timeout' => 30,
         ])
-        ->timeout(60) // avoid timeout
-        ->withBody($xml, 'text/xml; charset=utf-8')
-        ->post('http://ebioservernew.esslsecurity.com:99/webservice.asmx');
+            ->timeout(120)
+            ->retry(3, 5000)
+            ->withHeaders([
+                'Content-Type' => 'text/xml; charset=utf-8',
+                'SOAPAction' => '"http://tempuri.org/GetDeviceLogs"',
+            ])
+            ->withBody(
+                $xml,
+                'text/xml; charset=utf-8'
+            )
+            ->post(
+                'http://ebioservernew.esslsecurity.com:99/webservice.asmx'
+            );
 
         // DEBUG once
         // dd($response->body());

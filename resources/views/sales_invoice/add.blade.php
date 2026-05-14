@@ -675,11 +675,6 @@
                             </div>
                         </div>
                         <div class="text-end mt-4">
-                            @if(isset($invoice) && $invoice->irn)
-                                <button type="button" class="btn btn-secondary" disabled title="E-Invoice Already Generated"><i class="ri ri-checkbox-circle-line"></i> E-Invoice Generated</button>
-                            @else
-                                <button type="button" class="btn btn-info" id="einvoice-generate"><i class="ri ri-receipt-line"></i> Generate E-Invoice</button>
-                            @endif
                             <button type="submit" class="btn btn-primary">Submit</button>
                             <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
                         </div>
