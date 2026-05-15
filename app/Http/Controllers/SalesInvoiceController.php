@@ -175,7 +175,7 @@ class SalesInvoiceController extends Controller
                 if ($request->tran_doc_date) {
                     $invoiceData['tran_doc_date'] = Carbon::createFromFormat('d-m-Y', $request->tran_doc_date)->format('Y-m-d');
                 }
-                $invoiceData['lr_no'] = $request->tran_doc_no ?? $request->lr_no; // Keep lr_no in sync
+                $invoiceData['lr_no'] = $request->tran_doc_no ?? $request->lr_no;
 
                 $invoiceData['inv_date'] = Carbon::createFromFormat('d-m-Y', $request->inv_date)->format('Y-m-d');
                 if ($request->due_date) {
@@ -183,7 +183,6 @@ class SalesInvoiceController extends Controller
                 }
                 $invoiceData['show_fields'] = $request->show_fields ?? [];
                 $invoiceData['other_state'] = $request->other_state == 'yes';
-
 
                 if ($request->hasFile('signature_file')) {
                     $dir = public_path('uploads/sales_invoices/signatures');
@@ -214,15 +213,13 @@ class SalesInvoiceController extends Controller
                         $this->revertStockDeduction($invoice);
                     }
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
-                    $invoice->update($invoiceData);
-                    
+                    $invoice->update($invoiceData);                     
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
                     $invoice->items()->whereNotIn('id', $itemIds)->forceDelete();
                 } else {
                     $invoiceData['received_amount'] = (float)$request->received_amount;
                     $invoice = SalesInvoice::create($invoiceData);
                 }
-
                 foreach ($request->items as $item) {
                     SalesInvoiceItem::updateOrCreate(
                         ['id' => $item['id'] ?? null],
@@ -328,7 +325,6 @@ class SalesInvoiceController extends Controller
                     $itemName = $item->item->name;
                 }
             } 
-            // Fallback to stockEntryItem if direct item is missing
             elseif ($item->stockEntryItem) {
                 if ($item->stockEntryItem->item) {
                     $seItem = $item->stockEntryItem->item;
@@ -344,7 +340,6 @@ class SalesInvoiceController extends Controller
                         $itemName = $seItem->name;
                     }
                 } else {
-                    // Ultimate fallback: finished_item_code
                     $brandName = $item->stockEntryItem->finished_item_code;
                 }
                 
@@ -610,14 +605,5 @@ class SalesInvoiceController extends Controller
         return response()->json($result);
     }
 
-    public function cancelEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
-    {
-        $invoice = SalesInvoice::findOrFail($id);
-        if (!$invoice->irn) {
-            return response()->json(['success' => false, 'message' => 'No E-Invoice found to cancel']);
-        }
 
-        $result = $eInvoiceService->cancelEInvoice($invoice);
-        return response()->json($result);
-    }
 }

@@ -63,15 +63,12 @@ class OrderaxeService
         return null;
     }
 
-    public function syncOrders($limit = null)
+    public function syncOrders()
     {
         $orders = $this->fetchOrders(0);
 
-        if (!$orders) return 0;
-
-        if ($limit) {
-            $orders = array_slice($orders, 0, $limit);
-        }
+        if (!$orders)
+            return 0;
 
         $syncCount = 0;
         foreach ($orders as $orderData) {
@@ -79,7 +76,6 @@ class OrderaxeService
                 $syncCount++;
             }
         }
-
         return $syncCount;
     }
 
@@ -109,7 +105,6 @@ class OrderaxeService
                 ]);
                 return false;
             }
-
             $salesOrder = SalesOrder::create([
                 'so_no'        => $orderNo,
                 'orderaxe_id'  => $orderAxeId,
@@ -124,63 +119,67 @@ class OrderaxeService
                 'season_id'    => null,
                 'zone_id'      => null,
                 'created_by'   => 1,
+                'billing_address' => $this->formatAddress($customerData['alias']['address'] ?? []),
+                'shipping_address' => $this->formatAddress($customerData['alias']['address'] ?? []),
             ]);
-
-            $combinations = $orderData['combinations'] ?? [];
+            $products = $orderData['products'] ?? [];
             $totalQty = 0;
             $totalAmount = 0;
 
-            foreach ($combinations as $itemData) {
-                $barcode = $itemData['barcode'] ?? null;
-                $qty = $itemData['quantity'] ?? 0;
-                $stockEntryItem = null;
-                $rate = $itemData['mrp'] ?? 0;
-                $artNo = null;
+            foreach ($products as $product) {
+                $combinations = $product['combinations'] ?? []; 
+                foreach ($combinations as $itemData) {
+                    $barcode = $itemData['barcode'] ?? null;    
+                    $qty = $itemData['quantity'] ?? 0;         
+                    $rate = $itemData['mrp'] ?? 0;             
+                    $artNo = null;
+                    $stockEntryItem = null;
 
-                $attributes = $itemData['attributes'] ?? [];
-                $apiSize = $attributes[0]['val'] ?? null;
-                $apiColor = $attributes[1]['val'] ?? null;
-                $apiFit = $attributes[2]['val'] ?? null;
+                    $attributes = $itemData['attributes'] ?? []; 
+                    $apiSize = $attributes[0]['val'] ?? null;
+                    $apiColor = $attributes[1]['val'] ?? null;
+                    $apiFit = $attributes[2]['val'] ?? null;
 
-                if ($barcode) {
-                    $barcode = trim($barcode);
-                    $stockEntryItem = StockEntryItem::with('item')->where('sku', $barcode)->where('stock_type', 'finished_goods')->first();
-                    if ($stockEntryItem) {
-                        $artNo = $stockEntryItem->art_no;
-                        $itemPrice = ItemPrice::where('finished_item_code', $stockEntryItem->finished_item_code)->where('status', 'Active')->where('effective_from', '<=', date('Y-m-d'))->orderBy('effective_from', 'desc')->first();
-                        
-                        if ($itemPrice) {
-                            $rate = $itemPrice->selling_price;
+                    if ($barcode) {
+                        $barcode = trim($barcode);
+                        $stockEntryItem = StockEntryItem::with('item')->where('sku', $barcode)->where('stock_type', 'finished_goods')->first();
+                        if ($stockEntryItem) {
+                            $artNo = $stockEntryItem->art_no;
+                            $itemPrice = ItemPrice::where('finished_item_code', $stockEntryItem->finished_item_code)->where('status', 'Active')->where('effective_from', '<=', date('Y-m-d'))->orderBy('effective_from', 'desc')->first();
+
+                            if ($itemPrice) {
+                                $rate = $itemPrice->selling_price;
+                            }
+                        } else {
+                            Log::warning('Orderaxe Sync: Barcode match failed for item.', [
+                                'barcode' => $barcode,
+                                'order_no' => $orderNo,
+                                'variation' => $itemData['variationDescription'] ?? 'N/A'
+                            ]);
                         }
-                    } else {
-                        Log::warning('Orderaxe Sync: Barcode match failed for item.', [
-                            'barcode' => $barcode,
-                            'order_no' => $orderNo,
-                            'variation' => $itemData['variationDescription'] ?? 'N/A'
-                        ]);
                     }
+
+                    $amount = $qty * $rate;
+                    $totalQty += $qty;
+                    $totalAmount += $amount;
+
+                    SalesOrderItem::create([
+                        'sale_order_id' => $salesOrder->id,
+                        'item_id' => $stockEntryItem->item_id ?? null,
+                        'brand_cat_id' => $stockEntryItem->item->brand_category_id ?? null,
+                        'qty' => $qty,
+                        'rate' => $rate,
+                        'mrp' => $itemData['mrp'] ?? 0,
+                        'amount' => $amount,
+                        'art_no' => $artNo,
+                        'stock_entry_item_id' => $stockEntryItem->id ?? null,
+                        'sku' => $barcode,
+                        'color_id' => $stockEntryItem->color_id ?? null,
+                        'uom_id' => $stockEntryItem->uom_id ?? 'PCS',
+                        'size_id' => $stockEntryItem->size_id ?? $apiSize ?? null,
+                        'sleeve' => $apiFit ? [$apiFit] : ($stockEntryItem->sleeve_type ? [$stockEntryItem->sleeve_type] : null),
+                    ]);
                 }
-
-                $amount = $qty * $rate;
-                $totalQty += $qty;
-                $totalAmount += $amount;
-
-                SalesOrderItem::create([
-                    'sale_order_id' => $salesOrder->id,
-                    'item_id' => $stockEntryItem->item_id ?? null,
-                    'brand_cat_id' => $stockEntryItem->item->brand_category_id ?? null,
-                    'qty' => $qty,
-                    'rate' => $rate,
-                    'mrp' => $itemData['mrp'] ?? 0,
-                    'amount' => $amount,
-                    'art_no' => $artNo,
-                    'stock_entry_item_id' => $stockEntryItem->id ?? null,
-                    'sku' => $barcode,
-                    'color_id' => $stockEntryItem->color_id ?? null,
-                    'uom_id' => $stockEntryItem->uom_id ?? null,
-                    'size_id' => $stockEntryItem->size_ratio_id ?? null,
-                    'sleeve' => $apiFit ? [$apiFit] : ($stockEntryItem->sleeve_type ? [$stockEntryItem->sleeve_type] : null),
-                ]);
             }
 
             $salesOrder->update([
@@ -196,5 +195,16 @@ class OrderaxeService
             ]);
             return false;
         }
+    }
+    private function formatAddress(array $address): string
+    {
+        return implode(', ', array_filter([
+            $address['address_line1'] ?? '',
+            $address['address_line2'] ?? '',
+            $address['city'] ?? '',
+            $address['state'] ?? '',
+            $address['country'] ?? '',
+            isset($address['zip']) ? (string) $address['zip'] : '',
+        ]));
     }
 }

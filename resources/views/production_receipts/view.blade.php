@@ -5,11 +5,16 @@
     <div class="row g-4">
         <div class="col-lg-12 d-flex justify-content-between align-items-center">
             <h4>Production Receipts</h4>
-            @if(auth()->id() == 1 || auth()->user()->can('create production-receipts'))
-            <a href="{{ url('production_receipts/add') }}" class="btn btn-primary">
-                <i class="ri ri-add-circle-line me-1"></i> Add
-            </a>
-            @endif
+            <div class="d-flex gap-2">
+                <a href="{{ url('production_receipts/export-excel') }}" class="btn btn-outline-success">
+                    <i class="ri ri-file-excel-line me-1"></i> Export
+                </a>
+                @if(auth()->id() == 1 || auth()->user()->can('create production-receipts'))
+                <a href="{{ url('production_receipts/add') }}" class="btn btn-primary">
+                    <i class="ri ri-add-circle-line me-1"></i> Add
+                </a>
+                @endif
+            </div>
         </div>
         <div class="col-lg-12">
              <div class="col-lg-12">

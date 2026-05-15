@@ -108,7 +108,9 @@ class SalesOrderController extends Controller
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
-                    'so_no' => $so->so_no,
+                    'so_no' => $so->so_no . ($so->orderaxe_id
+                        ? '<br><span class="badge bg-label-warning mt-1" style="font-size:10px;"><i class="ri ri-refresh-line me-1"></i>Orderaxe</span>'
+                        : ''),
                     'so_date' => $so->so_date ? $so->so_date->format('d-m-Y') : '-',
                     'customer_name' => $so->customer ? ($so->customer->name . ' <span class="mini-title">(' . $so->customer->code . ')</span>') : '-',
                     'customer_po_ref' => $so->customer_po_ref ?? '-',

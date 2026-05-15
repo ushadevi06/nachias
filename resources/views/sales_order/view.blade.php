@@ -101,7 +101,7 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex' },
-                    { data: 'so_no' },
+                    { data: 'so_no', render: function (data) { return data; } },
                     { data: 'so_date' },
                     { data: 'customer_name' },
                     { data: 'customer_po_ref' },
@@ -142,8 +142,6 @@
                     error: function () { alert('Failed to update status'); }
                 });
             });
-
-            // Delete confirmation
             $(document).on('click', '.delete-btn', function (e) {
                 e.preventDefault();
                 let url = $(this).attr('href');

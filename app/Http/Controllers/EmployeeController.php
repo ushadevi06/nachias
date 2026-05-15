@@ -69,7 +69,7 @@ class EmployeeController extends Controller
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
-                    'name'        => $emp->name,
+                    'name'        => '<div>' . $emp->name . '</div><span class="badge bg-primary mt-1">' . $emp->emp_id . '</span>',
                     'image'       => '<img src="' . $image . '" class="rounded-circle" width="50">',
                     'role'        => $emp->role->name ?? '-',
                     'department'  => $emp->department->department ?? '-',

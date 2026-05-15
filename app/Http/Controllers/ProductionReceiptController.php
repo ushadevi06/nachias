@@ -17,6 +17,8 @@ use App\Models\JobCardMatrixQuantity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Exports\ProductionReceiptExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductionReceiptController extends Controller
 {
@@ -989,5 +991,13 @@ class ProductionReceiptController extends Controller
 
         $filename = 'Production_Receipt_' . str_replace(['/', '\\'], '_', $receipt->receipt_no) . '.pdf';
         return $pdf->stream($filename);
+    }
+
+    public function exportExcel()
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view production-receipts')) {
+            return unauthorizedRedirect();
+        }
+        return Excel::download(new ProductionReceiptExport, 'production_receipts_' . date('Ymd_His') . '.xlsx');
     }
 }

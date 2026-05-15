@@ -537,6 +537,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('production_receipts/download-pdf/{id}', [ProductionReceiptController::class, 'downloadPdf'])->name('production_receipts.download_pdf');
     Route::get('production_receipts/get-job-card-details/{id}', [ProductionReceiptController::class, 'getJobCardDetails']);
     Route::get('production_receipts/delete/{id}', [ProductionReceiptController::class, 'destroy']);
+    Route::get('production_receipts/export-excel', [ProductionReceiptController::class, 'exportExcel']);
 
     /* Shifts */
     Route::get('shifts', [ShiftController::class, 'index']);
