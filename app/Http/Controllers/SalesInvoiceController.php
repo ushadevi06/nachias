@@ -100,7 +100,7 @@ class SalesInvoiceController extends Controller
                     'inv_no' => $inv->inv_no,
                     'inv_date' => $inv->inv_date->format('d-m-Y'),
                     'customer_name' => ($inv->customer ? $inv->customer->name : 'N/A') . ($inv->customer ? ' <span class="mini-title">(' . $inv->customer->code . ')</span>' : ''),
-                    'so_no' => $inv->salesOrder ? $inv->salesOrder->so_no : 'N/A',
+                    'so_no' => ($inv->salesOrder ? $inv->salesOrder->so_no : 'N/A') . ($inv->salesOrder && $inv->salesOrder->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $inv->salesOrder->order_no . '</span>' : ''),
                     'total_items' => $inv->items->count(),
                     'grand_total' => '₹' . number_format($inv->grand_total, 2),
                     'status' => $statusDropdown,

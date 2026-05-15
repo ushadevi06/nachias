@@ -91,9 +91,10 @@ class OrderaxeService
                 return false;
             }
 
-            if (!$orderAxeId && SalesOrder::where('so_no', $orderNo)->exists()) {
+            if ($orderNo && SalesOrder::where('order_no', $orderNo)->exists()) {
                 return false;
             }
+
             $customerData = $orderData['retailer'] ?? [];
             $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? 'Unknown Orderaxe Customer');
             $cleanedCustomerName = trim(preg_replace('/\s*\(.*\)/', '', $customerName));
@@ -105,8 +106,10 @@ class OrderaxeService
                 ]);
                 return false;
             }
+
             $salesOrder = SalesOrder::create([
-                'so_no'        => $orderNo,
+                'so_no'        => SalesOrder::generateSoNo(),
+                'order_no'     => $orderNo,
                 'orderaxe_id'  => $orderAxeId,
                 'so_date'      => date('Y-m-d', ($orderData['created_at'] / 1000)),
                 'request_date' => date('Y-m-d', ($orderData['created_at'] / 1000)),

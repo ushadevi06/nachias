@@ -63,6 +63,7 @@ class SalesOrder extends Model
         'created_by',
         'updated_by',
         'apply_box_discount',
+        'order_no',
     ];
 
     protected $casts = [
@@ -147,5 +148,20 @@ class SalesOrder extends Model
     public function charges()
     {
         return $this->hasMany(SalesOrderCharge::class, 'sales_order_id');
+    }
+
+    public static function generateSoNo()
+    {
+        $setting = Setting::first();
+        $prefix = ($setting && $setting->so_prefix) ? $setting->so_prefix : 'SO-';
+        
+        $lastSo = self::where('so_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
+        if ($lastSo) {
+            $lastNumStr = substr($lastSo->so_no, strlen($prefix));
+            $lastNum = is_numeric($lastNumStr) ? intval($lastNumStr) : 0;
+            return $prefix . str_pad($lastNum + 1, 4, '0', STR_PAD_LEFT);
+        }
+        
+        return $prefix . '0001';
     }
 }

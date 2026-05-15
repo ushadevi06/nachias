@@ -108,7 +108,7 @@ class SalesOrderController extends Controller
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
-                    'so_no' => $so->so_no . ($so->orderaxe_id
+                    'so_no' => $so->so_no . ($so->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $so->order_no . '</span>' : '') . ($so->orderaxe_id
                         ? '<br><span class="badge bg-label-warning mt-1" style="font-size:10px;"><i class="ri ri-refresh-line me-1"></i>Orderaxe</span>'
                         : ''),
                     'so_date' => $so->so_date ? $so->so_date->format('d-m-Y') : '-',
@@ -500,18 +500,7 @@ class SalesOrderController extends Controller
 
         $nextSoNumber = '';
         if (!$id) {
-            $setting = Setting::first();
-            if ($setting && $setting->so_prefix) {
-                $prefix = $setting->so_prefix;
-                $lastSo = SalesOrder::where('so_no', 'like', $prefix . '%')->orderBy('id', 'desc')->first();
-                if ($lastSo) {
-                    $lastNum = intval(substr($lastSo->so_no, strlen($prefix)));
-                    $nextSoNumber = $prefix . str_pad($lastNum + 1, 4, '0', STR_PAD_LEFT);
-                }
-                else {
-                    $nextSoNumber = $prefix . '0001';
-                }
-            }
+            $nextSoNumber = SalesOrder::generateSoNo();
         }
 
         $zones = Zone::where('status', 'Active')->get();
