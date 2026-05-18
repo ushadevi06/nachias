@@ -30,21 +30,21 @@ class WarehouseReportController extends Controller
         // Current Period Sales
         $currentSalesQuery = SalesInvoiceItem::query()
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-            ->leftJoin('brands', 'sales_invoice_items.brand_id', '=', 'brands.id')
-            ->leftJoin('items', 'sales_invoice_items.item_id', '=', 'items.id')
+            ->leftJoin('items', 'sales_invoice_items.art_no', '=', 'items.design_art_no')
+            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
             ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('sales_invoice_items.deleted_at')
             ->whereBetween('sales_invoices.inv_date', [$fromDate, $toDate]);
 
         if ($request->brand_id) {
-            $currentSalesQuery->where('sales_invoice_items.brand_id', $request->brand_id);
+            $currentSalesQuery->where('items.brand_id', $request->brand_id);
         }
         if ($request->store_id) {
             $currentSalesQuery->where('sales_invoices.store_location_id', $request->store_id);
         }
         if ($request->item_id) {
-            $currentSalesQuery->where('sales_invoice_items.item_id', $request->item_id);
+            $currentSalesQuery->where('items.id', $request->item_id);
         }
 
         $brandwiseSales = $currentSalesQuery->select(
@@ -52,9 +52,9 @@ class WarehouseReportController extends Controller
             'brand_categories.name as category',
             DB::raw('SUM(sales_invoice_items.quantity) as sold_qty'),
             DB::raw('SUM(sales_invoice_items.amount) as sales_value'),
-            'sales_invoice_items.brand_id'
+            'items.brand_id'
         )
-            ->groupBy('brands.brand_name', 'brand_categories.name', 'sales_invoice_items.brand_id')
+            ->groupBy('brands.brand_name', 'brand_categories.name', 'items.brand_id')
             ->get();
 
         // Trend Calculation
@@ -64,11 +64,12 @@ class WarehouseReportController extends Controller
 
         $prevSales = SalesInvoiceItem::query()
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->leftJoin('items', 'sales_invoice_items.art_no', '=', 'items.design_art_no')
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('sales_invoice_items.deleted_at')
             ->whereBetween('sales_invoices.inv_date', [$prevFromDate, $prevToDate])
-            ->select('brand_id', DB::raw('SUM(amount) as prev_sales_value'))
-            ->groupBy('brand_id')
+            ->select('items.brand_id', DB::raw('SUM(sales_invoice_items.amount) as prev_sales_value'))
+            ->groupBy('items.brand_id')
             ->pluck('prev_sales_value', 'brand_id');
 
         foreach ($brandwiseSales as $sale) {
@@ -270,12 +271,13 @@ class WarehouseReportController extends Controller
             $regularDiscountQuery->whereExists(function ($query) use ($request) {
                 $query->select(DB::raw(1))
                     ->from('sales_invoice_items')
+                    ->join('items', 'sales_invoice_items.art_no', '=', 'items.design_art_no')
                     ->whereColumn('sales_invoice_items.sales_invoice_id', 'sales_invoices.id');
                 if ($request->brand_id) {
-                    $query->where('sales_invoice_items.brand_id', $request->brand_id);
+                    $query->where('items.brand_id', $request->brand_id);
                 }
                 if ($request->item_id) {
-                    $query->where('sales_invoice_items.item_id', $request->item_id);
+                    $query->where('items.id', $request->item_id);
                 }
             });
         }

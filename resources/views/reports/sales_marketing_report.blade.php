@@ -93,7 +93,7 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-report" type="button" role="tab">Sales Comparison</button>
                 </li>
-                <li class="nav-item" role="presentation">
+                {{-- <li class="nav-item" role="presentation">
                     <button class="nav-link" id="outstanding-tab" data-bs-toggle="tab" data-bs-target="#outstanding-report" type="button" role="tab">Zone Wise Outstanding</button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -124,7 +124,7 @@
                         <li><a class="dropdown-item" href="#swatch-report" data-bs-toggle="tab">Swatch Card</a></li>
                         <li><a class="dropdown-item" href="#complaint-report" data-bs-toggle="tab">Complaints</a></li>
                     </ul>
-                </li>
+                </li> --}}
             </ul>
         </div>
         <div class="card-body py-4">

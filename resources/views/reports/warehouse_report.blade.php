@@ -93,21 +93,21 @@
                 <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#white-dhoti" type="button" role="tab">White & Dhoti</button>
                 </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
+                {{-- <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dispatch" type="button" role="tab">Dispatch Report</button>
-                </li>
+                </li> --}}
                 <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#inward" type="button" role="tab">Stock Inward</button>
                 </li>
                 <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#discount" type="button" role="tab">Regular/Discount</button>
                 </li>
-                <li class="nav-item d-none d-xl-block" role="presentation">
+                {{-- <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#priority" type="button" role="tab">Priority Stock</button>
                 </li>
                 <li class="nav-item d-none d-xl-block" role="presentation">
                     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#damage" type="button" role="tab">Damage Sales</button>
-                </li>
+                </li> --}}
                 <li class="nav-item dropdown d-xl-none">
                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">More</a>
                     <ul class="dropdown-menu">
