@@ -19,6 +19,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FinishedGoodsStockExport;
 use App\Exports\BarcodeExport;
 use App\Exports\RawMaterialStockExport;
+use App\Imports\RawMaterialStockImport;
 
 class StockEntryController extends Controller
 {
@@ -193,9 +194,7 @@ class StockEntryController extends Controller
                         }
                     }
 
-                    $categoryDisplay = $firstItem && $firstItem->storeCategory
-                        ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>'
-                        : '-';
+                    $categoryDisplay = $firstItem && $firstItem->storeCategory ? $firstItem->storeCategory->category_name . ' <span class="mini-title">(' . $firstItem->storeCategory->code . ')</span>' : '-';
 
                     $artNo = $firstItem ? ($firstItem->art_no ?: '-') : '-';
 
@@ -612,5 +611,62 @@ class StockEntryController extends Controller
         }
 
         return Excel::download(new RawMaterialStockExport, 'raw_material_stock_' . date('Ymd_His') . '.xlsx');
+    }
+
+    public function importRawMaterials(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create stock-entry')) {
+            return unauthorizedRedirect();
+        }
+
+        $request->validate([
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+        ]);
+
+        try {
+            Excel::import(new RawMaterialStockImport, $request->file('import_file'));
+            return redirect('stock_entries')->with('success', 'Raw Materials Stock imported successfully.');
+        } catch (\Exception $e) {
+            return redirect('stock_entries')->with('error', $e->getMessage());
+        }
+    }
+
+    public function downloadSample()
+    {
+        $headers = [
+            'Stock Date',
+            'GRN No',
+            'Store Category',
+            'Raw Material',
+            'Art No',
+            'UOM',
+            'Qty In',
+            'Price',
+            'Store Location',
+            'Remarks'
+        ];
+
+        $callback = function () use ($headers) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($file, $headers);
+            fputcsv($file, [
+                date('d-m-Y'),
+                '',
+                'Category Code / Name',
+                'Raw Material Code / Name',
+                'ART-1234',
+                'PCS',
+                '100',
+                '50.00',
+                'Store Location Name',
+                'Sample import remarks'
+            ]);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'Raw_Material_Stock_Sample.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

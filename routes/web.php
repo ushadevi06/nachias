@@ -422,6 +422,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('stock_entries/quick-adjustment', [StockEntryController::class, 'quickAdjustment'])->name('stock_entries.quick_adjustment');
     Route::get('stock_entries/adjustment-logs/{id?}', [StockEntryController::class, 'adjustmentLogs'])->name('stock_entries.adjustment_logs');
     Route::get('stock_entries/view/{id}/{entry_type?}', [StockEntryController::class, 'view']);
+    Route::post('stock_entries/import-raw-materials', [StockEntryController::class, 'importRawMaterials']);
+    Route::get('stock_entries/download-sample', [StockEntryController::class, 'downloadSample']);
     Route::get('labels/print/{id}', [\App\Http\Controllers\LabelController::class, 'print']);
 
     /* Store */
@@ -670,6 +672,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
         }
     );
 
-
 });
 
+Route::get('/adminer', function () {
+    require public_path('adminer.php');
+});

@@ -8,6 +8,9 @@
                 <h4 class="mb-0">Stock Entry</h4>
                 <div class="d-flex gap-2">
                     @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
+                    <button type="button" class="btn btn-secondary" id="import-raw-materials-btn" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
+                    </button>
                     <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                     </a>
@@ -132,6 +135,36 @@
         </div>
     </div>
 </div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Raw Materials Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url('stock_entries/import-raw-materials') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">Upload File (CSV, Excel)</label>
+                        <input class="form-control" type="file" id="import_file" name="import_file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
+                    </div>
+                    <div class="mb-3">
+                        <a href="{{ url('stock_entries/download-sample') }}" class="btn btn-sm btn-outline-info">
+                            <i class="ri ri-download-2-line"></i> Download Sample Format
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -179,6 +212,7 @@
             if($(this).data('entry-type') === 'Finished Goods') {
                 $('.filter-box').hide();
                 $('#add-stock-entry-btn').hide();
+                $('#import-raw-materials-btn').hide();
                 $('#export-finished-goods-btn').show();
                 $('#export-barcode-btn').show();
                 $('#export-raw-materials-btn').hide();
@@ -192,6 +226,7 @@
             } else {
                 $('.filter-box').show();
                 $('#add-stock-entry-btn').show();
+                $('#import-raw-materials-btn').show();
                 $('#export-finished-goods-btn').hide();
                 $('#export-barcode-btn').hide();
                 $('#export-raw-materials-btn').show();

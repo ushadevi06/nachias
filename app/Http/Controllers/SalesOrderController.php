@@ -883,7 +883,6 @@ class SalesOrderController extends Controller
             $service = new \App\Services\OrderaxeService();
             $limit = $request->query('limit', 1);
             $syncCount = $service->syncOrders((int)$limit);
-
             if ($syncCount > 0) {
                 return redirect('sales_orders')->with('success', $syncCount . ' orders synced successfully from Orderaxe');
             } else {
