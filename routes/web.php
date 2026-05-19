@@ -460,6 +460,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
     Route::post('sales_invoices/generate-ewaybill/{id}', [SalesInvoiceController::class, 'generateEWayBill']);
     Route::post('sales_invoices/cancel-einvoice/{id}', [SalesInvoiceController::class, 'cancelEInvoice']);
+    Route::post('sales_invoices/cancel-ewaybill/{id}', [SalesInvoiceController::class, 'cancelEWayBill']);
+    Route::get('sales_invoices/recreate/{id}', [SalesInvoiceController::class, 'recreate']);
 
     /* Credit Notes */
     Route::get('credit_notes', [CreditNoteController::class, 'index']);

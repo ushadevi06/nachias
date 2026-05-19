@@ -115,6 +115,17 @@
                                     @enderror
                                 </div>
                             </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('hsn_sac') is-invalid @enderror"
+                                        id="hsn_sac" name="hsn_sac" placeholder="HSN Code"
+                                        value="{{ old('hsn_sac', isset($invoice) ? $invoice->hsn_sac : '') }}">
+                                    <label for="hsn_sac">HSN Code</label>
+                                    @error('hsn_sac')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -142,10 +153,9 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 5%;">S.No.</th>
-                                        <th style="width: 15%;">Stock Item</th>
+                                        <th style="width: 20%;">Stock Item</th>
                                         <th style="width: 10%;">Color</th>
                                         <th style="width: 10%;">Art No</th>
-                                        <th style="width: 8%;">HSN Code</th>
                                         <th style="width: 8%;">UOM</th>
                                         <th style="width: 8%;">Size</th>
                                         <th style="width: 8%;">Quantity *</th>
@@ -261,13 +271,6 @@
                                                 <input type="hidden" name="items[{{ $index }}][art_no]" class="art-no" value="{{ $row->art_no ?? '' }}">
                                             </td>
                                             <td>
-                                                <input type="text" class="form-control form-control-sm hsn-sac" 
-                                                    name="items[{{ $index }}][hsn_sac]" 
-                                                    value="{{ $row->hsn_sac ?? '' }}" 
-                                                    placeholder="HSN Code"
-                                                    style="width: 90px;">
-                                            </td>
-                                            <td>
                                                 <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id }}">
                                                 <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code" value="{{ $row->uom_code ?? '' }}">
@@ -372,6 +375,13 @@
                                         <div class="form-floating form-floating-outline">
                                             <input type="text" class="form-control due_date" id="due_date" name="due_date" value="{{ old('due_date', isset($invoice) ? ($invoice->due_date ? $invoice->due_date->format('d-m-Y') : '') : date('d-m-Y')) }}">
                                             <label for="due_date">Due Date</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-floating form-floating-outline">
+                                            <input type="number" step="any" class="form-control" id="other_charges" name="other_charges" placeholder="Courier Charge" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
+                                            <label for="other_charges">Courier Charge</label>
                                         </div>
                                     </div>
 
@@ -669,7 +679,7 @@
                     </div>
                 </div>
                 <div class="text-end mt-4">
-                    <?php if(isset($invoice) && $invoice->ack_no !== '' && $invoice->eway_bill_no !== '' ) { ?>
+                    <?php if(isset($invoice) && (!empty($invoice->ack_no) || !empty($invoice->eway_bill_no))) { ?>
                         <button type="submit" class="btn btn-primary" disabled>Submit</button>
                     <?php } else { ?>
                         <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
@@ -810,13 +820,6 @@
                     <td>
                         <span class="art-no-text">${matchedItem.art_no || ''}</span>
                         <input type="hidden" name="items[${index}][art_no]" class="art-no" value="${matchedItem.art_no || ''}">
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm hsn-sac" 
-                            name="items[${index}][hsn_sac]" 
-                            value="${matchedItem.hsn_sac || ''}" 
-                            placeholder="HSN Code"
-                            style="width: 90px;">
                     </td>
                     <td>
                         <span class="uom-text">${matchedItem.uom_code}</span>
@@ -1028,9 +1031,9 @@
                         },
                         success: function(res) {
                             if (res.success && res.distance) {
-                                $('#transport_distance').val(res.distance).attr('readonly', true);
+                                $('#transport_distance').val(Math.round(res.distance)).prop('readonly',true);
                             } else {
-                                $('#transport_distance').removeAttr('readonly').attr('placeholder', 'Distance (in km)');
+                                $('#transport_distance').prop('readonly',false).attr('placeholder', 'Distance (in km)');
                             }
                         },
                         error: function() {

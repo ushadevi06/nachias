@@ -57,6 +57,23 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <input class="form-control @error('qr_code') is-invalid @enderror" type="file" id="qr_code" name="qr_code" accept="image/*">
+                                    <label for="qr_code" class="form-label">QR Code Image</label>
+                                    @error('qr_code')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    @if(isset($setting) && $setting->qr_code)
+                                    <div class="mt-2">
+                                        <img src="{{ url('uploads/qr_code/' . $setting->qr_code) }}"
+                                            alt="Current QR Code"
+                                            style="max-width: 100px; max-height: 100px;">
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('phone_number') is-invalid @enderror" id="phone_number" placeholder="Enter Phone Number" name="phone_number" value="{{ old('phone_number', $setting->phone_number ?? '') }}">
                                     <label for="phone_number">Phone Number *</label>
                                     @error('phone_number')

@@ -261,7 +261,7 @@
                                         <input type="text" class="form-control @error('zip_code') is-invalid @enderror"
                                             id="zip_code" placeholder="Enter ZipCode" name="zip_code"
                                             value="{{ old('zip_code', $customer->zip_code ?? '') }}">
-                                        <label for="zip_code">Zip Code </label>
+                                        <label for="zip_code">Zip Code <span class="text-danger">*</span></label>
                                     </div>
                                     @error('zip_code')
                                         <div class="text-danger mt-1">{{ $message }}</div>
@@ -334,7 +334,7 @@
                                         <input type="text" class="form-control @error('gst_no') is-invalid @enderror"
                                             id="gst_no" placeholder="Enter GST No" name="gst_no"
                                             value="{{ old('gst_no', $customer->gst_no ?? '') }}">
-                                        <label for="gst_no">GST No</label>
+                                        <label for="gst_no">GST No <span class="text-danger">*</span></label>
                                     </div>
                                     @error('gst_no')
                                         <div class="text-danger mt-1">{{ $message }}</div>

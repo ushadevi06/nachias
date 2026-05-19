@@ -218,13 +218,46 @@
         $(document).on('click', '.einvoice-cancel-btn', function() {
             let invoiceId = $(this).data('id');
             Swal.fire({
-                title: 'Are you sure?',
-                text: "Do you want to cancel the E-Invoice? This action cannot be undone.",
+                title: 'Cancel E-Invoice',
+                html: `
+                    <div class="alert alert-warning text-start p-2 mb-3" style="font-size: 13.5px; border: 1px solid #ffd8a8; background-color: #fff9db; color: #d9480f; border-radius: 4px; line-height: 1.4;">
+                        <div class="fw-semibold mb-1" style="font-size: 14.5px; color: #d9480f;"><i class="ri-information-line me-1"></i> GST e-Invoicing Guidelines:</div>
+                        <ul class="mb-0 ps-3">
+                            <li><strong>24-Hour Window:</strong> IRN can only be cancelled within 24 hours of generation.</li>
+                            <li><strong>E-Way Bill:</strong> If linked to an active E-Way Bill, the E-Way Bill will be automatically cancelled first.</li>
+                            <li><strong>No Re-Use:</strong> Once cancelled, this invoice number cannot be reused to generate another IRN.</li>
+                            <li><strong>Full Cancellation:</strong> Partial cancellations are not allowed.</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label for="cancel_reason" class="form-label font-semibold text-dark">Cancellation Reason <span class="text-danger">*</span></label>
+                        <select id="cancel_reason" class="form-select">
+                            <option value="1">1 - Duplicate</option>
+                            <option value="2" selected>2 - Data Entry Mistake</option>
+                            <option value="3">3 - Order Cancelled</option>
+                            <option value="4">4 - Others</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label for="cancel_remarks" class="form-label font-semibold text-dark">Remarks / Explanation <span class="text-danger">*</span></label>
+                        <textarea id="cancel_remarks" class="form-control" rows="2" placeholder="Explain the reason for cancellation (min 3 chars)"></textarea>
+                    </div>
+                `,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, cancel it!'
+                confirmButtonText: 'Yes, cancel it!',
+                preConfirm: () => {
+                    const reason = Swal.getPopup().querySelector('#cancel_reason').value;
+                    const remarks = Swal.getPopup().querySelector('#cancel_remarks').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage(`Please select a reason`);
+                    } else if (remarks.length < 3) {
+                        Swal.showValidationMessage(`Remarks must be at least 3 characters`);
+                    }
+                    return { cancel_reason: reason, cancel_remarks: remarks }
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
                     let btn = $(this);
@@ -244,7 +277,9 @@
                         url: "{{ url('sales_invoices/cancel-einvoice') }}/" + invoiceId,
                         type: "POST",
                         data: {
-                            _token: "{{ csrf_token() }}"
+                            _token: "{{ csrf_token() }}",
+                            cancel_reason: result.value.cancel_reason,
+                            cancel_remarks: result.value.cancel_remarks
                         },
                         success: function(response) {
                             if (response.success) {
@@ -267,6 +302,16 @@
                         }
                     });
                 }
+            });
+        });
+
+        $(document).on('click', '.einvoice-expired-btn', function() {
+            Swal.fire({
+                title: 'Cancellation Expired',
+                text: 'According to GST guidelines, an E-Invoice cannot be cancelled after 24 hours of generation. Please issue a Credit Note instead.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
             });
         });
     });

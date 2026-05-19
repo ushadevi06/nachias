@@ -22,6 +22,34 @@
                             <i class="ri ri-receipt-line"></i> E-INVOICE Details
                         </button>
                         @endif
+                        @if($invoice->einvoice_status === 'cancelled')
+                        <button type="button" class="btn btn-warning text-white" disabled>
+                            <i class="ri ri-close-circle-line"></i> E-Invoice Cancelled
+                        </button>
+                        <a href="{{ url('sales_invoices/recreate/' . $invoice->id) }}" class="btn btn-outline-primary" title="Recreate / Copy to New Invoice">
+                            <i class="ri ri-file-copy-line"></i> Recreate Invoice
+                        </a>
+                        @elseif($invoice->irn)
+                            @php
+                                $ackDateTime = $invoice->ack_date ? \Carbon\Carbon::parse($invoice->ack_date) : null;
+                                $isExpired = $ackDateTime ? $ackDateTime->diffInHours(now()) >= 24 : false;
+                            @endphp
+                            @if($isExpired)
+                            <button type="button" class="btn btn-secondary" id="einvoice-expired">
+                                <i class="ri ri-close-circle-line"></i> Cancel E-Invoice
+                            </button>
+                            @else
+                            <button type="button" class="btn btn-danger" id="einvoice-cancel">
+                                <i class="ri ri-close-circle-line"></i> Cancel E-Invoice
+                            </button>
+                            @endif
+                        @else
+                        @if($invoice->customer && $invoice->customer->gst_no)
+                        <button type="button" class="btn btn-info" id="einvoice-generate">
+                            <i class="ri ri-receipt-line"></i> Generate E-Invoice
+                        </button>
+                        @endif
+                        @endif
                         <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
                             <i class="ri ri-arrow-left-line back-arrow"></i>Back
                         </a>
@@ -78,6 +106,11 @@
                             <div class="col-md-4">
                                 <label class="detail-title">No of Box:</label>
                                 <div class="text-muted">{{ $invoice->no_of_box ?: 1 }}</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="detail-title">HSN Code:</label>
+                                <div class="text-muted">{{ $invoice->hsn_sac ?? '-' }}</div>
                             </div>
 
                             <div class="col-lg-12">
@@ -421,13 +454,46 @@
 
         $('#einvoice-cancel').on('click', function() {
             Swal.fire({
-                title: 'Are you sure?',
-                text: "Do you want to cancel the E-Invoice? This action cannot be undone.",
+                title: 'Cancel E-Invoice',
+                html: `
+                    <div class="alert alert-warning text-start p-2 mb-3" style="font-size: 13.5px; border: 1px solid #ffd8a8; background-color: #fff9db; color: #d9480f; border-radius: 4px; line-height: 1.4;">
+                        <div class="fw-semibold mb-1" style="font-size: 14.5px; color: #d9480f;"><i class="ri-information-line me-1"></i> GST e-Invoicing Guidelines:</div>
+                        <ul class="mb-0 ps-3">
+                            <li><strong>24-Hour Window:</strong> IRN can only be cancelled within 24 hours of generation.</li>
+                            <li><strong>E-Way Bill:</strong> If linked to an active E-Way Bill, the E-Way Bill will be automatically cancelled first.</li>
+                            <li><strong>No Re-Use:</strong> Once cancelled, this invoice number cannot be reused to generate another IRN.</li>
+                            <li><strong>Full Cancellation:</strong> Partial cancellations are not allowed.</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label for="cancel_reason" class="form-label font-semibold text-dark">Cancellation Reason <span class="text-danger">*</span></label>
+                        <select id="cancel_reason" class="form-select">
+                            <option value="1">1 - Duplicate</option>
+                            <option value="2" selected>2 - Data Entry Mistake</option>
+                            <option value="3">3 - Order Cancelled</option>
+                            <option value="4">4 - Others</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label for="cancel_remarks" class="form-label font-semibold text-dark">Remarks / Explanation <span class="text-danger">*</span></label>
+                        <textarea id="cancel_remarks" class="form-control" rows="2" placeholder="Explain the reason for cancellation (min 3 chars)"></textarea>
+                    </div>
+                `,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, cancel it!'
+                confirmButtonText: 'Yes, cancel it!',
+                preConfirm: () => {
+                    const reason = Swal.getPopup().querySelector('#cancel_reason').value;
+                    const remarks = Swal.getPopup().querySelector('#cancel_remarks').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage(`Please select a reason`);
+                    } else if (remarks.length < 3) {
+                        Swal.showValidationMessage(`Remarks must be at least 3 characters`);
+                    }
+                    return { cancel_reason: reason, cancel_remarks: remarks }
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
                     var btn = $(this);
@@ -446,7 +512,9 @@
                         url: "{{ url('sales_invoices/cancel-einvoice') }}/" + invoiceId,
                         type: "POST",
                         data: {
-                            _token: "{{ csrf_token() }}"
+                            _token: "{{ csrf_token() }}",
+                            cancel_reason: result.value.cancel_reason,
+                            cancel_remarks: result.value.cancel_remarks
                         },
                         success: function(response) {
                             if (response.success) {
@@ -470,6 +538,118 @@
                         }
                     });
                 }
+            });
+        });
+
+        $('#einvoice-expired').on('click', function() {
+            Swal.fire({
+                title: 'Cancellation Expired',
+                text: 'According to GST guidelines, an E-Invoice cannot be cancelled after 24 hours of generation. Please issue a Credit Note instead.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+            });
+        });
+
+        $('#ewaybill-cancel').on('click', function() {
+            $('#einvoiceDetailsModal').modal('hide');
+            Swal.fire({
+                title: 'Cancel E-Way Bill',
+                html: `
+                    <div class="alert alert-warning text-start p-2 mb-3" style="font-size: 13.5px; border: 1px solid #ffd8a8; background-color: #fff9db; color: #d9480f; border-radius: 4px; line-height: 1.4;">
+                        <div class="fw-semibold mb-1" style="font-size: 14.5px; color: #d9480f;"><i class="ri-information-line me-1"></i> GST E-Way Bill Cancellation Guidelines:</div>
+                        <ul class="mb-0 ps-3">
+                            <li><strong>24-Hour Window:</strong> E-Way Bill can only be cancelled within 24 hours of generation.</li>
+                            <li><strong>Transit Check:</strong> Cannot cancel if the goods are already in transit or verified by a GST officer.</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label for="ewb_cancel_reason" class="form-label font-semibold text-dark">Cancellation Reason <span class="text-danger">*</span></label>
+                        <select id="ewb_cancel_reason" class="form-select">
+                            <option value="1">1 - Duplicate</option>
+                            <option value="2" selected>2 - Data Entry Mistake</option>
+                            <option value="3">3 - Order Cancelled</option>
+                            <option value="4">4 - Others</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label for="ewb_cancel_remarks" class="form-label font-semibold text-dark">Remarks / Explanation <span class="text-danger">*</span></label>
+                        <textarea id="ewb_cancel_remarks" class="form-control" rows="2" placeholder="Explain the reason for cancellation (min 3 chars)"></textarea>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, cancel it!',
+                preConfirm: () => {
+                    const reason = Swal.getPopup().querySelector('#ewb_cancel_reason').value;
+                    const remarks = Swal.getPopup().querySelector('#ewb_cancel_remarks').value.trim();
+                    if (!reason) {
+                        Swal.showValidationMessage(`Please select a reason`);
+                    } else if (remarks.length < 3) {
+                        Swal.showValidationMessage(`Remarks must be at least 3 characters`);
+                    }
+                    return { cancel_reason: reason, cancel_remarks: remarks }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Canceling...',
+                        text: 'Please wait while we cancel the E-Way Bill.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading()
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('sales_invoices/cancel-ewaybill') }}/" + invoiceId,
+                        type: "POST",
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            cancel_reason: result.value.cancel_reason,
+                            cancel_remarks: result.value.cancel_remarks
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Canceled!',
+                                    text: response.message,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', response.message, 'error').then(() => {
+                                    $('#einvoiceDetailsModal').modal('show');
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error').then(() => {
+                                $('#einvoiceDetailsModal').modal('show');
+                            });
+                        }
+                    });
+                } else {
+                    $('#einvoiceDetailsModal').modal('show');
+                }
+            });
+        });
+
+        $('#ewaybill-expired').on('click', function() {
+            $('#einvoiceDetailsModal').modal('hide');
+            Swal.fire({
+                title: 'Cancellation Expired',
+                text: 'According to GST guidelines, an E-Way Bill cannot be cancelled after 24 hours of generation.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                $('#einvoiceDetailsModal').modal('show');
             });
         });
 
@@ -545,6 +725,24 @@
                             @endif
                         </div>
                     </div>
+                    
+                    @if($invoice->eway_bill_no)
+                        @php
+                            $ewbDateTime = $invoice->eway_bill_date ? \Carbon\Carbon::parse($invoice->eway_bill_date) : null;
+                            $isEwbExpired = $ewbDateTime ? $ewbDateTime->diffInHours(now()) >= 24 : false;
+                        @endphp
+                        <div class="mb-3">
+                            @if($isEwbExpired)
+                            <button type="button" class="btn btn-secondary btn-sm w-100" id="ewaybill-expired">
+                                <i class="ri ri-close-circle-line me-1"></i> Cancel E-Way Bill (Window Expired)
+                            </button>
+                            @else
+                            <button type="button" class="btn btn-danger btn-sm w-100" id="ewaybill-cancel">
+                                <i class="ri ri-close-circle-line me-1"></i> Cancel E-Way Bill
+                            </button>
+                            @endif
+                        </div>
+                    @endif
                     
                     <div class="row text-start">
                         <div class="col-6">

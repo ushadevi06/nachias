@@ -26,6 +26,11 @@ class EInvoiceService
         $buyerStateCode = $invoice->customer->state->state_code ?? "33";
         $isInterState = $sellerStateCode !== $buyerStateCode;
 
+        $rndOff = (float) ($invoice->round_off ?? 0);
+        if (strtolower($invoice->round_off_type ?? '') === 'less') {
+            $rndOff = -$rndOff;
+        }
+
         $payload = [
             "Version" => "1.1",
             "TranDtls" => [
@@ -62,7 +67,8 @@ class EInvoiceService
                 "CgstVal" => $isInterState ? 0.00 : (float) number_format((float) $invoice->cgst, 2, '.', ''),
                 "SgstVal" => $isInterState ? 0.00 : (float) number_format((float) $invoice->sgst, 2, '.', ''),
                 "IgstVal" => $isInterState ? (float) number_format((float) $invoice->igst, 2, '.', '') : 0.00,
-                "RndOffAmt" => (float) number_format((float) ($invoice->round_off ?? 0), 2, '.', ''),
+                "OthChrg" => (float) number_format((float) ($invoice->other_charges ?? 0.00), 2, '.', ''),
+                "RndOffAmt" => (float) number_format((float) $rndOff, 2, '.', ''),
                 "TotInvVal" => (float) number_format((float) $invoice->grand_total, 2, '.', ''),
             ]
         ];
@@ -133,10 +139,14 @@ class EInvoiceService
                 'ack_no' => $responseData['AckNo'] ?? null,
                 'ack_date' => $responseData['AckDt'] ?? Carbon::now()->format('Y-m-d H:i:s'),
                 'signed_qr_code' => $responseData['SignedQRCode'] ?? null,
+                'einvoice_status' => 'generated',
             ]);
             $invoice->refresh();
             $ewayBillResult = null;
-            if (!empty($transporterData) && !empty($transporterData['vehicle_no'])) {
+            if (!empty($transporterData) && (
+                !empty($transporterData['vehicle_no']) || 
+                (!empty($transporterData['transporter_id']) && !empty($transporterData['tran_doc_no']))
+            )) {
                 $ewayBillResult = $this->generateEWayBill($invoice, $transporterData);
             }
 
@@ -192,10 +202,7 @@ class EInvoiceService
         ]);
 
         $data = $response->json();
-        \Log::info('E-Way Bill Auth Response', $data ?? []);
         $authToken = $data['authtoken'] ?? null;
-
-        \Log::info('E-Way Bill Token Extracted', ['token' => $authToken]);
 
         if (!empty($authToken)) {
             return ['success' => true, 'token' => $authToken];
@@ -217,7 +224,6 @@ class EInvoiceService
         $setting = Setting::first()->load(['state', 'city']);
 
         $authData = $this->authenticateEWayBill($setting);
-        \Log::info('E-Way Bill Auth Result', $authData);
         if (!$authData['success']) {
             return $authData;
         }
@@ -291,11 +297,11 @@ class EInvoiceService
             'cgstValue'        => $isInterState ? 0.0 : (float) $invoice->cgst,
             'sgstValue'        => $isInterState ? 0.0 : (float) $invoice->sgst,
             'igstValue'        => $isInterState ? (float) $invoice->igst : 0.0,
+            'otherValue'       => (float) ($invoice->other_charges ?? 0.0),
             'taxableAmount'    => $taxableAmount,
             'itemList'         => $itemList,
         ], fn($v) => $v !== null && $v !== '');
 
-        \Log::info('E-Way Bill Payload', $payload);
 
         $queryString = http_build_query([
             'action'    => 'GENEWAYBILL',
@@ -306,15 +312,10 @@ class EInvoiceService
         ]);
 
         $fullUrl = env('EINV_EWAYBILL_URL') . '?' . $queryString;
-        \Log::info('E-Way Bill Full URL', ['url' => $fullUrl]);
 
         $response = Http::withHeaders(['Content-Type' => 'application/json'])->post($fullUrl, $payload);
 
-        \Log::info('E-Way Bill HTTP Code', ['code' => $response->status()]);
-        \Log::info('E-Way Bill Raw Response', ['body' => $response->body()]);
-
         $apiData = $response->json();
-        \Log::info('E-Way Bill API Response', $apiData ?? []);
 
         $ewbNo       = $apiData['ewayBillNo'] ?? $apiData['EwbNo'] ?? null;
         $ewbDate     = $apiData['ewayBillDate'] ?? $apiData['EwbDt'] ?? null;
@@ -339,7 +340,11 @@ class EInvoiceService
                 'transport_distance'  => $transporterData['transport_distance'] ?? null,
                 'transporter_name'    => $transporterData['transporter_name'] ?? null,
                 'tran_doc_no'         => $transporterData['tran_doc_no'] ?? null,
-                'tran_doc_date'       => $transporterData['tran_doc_date'] ?? null,
+                'tran_doc_date'       => !empty($transporterData['tran_doc_date'])
+                    ? (strpos($transporterData['tran_doc_date'], '/') !== false
+                        ? \Carbon\Carbon::createFromFormat('d/m/Y', explode(' ', $transporterData['tran_doc_date'])[0])->format('Y-m-d')
+                        : \Carbon\Carbon::parse($transporterData['tran_doc_date'])->format('Y-m-d'))
+                    : null,
                 'veh_type'            => $transporterData['veh_type'] ?? null,
             ]);
 
@@ -371,14 +376,146 @@ class EInvoiceService
     /**
      * Cancel E-Invoice.
      */
-    public function cancelEInvoice(SalesInvoice $invoice, $cancelReason = '1', $cancelRemarks = 'Wrong Entry')
+    public function cancelEInvoice(SalesInvoice $invoice, $cancelReason = '2', $cancelRemarks = 'Data Entry Mistake')
     {
-        $invoice->irn = null;
-        $invoice->ack_no = null;
-        $invoice->ack_date = null;
-        $invoice->signed_qr_code = null;
-        $invoice->save();
+        if (empty($invoice->irn)) {
+            return [
+                'success' => false,
+                'message' => 'No IRN found for this invoice.'
+            ];
+        }
 
-        return ['success' => true, 'message' => 'E-Invoice cancelled successfully'];
+        $setting = Setting::first();
+        $authData = $this->authenticate($setting);
+        if (!$authData['success']) {
+            return $authData;
+        }
+
+        $payload = [
+            "Irn" => $invoice->irn,
+            "CnlRsn" => (string)$cancelReason,
+            "CnlRem" => substr(trim($cancelRemarks), 0, 100)
+        ];
+
+        $cancelUrl = env('EINV_API_URL') . '/Cancel';
+
+        $response = Http::withHeaders([
+            'aspid' => env('EINV_ASP_ID'),
+            'password' => env('EINV_ASP_PASSWORD'),
+            'Gstin' => env('EINV_GSTIN'),
+            'User_Name' => env('EINV_USERNAME'),
+            'AuthToken' => $authData['token'],
+            'Content-Type' => 'application/json',
+        ])->post($cancelUrl, $payload);
+
+        $apiData = $response->json();
+
+        if ($response->successful() && (isset($apiData['Status']) && $apiData['Status'] == 1 || isset($apiData['CancelDate']))) {
+            \DB::table('sales_invoices')->where('id', $invoice->id)->update([
+                'irn' => null,
+                'ack_no' => null,
+                'ack_date' => null,
+                'signed_qr_code' => null,
+                'eway_bill_no' => null,
+                'eway_bill_date' => null,
+                'eway_bill_valid_till' => null,
+                'einvoice_status' => 'cancelled',
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'E-Invoice cancelled successfully',
+                'data' => $apiData
+            ];
+        }
+
+        $errorMessage = 'Failed to cancel E-Invoice';
+        if (isset($apiData['ErrorDetails'][0]['ErrorMessage'])) {
+            $errorMessage = $apiData['ErrorDetails'][0]['ErrorMessage'];
+        } elseif (isset($apiData['message'])) {
+            $errorMessage = $apiData['message'];
+        }
+
+        return ['success' => false, 'message' => 'API Error: ' . $errorMessage, 'response' => $apiData];
+    }
+
+    /**
+     * Cancel E-Way Bill.
+     */
+    public function cancelEWayBill(SalesInvoice $invoice, $cancelReason = 2, $cancelRemarks = 'Data Entry Mistake')
+    {
+        if (empty($invoice->eway_bill_no)) {
+            return [
+                'success' => false,
+                'message' => 'No active E-Way Bill found for this invoice.'
+            ];
+        }
+
+        $setting = Setting::first();
+        $authData = $this->authenticateEWayBill($setting);
+        if (!$authData['success']) {
+            return $authData;
+        }
+
+        $payload = [
+            'ewbNo' => (int) $invoice->eway_bill_no,
+            'cancelRsnCode' => (int) $cancelReason,
+            'cancelRmrk' => substr(trim($cancelRemarks), 0, 100)
+        ];
+
+        $queryString = http_build_query([
+            'action'    => 'CANEWB',
+            'aspid'     => env('EINV_ASP_ID'),
+            'password'  => env('EINV_ASP_PASSWORD'),
+            'gstin'     => env('EINV_GSTIN'),
+            'authtoken' => $authData['token'],
+        ]);
+
+        $fullUrl = env('EINV_EWAYBILL_URL') . '?' . $queryString;
+        \Log::info('Cancel E-Way Bill Payload', $payload);
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Content-Type' => 'application/json'
+        ])->post($fullUrl, $payload);
+
+        $apiData = $response->json();
+        \Log::info('Cancel E-Way Bill Response', $apiData ?? []);
+
+        if ($response->successful() && (
+            (isset($apiData['status']) && $apiData['status'] == 1) || 
+            (isset($apiData['Status']) && $apiData['Status'] == 1) || 
+            !empty($apiData['cancelDate']) ||
+            !empty($apiData['CancelDate']) ||
+            (isset($apiData['ewbNo']) && empty($apiData['error']))
+        )) {
+            \DB::table('sales_invoices')->where('id', $invoice->id)->update([
+                'eway_bill_no' => null,
+                'eway_bill_date' => null,
+                'eway_bill_valid_till' => null,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'E-Way Bill cancelled successfully',
+                'data' => $apiData
+            ];
+        }
+
+        $errorMessage = 'Failed to cancel E-Way Bill';
+        if (!empty($apiData['error']) && is_array($apiData['error'])) {
+            $errorMessage = $apiData['error']['message'] ?? json_encode($apiData['error']);
+        } elseif (!empty($apiData['error']) && is_string($apiData['error'])) {
+            $errorMessage = $apiData['error'];
+        } elseif (!empty($apiData['message'])) {
+            $errorMessage = $apiData['message'];
+        } elseif (!empty($apiData['ErrorDetails']) && is_array($apiData['ErrorDetails'])) {
+            $errorMessage = $apiData['ErrorDetails'][0]['ErrorMessage'] ?? json_encode($apiData['ErrorDetails']);
+        }
+
+        return [
+            'success' => false,
+            'message' => 'API Error: ' . $errorMessage,
+            'response' => $apiData
+        ];
     }
 }

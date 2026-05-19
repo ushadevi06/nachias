@@ -93,6 +93,20 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'sqlsrv_ETIME' => [
+            'driver' => 'sqlsrv',
+            'url' => env('ETIME_DATABASE_URL'),
+            'host' => env('ETIME_DB_HOST', 'localhost'),
+            'port' => env('ETIME_DB_PORT', '1433'),
+            'database' => env('ETIME_DB_DATABASE', 'forge'),
+            'username' => env('ETIME_DB_USERNAME', 'forge'),
+            'password' => env('ETIME_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'server_version' => env('ETIME_SERVER_VERSION', '2012'),
+        ],
+
     ],
 
     /*

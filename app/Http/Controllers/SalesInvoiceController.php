@@ -83,15 +83,29 @@ class SalesInvoiceController extends Controller
                 <div class="status_msg_' . $inv->id . ' mt-1" style="font-size:10px;"></div>';
 
                 $eInvoiceBtn = '';
-                if ($inv->irn) {
-                    $eInvoiceBtn = '<button type="button" class="btn btn-secondary" disabled title="E-Invoice Already Generated" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-checkbox-circle-line"></i></button>';
+                if ($inv->einvoice_status === 'cancelled') {
+                    $eInvoiceBtn = '<button type="button" class="btn btn-warning" title="E-Invoice Cancelled" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;" disabled><i class="ri ri-close-circle-line"></i> Cancelled</button>';
+                    $eInvoiceBtn .= '<a href="' . url('sales_invoices/recreate/' . $inv->id) . '" class="btn btn-outline-primary" title="Recreate / Copy to New Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-file-copy-line"></i></a>';
+                } elseif ($inv->irn) {
+                    $ackDateTime = $inv->ack_date ? \Carbon\Carbon::parse($inv->ack_date) : null;
+                    $isExpired = $ackDateTime ? $ackDateTime->diffInHours(now()) >= 24 : false;
+                    if ($isExpired) {
+                        $eInvoiceBtn = '<button type="button" class="btn btn-secondary einvoice-expired-btn" data-id="' . $inv->id . '" title="E-Invoice Cancellation Window Expired" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
+                    } else {
+                        $eInvoiceBtn = '<button type="button" class="btn btn-danger einvoice-cancel-btn" data-id="' . $inv->id . '" title="Cancel E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
+                    }
                 } else {
                     $eInvoiceBtn = '<button type="button" class="btn btn-info einvoice-generate-btn" data-id="' . $inv->id . '" title="Generate E-Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
                 }
 
+                $editBtn = '';
+                if ($inv->einvoice_status !== 'cancelled') {
+                    $editBtn = '<a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                }
+
                 $action = '<div class="button-box d-flex align-items-center">
                     <a href="' . url('sales_invoices/view/' . $inv->id) . '" class="btn btn-view" title="View"><i class="icon-base ri ri-eye-line"></i></a>
-                    <a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>
+                    ' . $editBtn . '
                     ' . $eInvoiceBtn . '
                 </div>';
 
@@ -99,7 +113,7 @@ class SalesInvoiceController extends Controller
                     'DT_RowIndex' => $count++,
                     'inv_no' => $inv->inv_no,
                     'inv_date' => $inv->inv_date->format('d-m-Y'),
-                    'customer_name' => ($inv->customer ? $inv->customer->name : 'N/A') . ($inv->customer ? ' <span class="mini-title">(' . $inv->customer->code . ')</span>' : ''),
+                    'customer_name' => ($inv->customer ? $inv->customer->name : 'N/A') . ($inv->customer ? ' <span  class="mini-title">(' . $inv->customer->code . ')</span>' : ''),
                     'so_no' => ($inv->salesOrder ? $inv->salesOrder->so_no : 'N/A') . ($inv->salesOrder && $inv->salesOrder->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $inv->salesOrder->order_no . '</span>' : ''),
                     'total_items' => $inv->items->count(),
                     'grand_total' => '₹' . number_format($inv->grand_total, 2),
@@ -165,7 +179,7 @@ class SalesInvoiceController extends Controller
                     'invoice_status', 'payment_mode', 'extra_input', 'due_date',
                     'notes', 'transporter_name', 'transporter_id', 'transport_mode',
                     'vehicle_no', 'veh_type', 'transport_distance', 'tran_doc_no', 'tran_doc_date',
-                    'lr_no', 'no_of_box', 'sub_total', 'discount_percent', 'discount', 
+                    'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
                     'other_charges', 'round_off_type', 'round_off',
@@ -231,7 +245,7 @@ class SalesInvoiceController extends Controller
                             'rate' => $item['rate'] ?? 0,
                             'mrp' => $item['mrp'] ?? 0,
                             'amount' => $item['amount'] ?? 0,
-                            'hsn_sac' => $item['hsn_sac'] ?? null,
+                            'hsn_sac' => $invoice->hsn_sac ?? $item['hsn_sac'] ?? null,
                             'art_no' => $item['art_no'] ?? null,
                             'size' => $item['size'] ?? null,
                             'color_id' => $item['color_id'] ?? null,
@@ -258,14 +272,28 @@ class SalesInvoiceController extends Controller
         }
 
         $invoice = $id ? SalesInvoice::with(['items.brandCategory', 'items.item.brand', 'items.item.style', 'items.color', 'items.uom', 'items.sizeRatio', 'salesOrder'])->findOrFail($id) : null;
+        if ($invoice && $invoice->einvoice_status === 'cancelled') {
+            return redirect('sales_invoices')->with('error', 'Cancelled invoices cannot be edited.');
+        }
         $customers = Customer::active()->orderBy('id','desc')->get();
 
         $usedSoIds = SalesInvoice::whereNotNull('so_id')
+            ->where(function($query) {
+                $query->where('einvoice_status', '!=', 'cancelled')
+                      ->orWhereNull('einvoice_status');
+            })
             ->when($id, function($query) use ($id) {
                 return $query->where('id', '!=', $id);
             })->pluck('so_id')->toArray();
 
         $saleOrders = SalesOrder::where('status', 'Approved')->whereNotIn('id', $usedSoIds)->orderBy('id', 'desc')->get();
+
+        if ($invoice && $invoice->so_id) {
+            $currentSo = SalesOrder::find($invoice->so_id);
+            if ($currentSo && !$saleOrders->contains('id', $invoice->so_id)) {
+                $saleOrders->push($currentSo);
+            }
+        }
         $brandCategories = BrandCategory::active()->get();
         $uoms = Uom::active()->get();
         $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
@@ -567,6 +595,12 @@ class SalesInvoiceController extends Controller
     public function generateEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $invoice = SalesInvoice::findOrFail($id);
+        if ($invoice->einvoice_status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This E-Invoice has been cancelled on IRP. According to GST guidelines, you cannot reuse this invoice number to generate a new E-Invoice. You must issue a new sales invoice with a new invoice number.'
+            ]);
+        }
         if ($invoice->irn) {
             return response()->json(['success' => false, 'message' => 'E-Invoice already generated']);
         }
@@ -605,6 +639,154 @@ class SalesInvoiceController extends Controller
         return response()->json($result);
     }
 
+    public function cancelEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+
+        if (empty($invoice->irn)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active E-Invoice found for this sales invoice.'
+            ]);
+        }
+
+        if ($invoice->ack_date) {
+            $ackDateTime = \Carbon\Carbon::parse($invoice->ack_date);
+            if ($ackDateTime->diffInHours(now()) >= 24) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cancellation time window expired. According to GST guidelines, an E-Invoice cannot be cancelled after 24 hours of generation. Please issue a Credit Note instead.'
+                ]);
+            }
+        }
+
+        $cancelReason = $request->input('cancel_reason', '2');
+        $cancelRemarks = $request->input('cancel_remarks', 'Data Entry Mistake');
+
+        $oldData = $invoice->toArray();
+
+        // 1. Automatically cancel linked E-Way Bill if it exists
+        if (!empty($invoice->eway_bill_no)) {
+            // Check E-Way Bill cancellation time window (24 hours)
+            if ($invoice->eway_bill_date) {
+                $ewbDateTime = \Carbon\Carbon::parse($invoice->eway_bill_date);
+                if ($ewbDateTime->diffInHours(now()) >= 24) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cannot cancel. E-Way Bill cancellation time window (24 hours) has expired.'
+                    ]);
+                }
+            }
+
+            $ewbResult = $eInvoiceService->cancelEWayBill($invoice, $cancelReason, $cancelRemarks);
+            if (!$ewbResult['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to cancel linked E-Way Bill first: ' . $ewbResult['message']
+                ]);
+            }
+            $invoice->refresh();
+        }
+
+        // 2. Cancel the E-Invoice
+        $result = $eInvoiceService->cancelEInvoice($invoice, $cancelReason, $cancelRemarks);
+
+        if ($result['success']) {
+            $invoice->refresh();
+            $newData = $invoice->toArray();
+            addLog('cancel_einvoice', 'Sales Invoice E-Invoice Cancelled', 'sales_invoices', $id, $oldData, $newData);
+
+            if (!empty($oldData['eway_bill_no'])) {
+                $result['message'] = 'E-Way Bill and E-Invoice cancelled successfully.';
+            }
+        }
+
+        return response()->json($result);
+    }
+
+    public function cancelEWayBill(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+
+        if (empty($invoice->eway_bill_no)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active E-Way Bill found for this invoice.'
+            ]);
+        }
+
+        if ($invoice->eway_bill_date) {
+            $ewbDateTime = \Carbon\Carbon::parse($invoice->eway_bill_date);
+            if ($ewbDateTime->diffInHours(now()) >= 24) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cancellation time window expired. According to GST guidelines, an E-Way Bill cannot be cancelled after 24 hours of generation.'
+                ]);
+            }
+        }
+
+        $cancelReason = $request->input('cancel_reason', '2');
+        $cancelRemarks = $request->input('cancel_remarks', 'Data Entry Mistake');
+
+        $oldData = $invoice->toArray();
+        $result = $eInvoiceService->cancelEWayBill($invoice, $cancelReason, $cancelRemarks);
+
+        if ($result['success']) {
+            $invoice->refresh();
+            $newData = $invoice->toArray();
+            addLog('cancel_ewaybill', 'Sales Invoice E-Way Bill Cancelled', 'sales_invoices', $id, $oldData, $newData);
+        }
+
+        return response()->json($result);
+    }
+
+    public function recreate($id)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create sales-invoice')) {
+            return unauthorizedRedirect();
+        }
+
+        $original = SalesInvoice::with('items')->findOrFail($id);
+
+        DB::beginTransaction();
+        try {
+            $lastInv = SalesInvoice::orderBy('id', 'desc')->first();
+            $nextInvNumber = 'SV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+
+            $newInvoice = $original->replicate();
+            $newInvoice->inv_no = $nextInvNumber;
+            $newInvoice->inv_date = now();
+            $newInvoice->invoice_status = 'Draft';
+            $newInvoice->einvoice_status = null;
+            $newInvoice->irn = null;
+            $newInvoice->ack_no = null;
+            $newInvoice->ack_date = null;
+            $newInvoice->signed_qr_code = null;
+            $newInvoice->eway_bill_no = null;
+            $newInvoice->eway_bill_date = null;
+            $newInvoice->eway_bill_valid_till = null;
+            $newInvoice->received_amount = 0.00;
+            $newInvoice->save();
+
+            foreach ($original->items as $item) {
+                $newItem = $item->replicate();
+                $newItem->sales_invoice_id = $newInvoice->id;
+                $newItem->save();
+            }
+
+
+            // Keep the so_id on the original cancelled invoice so that it still shows the linked Sales Order on the index/view screens, but it won't block reuse because we exclude cancelled e-invoices from $usedSoIds
+
+
+            DB::commit();
+
+            return redirect('sales_invoices/add/' . $newInvoice->id)->with('success', 'Invoice details copied successfully. New Invoice ' . $newInvoice->inv_no . ' created as Draft.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to copy invoice: ' . $e->getMessage());
+        }
+    }
+
     public function calculateDistance(Request $request)
     {
         $fromPincode = trim($request->query('from_pincode'));
@@ -625,14 +807,22 @@ class SalesInvoiceController extends Controller
                 ]);
             }
 
-            $distance = $this->getDistance(
+            $straightDistance = $this->getDistance(
                 $fromCoords['lat'], $fromCoords['lng'],
                 $toCoords['lat'], $toCoords['lng']
             );
 
+            $roadDistance = $straightDistance * 1.1576;
+
             return response()->json([
                 'success' => true,
-                'distance' => round($distance, 2)
+                'from_pincode' => $fromPincode,
+                'to_pincode' => $toPincode,
+                'from_coords' => $fromCoords,
+                'to_coords' => $toCoords,
+                'straight_line_km' => round($straightDistance, 2),
+                'distance' => round($roadDistance),
+                'note' => 'Estimated road distance (Haversine distance multiplied by a 1.1576 correction factor).'
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()]);
@@ -662,8 +852,50 @@ class SalesInvoiceController extends Controller
                     if (!empty($data) && isset($data[0]['lat']) && isset($data[0]['lon'])) {
                         return [
                             'lat' => (float)$data[0]['lat'],
-                            'lng' => (float)$data[0]['lon']
+                            'lng' => (float)$data[0]['lon'],
+                            'source' => 'nominatim_postal'
                         ];
+                    }
+                }
+
+                $postalResponse = \Illuminate\Support\Facades\Http::timeout(5)->get("https://api.postalpincode.in/pincode/{$cleanPincode}");
+                if ($postalResponse->successful()) {
+                    $postalData = $postalResponse->json();
+                    if (!empty($postalData) && isset($postalData[0]['Status']) && $postalData[0]['Status'] === 'Success' && !empty($postalData[0]['PostOffice'])) {
+                        $postOffice = $postalData[0]['PostOffice'][0];
+                        $locality = $postOffice['Name'] ?? '';
+                        $district = $postOffice['District'] ?? '';
+                        $state = $postOffice['State'] ?? '';
+
+                        $queries = [];
+                        if ($locality && $district && $state) {
+                            $queries[] = "{$locality}, {$district}, {$state}, India";
+                        }
+                        if ($district && $state) {
+                            $queries[] = "{$district}, {$state}, India";
+                        }
+
+                        foreach ($queries as $q) {
+                            $geoResponse = \Illuminate\Support\Facades\Http::withHeaders([
+                                'User-Agent' => 'NachiasERP/1.0 (admin@nachias.com)'
+                            ])->timeout(5)->get('https://nominatim.openstreetmap.org/search', [
+                                'q' => $q,
+                                'countrycodes' => 'in',
+                                'format' => 'json',
+                                'limit' => 1
+                            ]);
+
+                            if ($geoResponse->successful()) {
+                                $geoData = $geoResponse->json();
+                                if (!empty($geoData) && isset($geoData[0]['lat']) && isset($geoData[0]['lon'])) {
+                                    return [
+                                        'lat' => (float)$geoData[0]['lat'],
+                                        'lng' => (float)$geoData[0]['lon'],
+                                        'source' => 'postal_in_fallback'
+                                    ];
+                                }
+                            }
+                        }
                     }
                 }
             } catch (\Exception $e) {
@@ -673,15 +905,16 @@ class SalesInvoiceController extends Controller
         });
     }
 
-    public function getDistance($lat1, $lon1, $lat2, $lon2) {
-        $earthRadius = 6371; // In Kilometers
+    public function getDistance($lat1, $lon1, $lat2, $lon2)
+    {
+        $earthRadius = 6371;
 
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
 
         $a = sin($dLat/2) * sin($dLat/2) +
-             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon/2) * sin($dLon/2);
+            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+            sin($dLon/2) * sin($dLon/2);
         $c = 2 * atan2(sqrt($a), sqrt(1-$a));
 
         return $earthRadius * $c;

@@ -14,6 +14,7 @@ class Setting extends Model
         'company_name',
         'email',
         'logo',
+        'qr_code',
         'phone_number',
         'state_id',
         'city_id',

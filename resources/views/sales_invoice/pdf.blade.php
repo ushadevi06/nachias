@@ -203,28 +203,37 @@ $showGrandTotal = in_array('grandtotal', $showFields);
                             <tr>
                                 <td style="border: none; vertical-align: top; width:30%;">
                                     @php
-$logoPath = public_path('assets/images/jc_logo.png');
-$logoBase64 = '';
-if (file_exists($logoPath)) {
-    $logoData = file_get_contents($logoPath);
-    $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
-}
+                                    $logoPath = public_path('assets/images/jc_logo.png');
+                                    $logoBase64 = '';
+                                    if (file_exists($logoPath)) {
+                                        $logoData = file_get_contents($logoPath);
+                                        $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+                                    }
 
-$qrPath = public_path('assets/images/qr_code.png');
-$qrBase64 = '';
-if (file_exists($qrPath)) {
-    $qrData = file_get_contents($qrPath);
-    $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
-}
+                                    $qrBase64 = '';
+                                    if (!empty($setting->qr_code)) {
+                                        $uploadedQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
+                                        if (file_exists($uploadedQrPath)) {
+                                            $qrData = file_get_contents($uploadedQrPath);
+                                            $qrBase64 = 'data:image/' . pathinfo($uploadedQrPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($qrData);
+                                        }
+                                    }
+                                    if (!$qrBase64) {
+                                        $qrPath = public_path('assets/images/qr_code.png');
+                                        if (file_exists($qrPath)) {
+                                            $qrData = file_get_contents($qrPath);
+                                            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
+                                        }
+                                    }
 
-$einvoiceQr = '';
-if (!empty($invoice->signed_qr_code)) {
-    try {
-        $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($invoice->signed_qr_code));
-    } catch (\Exception $e) {
-        \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
-    }
-}
+                                    $einvoiceQr = '';
+                                    if (!empty($invoice->signed_qr_code)) {
+                                        try {
+                                            $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($invoice->signed_qr_code));
+                                        } catch (\Exception $e) {
+                                            \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
+                                        }
+                                    }
                                     @endphp
                                     @if($logoBase64)
                                         <img src="{{ $logoBase64 }}" style="width: 140px;">

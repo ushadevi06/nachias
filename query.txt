@@ -231,3 +231,20 @@ ALTER TABLE `sales_invoices`
     ADD COLUMN `transporter_id` VARCHAR(255) NULL AFTER `vehicle_no`,
     ADD COLUMN `transport_mode` VARCHAR(255) NULL AFTER `transporter_id`,
     ADD COLUMN `transport_distance` INT NULL AFTER `transport_mode`;
+
+-- Add columns to settings table
+ALTER TABLE `settings`
+ADD COLUMN `bank_name` VARCHAR(255) NULL AFTER `so_prefix`,
+ADD COLUMN `branch_location` VARCHAR(255) NULL AFTER `bank_name`,
+ADD COLUMN `account_no` VARCHAR(255) NULL AFTER `branch_location`,
+ADD COLUMN `ifsc_code` VARCHAR(255) NULL AFTER `account_no`;
+
+-- Add column to sales_invoices table
+ALTER TABLE `sales_invoices`
+ADD COLUMN `hsn_sac` VARCHAR(50) NULL AFTER `no_of_box`;
+
+ALTER TABLE `settings`
+ADD COLUMN `qr_code` VARCHAR(255) NULL;
+
+ALTER TABLE `sales_invoices`
+ADD COLUMN `einvoice_status` VARCHAR(20) NULL AFTER `hsn_sac`;
