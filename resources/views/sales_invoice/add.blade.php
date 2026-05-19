@@ -669,8 +669,12 @@
                     </div>
                 </div>
                 <div class="text-end mt-4">
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                    <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
+                    <?php if(isset($invoice) && $invoice->ack_no !== '' && $invoice->eway_bill_no !== '' ) { ?>
+                        <button type="submit" class="btn btn-primary" disabled>Submit</button>
+                    <?php } else { ?>
+                        <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    <?php } ?>
                 </div>
             </form>
         </div>
@@ -1010,9 +1014,33 @@
                 }
                 let customerPincode = $(this).find(':selected').data('pincode');
                 let companyPincode = "{{ $web_settings->zip_code ?? '' }}";
-                // let distance = getDistance(customerPincode, companyPincode);
-                // $('#distance').val(distance);
-                // $('#distance_val').text(distance.toFixed(2));
+                
+                if (customerPincode && companyPincode) {
+                    $.ajax({
+                        url: "{{ url('sales_invoices/calculate-distance') }}",
+                        type: "GET",
+                        data: {
+                            from_pincode: companyPincode,
+                            to_pincode: customerPincode
+                        },
+                        beforeSend: function() {
+                            $('#transport_distance').attr('placeholder', 'Calculating...');
+                        },
+                        success: function(res) {
+                            if (res.success && res.distance) {
+                                $('#transport_distance').val(res.distance).attr('readonly', true);
+                            } else {
+                                $('#transport_distance').removeAttr('readonly').attr('placeholder', 'Distance (in km)');
+                            }
+                        },
+                        error: function() {
+                            $('#transport_distance').removeAttr('readonly').attr('placeholder', 'Distance (in km)');
+                        }
+                    });
+                } else {
+                    $('#transport_distance').removeAttr('readonly')
+                        .val('');
+                }
                 calculateTotals();
             }
         });

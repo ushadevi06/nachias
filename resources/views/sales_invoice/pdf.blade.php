@@ -187,12 +187,12 @@
 </head>
 <body>
 @php
-    $showFields = is_array($invoice->show_fields) ? $invoice->show_fields : [];
-    $showAmount    = in_array('amount',     $showFields);
-    $showSubTotal  = in_array('subtotal',   $showFields);
-    $showDiscount  = in_array('discount',   $showFields);
-    $showTax       = in_array('tax',        $showFields);
-    $showGrandTotal= in_array('grandtotal', $showFields);
+$showFields = is_array($invoice->show_fields) ? $invoice->show_fields : [];
+$showAmount = in_array('amount', $showFields);
+$showSubTotal = in_array('subtotal', $showFields);
+$showDiscount = in_array('discount', $showFields);
+$showTax = in_array('tax', $showFields);
+$showGrandTotal = in_array('grandtotal', $showFields);
 @endphp
     <div class="container">
         <div style="position: relative;">
@@ -203,19 +203,28 @@
                             <tr>
                                 <td style="border: none; vertical-align: top; width:30%;">
                                     @php
-                                        $logoPath = public_path('assets/images/jc_logo.png');
-                                        $logoBase64 = '';
-                                        if (file_exists($logoPath)) {
-                                            $logoData = file_get_contents($logoPath);
-                                            $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
-                                        }
-                                        
-                                        $qrPath = public_path('assets/images/qr_code.png');
-                                        $qrBase64 = '';
-                                        if (file_exists($qrPath)) {
-                                            $qrData = file_get_contents($qrPath);
-                                            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
-                                        }
+$logoPath = public_path('assets/images/jc_logo.png');
+$logoBase64 = '';
+if (file_exists($logoPath)) {
+    $logoData = file_get_contents($logoPath);
+    $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+}
+
+$qrPath = public_path('assets/images/qr_code.png');
+$qrBase64 = '';
+if (file_exists($qrPath)) {
+    $qrData = file_get_contents($qrPath);
+    $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
+}
+
+$einvoiceQr = '';
+if (!empty($invoice->signed_qr_code)) {
+    try {
+        $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($invoice->signed_qr_code));
+    } catch (\Exception $e) {
+        \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
+    }
+}
                                     @endphp
                                     @if($logoBase64)
                                         <img src="{{ $logoBase64 }}" style="width: 140px;">
@@ -250,10 +259,14 @@
                     </td>
                     <td width="40%" class="text-right" style="vertical-align: top;">
                         <div style="margin-right: 10px;">ORIGINAL</div>
-                        @if($qrBase64)
-                            <img src="{{ $qrBase64 }}" class="qr-code">
+                        @if($einvoiceQr)
+                            <img src="{{ $einvoiceQr }}" class="qr-code">
                         @else
-                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" class="qr-code">
+                            @if($qrBase64)
+                                <img src="{{ $qrBase64 }}" class="qr-code">
+                            @else
+                                <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" class="qr-code">
+                            @endif
                         @endif
                     </td>
                 </tr>
@@ -373,7 +386,7 @@
             <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
                     <th width="4%">S.No</th>
-                    <th width="{{ $showAmount ? '22%' : '28%' }}">Stock Item</th>
+                    <th width="{{ $showAmount ? '22%' : '28%' }}">Description</th>
                     <th width="10%">Color</th>
                     <th width="10%">Art</th>
                     <th width="6%">UOM</th>
@@ -392,23 +405,23 @@
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
                             @php
-                                $brandName = '';
-                                $itemName = '';
-                                if ($item->item) {
-                                    $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : ''));
-                                    $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
-                                } elseif ($item->stockEntryItem) {
-                                    if ($item->stockEntryItem->item) {
-                                        $seItem = $item->stockEntryItem->item;
-                                        $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : ''));
-                                        $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
-                                    } else {
-                                        $brandName = $item->stockEntryItem->finished_item_code;
-                                    }
-                                } else {
-                                    $brandName = $item->brandCategory ? $item->brandCategory->name : '';
-                                    $itemName = $item->item ? $item->item->name : '';
-                                }
+    $brandName = '';
+    $itemName = '';
+    if ($item->item) {
+        $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : ''));
+        $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+    } elseif ($item->stockEntryItem) {
+        if ($item->stockEntryItem->item) {
+            $seItem = $item->stockEntryItem->item;
+            $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : ''));
+            $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+        } else {
+            $brandName = $item->stockEntryItem->finished_item_code;
+        }
+    } else {
+        $brandName = $item->brandCategory ? $item->brandCategory->name : '';
+        $itemName = $item->item ? $item->item->name : '';
+    }
                             @endphp
                             <div class="bold">{{ $brandName }}</div>
                             <div>{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</div>
@@ -428,7 +441,6 @@
                 @for($i = count($invoice->items); $i < 10; $i++)
                     <tr>
                         <td style="height: 15px;">&nbsp;</td>
-                        <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
                         <td>&nbsp;</td>
@@ -461,10 +473,10 @@
                     <table style="width: 100%; border-collapse: collapse; border-top: 1px solid #000;">
                         <tr>
                             <td style="width: 75%; padding: 4px; border-right: 1px solid #000; vertical-align: top; border-bottom: none; border-left: none;">
-                                Company's Bank Details :<br>
+                                <b>Company's Bank Details :</b><br>
                                 Bank Name : {{ $setting->bank_name ?? '' }}<br>
                                 A/C No. : {{ $setting->account_no ?? '' }}<br>
-                                Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}
+                                Branch & IFS Code : {{ $setting->branch_location ? $setting->branch_location . ', ' : '' }}{{ $setting->ifsc_code ?? '' }}
                             </td>
                             <td style="width: 25%; padding: 4px; vertical-align: top; text-align: center; border-bottom: none; border-right: none;">
                                 <span style="font-weight: bold;">For UPI Payment</span><br>
@@ -525,7 +537,7 @@
                     Total
                 </td>
                 <td style="width: 12%; padding: 4px; font-weight: bold; text-align: right; border-left: none; border-top:none;">
-                    {{ number_format($invoice->total, 2) }}
+                    {{ number_format($invoice->grand_total, 2) }}
                 </td>
             </tr>
             @endif
@@ -563,13 +575,13 @@
                         <td class="text-right">{{ number_format($summary['cgst_amount'], 2) }}</td>
                         <td class="text-right">{{ $summary['sgst_rate'] }}</td>
                         <td class="text-right">{{ number_format($summary['sgst_amount'], 2) }}</td>
-                        <td class="text-center"></td>
-                        <td class="text-right"></td>
+                        <td class="text-center">-</td>
+                        <td class="text-right">-</td>
                         @else
-                        <td class="text-center"></td>
-                        <td class="text-right"></td>
-                        <td class="text-center"></td>
-                        <td class="text-right"></td>
+                        <td class="text-center">-</td>
+                        <td class="text-right">-</td>
+                        <td class="text-center">-</td>
+                        <td class="text-right">-</td>
                         <td class="text-right">{{ $summary['igst_rate'] }}</td>
                         <td class="text-right">{{ number_format($summary['igst_amount'], 2) }}</td>
                         @endif
@@ -581,18 +593,18 @@
                     <td colspan="2" class="text-right">Total</td>
                     <td class="text-right">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td>
                     @if(!$invoice->other_state)
-                    <td></td>
+                    <td>-</td>
                     <td class="text-right">{{ number_format($invoice->cgst, 2) }}</td>
-                    <td></td>
+                    <td>-</td>
                     <td class="text-right">{{ number_format($invoice->sgst, 2) }}</td>
-                    <td></td>
-                    <td></td>
+                    <td>-</td>
+                    <td>-</td>
                     @else
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
                     <td class="text-right bold">{{ number_format($invoice->igst, 2) }}</td>
                     @endif
                 </tr>

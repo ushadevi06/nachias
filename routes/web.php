@@ -455,6 +455,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/download/{id}', [SalesInvoiceController::class, 'downloadPdf']);
     Route::post('sales_invoices/status/{id}', [SalesInvoiceController::class, 'updateStatus']);
     Route::get('sales_invoices/get-sale-order-details/{id}', [SalesInvoiceController::class, 'getSaleOrderDetails']);
+    Route::get('sales_invoices/calculate-distance', [SalesInvoiceController::class, 'calculateDistance']);
     Route::get('sales_invoices/print-sticker/{id}', [SalesInvoiceController::class, 'printSticker']);
     Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
     Route::post('sales_invoices/generate-ewaybill/{id}', [SalesInvoiceController::class, 'generateEWayBill']);

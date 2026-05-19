@@ -274,7 +274,7 @@ class SalesInvoiceController extends Controller
         $nextInvNumber = '';
         if (!$id) {
             $lastInv = SalesInvoice::orderBy('id', 'desc')->first();
-            $nextInvNumber = 'SINV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+            $nextInvNumber = 'SV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
         }
 
         return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent'));
@@ -605,5 +605,85 @@ class SalesInvoiceController extends Controller
         return response()->json($result);
     }
 
+    public function calculateDistance(Request $request)
+    {
+        $fromPincode = trim($request->query('from_pincode'));
+        $toPincode = trim($request->query('to_pincode'));
 
+        if (empty($fromPincode) || empty($toPincode)) {
+            return response()->json(['success' => false, 'message' => 'Both pincodes are required.']);
+        }
+
+        try {
+            $fromCoords = $this->getGeocode($fromPincode);
+            $toCoords = $this->getGeocode($toPincode);
+
+            if (!$fromCoords || !$toCoords) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to resolve coordinates. Please enter distance manually.'
+                ]);
+            }
+
+            $distance = $this->getDistance(
+                $fromCoords['lat'], $fromCoords['lng'],
+                $toCoords['lat'], $toCoords['lng']
+            );
+
+            return response()->json([
+                'success' => true,
+                'distance' => round($distance, 2)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    private function getGeocode($pincode)
+    {
+        $cleanPincode = preg_replace('/[^0-9]/', '', $pincode);
+        if (strlen($cleanPincode) !== 6) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Cache::remember("geocode_in_{$cleanPincode}", now()->addDays(30), function () use ($cleanPincode) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'User-Agent' => 'NachiasERP/1.0 (admin@nachias.com)'
+                ])->timeout(5)->get('https://nominatim.openstreetmap.org/search', [
+                    'postalcode' => $cleanPincode,
+                    'countrycodes' => 'in',
+                    'format' => 'json',
+                    'limit' => 1
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (!empty($data) && isset($data[0]['lat']) && isset($data[0]['lon'])) {
+                        return [
+                            'lat' => (float)$data[0]['lat'],
+                            'lng' => (float)$data[0]['lon']
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Geocoding failed for pincode {$cleanPincode}: " . $e->getMessage());
+            }
+            return null;
+        });
+    }
+
+    public function getDistance($lat1, $lon1, $lat2, $lon2) {
+        $earthRadius = 6371; // In Kilometers
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat/2) * sin($dLat/2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon/2) * sin($dLon/2);
+        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+
+        return $earthRadius * $c;
+    }
 }

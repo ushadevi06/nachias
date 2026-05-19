@@ -63,6 +63,10 @@ class SettingController extends Controller
             'po_prefix' => 'nullable|string|max:10',
             'purchase_invoice_prefix' => 'nullable|string|max:10',
             'so_prefix' => 'nullable|string|max:10',
+            'bank_name' => 'nullable|string|max:255',
+            'branch_location' => 'nullable|string|max:255',
+            'account_no' => 'nullable|string|max:50',
+            'ifsc_code' => 'nullable|string|max:20',
         ];
 
         $messages = [
@@ -96,6 +100,10 @@ class SettingController extends Controller
             'po_prefix' => $request->po_prefix,
             'purchase_invoice_prefix' => $request->purchase_invoice_prefix,
             'so_prefix' => $request->so_prefix,
+            'bank_name' => $request->bank_name,
+            'branch_location' => $request->branch_location,
+            'account_no' => $request->account_no,
+            'ifsc_code' => $request->ifsc_code,
         ];
 
         if ($request->hasFile('logo')) {

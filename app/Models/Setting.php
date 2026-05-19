@@ -32,6 +32,10 @@ class Setting extends Model
         'po_prefix',
         'purchase_invoice_prefix',
         'so_prefix',
+        'bank_name',
+        'branch_location',
+        'account_no',
+        'ifsc_code',
     ];
 
     protected $casts = [

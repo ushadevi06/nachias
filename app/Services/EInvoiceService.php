@@ -147,7 +147,7 @@ class EInvoiceService
                 'eway_bill' => $ewayBillResult
             ];
         }
-
+    
         $errorMessage = 'Failed to generate E-Invoice';
         if (isset($apiData['ErrorDetails'][0]['ErrorMessage'])) {
             $errorMessage = $apiData['ErrorDetails'][0]['ErrorMessage'];

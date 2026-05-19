@@ -3099,8 +3099,6 @@
                 return; 
             }
 
-            $(`tr.cat1-row .qty-input`).val('');
-
             $('.lay-mark-table').each(function() {
                 const fabricIndex = $(this).find('.add-lay-mark-btn').data('index');
                 if (fabricIndex === undefined) return;
@@ -3113,6 +3111,11 @@
                 });
 
                 if (hasValidMarks) {
+                    const fabricArt = String($(this).data('art') || "").trim();
+                    if (fabricArt) {
+                        $(`tr.cat1-row[data-art="${fabricArt}"] .qty-input`).val('');
+                    }
+
                     if (!matrixData[fabricIndex]) matrixData[fabricIndex] = { fs: {}, hs: {} };
                     $(this).find('tbody tr.lay-mark-row').each(function() {
                         const sizes = $(this).find('.select2-size-multi').val() || [];

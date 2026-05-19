@@ -17,10 +17,10 @@
                         <a href="{{ url('sales_invoices/print-sticker/' . $invoice->id) }}" class="btn btn-info" target="_blank" style="background-color: #00bcd4; border-color: #00bcd4;">
                             <i class="ri ri-printer-line back-arrow"></i>Print Sticker
                         </a>
-                        @if(!$invoice->irn)
-                        <button type="button" class="btn btn-info" id="einvoice-generate"><i class="ri ri-receipt-line"></i> Generate E-Invoice</button>
-                        @else
-                        <button type="button" class="btn btn-warning" id="einvoice-cancel"><i class="ri ri-close-circle-line"></i> Cancel E-Invoice</button>
+                        @if($invoice->irn || $invoice->eway_bill_no)
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#einvoiceDetailsModal">
+                            <i class="ri ri-receipt-line"></i> E-INVOICE Details
+                        </button>
                         @endif
                         <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
                             <i class="ri ri-arrow-left-line back-arrow"></i>Back
@@ -47,33 +47,33 @@
 
                             <div class="col-md-4">
                                 <label class="detail-title">Customer / Buyer Name:</label>
-                                <div class="text-muted">{{ $invoice->customer ? $invoice->customer->name : 'N/A' }}
+                                <div class="text-muted">{{ $invoice->customer ? $invoice->customer->name : '-' }}
                                     ({{ $invoice->customer ? $invoice->customer->code : '' }})</div>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="detail-title">Linked SO No:</label>
-                                <div class="text-muted">{{ $invoice->salesOrder ? $invoice->salesOrder->so_no : 'N/A' }}</div>
+                                <div class="text-muted">{{ $invoice->salesOrder ? $invoice->salesOrder->so_no : '-' }}</div>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="detail-title">IRN No:</label>
-                                <div class="text-muted" style="word-break: break-all;">{{ $invoice->irn ?? 'N/A' }}</div>
+                                <div class="text-muted" style="word-break: break-all;">{{ $invoice->irn ?? '-' }}</div>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="detail-title">E-Way Bill No:</label>
-                                <div class="text-muted">{{ $invoice->eway_bill_no ?? 'N/A' }}</div>
+                                <div class="text-muted">{{ $invoice->eway_bill_no ?? '-' }}</div>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="detail-title">Delivery Address:</label>
-                                <div class="text-muted">{{ $invoice->delivery_address ?? 'N/A' }}</div>
+                                <div class="text-muted">{{ $invoice->delivery_address ?? '-' }}</div>
                             </div>
 
                             <div class="col-md-4">
                                 <label class="detail-title">Remarks:</label>
-                                <div class="text-muted">{{ $invoice->remarks ?? 'N/A' }}</div>
+                                <div class="text-muted">{{ $invoice->remarks ?? '-' }}</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="detail-title">No of Box:</label>
@@ -110,23 +110,23 @@
                                                     <td>{{ $index + 1 }}</td>
                                                      <td>
                                                         @php
-    $brandName = '';
-    $itemName = '';
-    if ($item->item) {
-        $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : 'N/A'));
-        $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
-    } elseif ($item->stockEntryItem) {
-        if ($item->stockEntryItem->item) {
-            $seItem = $item->stockEntryItem->item;
-            $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : 'N/A'));
-            $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
-        } else {
-            $brandName = $item->stockEntryItem->finished_item_code;
-        }
-    } else {
-        $brandName = $item->brandCategory ? $item->brandCategory->name : 'N/A';
-        $itemName = $item->item ? $item->item->name : 'N/A';
-    }
+                                                            $brandName = '';
+                                                            $itemName = '';
+                                                            if ($item->item) {
+                                                                $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : '-'));
+                                                                $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+                                                            } elseif ($item->stockEntryItem) {
+                                                                if ($item->stockEntryItem->item) {
+                                                                    $seItem = $item->stockEntryItem->item;
+                                                                    $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : '-'));
+                                                                    $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+                                                                } else {
+                                                                    $brandName = $item->stockEntryItem->finished_item_code;
+                                                                }
+                                                            } else {
+                                                                $brandName = $item->brandCategory ? $item->brandCategory->name : '-';
+                                                                $itemName = $item->item ? $item->item->name : '-';
+                                                            }
                                                         @endphp
                                                         <div class="fw-bold">{{ $brandName }}</div>
                                                         <small class="text-muted">{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</small>
@@ -267,30 +267,30 @@
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Payment Mode:</label>
-                                                <div class="text-muted">{{ $invoice->payment_mode ?? 'N/A' }}</div>
+                                                <div class="text-muted">{{ $invoice->payment_mode ?? '-' }}</div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Cheque / UPI Ref:</label>
-                                                <div class="text-muted">{{ $invoice->extra_input ?? 'N/A' }}</div>
+                                                <div class="text-muted">{{ $invoice->extra_input ?? '-' }}</div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Due Date:</label>
                                                 <div class="text-muted">
-                                                    {{ $invoice->due_date ? $invoice->due_date->format('d-M-Y') : 'N/A' }}
+                                                    {{ $invoice->due_date ? $invoice->due_date->format('d-M-Y') : '-' }}
                                                 </div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Additional Notes:</label>
-                                                <div class="text-muted">{{ $invoice->notes ?? 'N/A' }}</div>
+                                                <div class="text-muted">{{ $invoice->notes ?? '-' }}</div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2 border-top pt-2">
                                                 <label class="detail-title">Authorized Signature:</label>
                                                 <div class="text-muted">
                                                     @if($invoice->signature_file)
                                                         @php
-    $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
-    $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-    $sigUrl = asset($invoice->signature_file);
+                                                            $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
+                                                            $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                            $sigUrl = asset($invoice->signature_file);
                                                         @endphp
                                                         <div
                                                             class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
@@ -312,7 +312,7 @@
                                                             @endif
                                                         </div>
                                                     @else
-                                                        N/A
+                                                        -
                                                     @endif
                                                 </div>
                                             </div>
@@ -321,9 +321,9 @@
                                                 <div class="text-muted">
                                                     @if($invoice->attachment_file)
                                                         @php
-    $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
-    $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-    $attUrl = asset($invoice->attachment_file);
+                                                            $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
+                                                            $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                            $attUrl = asset($invoice->attachment_file);
                                                         @endphp
                                                         <div
                                                             class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
@@ -345,7 +345,7 @@
                                                             @endif
                                                         </div>
                                                     @else
-                                                        N/A
+                                                        -
                                                     @endif
                                                 </div>
                                             </div>
@@ -407,7 +407,7 @@
                                 });
                             } else {
                                 Swal.fire('Error!', response.message, 'error');
-                                btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
+                                btn.prop('disabled', false).html('<i class="ri ri ri-receipt-line"></i> Generate E-Invoice');
                             }
                         },
                         error: function() {
@@ -472,6 +472,100 @@
                 }
             });
         });
+
+        $(document).on('click', '.copy-btn', function() {
+            let targetId = $(this).data('clipboard-target');
+            let text = $(targetId).text();
+            let btn = $(this);
+            
+            navigator.clipboard.writeText(text).then(() => {
+                let originalHtml = btn.html();
+                btn.html('<i class="ri ri-check-line text-success"></i>');
+                setTimeout(() => {
+                    btn.html(originalHtml);
+                }, 1500);
+            });
+        });
     });
 </script>
+
+<!-- E-Invoice Details Modal -->
+<div class="modal fade" id="einvoiceDetailsModal" tabindex="-1" aria-labelledby="einvoiceDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title text-white" id="einvoiceDetailsModalLabel">
+                    <i class="ri ri-receipt-line me-1"></i> E-Invoice & E-Way Bill Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- E-Invoice Segment -->
+                <div class="mb-4">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">E-Invoice Info</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold small mb-1 d-block">Invoice Reference Number (IRN)</label>
+                        <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded border">
+                            <span class="text-break font-monospace small" id="irnVal">{{ $invoice->irn ?? '-' }}</span>
+                            @if($invoice->irn)
+                            <button class="btn btn-sm btn-outline-secondary copy-btn py-0 px-2" data-clipboard-target="#irnVal" title="Copy IRN">
+                                <i class="ri ri-file-copy-line"></i>
+                            </button>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <div class="row text-start">
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted fw-semibold small mb-1">Acknowledgement No.</label>
+                            <p class="fw-bold mb-0 text-dark">{{ $invoice->ack_no ?? '-' }}</p>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted fw-semibold small mb-1">Acknowledgement Date</label>
+                            <p class="fw-bold mb-0 text-dark">
+                                {{ $invoice->ack_date ? \Carbon\Carbon::parse($invoice->ack_date)->format('d-m-Y h:i A') : '-' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E-Way Bill Segment -->
+                <div>
+                    <h6 class="text-info border-bottom pb-2 mb-3">E-Way Bill Info</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-semibold small mb-1 d-block">E-Way Bill Number</label>
+                        <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded border">
+                            <span class="font-monospace fw-bold text-dark" id="ewbVal">{{ $invoice->eway_bill_no ?? '-' }}</span>
+                            @if($invoice->eway_bill_no)
+                            <button class="btn btn-sm btn-outline-secondary copy-btn py-0 px-2" data-clipboard-target="#ewbVal" title="Copy E-Way Bill No">
+                                <i class="ri ri-file-copy-line"></i>
+                            </button>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <div class="row text-start">
+                        <div class="col-6">
+                            <label class="form-label text-muted fw-semibold small mb-1">E-Way Bill Date</label>
+                            <p class="fw-bold mb-0 text-dark">
+                                {{ $invoice->eway_bill_date ? \Carbon\Carbon::parse($invoice->eway_bill_date)->format('d-m-Y h:i A') : '-' }}
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted fw-semibold small mb-1">Valid Till</label>
+                            <p class="fw-bold mb-0 text-success">
+                                {{ $invoice->eway_bill_valid_till ? \Carbon\Carbon::parse($invoice->eway_bill_valid_till)->format('d-m-Y h:i A') : '-' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

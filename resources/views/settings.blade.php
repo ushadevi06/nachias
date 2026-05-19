@@ -235,6 +235,54 @@
                             </div>
 
                             <div class="col-lg-12">
+                                <h6>Bank Details:</h6>
+                            </div>
+
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('bank_name') is-invalid @enderror" id="bank_name" placeholder="Enter Bank Name" name="bank_name" value="{{ old('bank_name', $setting->bank_name ?? '') }}">
+                                    <label for="bank_name">Bank Name</label>
+                                    @error('bank_name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('branch_location') is-invalid @enderror" id="branch_location" placeholder="Enter Branch Location" name="branch_location" value="{{ old('branch_location', $setting->branch_location ?? '') }}">
+                                    <label for="branch_location">Branch Location</label>
+                                    @error('branch_location')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('account_no') is-invalid @enderror" id="account_no" placeholder="Enter Account No" name="account_no" value="{{ old('account_no', $setting->account_no ?? '') }}">
+                                    <label for="account_no">Account No</label>
+                                    @error('account_no')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('ifsc_code') is-invalid @enderror" id="ifsc_code" placeholder="Enter IFSC Code" name="ifsc_code" value="{{ old('ifsc_code', $setting->ifsc_code ?? '') }}">
+                                    <label for="ifsc_code">IFSC Code</label>
+                                    @error('ifsc_code')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <hr>
+                            </div>
+
+                            <div class="col-lg-12">
                                 <h6>Working Days & Time:</h6>
                             </div>
 
