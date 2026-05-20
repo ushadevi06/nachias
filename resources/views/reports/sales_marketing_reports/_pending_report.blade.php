@@ -26,14 +26,14 @@
                                     $s = is_array($item->sleeve) ? ($item->sleeve[0] ?? "") : $item->sleeve;
                                     $sd = ($s == "Full" || $s == "Full Sleeve") ? "F/S" : (($s == "Half" || $s == "Half Sleeve") ? "H/S" : $s);
                                     return [
-                                        "name" => $item->item->name ?? "-",
+                                        "name" => $item->item_name,
                                         "size" => $item->size_id ?? "-",
                                         "sleeve" => $sd,
                                         "qty" => number_format($item->qty, 0)
                                     ];
                                 });
                             @endphp
-                            <span>{{ $firstItem->item->name ?? '-' }} ({{ trim($variantInfo) }})</span>
+                            <span>{{ $firstItem->item_name }} ({{ trim($variantInfo) }})</span>
                             @if($order->items->count() > 1)
                                 <span class="badge bg-label-primary rounded-pill cursor-pointer view-order-items" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#orderItemsModal" data-order-no="{{ $order->so_no }}" data-items='@json($orderItemsData)'>
                                     +{{ $order->items->count() - 1 }} more

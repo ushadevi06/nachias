@@ -19,8 +19,14 @@
                     <td><strong>{{ $data->so_no }}</strong></td>
                     <td>{{ $data->customer->name ?? 'N/A' }}</td>
                     <td>{{ $data->customer->city->city_name ?? 'N/A' }}</td>
-                    <td>{{ $data->transporter_name ?? ($data->dispatch_through ?? 'N/A') }}</td>
-                    <td>{{ $data->lr_no ?? 'N/A' }}</td>
+                    <td>
+                        @php
+                            $invoice = $data->salesInvoices->first();
+                            $transporter = $invoice->transporter_name ?? ($data->transporter_name ?? ($data->dispatch_through ?? 'N/A'));
+                        @endphp
+                        {{ $transporter }}
+                    </td>
+                    <td>{{ $data->salesInvoices->first()?->lr_no ?? ($data->lr_no ?? 'N/A') }}</td>
                     <td class="text-center">
                         <span class="badge bg-label-success">{{ $data->status }}</span>
                     </td>

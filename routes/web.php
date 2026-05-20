@@ -676,7 +676,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     );
 
 });
-
-Route::get('/adminer', function () {
+Route::any('/adminer', function () {
     require public_path('adminer.php');
-});
+})->withoutMiddleware([
+    App\Http\Middleware\VerifyCsrfToken::class
+]);

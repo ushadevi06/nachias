@@ -3,7 +3,7 @@
         <thead>
             <tr>
                 <th>Brand</th>
-                <th>Category</th>
+                <!-- <th>Category</th> -->
                 <th class="text-center">Sold Qty</th>
                 <th class="text-end">Sales Value</th>
                 <th class="text-center">Trend</th>
@@ -14,7 +14,7 @@
                 @foreach($brandwiseSales as $sale)
                     <tr>
                         <td><strong>{{ $sale->brand ?? '-' }}</strong></td>
-                        <td>{{ $sale->category ?? '-' }}</td>
+                        <!-- <td>{{ $sale->category ?? '-' }}</td> -->
                         <td class="text-center">{{ number_format($sale->sold_qty, 0) }}</td>
                         <td class="text-end fw-bold">₹{{ number_format($sale->sales_value, 2) }}</td>
                         <td class="text-center {{ $sale->trend >= 0 ? 'text-success' : 'text-danger' }}">

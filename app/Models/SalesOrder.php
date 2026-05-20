@@ -150,6 +150,11 @@ class SalesOrder extends Model
         return $this->hasMany(SalesOrderCharge::class, 'sales_order_id');
     }
 
+    public function salesInvoices()
+    {
+        return $this->hasMany(SalesInvoice::class, 'so_id');
+    }
+
     public static function generateSoNo()
     {
         $setting = Setting::first();

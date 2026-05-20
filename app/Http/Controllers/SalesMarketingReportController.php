@@ -17,7 +17,7 @@ class SalesMarketingReportController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view sales-marketing-report')) {
             return unauthorizedRedirect();
         }
-        $query = SalesOrder::with(['customer', 'items.item'])->whereNull('deleted_at');
+        $query = SalesOrder::with(['customer', 'items.stockEntryItem'])->whereNull('deleted_at');
 
         if ($request->from_date) {
             $query->where('so_date', '>=', date('Y-m-d', strtotime($request->from_date)));

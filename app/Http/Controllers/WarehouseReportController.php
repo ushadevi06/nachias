@@ -30,31 +30,36 @@ class WarehouseReportController extends Controller
         // Current Period Sales
         $currentSalesQuery = SalesInvoiceItem::query()
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-            ->leftJoin('items', 'sales_invoice_items.art_no', '=', 'items.design_art_no')
-            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
-            ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
+            ->leftJoin('brands', function($join) {
+                $join->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                     ->whereRaw("NOT EXISTS (
+                         SELECT 1 FROM brands b2 
+                         WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                         AND LENGTH(b2.code) > LENGTH(brands.code)
+                     )");
+            })
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('sales_invoice_items.deleted_at')
             ->whereBetween('sales_invoices.inv_date', [$fromDate, $toDate]);
 
         if ($request->brand_id) {
-            $currentSalesQuery->where('items.brand_id', $request->brand_id);
+            $currentSalesQuery->where('brands.id', $request->brand_id);
         }
         if ($request->store_id) {
             $currentSalesQuery->where('sales_invoices.store_location_id', $request->store_id);
         }
         if ($request->item_id) {
-            $currentSalesQuery->where('items.id', $request->item_id);
+            $currentSalesQuery->where('sales_invoice_items.id', $request->item_id);
         }
 
         $brandwiseSales = $currentSalesQuery->select(
             'brands.brand_name as brand',
-            'brand_categories.name as category',
+            // 'brand_categories.name as category',
             DB::raw('SUM(sales_invoice_items.quantity) as sold_qty'),
             DB::raw('SUM(sales_invoice_items.amount) as sales_value'),
-            'items.brand_id'
+            'brands.id as brand_id'
         )
-            ->groupBy('brands.brand_name', 'brand_categories.name', 'items.brand_id')
+            ->groupBy('brands.brand_name', 'brands.id')
             ->get();
 
         // Trend Calculation
@@ -64,16 +69,34 @@ class WarehouseReportController extends Controller
 
         $prevSales = SalesInvoiceItem::query()
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
-            ->leftJoin('items', 'sales_invoice_items.art_no', '=', 'items.design_art_no')
+            ->leftJoin('brands', function($join) {
+                $join->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                     ->whereRaw("NOT EXISTS (
+                         SELECT 1 FROM brands b2 
+                         WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                         AND LENGTH(b2.code) > LENGTH(brands.code)
+                     )");
+            })
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('sales_invoice_items.deleted_at')
-            ->whereBetween('sales_invoices.inv_date', [$prevFromDate, $prevToDate])
-            ->select('items.brand_id', DB::raw('SUM(sales_invoice_items.amount) as prev_sales_value'))
-            ->groupBy('items.brand_id')
+            ->whereBetween('sales_invoices.inv_date', [$prevFromDate, $prevToDate]);
+
+        if ($request->brand_id) {
+            $prevSales->where('brands.id', $request->brand_id);
+        }
+        if ($request->store_id) {
+            $prevSales->where('sales_invoices.store_location_id', $request->store_id);
+        }
+        if ($request->item_id) {
+            $prevSales->where('sales_invoice_items.id', $request->item_id);
+        }
+
+        $prevSalesPlucked = $prevSales->select('brands.id as brand_id', DB::raw('SUM(sales_invoice_items.amount) as prev_sales_value'))
+            ->groupBy('brands.id')
             ->pluck('prev_sales_value', 'brand_id');
 
         foreach ($brandwiseSales as $sale) {
-            $prevValue = $prevSales[$sale->brand_id] ?? 0;
+            $prevValue = $prevSalesPlucked[$sale->brand_id] ?? 0;
             if ($prevValue > 0) {
                 $sale->trend = (($sale->sales_value - $prevValue) / $prevValue) * 100;
             }
@@ -84,31 +107,40 @@ class WarehouseReportController extends Controller
 
         // --- 2. Brandwise Stock ---
         $stockQuery = StockEntryItem::query()
+            ->leftJoin('brands', function($join) {
+                $join->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                     ->whereRaw("NOT EXISTS (
+                         SELECT 1 FROM brands b2 
+                         WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                         AND LENGTH(b2.code) > LENGTH(brands.code)
+                     )");
+            })
+            ->leftJoin('store_categories', 'stock_entry_items.store_category_id', '=', 'store_categories.id')
+            ->leftJoin('size_ratios', function($join) {
+                $join->on(DB::raw('1'), '=', DB::raw('1'))
+                     ->whereRaw("size_ratios.id = (SELECT MIN(id) FROM size_ratios WHERE status = 'Active')");
+            })
             ->select(
-            'brands.brand_name as brand',
-            'items.code as article_no',
-            'size_ratios.ratio',
-            DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty')
-        )
-            ->join('items', function ($join) {
-            $join->on('stock_entry_items.finished_item_code', 'like', DB::raw("CONCAT(items.code, '%')"));
-        })
-            ->join('brands', 'items.brand_id', '=', 'brands.id')
-            ->join('size_ratios', 'items.size_ratio_id', '=', 'size_ratios.id')
+                'brands.brand_name as brand',
+                DB::raw("COALESCE(store_categories.category_name, 'Fabric') as category"),
+                'stock_entry_items.art_no as article_no',
+                'size_ratios.ratio',
+                DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as total_qty')
+            )
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at');
 
         if ($request->brand_id) {
-            $stockQuery->where('items.brand_id', $request->brand_id);
+            $stockQuery->where('brands.id', $request->brand_id);
         }
         if ($request->store_id) {
             $stockQuery->where('stock_entry_items.store_location_id', $request->store_id);
         }
         if ($request->item_id) {
-            $stockQuery->where('items.id', $request->item_id);
+            $stockQuery->where('stock_entry_items.id', $request->item_id);
         }
 
-        $brandwiseStockRaw = $stockQuery->groupBy('brands.brand_name', 'items.code', 'size_ratios.ratio')->get();
+        $brandwiseStockRaw = $stockQuery->groupBy('brands.brand_name', 'store_categories.category_name', 'stock_entry_items.art_no', 'size_ratios.ratio')->get();
 
         $brandwiseStock = $brandwiseStockRaw->map(function ($data) {
             $ratios = explode(',', $data->ratio);
@@ -121,30 +153,39 @@ class WarehouseReportController extends Controller
         // --- 3. Assorted Stock ---
         $assortedQuery = StockEntryItem::query()
             ->select(
-            'store_locations.store_location as store',
-            'items.name as item_name',
-            'stock_entry_items.size',
-            DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as stock_qty')
-        )
+                'store_locations.store_location as store',
+                DB::raw("COALESCE(stock_entry_items.finished_item_code, stock_entry_items.art_no, '-') as item_name"),
+                'stock_entry_items.size',
+                DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as stock_qty')
+            )
             ->join('store_locations', 'stock_entry_items.store_location_id', '=', 'store_locations.id')
-            ->join('items', function ($join) {
-            $join->on('stock_entry_items.finished_item_code', 'like', DB::raw("CONCAT(items.code, '%')"));
-        })
+            ->leftJoin('brands', function($join) {
+                $join->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                     ->whereRaw("NOT EXISTS (
+                          SELECT 1 FROM brands b2 
+                          WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                          AND LENGTH(b2.code) > LENGTH(brands.code)
+                     )");
+            })
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at');
 
         if ($request->brand_id) {
-            $assortedQuery->where('items.brand_id', $request->brand_id);
+            $assortedQuery->where('brands.id', $request->brand_id);
         }
         if ($request->store_id) {
             $assortedQuery->where('stock_entry_items.store_location_id', $request->store_id);
         }
         if ($request->item_id) {
-            $assortedQuery->where('items.id', $request->item_id);
+            $assortedQuery->where('stock_entry_items.id', $request->item_id);
         }
 
-        $assortedStock = $assortedQuery->groupBy('store_locations.store_location', 'items.name', 'stock_entry_items.size')
-            ->get();
+        $assortedStock = $assortedQuery->groupBy(
+            'store_locations.store_location',
+            'stock_entry_items.finished_item_code',
+            'stock_entry_items.art_no',
+            'stock_entry_items.size'
+        )->get();
 
         // --- 4. Order vs Dispatch ---
         $orderVsDispatchQuery = SalesOrder::with(['customer'])
@@ -172,8 +213,16 @@ class WarehouseReportController extends Controller
             $orderVsDispatchQuery->whereExists(function ($query) use ($request) {
                 $query->select(DB::raw(1))
                     ->from('sales_order_items')
+                    ->leftJoin('brands', function($join) {
+                        $join->on('sales_order_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                             ->whereRaw("NOT EXISTS (
+                                  SELECT 1 FROM brands b2 
+                                  WHERE sales_order_items.art_no LIKE CONCAT(b2.code, '%') 
+                                  AND LENGTH(b2.code) > LENGTH(brands.code)
+                             )");
+                    })
                     ->whereColumn('sales_order_items.sale_order_id', 'sales_orders.id')
-                    ->where('sales_order_items.brand_cat_id', $request->brand_id);
+                    ->where('brands.id', $request->brand_id);
             });
         }
         if ($request->item_id) {
@@ -181,7 +230,7 @@ class WarehouseReportController extends Controller
                 $query->select(DB::raw(1))
                     ->from('sales_order_items')
                     ->whereColumn('sales_order_items.sale_order_id', 'sales_orders.id')
-                    ->where('sales_order_items.item_id', $request->item_id);
+                    ->where('sales_order_items.id', $request->item_id);
             });
         }
 
@@ -194,7 +243,7 @@ class WarehouseReportController extends Controller
         }
 
         // --- 5. Dispatch Report ---
-        $dispatchReportQuery = SalesOrder::with(['customer.city'])
+        $dispatchReportQuery = SalesOrder::with(['customer.city', 'salesInvoices'])
             ->where('status', 'Dispatched')
             ->whereNull('deleted_at');
 
@@ -208,8 +257,16 @@ class WarehouseReportController extends Controller
             $dispatchReportQuery->whereExists(function ($query) use ($request) {
                 $query->select(DB::raw(1))
                     ->from('sales_order_items')
+                    ->leftJoin('brands', function($join) {
+                        $join->on('sales_order_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                             ->whereRaw("NOT EXISTS (
+                                  SELECT 1 FROM brands b2 
+                                  WHERE sales_order_items.art_no LIKE CONCAT(b2.code, '%') 
+                                  AND LENGTH(b2.code) > LENGTH(brands.code)
+                             )");
+                    })
                     ->whereColumn('sales_order_items.sale_order_id', 'sales_orders.id')
-                    ->where('sales_order_items.brand_cat_id', $request->brand_id);
+                    ->where('brands.id', $request->brand_id);
             });
         }
 
@@ -218,7 +275,14 @@ class WarehouseReportController extends Controller
         // --- 6. Stock Inward (GRN) ---
         $stockInwardQuery = GrnEntry::with(['supplier'])
             ->leftJoin('grn_entry_items', 'grn_entries.id', '=', 'grn_entry_items.grn_entry_id')
-            ->leftJoin('items', 'grn_entry_items.art_no', '=', 'items.design_art_no')
+            ->leftJoin('brands', function($join) {
+                $join->on('grn_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                     ->whereRaw("NOT EXISTS (
+                          SELECT 1 FROM brands b2 
+                          WHERE grn_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                          AND LENGTH(b2.code) > LENGTH(brands.code)
+                     )");
+            })
             ->select(
                 'grn_entries.id',
                 'grn_entries.grn_number',
@@ -237,10 +301,10 @@ class WarehouseReportController extends Controller
             $stockInwardQuery->where('grn_entries.grn_date', '<=', date('Y-m-d', strtotime($request->to_date)));
         }
         if ($request->brand_id) {
-            $stockInwardQuery->where('items.brand_id', $request->brand_id);
+            $stockInwardQuery->where('brands.id', $request->brand_id);
         }
         if ($request->item_id) {
-            $stockInwardQuery->where('items.id', $request->item_id);
+            $stockInwardQuery->where('grn_entry_items.id', $request->item_id);
         }
 
         $stockInward = $stockInwardQuery->groupBy('grn_entries.id', 'grn_entries.grn_number', 'grn_entries.grn_date', 'grn_entries.status', 'grn_entries.supplier_id')
@@ -271,13 +335,20 @@ class WarehouseReportController extends Controller
             $regularDiscountQuery->whereExists(function ($query) use ($request) {
                 $query->select(DB::raw(1))
                     ->from('sales_invoice_items')
-                    ->join('items', 'sales_invoice_items.art_no', '=', 'items.design_art_no')
+                    ->leftJoin('brands', function($join) {
+                        $join->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                             ->whereRaw("NOT EXISTS (
+                                  SELECT 1 FROM brands b2 
+                                  WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                  AND LENGTH(b2.code) > LENGTH(brands.code)
+                             )");
+                    })
                     ->whereColumn('sales_invoice_items.sales_invoice_id', 'sales_invoices.id');
                 if ($request->brand_id) {
-                    $query->where('items.brand_id', $request->brand_id);
+                    $query->where('brands.id', $request->brand_id);
                 }
                 if ($request->item_id) {
-                    $query->where('items.id', $request->item_id);
+                    $query->where('sales_invoice_items.id', $request->item_id);
                 }
             });
         }
@@ -306,9 +377,14 @@ class WarehouseReportController extends Controller
         if ($request->brand_id) {
             $priorityStockQuery->whereExists(function ($query) use ($request) {
                 $query->select(DB::raw(1))
-                    ->from('items')
-                    ->whereColumn('items.design_art_no', 'stock_entry_items.art_no')
-                    ->where('items.brand_id', $request->brand_id);
+                    ->from('brands')
+                    ->whereColumn('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                    ->whereRaw("NOT EXISTS (
+                         SELECT 1 FROM brands b2 
+                         WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                         AND LENGTH(b2.code) > LENGTH(brands.code)
+                    )")
+                    ->where('brands.id', $request->brand_id);
             });
         }
         if ($request->store_id) {

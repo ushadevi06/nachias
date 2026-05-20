@@ -70,4 +70,23 @@ class SalesOrderItem extends Model
     {
         return $this->belongsTo(StockEntryItem::class);
     }
+
+    public function getItemNameAttribute()
+    {
+        // 1. Try to fetch from BarcodeMaster using SKU (barcode_no)
+        if (!empty($this->sku)) {
+            $barcode = BarcodeMaster::where('barcode_no', $this->sku)->first();
+            if ($barcode && !empty($barcode->item_name)) {
+                return $barcode->item_name;
+            }
+        }
+
+        // 2. Try to fetch from StockEntryItem -> finished_item_code
+        if ($this->stockEntryItem && !empty($this->stockEntryItem->finished_item_code)) {
+            return $this->stockEntryItem->finished_item_code;
+        }
+
+        // 3. Fallback to art_no, sku, or '-' (do NOT use items table)
+        return $this->art_no ?? $this->sku ?? '-';
+    }
 }
