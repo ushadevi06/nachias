@@ -50,15 +50,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted">Item</label>
-                    <select class="form-select select2" name="item_id" data-placeholder="Select Item">
-                        <option value=""></option>
-                        @foreach($items as $item)
-                            <option value="{{ $item->id }}" {{ request('item_id') == $item->id ? 'selected' : '' }}>{{ $item->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill">
                         <i class="ri ri-search-line me-1"></i> Search

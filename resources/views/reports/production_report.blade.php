@@ -41,19 +41,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted">Process</label>
-                    <select class="form-select select2" data-placeholder="Select Process">
-                        <option value=""></option>
-                        <option value="1">Fabric Spread</option>
-                        <option value="2">Cuff Stitching</option>
-                        <option value="3">Button Fixing</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label small fw-bold text-muted">Jobcard</label>
-                    <input type="text" class="form-control" placeholder="No.">
-                </div>
+
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill">
                         <i class="ri ri-search-line me-1"></i> Search

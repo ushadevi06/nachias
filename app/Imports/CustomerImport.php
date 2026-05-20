@@ -13,6 +13,7 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class CustomerImport implements ToCollection, WithHeadingRow
 {
@@ -202,12 +203,26 @@ class CustomerImport implements ToCollection, WithHeadingRow
             throw new \Exception(implode('<br>', $errors));
         }
 
-        foreach ($validData as $d) {
-            $d['created_by'] = auth()->id() ?? 1;
-            Customer::updateOrCreate(
-                ['code' => $d['code']],
-                $d
-            );
+        DB::beginTransaction();
+        try {
+            foreach ($validData as $d) {
+                $d['created_by'] = auth()->id() ?? 1;
+                
+                $existing = Customer::where('code', $d['code'])->first();
+                $oldData = $existing ? $existing->toArray() : null;
+                $action = $existing ? 'update' : 'create';
+
+                $customer = Customer::updateOrCreate(
+                    ['code' => $d['code']],
+                    $d
+                );
+
+                addLog($action, 'Customer via Import', 'customers', $customer->id, $oldData, $customer->toArray());
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
         }
     }
 }

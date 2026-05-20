@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Brand;
 use App\Models\BrandCategory;
-use App\Models\Item;
 use App\Models\GrnEntry;
 use App\Models\GrnEntryItem;
 use App\Models\SalesInvoice;
@@ -21,7 +20,7 @@ class WarehouseReportController extends Controller
     {
         $brands = Brand::where('status', 'Active')->get();
         $stores = StoreLocation::where('status', 'Active')->get();
-        $items = Item::where('status', 'Active')->get();
+
 
         // --- 1. Brandwise Sales with Trend ---
         $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-01');
@@ -48,9 +47,7 @@ class WarehouseReportController extends Controller
         if ($request->store_id) {
             $currentSalesQuery->where('sales_invoices.store_location_id', $request->store_id);
         }
-        if ($request->item_id) {
-            $currentSalesQuery->where('sales_invoice_items.id', $request->item_id);
-        }
+
 
         $brandwiseSales = $currentSalesQuery->select(
             'brands.brand_name as brand',
@@ -87,9 +84,7 @@ class WarehouseReportController extends Controller
         if ($request->store_id) {
             $prevSales->where('sales_invoices.store_location_id', $request->store_id);
         }
-        if ($request->item_id) {
-            $prevSales->where('sales_invoice_items.id', $request->item_id);
-        }
+
 
         $prevSalesPlucked = $prevSales->select('brands.id as brand_id', DB::raw('SUM(sales_invoice_items.amount) as prev_sales_value'))
             ->groupBy('brands.id')
@@ -136,9 +131,7 @@ class WarehouseReportController extends Controller
         if ($request->store_id) {
             $stockQuery->where('stock_entry_items.store_location_id', $request->store_id);
         }
-        if ($request->item_id) {
-            $stockQuery->where('stock_entry_items.id', $request->item_id);
-        }
+
 
         $brandwiseStockRaw = $stockQuery->groupBy('brands.brand_name', 'store_categories.category_name', 'stock_entry_items.art_no', 'size_ratios.ratio')->get();
 
@@ -176,9 +169,7 @@ class WarehouseReportController extends Controller
         if ($request->store_id) {
             $assortedQuery->where('stock_entry_items.store_location_id', $request->store_id);
         }
-        if ($request->item_id) {
-            $assortedQuery->where('stock_entry_items.id', $request->item_id);
-        }
+
 
         $assortedStock = $assortedQuery->groupBy(
             'store_locations.store_location',
@@ -225,14 +216,7 @@ class WarehouseReportController extends Controller
                     ->where('brands.id', $request->brand_id);
             });
         }
-        if ($request->item_id) {
-            $orderVsDispatchQuery->whereExists(function ($query) use ($request) {
-                $query->select(DB::raw(1))
-                    ->from('sales_order_items')
-                    ->whereColumn('sales_order_items.sale_order_id', 'sales_orders.id')
-                    ->where('sales_order_items.id', $request->item_id);
-            });
-        }
+
 
         $orderVsDispatch = $orderVsDispatchQuery->groupBy('sales_orders.id', 'sales_orders.customer_id', 'sales_orders.so_no', 'sales_orders.so_date', 'sales_orders.total_qty')
             ->get();
@@ -303,9 +287,7 @@ class WarehouseReportController extends Controller
         if ($request->brand_id) {
             $stockInwardQuery->where('brands.id', $request->brand_id);
         }
-        if ($request->item_id) {
-            $stockInwardQuery->where('grn_entry_items.id', $request->item_id);
-        }
+
 
         $stockInward = $stockInwardQuery->groupBy('grn_entries.id', 'grn_entries.grn_number', 'grn_entries.grn_date', 'grn_entries.status', 'grn_entries.supplier_id')
             ->orderBy('grn_entries.grn_date', 'desc')
@@ -331,7 +313,7 @@ class WarehouseReportController extends Controller
         if ($request->store_id) {
             $regularDiscountQuery->where('store_location_id', $request->store_id);
         }
-        if ($request->brand_id || $request->item_id) {
+        if ($request->brand_id) {
             $regularDiscountQuery->whereExists(function ($query) use ($request) {
                 $query->select(DB::raw(1))
                     ->from('sales_invoice_items')
@@ -343,13 +325,8 @@ class WarehouseReportController extends Controller
                                   AND LENGTH(b2.code) > LENGTH(brands.code)
                              )");
                     })
-                    ->whereColumn('sales_invoice_items.sales_invoice_id', 'sales_invoices.id');
-                if ($request->brand_id) {
-                    $query->where('brands.id', $request->brand_id);
-                }
-                if ($request->item_id) {
-                    $query->where('sales_invoice_items.id', $request->item_id);
-                }
+                    ->whereColumn('sales_invoice_items.sales_invoice_id', 'sales_invoices.id')
+                    ->where('brands.id', $request->brand_id);
             });
         }
 
@@ -423,8 +400,7 @@ class WarehouseReportController extends Controller
             'regularDiscount',
             'priorityStock',
             'brands',
-            'stores',
-            'items'
+            'stores'
         ));
     }
 }

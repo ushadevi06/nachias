@@ -31,9 +31,7 @@ class SalesMarketingReportController extends Controller
         if ($request->agent_id) {
             $query->where('agent_id', $request->agent_id);
         }
-        if ($request->zone_id) {
-            $query->where('zone_id', $request->zone_id);
-        }
+
 
         $orders = $query->orderBy('id', 'desc')->get();
 
@@ -184,6 +182,6 @@ class SalesMarketingReportController extends Controller
             ]);
         }
 
-        return view('reports/sales_marketing_report', compact('orders', 'customers', 'executives', 'incentiveReport', 'comparisonReport', 'outstandingReport', 'zones'));
+        return view('reports/sales_marketing_report', compact('orders', 'customers', 'executives', 'incentiveReport', 'comparisonReport', 'outstandingReport'));
     }
 }

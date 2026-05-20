@@ -32,17 +32,7 @@
                     <label class="form-label small fw-bold text-muted">To Date</label>
                     <input type="text" class="form-control end_date" name="to_date" value="{{ request('to_date') }}" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted">Zone</label>
-                    <select class="form-select select2" name="zone_id" id="zone_id_filter" data-placeholder="Select Zone">
-                        <option value=""></option>
-                        @foreach($zones as $zone)
-                        <option value="{{ $zone->id }}" {{ request('zone_id') == $zone->id ? 'selected' : '' }}>
-                            {{ $zone->zone_name }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
+
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">Customer</label>
                     <select class="form-select select2" name="customer_id" data-placeholder="Select Customer">
@@ -257,29 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Zone-based Agent Filtering
-    $('#zone_id_filter').on('change', function() {
-        const zoneId = $(this).val();
-        const agentSelect = $('#agent_id_filter');
-        
-        agentSelect.empty().append('<option value="">Select Executive</option>');
-        
-        if (zoneId) {
-            $.ajax({
-                url: `${APP_URL}/get-agents-by-zone/${zoneId}`,
-                type: 'GET',
-                success: function(data) {
-                    data.forEach(agent => {
-                        agentSelect.append(`<option value="${agent.id}">${agent.name}</option>`);
-                    });
-                    agentSelect.trigger('change');
-                }
-            });
-        } else {
-            // If no zone selected, re-fill with all active executives (optional, or just leave empty)
-            // For now, let's keep it empty or as is if no zone is selected.
-        }
-    });
+
 });
 </script>
 

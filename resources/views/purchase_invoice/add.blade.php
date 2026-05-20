@@ -13,6 +13,8 @@
                 <input type="hidden" id="isEditMode" value="{{ isset($invoice) ? 1 : 0 }}">
                 <input type="hidden" name="purchase_commission_agent_id" id="purchase_commission_agent_id"
                     value="{{ old('purchase_commission_agent_id', $invoice->purchase_commission_agent_id ?? '') }}">
+                <input type="hidden" id="agent_commission_percentage"
+                    value="{{ old('agent_commission_percentage', $invoice->supplier->commission_percentage ?? '') }}">
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -392,6 +394,7 @@
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <select id="charge_tax_type" class="form-select select2">
+                                        <option value="">Tax Type</option>
                                         <option value="Pre-GST">Pre-GST (Taxable)</option>
                                         <option value="Post-GST" selected>Post-GST (Non-Taxable)</option>
                                     </select>
@@ -935,10 +938,15 @@
                             $('#supplier_name_hidden').val(response.supplier_name);
 
                             $('#discount_input').val(response.discount_percent);
-                            $('#commission_input').val(response.commission);
-                            $('#commission_percent_display').text(parseFloat(response.commission || 0).toFixed(2));
-                            $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
-                            $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
+
+                             let commissionVal = parseFloat(response.commission || 0);
+                             $('#commission_input').val(commissionVal);
+                             $('#commission_percent_display').text(commissionVal.toFixed(2));
+                             $('#commission_amount_input').val('0.00');
+                             $('#commission_value').text('0.00');
+                             $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
+                             $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
+                             $('#agent_commission_percentage').val(response.agent_commission_percentage);
 
                             if (response.round_off) {
                                 $('#round_off_input').val(parseFloat(response.round_off).toFixed(2)).trigger('change');
@@ -1101,6 +1109,7 @@
                 $('#supplier_id').val('');
                 $('#purchase_commission_agent_id').val('');
                 $('#purchase_commission_agent_name').val('');
+                $('#agent_commission_percentage').val('');
                 $('#select_all_items').prop('checked', false);
                 calculateTotals();
             }
@@ -1237,6 +1246,26 @@
             calculateSummaryOnly();
         });
 
+        $('#charges_select').on('change', function () {
+            let chargeText = $('#charges_select option:selected').text().trim().toUpperCase();
+            if (chargeText === 'BROKERAGE') {
+                let currentVal = parseFloat($('#commission_amount_input').val()) || 0;
+                $('#charge_amount').val(currentVal > 0 ? currentVal.toFixed(2) : '');
+            } else {
+                $('#charge_amount').val('');
+            }
+        });
+
+        $('#charge_amount').on('input', function () {
+            let chargeText = $('#charges_select option:selected').text().trim().toUpperCase();
+            if (chargeText === 'BROKERAGE') {
+                let manualAmount = parseFloat($(this).val()) || 0;
+                $('#commission_amount_input').val(manualAmount.toFixed(2));
+                $('#commission_value').text(manualAmount.toFixed(2));
+                calculateSummaryOnly();
+            }
+        });
+
         $('input[name="other_state"]').on('change', function () {
             if ($(this).val() === 'Y') {
                 $('#igst_div').show();
@@ -1309,9 +1338,14 @@
             $('#discount_amount_input').val(discountAmount.toFixed(2));
 
             let commissionPercent = parseFloat($('#commission_input').val()) || 0;
-            let commissionAmount = (subTotal * commissionPercent) / 100;
+            let commissionAmount = 0;
+            if (commissionPercent > 0) {
+                commissionAmount = (subTotal * commissionPercent) / 100;
+                $('#commission_amount_input').val(commissionAmount.toFixed(2));
+            } else {
+                commissionAmount = parseFloat($('#commission_amount_input').val()) || 0;
+            }
             $('#commission_value').text(commissionAmount.toFixed(2));
-            $('#commission_amount_input').val(commissionAmount.toFixed(2));
 
             let itemTotal = subTotal - discountAmount - commissionAmount;
 
@@ -1450,6 +1484,14 @@
 
             if (!amount || amount <= 0) {
                 alert("Please enter a valid amount");
+                return;
+            }
+
+            if (chargeText.trim().toUpperCase() === 'BROKERAGE') {
+                // For brokerage, we don't add it as a tax & charges row in the table.
+                // It is already shown and calculated in the native Commission summary row.
+                $('#charges_select').val('').trigger('change');
+                $('#charge_amount').val('');
                 return;
             }
 
@@ -1725,9 +1767,14 @@
             $('#discount_amount_input').val(discountAmount.toFixed(2));
 
             let commissionPercent = parseFloat($('#commission_input').val()) || 0;
-            let commissionAmount = (subTotal * commissionPercent) / 100;
+            let commissionAmount = 0;
+            if (commissionPercent > 0) {
+                commissionAmount = (subTotal * commissionPercent) / 100;
+                $('#commission_amount_input').val(commissionAmount.toFixed(2));
+            } else {
+                commissionAmount = parseFloat($('#commission_amount_input').val()) || 0;
+            }
             $('#commission_value').text(commissionAmount.toFixed(2));
-            $('#commission_amount_input').val(commissionAmount.toFixed(2));
 
             let itemTotal = subTotal - discountAmount - commissionAmount;
 

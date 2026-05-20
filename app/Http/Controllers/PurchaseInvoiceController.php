@@ -619,6 +619,7 @@ class PurchaseInvoiceController extends Controller
             'commission' => $purchaseOrder->commission ?? 0,
             'purchase_commission_agent_id' => $purchaseOrder->purchase_commission_agent_id,
             'purchase_commission_agent_name' => $purchaseOrder->purchaseCommissionAgent->name ?? '',
+            'agent_commission_percentage' => $purchaseOrder->supplier->commission_percentage ?? 0,
             'round_off' => $purchaseOrder->round_off,
             'round_off_type' => $purchaseOrder->round_off_type,
             'igst_percent' => $purchaseOrder->igst_percent,
