@@ -37,46 +37,135 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
         })->orderBy('id', 'desc')->get();
     }
 
+    // public function headings(): array
+    // {
+    //     return [
+    //         [
+    //             'Product Variation Details',
+    //             '', '', '', '', '', '', '',
+    //             'Product Details',
+    //             '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+    //         ],
+    //         [
+    //             'Size',
+    //             'Color',
+    //             'Fit',
+    //             'Barcode*',
+    //             'MRP*',
+    //             'WSP',
+    //             'Pcs in One Set',
+    //             'Variation Description',
+    //             'Product Name*',
+    //             'SKU Code*',
+    //             'Status (ACTIVE/INACTIVE)*',
+    //             'Has Variation? (Yes/No)',
+    //             'Private (Yes/No)',
+    //             'Tags',
+    //             'Category Tree',
+    //             'Label (Helps to Categorise) - Max. 4 Labels',
+    //             'Short Description',
+    //             'Title #1',
+    //             'Description #1',
+    //             'Title #2',
+    //             'Description #2',
+    //             'Title #3',
+    //             'Description #3',
+    //             'Title #4',
+    //             'Description #4',
+    //             'Title #5',
+    //         ]
+    //     ];
+    // }
     public function headings(): array
     {
         return [
             [
                 'Product Variation Details',
-                '', '', '', '', '', '', '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
                 'Product Details',
-                '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                'Product Dimensions (Variation-wise)',
+                '',
+                '',
+                '',
+                '',
+                'Package Dimensions (Variation-wise)',
+                '',
+                '',
+                '',
+                ''
             ],
             [
                 'Size',
                 'Color',
                 'Fit',
-                'Barcode',
-                'MRP',
+                'Barcode*',
+                'MRP*',
                 'WSP',
                 'Pcs in One Set',
                 'Variation Description',
-                'Product Name',
-                'SKU Code',
-                'Status (ACTIVE/INACTIVE)',
+
+                'Product Name*',
+                'SKU Code*',
+                'Status (ACTIVE/INACTIVE)*',
                 'Has Variation? (Yes/No)',
-                'Private [Yes/No]',
+                'Private (Yes/No)',
                 'Tags',
                 'Category Tree',
-                'Label [Helps to Categorise] - Max. 4 Label',
+                'Label (Helps to Categorise) - Max. 4 Labels',
                 'Short Description',
-                'Title #',
+
+                'Title #1',
                 'Description #1',
-                'Title #',
+                'Title #2',
                 'Description #2',
-                'Title #',
+                'Title #3',
                 'Description #3',
-                'Title #',
+                'Title #4',
                 'Description #4',
-                'Internal Description',
+                'Title #5',
+                'Description #5',
+
+                'Internal Description (Private to Company)',
+
+                'Length',
+                'Breadth',
+                'Height',
+                'Volume',
+                'Weight',
+
+                'Length',
+                'Breadth',
+                'Height',
+                'Volume',
+                'Weight',
             ]
         ];
     }
-
     public function map($item): array
     {
         $this->count++;

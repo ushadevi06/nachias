@@ -258,7 +258,6 @@ class SalesInvoiceController extends Controller
                 $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
                 if (in_array($invoice->invoice_status, $activeStatuses)) {
                     $invoice->load('items');
-                    // $this->applyStockDeduction($invoice);
                 }
 
                 DB::commit();
@@ -339,7 +338,6 @@ class SalesInvoiceController extends Controller
             $itemName = '';
             $sleeveType = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
 
-            // Try to get from direct item relation
             if ($item->item) {
                 if ($item->item->brand) {
                     $brandName = $item->item->brand->brand_name;
@@ -475,23 +473,6 @@ class SalesInvoiceController extends Controller
             return back()->with('error', 'Failed to delete invoice: ' . $e->getMessage());
         }
     }
-
-    private function applyStockDeduction(SalesInvoice $invoice): void
-    {
-        foreach ($invoice->items as $item) {
-            if (empty($item->stock_entry_item_id)) continue;
-            StockEntryItem::where('id', $item->stock_entry_item_id)->increment('qty_out', $item->quantity);
-        }
-    }
-
-    private function revertStockDeduction(SalesInvoice $invoice): void
-    {
-        foreach ($invoice->items as $item) {
-            if (empty($item->stock_entry_item_id)) continue;
-            StockEntryItem::where('id', $item->stock_entry_item_id)->where('qty_out', '>=', $item->quantity)->decrement('qty_out', $item->quantity);
-        }
-    }
-
     public function downloadPdf($id)
     {
         $invoice = SalesInvoice::with([
