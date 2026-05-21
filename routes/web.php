@@ -63,6 +63,7 @@ use App\Http\Controllers\ProductionReportController;
 use App\Http\Controllers\OperationStageController;
 use App\Http\Controllers\TaxTypeController;
 use App\Http\Controllers\TaxController;
+use App\Http\Controllers\PurchaseReportController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\AjaxController;
 use App\Http\Controllers\FitController;
@@ -654,8 +655,14 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     /* Production Report */
     Route::get('production_reports', [ProductionReportController::class, 'index']);
 
+    /* Purchase Report */
+    Route::get('purchase_reports/fabric', [PurchaseReportController::class, 'fabricStore']);
+    Route::get('purchase_reports/accessories', [PurchaseReportController::class, 'accessoriesStore']);
+    Route::get('purchase_reports/supplier_performance', [PurchaseReportController::class, 'supplierPerformance'])->name('reports.supplier_performance');
+
     /* Customer Report */
     Route::get('sale_reports', [ReportController::class, 'sale_reports']);
+    Route::get('stock_reports', [ReportController::class, 'stock_reports']);
     Route::get('daily_production_reports', [ReportController::class, 'daily_production_reports']);
     Route::get('order_reports', [ReportController::class, 'order_reports']);
     Route::get('employee_reports', [ReportController::class, 'employee_reports']);

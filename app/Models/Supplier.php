@@ -85,6 +85,22 @@ class Supplier extends Model
     {
         return $this->belongsTo(\App\Models\Tax::class, 'tax_id');
     }
+
+    public function purchaseOrders()
+    {
+        return $this->hasMany(\App\Models\PurchaseOrder::class);
+    }
+
+    public function debitNotes()
+    {
+        return $this->hasMany(\App\Models\DebitNote::class);
+    }
+
+    public function returnGoods()
+    {
+        return $this->hasMany(\App\Models\DebitNote::class, 'supplier_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'Active');

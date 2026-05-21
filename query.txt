@@ -248,3 +248,9 @@ ADD COLUMN `qr_code` VARCHAR(255) NULL;
 
 ALTER TABLE `sales_invoices`
 ADD COLUMN `einvoice_status` VARCHAR(20) NULL AFTER `hsn_sac`;
+
+ALTER TABLE `stock_entry_items`
+ADD COLUMN `style_id` BIGINT UNSIGNED NULL AFTER `fabric_type_id`,
+ADD CONSTRAINT `stock_entry_items_style_id_foreign`
+FOREIGN KEY (`style_id`) REFERENCES `styles`(`id`)
+ON DELETE SET NULL;

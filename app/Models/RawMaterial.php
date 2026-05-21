@@ -19,6 +19,7 @@ class RawMaterial extends Model
         'material_type',
         'reference_image',
         'specification',
+        'min_stock',
         'status',
         'created_by',
     ];

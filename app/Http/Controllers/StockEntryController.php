@@ -351,38 +351,68 @@ class StockEntryController extends Controller
                     $headerData['reference_document'] = $filename;
                 }
 
-                if ($id) {
-                    $headerData['updated_by'] = auth()->id();
-                    $oldValues = $stockEntry->toArray();
-                    $stockEntry->update($headerData);
-                    $stockEntry->stockEntryItems()->forceDelete();
-                    addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
-                } else {
-                    $lastEntry = StockEntry::latest('id')->first();
-                    $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
-                    $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-                    $headerData['created_by'] = auth()->id();
-                    $stockEntry = StockEntry::create($headerData);
-                    addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
-                }
+                // if ($id) {
+                //     $headerData['updated_by'] = auth()->id();
+                //     $oldValues = $stockEntry->toArray();
+                //     $stockEntry->update($headerData);
+                //     $stockEntry->stockEntryItems()->forceDelete();
+                //     addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
+                // } else {
+                //     $lastEntry = StockEntry::latest('id')->first();
+                //     $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+                //     $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                //     $headerData['created_by'] = auth()->id();
+                //     $stockEntry = StockEntry::create($headerData);
+                //     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
+                // }
 
+                // if ($request->has('items') && is_array($request->items)) {
+                //     foreach ($request->items as $item) {
+                //         if (isset($item['selected']) && $item['selected'] == 1) {
+                //             $grnEntryItem = GrnEntryItem::find($item['grn_entry_item_id']);
+                //             StockEntryItem::create([
+                //                 'stock_entry_id' => $stockEntry->id,
+                //                 'stock_type' => 'raw_material',
+                //                 'grn_entry_item_id' => $item['grn_entry_item_id'] ?? null,
+                //                 'art_no' => $grnEntryItem->art_no ?? null,
+                //                 'raw_material_id' => $item['raw_material_id'] ?? null,
+                //                 'store_category_id' => $item['store_category_id'] ?? null,
+                //                 'store_location_id' => $item['store_location_id'],
+                //                 'uom_id' => $item['uom_id'] ?? null,
+                //                 'qty_in' => $item['qty_in'] ?? 0,
+                //                 'qty_out' => 0,
+                //                 'price' => $item['price'] ?? 0,
+                //                 'fabric_type_id' => $item['fabric_type_id'] ?? null,
+                //             ]);
+                //         }
+                //     }
+                // }
                 if ($request->has('items') && is_array($request->items)) {
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == 1) {
-                            $grnEntryItem = GrnEntryItem::find($item['grn_entry_item_id']);
+                            $grnEntryItem = GrnEntryItem::with([
+                                'purchaseInvoiceItem.purchaseInvoice.purchaseOrder',
+                                'purchaseInvoiceItem.purchaseInvoice.purchaseOrderItems'
+                            ])->find($item['grn_entry_item_id']);
+                            $purchaseOrderItem = $grnEntryItem->purchaseInvoiceItem->purchaseInvoice->purchaseOrder->purchaseOrderItems->firstWhere('raw_material_id', $item['raw_material_id']);
+
                             StockEntryItem::create([
-                                'stock_entry_id' => $stockEntry->id,
-                                'stock_type' => 'raw_material',
-                                'grn_entry_item_id' => $item['grn_entry_item_id'] ?? null,
-                                'art_no' => $grnEntryItem->art_no ?? null,
-                                'raw_material_id' => $item['raw_material_id'] ?? null,
-                                'store_category_id' => $item['store_category_id'] ?? null,
-                                'store_location_id' => $item['store_location_id'],
-                                'uom_id' => $item['uom_id'] ?? null,
-                                'qty_in' => $item['qty_in'] ?? 0,
-                                'qty_out' => 0,
-                                'price' => $item['price'] ?? 0,
-                                'fabric_type_id' => $item['fabric_type_id'] ?? null,
+                                'stock_entry_id'     => $stockEntry->id,
+                                'stock_type'         => 'raw_material',
+                                'grn_entry_item_id'  => $item['grn_entry_item_id'] ?? null,
+                                'art_no'             => $grnEntryItem->art_no ?? null,
+                                'raw_material_id'    => $item['raw_material_id'] ?? null,
+                                'store_category_id'  => $item['store_category_id'] ?? null,
+                                'store_location_id'  => $item['store_location_id'],
+                                'uom_id'             => $item['uom_id'] ?? null,
+                                'qty_in'             => $item['qty_in'] ?? 0,
+                                'qty_out'            => 0,
+                                'price'              => $item['price'] ?? 0,
+                                'fabric_type_id'     => $item['fabric_type_id'] ?? null,
+                                'brand_id'           => $purchaseOrderItem->brand_id ?? null,
+                                'style_id'           => $purchaseOrderItem->style_id ?? null,
+                                'fabric_width_id'    => $purchaseOrderItem->fabric_width_id ?? null,
+                                'color_id'           => $purchaseOrderItem->color_id ?? null,
                             ]);
                         }
                     }

@@ -78,4 +78,9 @@ class PurchaseOrderItem extends Model
     {
         return $this->belongsTo(FabricType::class, 'fabric_type_id');
     }
+
+    public function purchaseInvoiceItems()
+    {
+        return $this->hasMany(PurchaseInvoiceItem::class);
+    }
 }

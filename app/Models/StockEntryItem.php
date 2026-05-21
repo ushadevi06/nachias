@@ -31,8 +31,11 @@ class StockEntryItem extends Model
         'barcode',
         'fabric_type_id',
         'sleeve_type',
+        'style_id',
         'fit_id',
         'size_ratio_id',
+        'brand_id',
+        'fabric_width_id',
     ];
 
     public function stockEntry()
@@ -53,6 +56,16 @@ class StockEntryItem extends Model
     public function item()
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    public function fabricWidth()
+    {
+        return $this->belongsTo(FabricSize::class, 'fabric_width_id');
     }
 
     public function storeCategory()
@@ -83,6 +96,11 @@ class StockEntryItem extends Model
     public function fit()
     {
         return $this->belongsTo(Fit::class, 'fit_id');
+    }
+
+    public function style()
+    {
+        return $this->belongsTo(Style::class, 'style_id');
     }
 
     /**

@@ -784,9 +784,9 @@ $isSuper = $user->id == 1;
                                     </li>
                                 @endif
                                 <!-- Reports -->
-                                @if($user && ($isSuper || $user->can('view sales-marketing-report') || $user->can('view warehouse-report') || $user->can('view production-report')))
+                                @if($user && ($isSuper || $user->can('view sales-marketing-report') || $user->can('view warehouse-report') || $user->can('view production-report') || true))
                                 <li
-                                    class="menu-item {{  request()->is('sales_marketing_reports*') || request()->is('warehouse_reports*') || request()->is('production_reports*') ? 'active' : '' }}">
+                                    class="menu-item {{  request()->is('sales_marketing_reports*') || request()->is('warehouse_reports*') || request()->is('production_reports*') || request()->is('purchase_reports*') ? 'active' : '' }}">
                                     <a href="javascript:void(0)" class="menu-link menu-toggle">
                                         <i class="menu-icon icon-base ri ri-file-chart-line"></i>
                                         <div>Reports</div>
@@ -814,6 +814,25 @@ $isSuper = $user->id == 1;
                                             <a href="{{ url('production_reports') }}" class="menu-link">
                                                 <div>Production Reports</div>
                                             </a>
+                                        </li>
+                                        @endif
+                                        @if($isSuper || true)
+                                        <li class="menu-item {{ request()->is('purchase_reports*') ? 'active' : '' }}">
+                                            <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                                <div>Purchase Reports</div>
+                                            </a>
+                                            <ul class="menu-sub">
+                                                <li class="menu-item {{ request()->is('purchase_reports/fabric*') ? 'active' : '' }}">
+                                                    <a href="{{ url('purchase_reports/fabric') }}" class="menu-link">
+                                                        <div>Fabric Store</div>
+                                                    </a>
+                                                </li>
+                                                <li class="menu-item {{ request()->is('purchase_reports/accessories*') ? 'active' : '' }}">
+                                                    <a href="{{ url('purchase_reports/accessories') }}" class="menu-link">
+                                                        <div>Accessories Store</div>
+                                                    </a>
+                                                </li>
+                                            </ul>
                                         </li>
                                         @endif
                                     </ul>

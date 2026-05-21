@@ -24,51 +24,39 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                @foreach($stockBalances as $index => $stock) 
                                 <tr>
-                                    <td>1</td>
-                                    <td>STOCK001</td>
-                                    <td>Fabric <span class="mini-title">(MC001)</span></td>
-                                    <td>Cotton Poplin 60 GSM(M)</td>
-                                    <td>1000</td>
-                                    <td>Warehouse A</td>
-                                    <td>₹7,000</td>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>
+                                        @if($stock->stock_type == 'raw_material' && $stock->rawMaterial)
+                                            {{ $stock->rawMaterial->code }}
+                                        @elseif($stock->stock_type == 'finished_goods' && $stock->item)
+                                            {{ $stock->item->code ?? $stock->item->item_code ?? 'N/A' }}
+                                        @else
+                                            N/A
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($stock->storeCategory)
+                                            {{ $stock->storeCategory->category_name }} <span class="mini-title">({{ $stock->storeCategory->code }})</span>
+                                        @else
+                                            N/A
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($stock->stock_type == 'raw_material' && $stock->rawMaterial)
+                                            {{ $stock->rawMaterial->name }}
+                                        @elseif($stock->stock_type == 'finished_goods' && $stock->item)
+                                            {{ $stock->item->item_name }}
+                                        @else
+                                            N/A
+                                        @endif
+                                    </td>
+                                    <td>{{ number_format($stock->current_stock, 2) }}</td>
+                                    <td>{{ $stock->storeLocation ? $stock->storeLocation->store_location : 'N/A' }}</td>
+                                    <td>₹{{ number_format($stock->total_amount, 2) }}</td>
                                 </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>STOCK002</td>
-                                    <td>Accessories <span class="mini-title">(MC002)</span></td>
-                                    <td>Interlinings(CM)</td>
-                                    <td>4</td>
-                                    <td>Warehouse AB</td>
-                                    <td>₹200</td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>STOCK003</td>
-                                    <td>Accessories <span class="mini-title">(MC002)</span></td>
-                                    <td>Collar Stays(CM)</td>
-                                    <td>10</td>
-                                    <td>Warehouse B</td>
-                                    <td>₹100</td>
-                                </tr>
-                                <tr>
-                                    <td>4</td>
-                                    <td>STOCK004</td>
-                                    <td>Trims <span class="mini-title">(MC003)</span></td>
-                                    <td>Zippers(PCS)</td>
-                                    <td>20</td>
-                                    <td>Warehouse B</td>
-                                    <td>₹1400</td>
-                                </tr>
-                                <tr>
-                                    <td>5</td>
-                                    <td>STOCK005</td>
-                                    <td>Trims <span class="mini-title">(MC003)</span></td>
-                                    <td>Elastic Bands(M)</td>
-                                    <td>9</td>
-                                    <td>Warehouse N</td>
-                                    <td>₹98,900</td>
-                                </tr>
+                                @endforeach
                             </tbody>
                         </table>
                     </div>

@@ -61,7 +61,7 @@
             info: true,
             lengthChange: true,
             pageLength: 10,
-            dom: '<"d-none"B>lfrtip', 
+            dom: '<"d-none"B>lfrtip',
             buttons: [
                 'excel', 'pdf', 'print'
             ],
@@ -124,10 +124,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center p-4">
-                <img id="modalImage" src="" class="img-fluid rounded shadow-sm" alt="Preview">
+                <img id="modalImage" src="" class="rounded shadow-sm d-block mx-auto" style="max-width: 100%; max-height: 70vh; width: auto; height: auto; object-fit: contain;" alt="Preview">
             </div>
         </div>
     </div>
 </div>
 </body>
+
 </html>
