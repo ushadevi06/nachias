@@ -33,11 +33,15 @@ class ChargeController extends Controller
                     <div class="status_msg_' . $charge->id . '"></div>
                 ';
                 $action = '<div class="button-box">';
-                if (auth()->id() == 1 || auth()->user()->can('edit charges')) {
-                    $action .= '<a href="' . url('charges/add/' . $charge->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
-                }
-                if (auth()->id() == 1 || auth()->user()->can('delete charges')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('charges/delete/' . $charge->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                if (strtoupper(trim($charge->charge_name)) !== 'BROKERAGE') {
+                    if (auth()->id() == 1 || auth()->user()->can('edit charges')) {
+                        $action .= '<a href="' . url('charges/add/' . $charge->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
+                    }
+                    if (auth()->id() == 1 || auth()->user()->can('delete charges')) {
+                        $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('charges/delete/' . $charge->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                    }
+                } else {
+                    $action .= '<span class="badge bg-label-secondary"><i class="ri-lock-line me-1"></i> System Charge</span>';
                 }
                 $action .= '</div>';
                 $data[] = [
@@ -67,6 +71,9 @@ class ChargeController extends Controller
         $charge = null;
         if ($id) {
             $charge = Charge::findOrFail($id);
+            if (strtoupper(trim($charge->charge_name)) === 'BROKERAGE') {
+                return redirect('charges')->with('danger', 'The BROKERAGE charge is a system-required record and cannot be modified.');
+            }
             $oldData = $charge->toArray();
         }
         if (request()->isMethod('post')) {
@@ -124,6 +131,9 @@ class ChargeController extends Controller
             return unauthorizedRedirect();
         }
         $charge = Charge::findOrFail($id);
+        if (strtoupper(trim($charge->charge_name)) === 'BROKERAGE') {
+            return redirect('charges')->with('danger', 'The BROKERAGE charge is a system-required record and cannot be deleted.');
+        }
         $references = [
             [PurchaseInvoiceCharge::class, 'charge_id', 'Purchase Invoice Charges'],
         ];

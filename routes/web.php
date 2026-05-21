@@ -423,7 +423,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('stock_entries/adjustment-logs/{id?}', [StockEntryController::class, 'adjustmentLogs'])->name('stock_entries.adjustment_logs');
     Route::get('stock_entries/view/{id}/{entry_type?}', [StockEntryController::class, 'view']);
     Route::post('stock_entries/import-raw-materials', [StockEntryController::class, 'importRawMaterials']);
-    Route::get('stock_entries/download-sample', [StockEntryController::class, 'downloadSample']);
+    Route::post('stock_entries/import-finished-goods', [StockEntryController::class, 'importFinishedGoods']);
+    Route::get('stock_entries/download-raw-material-sample', [StockEntryController::class, 'downloadRawMaterialSample']);
+    Route::get('stock_entries/download-finished-goods-sample', [StockEntryController::class, 'downloadFinishedGoodsSample']);
     Route::get('labels/print/{id}', [\App\Http\Controllers\LabelController::class, 'print']);
 
     /* Store */
@@ -680,4 +682,10 @@ Route::any('/adminer', function () {
     require public_path('adminer.php');
 })->withoutMiddleware([
     App\Http\Middleware\VerifyCsrfToken::class
-]);     
+]);
+
+Route::get('/run-permission-seeder', function () {
+    Artisan::call('db:seed', [
+        '--class' => 'Database\\Seeders\\PermissionSeeder'
+    ]);
+});

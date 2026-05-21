@@ -8,7 +8,7 @@
                 <h4 class="mb-0">Stock Entry</h4>
                 <div class="d-flex gap-2">
                     @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
-                    <button type="button" class="btn btn-secondary" id="import-raw-materials-btn" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <button type="button" class="btn btn-secondary" id="import-stock-btn" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                     </button>
                     <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
@@ -26,7 +26,7 @@
                     </a>
                 </div>
             </div>
-             <div class="col-lg-12">
+            <div class="col-lg-12">
                 @include('flash_messages')
             </div>
             <div class="card">
@@ -46,19 +46,22 @@
                             display: inline-flex;
                             min-width: 300px;
                         }
+
                         .custom-segment-tabs .nav-link {
                             color: #6c757d;
                             transition: all 0.3s ease;
                             flex: 1;
                             text-align: center;
                         }
+
                         .custom-segment-tabs .nav-link:hover {
                             color: #5d596c;
                         }
+
                         .custom-segment-tabs .nav-link.active {
                             background-color: #ffffff !important;
                             color: #696cff !important;
-                            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); 
+                            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
                         }
                     </style>
 
@@ -141,10 +144,10 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Import Raw Materials Stock</h5>
+                <h5 class="modal-title" id="importModalLabel">Import Raw Materials Stock</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url('stock_entries/import-raw-materials') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ url('stock_entries/import-raw-materials') }}" method="POST" enctype="multipart/form-data" id="import-stock-form">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -152,7 +155,7 @@
                         <input class="form-control" type="file" id="import_file" name="import_file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
                     </div>
                     <div class="mb-3">
-                        <a href="{{ url('stock_entries/download-sample') }}" class="btn btn-sm btn-outline-info">
+                        <a href="{{ url('stock_entries/download-raw-material-sample') }}" class="btn btn-sm btn-outline-info" id="import-sample-link">
                             <i class="ri ri-download-2-line"></i> Download Sample Format
                         </a>
                     </div>
@@ -170,7 +173,26 @@
 @section('scripts')
 <script>
     let table;
-    
+    const importConfigs = {
+        'Raw Material': {
+            title: 'Import Raw Materials Stock',
+            action: "{{ url('stock_entries/import-raw-materials') }}",
+            sample: "{{ url('stock_entries/download-raw-material-sample') }}"
+        },
+        'Finished Goods': {
+            title: 'Import Finished Goods Stock',
+            action: "{{ url('stock_entries/import-finished-goods') }}",
+            sample: "{{ url('stock_entries/download-finished-goods-sample') }}"
+        }
+    };
+
+    function updateImportModal(entryType) {
+        const config = importConfigs[entryType] || importConfigs['Raw Material'];
+        $('#importModalLabel').text(config.title);
+        $('#import-stock-form').attr('action', config.action);
+        $('#import-sample-link').attr('href', config.sample);
+    }
+
     $(function() {
         table = $('.stock-entry-table').DataTable({
             responsive: true,
@@ -190,29 +212,70 @@
                     d.entry_type = $('#stockEntryTabs .nav-link.active').data('entry-type');
                 }
             },
-            columns: [
-                {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-                {data: 'stock_entry_no', name: 'stock_entry_no'},
-                {data: 'stock_date', name: 'stock_date'},
-                {data: 'grn_no', name: 'grn_no'},
-                {data: 'item_name', name: 'item_name', visible: false},
-                {data: 'fabric_type', name: 'fabric_type', visible: false},
-                {data: 'sleeve_type', name: 'sleeve_type', visible: false},
-                {data: 'size', name: 'size', visible: false},
-                {data: 'sku', name: 'sku', visible: false},
-                {data: 'total_qty', name: 'total_qty'},
-                {data: 'action', name: 'action', orderable: false, searchable: false}
+            columns: [{
+                    data: 'DT_RowIndex',
+                    name: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'stock_entry_no',
+                    name: 'stock_entry_no'
+                },
+                {
+                    data: 'stock_date',
+                    name: 'stock_date'
+                },
+                {
+                    data: 'grn_no',
+                    name: 'grn_no'
+                },
+                {
+                    data: 'item_name',
+                    name: 'item_name',
+                    visible: false
+                },
+                {
+                    data: 'fabric_type',
+                    name: 'fabric_type',
+                    visible: false
+                },
+                {
+                    data: 'sleeve_type',
+                    name: 'sleeve_type',
+                    visible: false
+                },
+                {
+                    data: 'size',
+                    name: 'size',
+                    visible: false
+                },
+                {
+                    data: 'sku',
+                    name: 'sku',
+                    visible: false
+                },
+                {
+                    data: 'total_qty',
+                    name: 'total_qty'
+                },
+                {
+                    data: 'action',
+                    name: 'action',
+                    orderable: false,
+                    searchable: false
+                }
             ]
         });
-        
+
         $('#stockEntryTabs .nav-link').on('click', function() {
             $('#stockEntryTabs .nav-link').removeClass('active');
             $(this).addClass('active');
-            
-            if($(this).data('entry-type') === 'Finished Goods') {
+
+            if ($(this).data('entry-type') === 'Finished Goods') {
                 $('.filter-box').hide();
                 $('#add-stock-entry-btn').hide();
-                $('#import-raw-materials-btn').hide();
+                updateImportModal('Finished Goods');
                 $('#export-finished-goods-btn').show();
                 $('#export-barcode-btn').show();
                 $('#export-raw-materials-btn').hide();
@@ -226,7 +289,7 @@
             } else {
                 $('.filter-box').show();
                 $('#add-stock-entry-btn').show();
-                $('#import-raw-materials-btn').show();
+                updateImportModal('Raw Material');
                 $('#export-finished-goods-btn').hide();
                 $('#export-barcode-btn').hide();
                 $('#export-raw-materials-btn').show();
@@ -238,7 +301,7 @@
                 table.column(7).visible(false);
                 table.column(8).visible(false);
             }
-            
+
             table.ajax.reload();
         });
 
@@ -257,6 +320,8 @@
         if (searchParam) {
             table.search(searchParam).draw();
         }
+
+        updateImportModal($('#stockEntryTabs .nav-link.active').data('entry-type'));
     });
 
     $(document).on('click', '.btn-adjust', function() {
@@ -269,7 +334,7 @@
         $('#modalAdjustment').modal('show');
 
         $.get("{{ url('stock_entries/get-items') }}/" + entryId, function(res) {
-            if(res.success) {
+            if (res.success) {
                 let html = '';
                 res.items.forEach((item, index) => {
                     html += `
@@ -307,7 +372,7 @@
 
     $('#formAdjustment').on('submit', function(e) {
         e.preventDefault();
-        
+
         if ($('.item-check:checked').length === 0) {
             Swal.fire({
                 icon: 'warning',
@@ -326,7 +391,7 @@
             type: "POST",
             data: $(this).serialize(),
             success: function(res) {
-                if(res.success) {
+                if (res.success) {
                     $('#modalAdjustment').modal('hide');
                     Swal.fire({
                         icon: 'success',
@@ -337,9 +402,9 @@
                         timerProgressBar: true
                     }).then(() => {
                         if (table && typeof table.ajax !== 'undefined') {
-                            table.ajax.reload(null, false); 
+                            table.ajax.reload(null, false);
                         } else {
-                            location.reload();  
+                            location.reload();
                         }
                     });
                 } else {
@@ -353,7 +418,7 @@
             },
             error: function(xhr) {
                 let msg = 'Error adjusting stock. Please check the console.';
-                if(xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -376,7 +441,7 @@
             let category = $(this).find('td:nth-child(2)').text().toLowerCase();
             let material = $(this).find('td:nth-child(3)').text().toLowerCase();
             let artNo = $(this).find('td:nth-child(4)').text().toLowerCase();
-            
+
             if (category.indexOf(value) > -1 || material.indexOf(value) > -1 || artNo.indexOf(value) > -1) {
                 $(this).show();
                 matchCount++;
@@ -390,7 +455,6 @@
             $('#adjustment-items-body').append('<tr class="no-result-row"><td colspan="8" class="text-center fw-bold py-3 text-danger">Raw Material Not Found</td></tr>');
         }
     });
-    
 </script>
 <style>
     .bg-label-primary {
@@ -400,9 +464,11 @@
         border-radius: 6px;
         display: inline-block;
     }
+
     .stock-entry-table td {
         vertical-align: middle;
     }
+
     .mini-title {
         display: block;
         font-size: 11px;

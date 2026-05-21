@@ -20,6 +20,8 @@ use App\Exports\FinishedGoodsStockExport;
 use App\Exports\BarcodeExport;
 use App\Exports\RawMaterialStockExport;
 use App\Imports\RawMaterialStockImport;
+use App\Imports\FinishedGoodsStockImport;
+
 
 class StockEntryController extends Controller
 {
@@ -630,8 +632,25 @@ class StockEntryController extends Controller
             return redirect('stock_entries')->with('error', $e->getMessage());
         }
     }
+    public function importFinishedGoods(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create stock-entry')) {
+            return unauthorizedRedirect();
+        }
 
-    public function downloadSample()
+        $request->validate([
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+        ]);
+
+        try {
+            Excel::import(new FinishedGoodsStockImport, $request->file('import_file'));
+            return redirect('stock_entries')->with('success', 'Finished Goods Stock imported successfully.');
+        } catch (\Exception $e) {
+            return redirect('stock_entries')->with('error', $e->getMessage());
+        }
+    }
+
+    public function downloadRawMaterialSample()
     {
         $headers = [
             'Stock Date',
@@ -648,7 +667,7 @@ class StockEntryController extends Controller
 
         $callback = function () use ($headers) {
             $file = fopen('php://output', 'w');
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($file, $headers);
             fputcsv($file, [
                 date('d-m-Y'),
@@ -666,6 +685,51 @@ class StockEntryController extends Controller
         };
 
         return response()->streamDownload($callback, 'Raw_Material_Stock_Sample.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    public function downloadFinishedGoodsSample()
+    {
+        $headers = [
+            'Stock Date',
+            'Product Code',
+            'Art No',
+            'Size',
+            'Color',
+            'Sleeve Type',
+            'Qty In',
+            'Qty Out',
+            'Price',
+            'Store Location',
+            'SKU(Barcode)',
+            'UOM',
+            'Remarks'
+        ];
+
+        $callback = function () use ($headers) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($file, $headers);
+            fputcsv($file, [
+                date('d-m-Y'),
+                'CDS-PRNT',
+                'CDS30906',
+                '38',
+                'Blue',
+                'Full',
+                '50',
+                '0',
+                '499.00',
+                'S1',
+                'BC309060',
+                'PCS',
+                'Sample finished goods import'
+            ]);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'Finished_Goods_Stock_Sample.csv', [
             'Content-Type' => 'text/csv',
         ]);
     }
