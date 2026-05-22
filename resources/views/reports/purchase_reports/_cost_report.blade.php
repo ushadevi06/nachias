@@ -25,8 +25,10 @@
 
 <script>
     $(document).ready(function() {
-        if (!$.fn.DataTable.isDataTable('#cost-report .datatable')) {
-            $('#cost-report .datatable').DataTable({
+        if ($.fn.DataTable.isDataTable('#cost-report .datatable')) {
+            $('#cost-report .datatable').DataTable().destroy();
+        }
+        $('#cost-report .datatable').DataTable({
                 "pageLength": 25,
                 "ordering": true,
                 "info": true,
@@ -42,6 +44,5 @@
                     { extend: 'print', title: 'Average Cost Report', className: 'd-none' }
                 ]
             });
-        }
     });
 </script>

@@ -49,8 +49,10 @@
 
 <script>
     $(document).ready(function() {
-        if (!$.fn.DataTable.isDataTable('#minstock-report .datatable')) {
-            $('#minstock-report .datatable').DataTable({
+        if ($.fn.DataTable.isDataTable('#minstock-report .datatable')) {
+            $('#minstock-report .datatable').DataTable().destroy();
+        }
+        $('#minstock-report .datatable').DataTable({
                 "pageLength": 25,
                 "ordering": true,
                 "info": true,
@@ -66,6 +68,5 @@
                     { extend: 'print', title: 'Minimum Stock Report', className: 'd-none' }
                 ]
             });
-        }
     });
 </script>

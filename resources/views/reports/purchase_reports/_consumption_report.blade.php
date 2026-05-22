@@ -54,8 +54,10 @@
 
 <script>
     $(document).ready(function() {
-        if (!$.fn.DataTable.isDataTable('#consumption-report .datatable')) {
-            $('#consumption-report .datatable').DataTable({
+        if ($.fn.DataTable.isDataTable('#consumption-report .datatable')) {
+            $('#consumption-report .datatable').DataTable().destroy();
+        }
+        $('#consumption-report .datatable').DataTable({
                 "pageLength": 25,
                 "ordering": true,
                 "info": true,
@@ -71,6 +73,5 @@
                     { extend: 'print', title: 'Job Card Consumption Report', className: 'd-none' }
                 ]
             });
-        }
     });
 </script>

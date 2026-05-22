@@ -91,43 +91,12 @@
 
                 <!-- 2. Stock Report -->
                 <div class="tab-pane fade" id="stock-report" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table premium-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>ITEM NAME</th>
-                                    <th>OPENING QTY</th>
-                                    <th>INWARD QTY</th>
-                                    <th>OUTWARD QTY</th>
-                                    <th>CLOSING QTY</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td colspan="5" class="text-center py-4 text-muted">No data available in table</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
                 </div>
 
                 <!-- 3. Stock Ageing -->
                 <div class="tab-pane fade" id="ageing-report" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table premium-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>ITEM NAME</th>
-                                    <th>0-30 DAYS</th>
-                                    <th>30-60 DAYS</th>
-                                    <th>60-90 DAYS</th>
-                                    <th>90+ DAYS</th>
-                                    <th>TOTAL STOCK</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td colspan="6" class="text-center py-4 text-muted">No data available in table</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-1"></span> Loading...</div>
                 </div>
                 
                 <!-- Add other dummy panes -->

@@ -13,38 +13,41 @@
         </thead>
         <tbody>
             @forelse($purchaseOrders as $po)
-                <tr>
-                    <td class="fw-medium text-dark">{{ $po->po_number }}</td>
-                    <td>{{ $po->po_date ? $po->po_date->format('d-M-Y') : '-' }}</td>
-                    <td>{{ $po->supplier ? $po->supplier->name : '-' }}</td>
-                    <td>{{ number_format($po->total_ordered, 2) }}</td>
-                    <td>{{ number_format($po->total_received, 2) }}</td>
-                    <td>{{ number_format($po->total_pending, 2) }}</td>
-                    <td>
-                        @if(strtolower($po->status) == 'closed' || $po->is_self_closed || $po->total_pending <= 0)
-                            <span class="badge bg-label-success rounded-pill">Closed</span>
+            <tr>
+                <td class="fw-medium text-dark">{{ $po->po_number }}</td>
+                <td>{{ $po->po_date ? $po->po_date->format('d-M-Y') : '-' }}</td>
+                <td>{{ $po->supplier ? $po->supplier->name : '-' }}</td>
+                <td>{{ number_format($po->total_ordered, 2) }}</td>
+                <td>{{ number_format($po->total_received, 2) }}</td>
+                <td>{{ number_format($po->total_pending, 2) }}</td>
+                <td>
+                    @if(strtolower($po->status) == 'closed' || $po->is_self_closed || $po->total_pending <= 0)
+                        <span class="badge bg-label-success rounded-pill">Closed</span>
                         @else
-                            <span class="badge bg-label-warning rounded-pill">Pending</span>
+                        <span class="badge bg-label-warning rounded-pill">Pending</span>
                         @endif
-                    </td>
-                </tr>
+                </td>
+            </tr>
             @empty
-                <tr>
-                    <td colspan="7" class="text-center py-4 text-muted">No purchase orders found.</td>
-                </tr>
+            <tr>
+                <td colspan="7" class="text-center py-4 text-muted">No purchase orders found.</td>
+            </tr>
             @endforelse
         </tbody>
     </table>
 </div>
 
 <script>
-    if (!$.fn.DataTable.isDataTable('.datatables-po-supplier')) {
-        $('.datatables-po-supplier').DataTable({
-            "pageLength": 10,
-            "bLengthChange": true,
-            "bFilter": true,
-            "bInfo": true,
-            "bAutoWidth": false
-        });
+    if ($.fn.DataTable.isDataTable('.datatables-po-supplier')) {
+        $('.datatables-po-supplier').DataTable().destroy();
     }
+
+    $('.datatables-po-supplier').DataTable({
+        destroy: true,
+        pageLength: 10,
+        bLengthChange: true,
+        bFilter: true,
+        bInfo: true,
+        bAutoWidth: false
+    });
 </script>

@@ -71,8 +71,10 @@
 
 <script>
     $(document).ready(function() {
-        if (!$.fn.DataTable.isDataTable('#ageing-report .datatable')) {
-            $('#ageing-report .datatable').DataTable({
+        if ($.fn.DataTable.isDataTable('#ageing-report .datatable')) {
+            $('#ageing-report .datatable').DataTable().destroy();
+        }
+        $('#ageing-report .datatable').DataTable({
                 "pageLength": 25,
                 "ordering": true,
                 "info": true,
@@ -88,6 +90,5 @@
                     { extend: 'print', title: 'Stock Ageing Report', className: 'd-none' }
                 ]
             });
-        }
     });
 </script>

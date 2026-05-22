@@ -351,20 +351,20 @@ class StockEntryController extends Controller
                     $headerData['reference_document'] = $filename;
                 }
 
-                // if ($id) {
-                //     $headerData['updated_by'] = auth()->id();
-                //     $oldValues = $stockEntry->toArray();
-                //     $stockEntry->update($headerData);
-                //     $stockEntry->stockEntryItems()->forceDelete();
-                //     addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
-                // } else {
-                //     $lastEntry = StockEntry::latest('id')->first();
-                //     $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
-                //     $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-                //     $headerData['created_by'] = auth()->id();
-                //     $stockEntry = StockEntry::create($headerData);
-                //     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
-                // }
+                if ($id) {
+                    $headerData['updated_by'] = auth()->id();
+                    $oldValues = $stockEntry->toArray();
+                    $stockEntry->update($headerData);
+                    $stockEntry->stockEntryItems()->forceDelete();
+                    addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
+                } else {
+                    $lastEntry = StockEntry::latest('id')->first();
+                    $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+                    $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+                    $headerData['created_by'] = auth()->id();
+                    $stockEntry = StockEntry::create($headerData);
+                    addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
+                }
 
                 // if ($request->has('items') && is_array($request->items)) {
                 //     foreach ($request->items as $item) {
@@ -390,11 +390,8 @@ class StockEntryController extends Controller
                 if ($request->has('items') && is_array($request->items)) {
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == 1) {
-                            $grnEntryItem = GrnEntryItem::with([
-                                'purchaseInvoiceItem.purchaseInvoice.purchaseOrder',
-                                'purchaseInvoiceItem.purchaseInvoice.purchaseOrderItems'
-                            ])->find($item['grn_entry_item_id']);
-                            $purchaseOrderItem = $grnEntryItem->purchaseInvoiceItem->purchaseInvoice->purchaseOrder->purchaseOrderItems->firstWhere('raw_material_id', $item['raw_material_id']);
+                            $grnEntryItem = GrnEntryItem::with(['purchaseInvoiceItem.purchaseOrderItem'])->find($item['grn_entry_item_id']);
+                            $purchaseOrderItem = $grnEntryItem?->purchaseInvoiceItem?->purchaseOrderItem;
 
                             StockEntryItem::create([
                                 'stock_entry_id'     => $stockEntry->id,
