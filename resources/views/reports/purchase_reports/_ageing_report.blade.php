@@ -27,7 +27,7 @@
                 $total_91_plus = 0;
                 $grand_total = 0;
             @endphp
-            @forelse($ageingData as $row)
+            @foreach($ageingData as $row)
                 @php 
                     $total_0_30 += $row['0_30'];
                     $total_31_60 += $row['31_60'];
@@ -82,7 +82,8 @@
                 "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
                 "language": {
                     "search": "",
-                    "searchPlaceholder": "Search records..."
+                    "searchPlaceholder": "Search records...",
+                    "emptyTable": "No data available in table"
                 },
                 "buttons": [
                     { extend: 'excel', title: 'Stock Ageing Report', className: 'd-none' },

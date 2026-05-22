@@ -9,16 +9,14 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($costData as $row)
+            @foreach($costData as $row)
                 <tr>
                     <td>{{ $row['item_name'] }}</td>
                     <td class="text-center">{{ number_format($row['total_qty'], 2) }}</td>
                     <td class="text-end">{{ number_format($row['total_amount'], 2) }}</td>
                     <td class="text-end text-primary font-weight-bold">{{ number_format($row['average_cost'], 2) }}</td>
                 </tr>
-            @empty
-                <tr><td colspan="4" class="text-center py-4 text-muted">No data available in table</td></tr>
-            @endforelse
+            @endforeach
         </tbody>
     </table>
 </div>
@@ -34,14 +32,15 @@
                 "info": true,
                 "searching": true,
                 "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-                "language": {
-                    "search": "",
-                    "searchPlaceholder": "Search records..."
-                },
-                "buttons": [
-                    { extend: 'excel', title: 'Average Cost Report', className: 'd-none' },
-                    { extend: 'pdf', title: 'Average Cost Report', className: 'd-none' },
-                    { extend: 'print', title: 'Average Cost Report', className: 'd-none' }
+                 "language": {
+                     "search": "",
+                     "searchPlaceholder": "Search records...",
+                     "emptyTable": "No data available in table"
+                 },
+                 "buttons": [
+                     { extend: 'excel', title: 'Average Cost Report', className: 'd-none' },
+                     { extend: 'pdf', title: 'Average Cost Report', className: 'd-none' },
+                     { extend: 'print', title: 'Average Cost Report', className: 'd-none' }
                 ]
             });
     });

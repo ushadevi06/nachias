@@ -75,18 +75,24 @@ class LeaveController extends Controller
                         $statusBadge = '<span class="badge bg-warning text-dark">Pending</span>';
                         break;
                 }
-                $action = '
+                $action = '<div class="d-inline-block text-nowrap">';
+                if(auth()->id()== 1 || auth()->user()->can('view_details manage-leaves')){
+                $action .= '
                     <a href="' . url('view_leave/' . $leave->id) . '" class="btn btn-view">
                         <i class="icon-base ri ri-eye-line"></i>
                     </a>
                 ';
-                if ($leave->status === 'Pending') {
-                    $action .= '
-                        <a href="' . url('add_leave?id=' . $leave->id) . '" class="btn btn-edit">
-                            <i class="icon-base ri ri-edit-box-line"></i>
-                        </a>
-                    ';
                 }
+                if(auth()->id()== 1 || auth()->user()->can('edit manage-leaves')){
+                    if ($leave->status === 'Pending') {
+                        $action .= '
+                            <a href="' . url('add_leave?id=' . $leave->id) . '" class="btn btn-edit">
+                                <i class="icon-base ri ri-edit-box-line"></i>
+                            </a>
+                        ';
+                    }
+                }
+                $action .= '</div>';
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     // 'leave_id' => 'LV-' . $leave->id,

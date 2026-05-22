@@ -14,6 +14,8 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('backup:database')->dailyAt('00:00');
         $schedule->command('orderaxe:sync-orders')->everyFifteenMinutes();
+        $schedule->command('attendance:sync')->twiceDaily(10, 17);
+        // $schedule->command('attendance:sync')->everyMinute();
     }
 
     /**

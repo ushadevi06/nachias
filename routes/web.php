@@ -618,6 +618,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('/staff-report', [AttendanceController::class, 'getStaffReport']);
     Route::get('/get-employees', [AttendanceController::class, 'getEmployees']);
     Route::post('/attendance/update', [AttendanceController::class, 'updateAttendance']);
+    Route::get('/attendance-records', [AttendanceController::class, 'getAttendanceRecords']);
 
     /*  Leave  */
     Route::get('leave', [LeaveController::class, 'index']);
@@ -634,13 +635,16 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('update-overtime', [OvertimeController::class, 'update'])->name('update_overtime');
 
     /* Salary Calculation */
-    Route::get('salary_calculation', [SalaryController::class, 'index']);
-    Route::get('add_salary_calculation', [SalaryController::class, 'add']);
-    Route::get('view_salary_calculation', [SalaryController::class, 'view']);
-
-    /* Payroll Generation */
-    Route::get('payslip', [PayslipController::class, 'index']);
-    Route::get('add_payslip', [PayslipController::class, 'add']);
+    Route::get('monthly_payroll', [SalaryController::class, 'index']);
+    Route::get('add_monthly_payroll/{id?}', [SalaryController::class, 'add']);
+    Route::post('/generate-payroll', [SalaryController::class, 'generatePayroll'])
+        ->name('generate.payroll');
+    Route::post('/save-payroll', [SalaryController::class, 'savePayroll'])
+        ->name('save.payroll');
+    Route::post('/update-payroll-status', [SalaryController::class, 'updatePayrollStatus'])->name('update.payroll.status');
+    Route::post('/generate-payslip-pdf', [SalaryController::class, 'generatePayslipPdf'])->name('generate.payslip.pdf');
+    Route::get('/view-payslip/{id}', [SalaryController::class, 'viewPayslip'])->name('view.payslip');
+    Route::get('/print-payslip/{id}', [SalaryController::class, 'printPayslip'])->name('print.payslip');
 
     /* Payroll Report */
     Route::get('payroll_reports', [PayrollReportController::class, 'index']);

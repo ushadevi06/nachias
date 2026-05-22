@@ -16,6 +16,7 @@ use App\Models\Ticket;
 use App\Models\DocumentRepository;
 use App\Models\ProcessSchedule;
 use App\Models\JobCardOperation;
+use App\Models\Attendance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -41,6 +42,11 @@ class HomeController extends Controller
         $total_stock = StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at')->sum(DB::raw('qty_in - COALESCE(qty_out, 0)'));
         $urgent_orders = SalesOrder::where('status', 'Pending')->count();
 
+        /*  Employee Attendance Dashboard */
+        $present_emp_today = Attendance::whereDate('date', $today)->where('status', 'Present')->count();
+        $absent_emp_today = Attendance::whereDate('date', $today)->where('status', 'Absent')->count();
+        $late_emp_today = Attendance::whereDate('date', $today)->where('status', 'Late')->count();
+        $overtime_today = Attendance::whereDate('date', $today)->where('status', 'Overtime')->count();
         /* Accounts & Financial Dashboard */
         $total_sales_value = SalesInvoice::whereNull('deleted_at')->sum('grand_total');
         $sales_return = CreditNote::whereNull('deleted_at')->sum('grand_total');
@@ -283,7 +289,7 @@ class HomeController extends Controller
             ->groupBy('operation_stages.id', 'operation_stages.operation_stage_name')
             ->get();
 
-        return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents'));
+        return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today'));
     }
 
     public function getServiceWipDetails(Request $request)

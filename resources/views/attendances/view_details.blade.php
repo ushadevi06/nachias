@@ -69,13 +69,13 @@
                         <div class="col-sm-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <div class="text-muted small mb-1">In Time</div>
-                                <div class="fw-semibold">{{ date('h:i A', strtotime($attendance->in_time)) }}</div>
+                                <div class="fw-semibold">{{ $attendance->in_time != null ? date('h:i A', strtotime($attendance->in_time)) : '-' }}</div>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <div class="text-muted small mb-1">Out Time</div>
-                                <div class="fw-semibold">{{ date('h:i A', strtotime($attendance->out_time)) }}</div>
+                                <div class="fw-semibold">{{ $attendance->out_time!= null ? date('h:i A', strtotime($attendance->out_time)) : '-' }}</div>
                             </div>
                         </div>
                         <div class="col-sm-6">

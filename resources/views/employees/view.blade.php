@@ -8,9 +8,15 @@
             <div class="table-header-box">
                 <h4 class="mb-0">Employees</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create employees'))
-                <a class="btn btn-primary" href="{{ url('employees/add') }}">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal"
+                        data-bs-target="#importModal">
+                        <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
+                    </button>
+                    <a class="btn btn-primary" href="{{ url('employees/add') }}">
+                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                    </a>
+                </div>
                 @endif
             </div>
             <div class="col-lg-12">
@@ -78,14 +84,62 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Employees</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url('employees/import') }}" method="POST" enctype="multipart/form-data" id="importForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">
+                            Upload File (CSV, Excel)
+                        </label>
+                        <input class="form-control"
+                            type="file"
+                            id="import_file"
+                            name="import_file"
+                            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                            required>
+                    </div>
+                    <!-- Note -->
+                    <div class="alert alert-info py-2">
+                        <small>
+                            <strong>Note:</strong>
+                            Import 500 employees at a time, not exceed.
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <a href="{{ url('employees/download-sample') }}"
+                            class="btn btn-sm btn-outline-info">
+                            <i class="ri ri-download-2-line"></i>
+                            Download Sample Format
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                        Close
+                    </button>
+                    <button type="submit"
+                        class="btn btn-primary"
+                        id="importBtn">
+                        Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
-
-
 @section('scripts')
-
 <script>
     $(document).ready(function() {
-
         let table = $('#employeesTable').DataTable({
             responsive: true,
             paging: true,
@@ -153,7 +207,14 @@
             table.ajax.reload();
         });
     });
-
+    document.getElementById('importForm').addEventListener('submit', function () {
+        const btn = document.getElementById('importBtn');
+        btn.disabled = true;
+        btn.innerHTML = `
+            <span class="spinner-border spinner-border-sm me-1"></span>
+            Loading...
+        `;
+    });
     $(document).on('change', '.employee-status-toggle', function() {
 
         let employeeId = $(this).data('id');

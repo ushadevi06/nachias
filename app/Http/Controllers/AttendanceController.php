@@ -1,94 +1,99 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-
+use App\Jobs\SyncAttendanceJob;
 class AttendanceController extends Controller
 {
-    public function getLogs($date)
+    public function getLogs($date, $device)
     {
+        $from = date('Y-m-d 00:00:00', strtotime($date));
+        $to   = date('Y-m-d 23:59:59', strtotime($date));
         $xml = '<?xml version="1.0" encoding="utf-8"?>
         <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-        xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-        <soap:Body>
-            <GetDeviceLogs xmlns="http://tempuri.org/">
-            <UserName>essl</UserName>
-            <Password>essl</Password>
-            <Location>Aeria HQ</Location>
-            <LogDate>'.$date.'</LogDate>
-            </GetDeviceLogs>
-        </soap:Body>
+            xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+            <soap:Body>
+                <GetTransactionsLog xmlns="http://tempuri.org/">
+                    <FromDateTime>'.$from.'</FromDateTime>
+                    <ToDateTime>'.$to.'</ToDateTime>
+                    <SerialNumber>'.$device.'</SerialNumber>
+                    <UserName>test</UserName>
+                    <UserPassword>Test@123</UserPassword>
+                    <strDataList>123</strDataList>
+                </GetTransactionsLog>
+            </soap:Body>
         </soap:Envelope>';
-
         $response = Http::withOptions([
             'verify' => false,
             'connect_timeout' => 30,
         ])
-            ->timeout(120)
-            ->retry(3, 5000)
-            ->withHeaders([
-                'Content-Type' => 'text/xml; charset=utf-8',
-                'SOAPAction' => '"http://tempuri.org/GetDeviceLogs"',
-            ])
-            ->withBody(
-                $xml,
-                'text/xml; charset=utf-8'
-            )
-            ->post(
-                'http://ebioservernew.esslsecurity.com:99/webservice.asmx'
-            );
-
-        // DEBUG once
-        // dd($response->body());
-
-        if (!str_contains($response->body(), 'GetDeviceLogsResult')) {
-            dd('Invalid response', $response->body());
+        ->timeout(120)
+        ->retry(3, 5000)
+        ->withHeaders([
+            'Content-Type' => 'text/xml; charset=utf-8',
+            'SOAPAction' => '"http://tempuri.org/GetTransactionsLog"',
+        ])
+        ->withBody($xml, 'text/xml;')
+        ->post(
+            'http://106.51.22.181:85/iclock/webAPIservice.asmx'
+        );
+        if (!$response->successful()) {
+            dd('API Error', $response->body());
         }
-
-        // Extract without XML parser (SAFE way)
-        preg_match('/<GetDeviceLogsResult>(.*?)<\/GetDeviceLogsResult>/s', $response->body(), $matches);
-        // dd($matches);
-        return (object)[
-            'GetDeviceLogsResult' => $matches[1] ?? ''
-        ];
+        return $response->body();
     }
-    public function parseLogs($response)
+    public function parseLogs($xmlResponse)
     {
-        $result = $response->GetDeviceLogsResult ?? '';
         $logs = [];
-        $rows = explode(";", $result);
-        foreach ($rows as $row) {
-            if (!empty(trim($row))) {
-                $cols = explode(",", $row);
-                if (count($cols) < 3) {
-                    \Log::warning('Invalid log row: ' . $row);
+        try {
+            preg_match(
+                '/<strDataList>(.*?)<\/strDataList>/s',
+                $xmlResponse,
+                $matches
+            );
+            if (!isset($matches[1])) {
+                \Log::error('strDataList not found');
+                return [];
+            }
+            $rawLogs = trim($matches[1]);
+            if (empty($rawLogs)) {
+                \Log::warning('No logs found');
+                return [];
+            }
+            // Split rows
+            $rows = preg_split('/\r\n|\r|\n/', $rawLogs);
+            foreach ($rows as $row) {
+                $row = trim($row);
+                if (empty($row)) {
                     continue;
                 }
+                $parts = preg_split('/\s+/', $row);
+                if (count($parts) < 3) {
+                    \Log::warning('Invalid row: ' . $row);
+                    continue;
+                }
+                $empCode = trim($parts[0]);
+                $datetime = trim($parts[1] . ' ' . $parts[2]);
                 $logs[] = [
-                    'datetime' => trim($cols[0]),
-                    'emp_code' => trim($cols[1]),
-                    'device'   => trim($cols[2]),
+                    'emp_code' => $empCode,
+                    'datetime' => $datetime,
                 ];
             }
+        } catch (\Exception $e) {
+            \Log::error('Parse Error: ' . $e->getMessage());
         }
-
         return $logs;
     }
     public function processAttendance($logs)
     {
         $grouped = [];
-
         foreach ($logs as $log) {
             $date = date('Y-m-d', strtotime($log['datetime']));
             $emp  = $log['emp_code'];
-
             $grouped[$emp][$date][] = $log['datetime'];
         }
-
         return $grouped;
     }
     public function formatAttendance($grouped, $selectedDate)
@@ -112,6 +117,12 @@ class AttendanceController extends Controller
                     $name = DB::table('users')
                         ->where('emp_id', $emp)
                         ->value('name');
+                    $department_id = DB::table('users')
+                    ->where('emp_id', $emp)
+                    ->value('department_id');
+                    $department = DB::table('departments')
+                        ->where('id', $department_id)
+                        ->value('department');
                     $final[] = [
                         'id' => $attendanceId,
                         'name' => $name ?? 'Unknown',
@@ -124,7 +135,8 @@ class AttendanceController extends Controller
                             ? date('h:i A', strtotime($existingAttendance->out_time))
                             : '-',
                         'hours' => $existingAttendance->work_hours ?: '-',
-                        'status' => $existingAttendance->status
+                        'status' => $existingAttendance->status,
+                        'department' => $department ?? '-'
                     ];
                     continue;
                 }
@@ -144,6 +156,12 @@ class AttendanceController extends Controller
                 $name = DB::table('users')
                     ->where('emp_id', $emp)
                     ->value('name');
+                $department_id = DB::table('users')
+                    ->where('emp_id', $emp)
+                    ->value('department_id');
+                $department = DB::table('departments')
+                    ->where('id', $department_id)
+                    ->value('department');
                 $attendanceId = DB::table('attendances')
                     ->where('emp_code', $emp)
                     ->where('date', $date)
@@ -162,7 +180,8 @@ class AttendanceController extends Controller
                     'hours' => $hours
                         ? round($hours, 2)
                         : '-',
-                    'status' => $status
+                    'status' => $status,
+                    'department' => $department ?? '-'
                 ];
             }
         }
@@ -180,6 +199,12 @@ class AttendanceController extends Controller
                     $name = DB::table('users')
                         ->where('emp_id', $emp)
                         ->value('name');
+                    $department_id = DB::table('users')
+                        ->where('emp_id', $emp)
+                        ->value('department_id');
+                    $department = DB::table('departments')
+                        ->where('id', $department_id)
+                        ->value('department');
                     $final[] = [
                         'id' => $existingAttendance->id,
                         'name' => $name ?? 'Unknown',
@@ -192,7 +217,8 @@ class AttendanceController extends Controller
                             ? date('h:i A', strtotime($existingAttendance->out_time))
                             : '-',
                         'hours' => $existingAttendance->work_hours ?: '-',
-                        'status' => $existingAttendance->status
+                        'status' => $existingAttendance->status,
+                        'department' => $department ?? '-'
                     ];
                     continue;
                 }
@@ -218,6 +244,12 @@ class AttendanceController extends Controller
                 $name = DB::table('users')
                     ->where('emp_id', $emp)
                     ->value('name');
+                $department_id = DB::table('users')
+                    ->where('emp_id', $emp)
+                    ->value('department_id');
+                $department = DB::table('departments')
+                    ->where('id', $department_id)
+                    ->value('department');
                 $attendanceId = DB::table('attendances')
                     ->where('emp_code', $emp)
                     ->where('date', $selectedDate)
@@ -230,7 +262,8 @@ class AttendanceController extends Controller
                     'inTime' => '-',
                     'outTime' => '-',
                     'hours' => '-',
-                    'status' => $status
+                    'status' => $status,
+                    'department' => $department ?? '-'
                 ];
             }
         }
@@ -251,6 +284,9 @@ class AttendanceController extends Controller
             }
             return 'Absent';
         }
+        if (!$inTime) {
+            return 'Missing Time Card';
+        }
         if (($isSunday || $isHoliday) && ($inTime || $outTime)) {
             return 'Overtime';
         }
@@ -270,16 +306,56 @@ class AttendanceController extends Controller
     }
     public function sync(Request $request)
     {
-        $date = $request->date;
+        $request->validate([
+            'date' => 'required',
+            'device' => 'required'
+        ]);
 
-        $response = $this->getLogs($date); // SOAP call
-        $logs = $this->parseLogs($response);
-        $grouped = $this->processAttendance($logs);
-        $attendances = $this->formatAttendance($grouped, $date);
+        SyncAttendanceJob::dispatch(
+            $request->date,
+            $request->device
+        );
 
         return response()->json([
-            'data' => $attendances,
-            'time' => now()->format('d-m-Y H:i:s')
+            'success' => true,
+            'message' => 'Attendance sync started in background'
+        ]);
+    }
+    public function getAttendanceRecords(Request $request)
+    {
+        $date = $request->date;
+
+        $records = DB::table('attendances')
+            ->join('users', function ($join) {
+                $join->on(
+                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'),
+                    '=',
+                    DB::raw('attendances.emp_code COLLATE utf8mb4_unicode_ci')
+                );
+            })
+            ->leftJoin(
+                'departments',
+                'users.department_id',
+                '=',
+                'departments.id'
+            )
+            ->select(
+                'attendances.id',
+                'users.name',
+                'attendances.emp_code as code',
+                'attendances.date',
+                'attendances.in_time',
+                'attendances.out_time',
+                'attendances.work_hours as hours',
+                'attendances.status',
+                'departments.department'
+            )
+            ->whereDate('attendances.date', $date)
+            ->orderBy('users.emp_id')
+            ->get();
+
+        return response()->json([
+            'data' => $records
         ]);
     }
     public function index(Request $request)
@@ -289,7 +365,6 @@ class AttendanceController extends Controller
         $attendances = [];
         $lastSynced = null;
         $rows = [];
-
         if ($device === '192.168.203') {
             $rows = [
                 ['name' => 'Ramesh Kumar', 'code' => 'EMP001', 'inTime' => '09:05 AM', 'outTime' => '06:10 PM', 'hours' => '9.1', 'status' => 'Present'],
@@ -303,7 +378,6 @@ class AttendanceController extends Controller
                 ['name' => 'Nisha', 'code' => 'EMP003', 'inTime' => '08:40 AM', 'outTime' => '07:00 PM', 'hours' => '10.3', 'status' => 'Overtime'],
             ];
         }
-
         if (!empty($rows)) {
             foreach ($rows as $row) {
                 $row['date'] = date('d-m-Y', strtotime($date));
@@ -311,7 +385,6 @@ class AttendanceController extends Controller
             }
             $lastSynced = now()->format('d-m-Y H:i:s');
         }
-
         return view('attendances/view', compact('attendances', 'device', 'date', 'lastSynced'));
     }
     public function saveHolidays(Request $request)
@@ -341,11 +414,9 @@ class AttendanceController extends Controller
     public function getHolidays(Request $request)
     {
         $month = $request->month;
-
         $holidays = DB::table('declared_holidays')
             ->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])
             ->get();
-
         return response()->json($holidays);
     }
     public function getStaffReport(Request $request)
@@ -375,7 +446,7 @@ class AttendanceController extends Controller
         if ($month) {
             $query->where('attendances.date', 'like', $month . '%');
         }
-        $records = $query->orderBy('attendances.date','desc')->get();
+        $records = $query->orderBy('attendances.date','desc') ->orderBy('users.emp_id', 'desc')->get();
         return response()->json($records);
     }
     public function getEmployees()
@@ -385,7 +456,6 @@ class AttendanceController extends Controller
             ->where('id', '!=', 1)
             ->orderBy('id','desc')
             ->get();
-
         return response()->json($employees);
     }
     public function edit() {
@@ -410,20 +480,19 @@ class AttendanceController extends Controller
             )
             ->where('attendances.id', $id)
             ->first();
-
         if (!$attendance) {
             abort(404, 'Attendance not found');
         }
-
+        // dd($attendance);
         return view('attendances.view_details', compact('attendance'));
     }
     public function updateAttendance(Request $request)
     {
         $request->validate([
             'id' => 'required',
-            'in_time' => 'nullable',
-            'out_time' => 'nullable',
-            'status' => 'nullable'
+            'in_time' => 'required',
+            'out_time' => 'required',
+            'status' => 'required'
         ]);
         $attendance = DB::table('attendances')
             ->where('id', $request->id)

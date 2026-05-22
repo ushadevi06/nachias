@@ -16,7 +16,7 @@
                 $sum_garments = 0;
                 $sum_fabric = 0;
             @endphp
-            @forelse($consumptionData as $row)
+            @foreach($consumptionData as $row)
                 @php 
                     $sum_garments += $row['total_garments'];
                     $sum_fabric += $row['total_fabric'];
@@ -65,7 +65,8 @@
                 "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
                 "language": {
                     "search": "",
-                    "searchPlaceholder": "Search records..."
+                    "searchPlaceholder": "Search records...",
+                    "emptyTable": "No data available in table"
                 },
                 "buttons": [
                     { extend: 'excel', title: 'Job Card Consumption Report', className: 'd-none' },

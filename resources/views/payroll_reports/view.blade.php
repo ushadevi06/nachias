@@ -6,14 +6,14 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Payroll Reports</h4>
-                <a class="btn btn-primary" href="{{ url('add_payroll_report') }}">
+                {{-- <a class="btn btn-primary" href="{{ url('add_payroll_report') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
+                </a> --}}
             </div>
             <div class="card">
                 <div class="card-body">
                     <div class="card-datatable">
-                        <table class="datatables-products table">
+                        <table class="table nowrap w-100" id="payrollTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -28,56 +28,7 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Monthly Payroll Sep</td>
-                                    <td>Monthly</td>
-                                    <td>Sep 2025</td>
-                                    <td>Ramesh Kumar <span class="mini-title">(EMP001)</span></td>
-                                    <td>Production</td>
-                                    <td>₹50,000</td>
-                                    <td>₹45,000</td>
-                                    <td><span class="badge bg-success">Processed</span></td>
-                                    <td>
-                                        <div class="button-btn">
-                                            <a href="javascript:;" class="btn btn-cancel"><i class="icon-base ri ri-file-download-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td>Annual Payroll 2024</td>
-                                    <td>Annual</td>
-                                    <td>Sep 2025</td>
-                                    <td>Karthick <span class="mini-title">(EMP002)</span></td>
-                                    <td>HR</td>
-                                    <td>₹60,000</td>
-                                    <td>₹53,500</td>
-                                    <td><span class="badge bg-success">Processed</span></td>
-                                    <td>
-                                        <div class="button-btn">
-                                            <a href="javascript:;" class="btn btn-cancel"><i class="icon-base ri ri-file-download-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>3</td>
-                                    <td>Dept-wise Payroll</td>
-                                    <td>Dept-wise</td>
-                                    <td>Sep 2025</td>
-                                    <td>Akash Mehta <span class="mini-title">(EMP003)</span></td>
-                                    <td>Production</td>
-                                    <td>₹52,000</td>
-                                    <td>₹47,500</td>
-                                    <td><span class="badge bg-success">Processed</span></td>
-                                    <td>
-                                        <div class="button-btn">
-                                            <a href="javascript:;" class="btn btn-cancel"><i class="icon-base ri ri-file-download-line"></i></a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
@@ -85,4 +36,39 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+let table = $('#payrollTable').DataTable({
+    processing: true,
+    serverSide: true,
+    ajax: {
+        url: "{{ url('payroll_reports') }}",
+        data: function (d) {
+            d.month = $('#month').val();
+            d.year = $('#year').val();
+        }
+    },
+    columns: [
+        { data: 'DT_RowIndex', orderable: false, searchable: false },
+        { data: 'report_name' },
+        { data: 'report_type' },
+        { data: 'month_year' },
+        { data: 'employee' },
+        { data: 'department' },
+        { data: 'gross_salary' },
+        { data: 'net_salary' },
+        { data: 'status', orderable: false, searchable: false },
+        { data: 'action', orderable: false, searchable: false }
+    ]
+});
+$('#filterBtn').click(function () {
+    table.ajax.reload();
+});
+$('#resetBtn').click(function () {
+    $('#month').val('');
+    $('#year').val('');
+    table.ajax.reload();
+});
+</script>
 @endsection

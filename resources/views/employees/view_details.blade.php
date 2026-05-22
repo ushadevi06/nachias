@@ -10,7 +10,6 @@
                     <i class="ri ri-arrow-left-line"></i> Back 
                 </a>
             </div>
-
             <!-- Profile Header Card -->
             <div class="card mb-4">
                 <div class="card-body">
@@ -27,7 +26,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="row g-4">
                 <!-- Personal & Contact Info -->
                 <div class="col-md-6 col-xl-4">
@@ -57,7 +55,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Family & Organization -->
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100">
@@ -86,7 +83,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Address Details -->
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100">
@@ -115,7 +111,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Emergency Contact -->
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100">
@@ -140,7 +135,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Salary Structure -->
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100">
@@ -149,10 +143,22 @@
                         </div>
                         <div class="card-body pt-4">
                             <div class="row mb-2">
-                                <div class="col-6 text-muted">Basic Salary:</div>
-                                <div class="col-6 text-end fw-bold">₹ {{ number_format($employee->basic_salary, 2) }}</div>
+                                <div class="col-6 text-muted">Fixed Gross:</div>
+                                <div class="col-6 text-end fw-bold">₹ {{ number_format($employee->fixed_gross, 2) }}</div>
                             </div>
                             <div class="row mb-2">
+                                <div class="col-6 text-muted">Bus Fare:</div>
+                                <div class="col-6 text-end fw-bold">₹ {{ number_format($employee->bus_fare, 2) }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-6 text-muted">PF No:</div>
+                                <div class="col-6 text-end fw-bold">{{ $employee->pf_no ?? '-' }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-6 text-muted">ESI No:</div>
+                                <div class="col-6 text-end fw-bold">{{ $employee->esi_no ?? '-' }}</div>
+                            </div>
+                            {{-- <div class="row mb-2">
                                 <div class="col-6 text-muted">HRA:</div>
                                 <div class="col-6 text-end fw-bold">₹ {{ number_format($employee->hra, 2) }}</div>
                             </div>
@@ -172,11 +178,10 @@
                             <div class="row">
                                 <div class="col-6 h6 mb-0">Net Salary:</div>
                                 <div class="col-6 text-end h6 mb-0 fw-bold text-primary">₹ {{ number_format($employee->net_salary, 2) }}</div>
-                            </div>
+                            </div> --}}
                         </div>
                     </div>
                 </div>
-
                 <!-- Bank Details -->
                 <div class="col-md-6 col-xl-4">
                     <div class="card h-100">
@@ -201,7 +206,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Documents Section -->
                 <div class="col-12">
                     <div class="card">

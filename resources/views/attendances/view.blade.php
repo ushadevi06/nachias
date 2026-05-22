@@ -24,21 +24,27 @@
                                 <label class="form-label small fw-semibold">Device</label>
                                 <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
                                     <option value="">Choose device</option>
-                                    <option value="192.168.203" {{ (isset($device) && $device === '192.168.203') ? 'selected' : '' }}>192.168.203</option>
-                                    <option value="192.168.204" {{ (isset($device) && $device === '192.168.204') ? 'selected' : '' }}>192.168.204</option>
+                                    <option value="AEVL183660459" {{ (isset($device) && $device === 'AEVL183660459') ? 'selected' : '' }}>HO</option>
+                                    <option value="BJ2C180660790" {{ (isset($device) && $device === 'BJ2C180660790') ? 'selected' : '' }}>HO 1</option>
+                                    <option value="CEXJ210460057" {{ (isset($device) && $device === 'CEXJ210460057') ? 'selected' : '' }}>KALAVASAL</option>
+                                    <option value="CEXJ211160630" {{ (isset($device) && $device === 'CEXJ211160630') ? 'selected' : '' }}>SAMAYANALLUR</option>
                                 </select>
                             </div>
                             <div class="col-sm-6 col-md-3">
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary flex-fill" id="syncButton">
+                                    <div id="syncLoader" class="text-primary small mt-2 d-none">
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                        Reading Attendance...
+                                    </div>
+                                    {{-- <button type="button" class="btn btn-primary flex-fill" id="syncButton" disabled>
                                         <span id="syncButtonLabel">Sync Attendance</span>
-                                    </button>
+                                    </button> --}}
                                     <button type="button" class="btn btn-secondary flex-fill" id="resetButton">Reset</button>
                                 </div>
                             </div>
                             <div class="col-sm-6 col-md-3">
                                 <div class="alert alert-info py-2 mb-0">
-                                    Select a device and click <strong>Sync Attendance</strong> to populate records.
+                                    Select a device and attendance date for <strong>Reading Attendance</strong> 
                                 </div>
                             </div>
                         </div>
@@ -70,8 +76,8 @@
                             <div id="holidaySummary" class="text-muted small mt-3"></div>
                         </div>
                         <div class="col-md-2">
-                            <div class="small text-muted">Last Synced Time</div>
-                            <div id="lastSyncedText" class="fw-semibold">{{ $lastSynced ?? 'Not synced yet' }}</div>
+                            <div class="small text-muted">Last Read Time</div>
+                            <div id="lastSyncedText" class="fw-semibold">{{ $lastSynced ?? 'Not read yet' }}</div>
                         </div>
                         {{-- <div class="col-md-4 offset-md-8 text-md-end">
                             <div class="input-group input-group-sm">
@@ -112,7 +118,7 @@
                                 <option>Present</option>
                                 <option>Late</option>
                                 <option>Absent</option>
-                                <option>Punch Out Missing</option>
+                                <option>Missing Time Card</option>
                                 <option>Overtime</option>
                                 <option>Holiday</option>
                                 <option>Week Off</option>
@@ -139,10 +145,11 @@
                                     <th scope="col">#</th>
                                     <th scope="col">Employee Name</th>
                                     <th scope="col">Employee Code</th>
+                                    <th scope="col">Department</th>
                                     <th scope="col">Date</th>
                                     <th scope="col">In Time</th>
                                     <th scope="col">Out Time</th>
-                                    <th scope="col">Hours</th>
+                                    <th scope="col">Working Hours</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Actions</th>
                                 </tr>
@@ -152,7 +159,7 @@
                     </div>
                     <div id="noDataMessage" class="text-center py-5 text-muted">
                         <div class="mb-2"><strong>No Data</strong></div>
-                        <div>Click <strong>Sync Attendance</strong> to load biometric records.</div>
+                        <div>Select Attendance Date and Device for <strong>Reading Attendance</strong> </div>
                     </div>
                     <div id="holidayPanel" class="d-none">
                         <div class="border rounded p-3 mb-3 bg-light">
@@ -291,7 +298,7 @@
                                         {{-- <th scope="col">Device</th> --}}
                                         <th scope="col">In Time</th>
                                         <th scope="col">Out Time</th>
-                                        <th scope="col">Hours</th>
+                                        <th scope="col">Working Hours</th>
                                         <th scope="col">Status</th>
                                     </tr>
                                 </thead>
@@ -308,14 +315,19 @@
     </div>
 </div>
 <script>
+    const canViewAttendance =
+        {{ auth()->id() == 1 || auth()->user()->can('view_details attendance') ? 'true' : 'false' }};
+
+    const canEditAttendance =
+        {{ auth()->id() == 1 || auth()->user()->can('edit attendance') ? 'true' : 'false' }};
     document.addEventListener('DOMContentLoaded', function() {
         const attendanceBody = document.getElementById('attendanceBody');
         const noDataMessage = document.getElementById('noDataMessage');
         const statusMessage = document.getElementById('statusMessage');
         const lastSyncedText = document.getElementById('lastSyncedText');
         // const searchInput = document.getElementById('searchInput');
-        const syncButton = document.getElementById('syncButton');
-        const syncButtonLabel = document.getElementById('syncButtonLabel');
+        // const syncButton = document.getElementById('syncButton');
+        // const syncButtonLabel = document.getElementById('syncButtonLabel');
         const attendanceDate = document.getElementById('attendanceDate');
         const deviceSelect = document.getElementById('deviceSelect');
         const resetButton = document.getElementById('resetButton');
@@ -422,7 +434,7 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
             return `${day}-${month}-${year}`;
-        }
+        } 
 
         function formatMonthInputValue(dateValue) {
             const date = new Date(dateValue);
@@ -1016,7 +1028,7 @@
 
         function renderRows(records) {
             return records.map((item, index) => {
-                const rowDate = item.date || formatDate(attendanceDate.value);
+                const rowDate = formatDate(item.date) || formatDate(attendanceDate.value);
                 const inTime = item.inTime || '-';
                 const outTime = item.outTime || '-';
                 const hours = item.hours || '-';
@@ -1025,22 +1037,29 @@
                             <td>${index + 1}</td>
                             <td>${item.name}</td>
                             <td>${item.code}</td>
+                            <td>${item.department}</td>
                             <td>${rowDate}</td>
                             <td>${inTime}</td>
                             <td>${outTime}</td>
                             <td>${hours}</td>
                             <td><span class="${getBadgeClass(item.status)}">${item.status}</span></td>
                             <td>
-                                <a href="{{ url('view_attendance/${item.id}') }}" class="btn btn-sm btn-light text-primary" title="View details">
-                                    <i class="ri ri-eye-line"></i>
-                                </a>
-                                <button class="btn btn-edit editAttendanceBtn"
-                                        data-id="${item.id}"
-                                        data-status="${item.status}"
-                                        data-in="${item.inTime}"
-                                        data-out="${item.outTime}">
-                                    <i class="icon-base ri ri-edit-box-line"></i>
-                                </button>
+                                ${canViewAttendance ? `
+                                    <a href="${APP_URL}/view_attendance/${item.id}"
+                                    class="btn btn-sm btn-light text-primary"
+                                    title="View details">
+                                        <i class="ri ri-eye-line"></i>
+                                    </a>
+                                ` : ''}
+                                ${canEditAttendance ? `
+                                    <button class="btn btn-edit editAttendanceBtn"
+                                            data-id="${item.id}"
+                                            data-status="${item.status}"
+                                            data-in="${item.inTime}"
+                                            data-out="${item.outTime}">
+                                        <i class="icon-base ri ri-edit-box-line"></i>
+                                    </button>
+                                ` : ''}
                             </td>
                         </tr>
                     `;
@@ -1059,6 +1078,10 @@
             return `${hours}:${minutes}`;
         }
         $(document).on('click', '.editAttendanceBtn', function () {
+            $('.error-text').text('');
+            $('#edit_in_time').removeClass('is-invalid');
+            $('#edit_out_time').removeClass('is-invalid');
+            $('#edit_status').removeClass('is-invalid');
             $('#attendance_id').val($(this).data('id'));
             $('#edit_status').val($(this).data('status'));
             $('#edit_in_time').val(formatTime($(this).data('in')));
@@ -1066,18 +1089,23 @@
             $('#editAttendanceModal').modal('show');
         });
         $('#saveAttendanceBtn').on('click', function () {
-            let syncButton = document.getElementById('syncButton');
+            // let syncButton = document.getElementById('syncButton');
             $('.error-text').text('');
             $('#edit_in_time').removeClass('is-invalid');
             $('#edit_out_time').removeClass('is-invalid');
             $('#edit_status').removeClass('is-invalid');
             let inTime = $('#edit_in_time').val().trim();
             let outTime = $('#edit_out_time').val().trim();
-            let status = $('#edit_status').val().trim();
+            let status = ($('#edit_status').val() || '').trim();
             let hasError = false;
             if (!inTime) {
                 $('#in_time_error').text('In time is required');
                 $('#edit_in_time').addClass('is-invalid');
+                hasError = true;
+            }
+            if (!outTime) {
+                $('#out_time_error').text('Out time is required');
+                $('#edit_out_time').addClass('is-invalid');
                 hasError = true;
             }
             if (!status) {
@@ -1112,7 +1140,8 @@
                 if (res.success) {
                     $('#editAttendanceModal').modal('hide');
                     showStatus('success', res.message);
-                    syncButton.click();
+                    // syncButton.click();
+                    syncAttendance();
                 } else {
                     showStatus('danger', res.message);
                 }
@@ -1177,7 +1206,7 @@
                 return attendanceRecords.filter(item => item.status === 'Late');
             }
             if (currentView === 'missing') {
-                return attendanceRecords.filter(item => item.outTime === '-' && item.status !== 'Absent');
+                return attendanceRecords.filter(item => item.status === 'Missing Time Card');
             }
             return attendanceRecords;
         }
@@ -1259,8 +1288,8 @@
             deviceSelect.value = '';
             attendanceDate.value = new Date().toISOString().slice(0, 10);
             lastSyncedText.textContent = 'Not synced yet';
-            syncButton.disabled = false;
-            syncButtonLabel.textContent = 'Sync Attendance';
+            // syncButton.disabled = false;
+            // syncButtonLabel.textContent = 'Sync Attendance';
             setActiveView('all');
             updateHolidayBanner();
             showStatus('info', 'Attendance view reset.');
@@ -1478,47 +1507,70 @@
                 loadStaffReport();
             }
         });
-        syncButton.addEventListener('click', function () {
+        const syncLoader = document.getElementById('syncLoader');
+        function syncAttendance() {
             const device = deviceSelect.value;
             const date = attendanceDate.value;
-
-            if (!device) {
-                showStatus('warning', 'Please select a device before syncing.');
+            if (!device || !date) {
                 return;
             }
-
-            syncButton.disabled = true;
-            syncButtonLabel.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Syncing...';
-
+            syncLoader.classList.remove('d-none');
+            showStatus(
+                'info',
+                'Attendance sync started...'
+            );
             fetch(`${APP_URL}/sync-attendance`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN':
+                        document.querySelector(
+                            'meta[name="csrf-token"]'
+                        ).content
                 },
                 body: JSON.stringify({
-                    device: device,
-                    date: date
+                    device,
+                    date
                 })
             })
             .then(res => res.json())
             .then(res => {
-                attendanceRecords = res.data;
-                lastSyncedText.textContent = res.time;
-                showStatus('success', 'Attendance synced successfully.');
-                setActiveView('all');
-
+                console.log(res);
+                pollAttendanceData(date);
             })
             .catch(err => {
                 console.error(err);
-                showStatus('danger', 'Failed to sync attendance.');
-            })
-            .finally(() => {
-                syncButton.disabled = false;
-                syncButtonLabel.textContent = 'Sync Attendance';
+                showStatus(
+                    'danger',
+                    'Failed to start attendance sync.'
+                );
+                syncLoader.classList.add('d-none');
             });
+        }
+        attendanceDate.addEventListener('input', function () {
+            syncAttendance();
         });
-
+        $('#deviceSelect').on('change', syncAttendance);
+        function pollAttendanceData(date)
+        {
+            const interval = setInterval(() => {
+                fetch(`${APP_URL}/attendance-records?date=${date}`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.data.length > 0) {
+                        attendanceRecords = res.data;
+                        renderTable();
+                        syncLoader.classList.add('d-none');
+                        showStatus(
+                            'success',
+                            'Attendance synced successfully.'
+                        );
+                        // STOP polling
+                        clearInterval(interval);
+                    }
+                });
+            }, 3000);
+        }
         /* searchInput.addEventListener('input', function() {
             if (attendanceDataTable) {
                 attendanceDataTable.search(this.value.trim()).draw();

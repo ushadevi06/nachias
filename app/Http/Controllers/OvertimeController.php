@@ -113,20 +113,26 @@ class OvertimeController extends Controller
                         $otHours = '0 mins';
                     }
                 }
-                $action = '<div class="button-box d-flex gap-1">
-                    <a href="' . route(
-                        'view_overtime',
-                        [
-                            'date' => $date->format('Y-m-d'),
-                            'emp_code' => $att->emp_code
-                        ]
-                    ) . '" class="btn btn-view">
-                        <i class="icon-base ri ri-eye-line"></i>
-                    </a>
-                    <button type="button" class="btn btn-edit editOtBtn" data-id="' . $att->id . '" data-emp="' . $att->emp_code . '" data-date="' . $date->format('Y-m-d') . '" data-in="' . ($att->in_time ? Carbon::parse($att->in_time)->format('H:i') : '' ) . '" data-out="' . ($att->out_time ? Carbon::parse($att->out_time)->format('H:i') : '' ) . '" data-status="' . $att->status . '" >
-                        <i class="icon-base ri ri-pencil-line"></i>
-                    </button>
-                    </div>';
+                $action = '<div class="button-box d-flex gap-1">';
+                if(auth()->id()== 1 || auth()->user()->can('view_details overtime')){
+                    $action .= '
+                        <a href="' . route(
+                            'view_overtime',
+                            [
+                                'date' => $date->format('Y-m-d'),
+                                'emp_code' => $att->emp_code
+                            ]
+                        ) . '" class="btn btn-view">
+                            <i class="icon-base ri ri-eye-line"></i>
+                        </a>';
+                }
+                if(auth()->id()== 1 || auth()->user()->can('edit overtime')){
+                    $action .= '
+                        <button type="button" class="btn btn-edit editOtBtn" data-id="' . $att->id . '" data-emp="' . $att->emp_code . '" data-date="' . $date->format('Y-m-d') . '" data-in="' . ($att->in_time ? Carbon::parse($att->in_time)->format('H:i') : '' ) . '" data-out="' . ($att->out_time ? Carbon::parse($att->out_time)->format('H:i') : '' ) . '" data-status="' . $att->status . '" >
+                            <i class="icon-base ri ri-pencil-line"></i>
+                        </button>';
+                }
+                $action .=  '</div>';
                 $finalData[] = [
                     'DT_RowIndex' => $i++,
                     'date' => $date->format('d-m-Y'),

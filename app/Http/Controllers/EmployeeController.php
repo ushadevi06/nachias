@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Models\User;
 use App\Models\Department;
 use App\Models\BloodGroup;
@@ -18,7 +16,6 @@ use App\Models\JobCardOperation;
 use App\Models\Task;
 use App\Models\TaskAdjustment;
 use App\Models\OperationStage;
-
 class EmployeeController extends Controller
 {
     public function index(Request $request)
@@ -26,47 +23,32 @@ class EmployeeController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view employees')) {
             return unauthorizedRedirect();
         }
-
         if ($request->ajax()) {
-
-            $query = User::with(['department', 'role', 'serviceProvider', 'operationStage'])->orderBy('id', 'desc');
-
+            $query = User::with(['department', 'role', 'serviceProvider', 'operationStage'])->where('id', '!=', 1);
             if (!empty($request->department)) {
                 $query->where('department_id', $request->department);
             }
-
             if (!empty($request->role)) {
                 $query->where('role_id', $request->role);
             }
-
-            $employees = $query->get();
+            $employees = $query->orderBy('id', 'desc')->get();
             $data = [];
             $count = 1;
-
             foreach ($employees as $emp) {
-
                 $actionBtn = '<div class="button-box">';
-
                 if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('view_details employees'))) {
                     $actionBtn .= '<a href="' . url('employees/view/' . $emp->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-
                 if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('edit employees'))) {
                     $actionBtn .= '<a href="' . url('employees/add/' . $emp->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-
                 if ($emp->id != 1 && (auth()->id() == 1 || auth()->user()->can('delete employees'))) {
                     $actionBtn .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('employees/delete/' . $emp->id) . '\')" data-id="' . $emp->id . '"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
-
                 $actionBtn .= '</div>';
-
                 $checked = $emp->status === 'Active' ? 'checked' : '';
-
                 $statusSwitch = '<label class="switch switch-success switch-lg"><input type="checkbox" class="switch-input employee-status-toggle" data-id="' . $emp->id . '" ' . $checked . '><span class="switch-toggle-slider"><span class="switch-on"></span><span class="switch-off"></span></span></label><div class="status_msg_' . $emp->id . '"></div>';
-
                 $image = $emp->profile_image ? url('uploads/employee/' . $emp->id . '/' . $emp->profile_image) : url('assets/images/user.jpg');
-
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'name'        => '<div>' . $emp->name . '</div><span class="badge bg-primary mt-1">' . $emp->emp_id . '</span>',
@@ -90,16 +72,13 @@ class EmployeeController extends Controller
                     'action'      => $actionBtn
                 ];
             }
-
             return response()->json(['data' => $data]);
         }
-
         return view('employees.view');
     }
-
-
     public function add(Request $request, $id = null)
     {
+        // dd($id);
         if ($id) {
             if (auth()->id() != 1 && !auth()->user()->can('edit employees')) {
                 return unauthorizedRedirect();
@@ -117,13 +96,10 @@ class EmployeeController extends Controller
         $operationStages = OperationStage::active()->orderBy('id', 'desc')->get();
         $states = State::active()->orderBy('id', 'desc')->get();
         $cities = [];
-
         $stateId = old('state_id') ?? ($employee->state_id ?? null);
-
         if ($stateId) {
             $cities = City::active()->where('state_id', $stateId)->orderBy('id', 'desc')->get();
         }
-
         if (request()->isMethod('post')) {
             $rules = [
                 'name' => 'required|string|min:3|max:50',
@@ -163,7 +139,10 @@ class EmployeeController extends Controller
                 'contact_person_name' => 'nullable|string|min:3|max:100',
                 'contact_person_phone' => 'nullable|numeric|digits_between:10,15',
                 'contact_person_email' => 'nullable|email|max:128',
-                'basic_salary'   => 'nullable|numeric|min:0|max:9999999',
+                'pf_no'   => 'nullable|max:30',
+                'esi_no'   => 'nullable|max:30',
+                'fixed_gross'   => 'nullable|numeric|min:0|max:9999999',
+                'bus_fare'       => 'nullable|numeric|min:0|max:1000',
                 'hra'            => 'nullable|numeric|min:0|max:9999999',
                 'allowances'     => 'nullable|numeric|min:0|max:9999999',
                 'deductions'     => 'nullable|numeric|min:0|max:9999999',
@@ -181,7 +160,6 @@ class EmployeeController extends Controller
                     'unique:users,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
             ];
-
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
@@ -194,15 +172,11 @@ class EmployeeController extends Controller
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];
-
             if (!$id) {
                 $rules['password'] = 'required|string|min:6|max:15';
             }
-
             $validated = $request->validate($rules, $messages);
-
             $dateOfJoining = $request->date_of_joining ? date('Y-m-d', strtotime($request->date_of_joining)) : null;
-
             $data = [
                 'name' => $request->name,
                 'email' => $request->email,
@@ -225,7 +199,10 @@ class EmployeeController extends Controller
                 'contact_person_name' => $request->contact_person_name,
                 'contact_person_phone' => $request->contact_person_phone,
                 'contact_person_email' => $request->contact_person_email,
-                'basic_salary' => $request->basic_salary,
+                'pf_no' => $request->pf_no,
+                'esi_no' => $request->esi_no,
+                'fixed_gross' => $request->fixed_gross,
+                'bus_fare' => $request->bus_fare,
                 'hra' => $request->hra,
                 'allowances' => $request->allowances,
                 'deductions' => $request->deductions,
@@ -235,33 +212,28 @@ class EmployeeController extends Controller
                 'bank_name' => $request->bank_name,
                 'ifsc_code' => $request->ifsc_code,
             ];
-
             if ($request->password) {
                 $data['password'] = Hash::make($request->password);
             }
-
+            // dd($data);
             if ($id) {
                 $oldData = $employee->toArray();
                 $data['updated_by'] = auth()->id();
                 $employee->update($data);
                 $employeeId = $employee->id;
-
                 $role = Role::findById($request->role_id, 'web');
                 $employee->syncRoles([$role]);
             } else {
                 $data['created_by'] = auth()->id();
                 $created = User::create($data);
                 $employeeId = $created->id;
-
                 $role = Role::findById($request->role_id, 'web');
                 $created->assignRole($role);
             }
-
             $uploadPath = public_path('uploads/employee/' . $employeeId);
             if (!File::exists($uploadPath)) {
                 File::makeDirectory($uploadPath, 0755, true);
             }
-
             if ($request->hasFile('image')) {
                 if ($employee && $employee->profile_image) {
                     $oldImagePath = $uploadPath . '/' . $employee->profile_image;
@@ -274,7 +246,6 @@ class EmployeeController extends Controller
                 $file->move($uploadPath, $filename);
                 User::where('id', $employeeId)->update(['profile_image' => $filename]);
             }
-
             if ($request->hasFile('esi')) {
                 if ($employee && $employee->esi_document) {
                     $oldEsiPath = $uploadPath . '/' . $employee->esi_document;
@@ -287,7 +258,6 @@ class EmployeeController extends Controller
                 $file->move($uploadPath, $filename);
                 User::where('id', $employeeId)->update(['esi_document' => $filename]);
             }
-
             if ($request->hasFile('pf')) {
                 if ($employee && $employee->pf_document) {
                     $oldPfPath = $uploadPath . '/' . $employee->pf_document;
@@ -300,7 +270,6 @@ class EmployeeController extends Controller
                 $file->move($uploadPath, $filename);
                 User::where('id', $employeeId)->update(['pf_document' => $filename]);
             }
-
             if ($request->hasFile('aadhaar')) {
                 if ($employee && $employee->aadhaar_document) {
                     $oldAadhaarPath = $uploadPath . '/' . $employee->aadhaar_document;
@@ -313,7 +282,6 @@ class EmployeeController extends Controller
                 $file->move($uploadPath, $filename);
                 User::where('id', $employeeId)->update(['aadhaar_document' => $filename]);
             }
-
             if ($request->hasFile('pan')) {
                 if ($employee && $employee->pan_document) {
                     $oldPanPath = $uploadPath . '/' . $employee->pan_document;
@@ -326,7 +294,6 @@ class EmployeeController extends Controller
                 $file->move($uploadPath, $filename);
                 User::where('id', $employeeId)->update(['pan_document' => $filename]);
             }
-
             if ($id) {
                 $newData = User::find($employeeId)->toArray();
                 addLog('update', 'User', 'users', $employeeId, $oldData, $newData);
@@ -336,81 +303,90 @@ class EmployeeController extends Controller
                 addLog('create', 'User', 'users', $employeeId, null, $newEmployee->toArray());
                 $message = 'User added successfully';
             }
-
             return redirect('employees')->with('success', $message);
         }
-
         return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities', 'serviceProviders', 'operationStages'));
     }
-
-
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view_details employees')) {
             return unauthorizedRedirect();
         }
-
         $employee = User::with(['department', 'role', 'bloodGroup', 'state', 'city', 'serviceProvider', 'operationStage'])->findOrFail($id);
-
         return view('employees.view_details', compact('employee'));
     }
-    
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete employees')) {
             return unauthorizedRedirect();
         }
-
         if ($id == 1) {
             return redirect('employees')->with('danger', 'The super administrator cannot be deleted.');
         }
-
         if (JobCardEntry::where('cutting_master_id', $id)->exists()) {
             return redirect('employees')->with('danger', 'Cannot delete This employee is a Cutting Master in Job Cards.');
         }
-
         if (JobCardOperation::where('employee_id', $id)->orWhere('received_by', $id)->exists()) {
             return redirect('employees')->with('danger', 'Cannot delete This employee has operations recorded in Job Cards.');
         }
         if (JobCardOperation::where('employee_id', $id)->orWhere('received_by', $id)->exists()) {
             return redirect('employees')->with('danger', 'Cannot delete This employee has operations recorded in Job Cards.');
         }
-
         if (Task::where('issued_to', $id)->exists()) {
             return redirect('employees')->with('danger', 'Cannot delete This employee has tasks issued to them.');
         }
-
         if (TaskAdjustment::where('approved_by', $id)->exists()) {
             return redirect('employees')->with('danger', 'Cannot delete This employee has approved task adjustments.');
         }
-
         $employee = User::findOrFail($id);
-
         $uploadPath = public_path('uploads/employee/' . $id);
         if (File::exists($uploadPath)) {
             File::deleteDirectory($uploadPath);
         }
-
         addLog('delete', 'User', 'users', $id, $employee->toArray(), null);
         $employee->delete();
-
         return redirect('employees')->with('success', 'User deleted successfully');
     }
-
     public function updateStatus($id)
     {
         $employee = User::findOrFail($id);
         $oldData = $employee->toArray();
-
         $employee->status = request('status');
         $employee->save();
-
         addLog('update_status', 'User', 'users', $id, $oldData, $employee->fresh()->toArray());
-
         return response()->json([
             'success' => true,
             'status' => $employee->status,
             'message' => 'Status updated successfully'
+        ]);
+    }
+    public function import(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create employees')) {
+            return unauthorizedRedirect();
+        }
+        $request->validate([
+            'import_file' => 'required|file'
+        ]);
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\EmployeeImport, $request->file('import_file'));
+            return redirect('employees')->with('success', 'Employees imported successfully.');
+        } catch (\Exception $e) {
+            return redirect('employees')->with('error', $e->getMessage());
+        }
+    }
+    public function downloadSample()
+    {
+        $headers = [
+            'Emp Code', 'Name',  'Date of Joining', 'Phone', 'Email', 'Department', 'Designation', 'ESI No', 'PF No', 'Fixed Gross', 'Bus Fare'
+        ];
+        $callback = function() use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            fclose($file);
+        };
+        return response()->streamDownload($callback, 'Employee_Sample_Format.csv', [
+            'Content-Type' => 'text/csv',
         ]);
     }
 }

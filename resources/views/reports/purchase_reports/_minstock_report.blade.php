@@ -19,7 +19,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($minStockData as $row)
+            @foreach($minStockData as $row)
                 <tr>
                     @if($isFabric)
                         <td>{{ $row['item_name'] }}</td>
@@ -60,7 +60,8 @@
                 "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
                 "language": {
                     "search": "",
-                    "searchPlaceholder": "Search records..."
+                    "searchPlaceholder": "Search records...",
+                    "emptyTable": "No data available in table"
                 },
                 "buttons": [
                     { extend: 'excel', title: 'Minimum Stock Report', className: 'd-none' },

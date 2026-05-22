@@ -296,60 +296,42 @@
                                 <div class="col-lg-12">
                                     <h6>Salary Structure:</h6>
                                 </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-4 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="number" step="0.01" class="form-control @error('basic_salary') is-invalid @enderror" id="basic_salary" placeholder="Enter Basic Salary" name="basic_salary" value="{{ old('basic_salary', $employee->basic_salary ?? '') }}">
-                                        <label for="basic_salary">Basic Salary</label>
+                                        <input type="number" step="0.01" class="form-control @error('fixed_gross') is-invalid @enderror" id="fixed_gross" placeholder="Enter Fixed Gross" name="fixed_gross" value="{{ old('fixed_gross', $employee->fixed_gross ?? '') }}">
+                                        <label for="fixed_gross">Fixed Gross</label>
                                     </div>
-                                    @error('basic_salary')
+                                    @error('fixed_gross')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-4 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="number" step="0.01" class="form-control @error('hra') is-invalid @enderror" id="hra" placeholder="Enter HRA" name="hra" value="{{ old('hra', $employee->hra ?? '') }}">
-                                        <label for="hra">HRA</label>
+                                        <input type="number" step="0.01" class="form-control @error('bus_fare') is-invalid @enderror" id="bus_fare" placeholder="Enter Bus Fare(per day)" name="bus_fare" value="{{ old('bus_fare', $employee->bus_fare ?? '') }}">
+                                        <label for="bus_fare">Bus Fare</label>
                                     </div>
-                                    @error('hra')
+                                    @error('bus_fare')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                <div class="col-md-6 col-xl-4">
+                                <div class="col-md-4 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="number" step="0.01" class="form-control @error('allowances') is-invalid @enderror" id="allowances" placeholder="Enter Allowances" name="allowances" value="{{ old('allowances', $employee->allowances ?? '') }}">
-                                        <label for="allowances">Allowances</label>
+                                        <input type="text" class="form-control @error('pf_no') is-invalid @enderror" id="pf_no" placeholder="Enter PF No" name="pf_no" value="{{ old('pf_no', $employee->pf_no ?? '') }}">
+                                        <label for="pf_no">PF No</label>
                                     </div>
-                                    @error('allowances')
+                                    @error('pf_no')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
-                                </div>
-                                <div class="col-md-6 col-xl-4">
+                                </div>   
+                                <div class="col-md-4 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="number" step="0.01" class="form-control @error('deductions') is-invalid @enderror" id="deductions" placeholder="Enter Deductions" name="deductions" value="{{ old('deductions', $employee->deductions ?? '') }}">
-                                        <label for="deductions">Deductions</label>
+                                        <input type="text" class="form-control @error('esi_no') is-invalid @enderror" id="esi_no" placeholder="Enter ESI No" name="esi_no" value="{{ old('esi_no', $employee->esi_no ?? '') }}">
+                                        <label for="esi_no">ESI No</label>
                                     </div>
-                                    @error('deductions')
+                                    @error('esi_no')
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
-                                </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="number" step="0.01" class="form-control @error('gross_salary') is-invalid @enderror" id="gross_salary" placeholder="Enter Gross Salary" name="gross_salary" value="{{ old('gross_salary', $employee->gross_salary ?? '') }}">
-                                        <label for="gross_salary">Gross Salary</label>
-                                    </div>
-                                    @error('gross_salary')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="number" step="0.01" class="form-control @error('net_salary') is-invalid @enderror" id="net_salary" placeholder="Enter Net Salary" name="net_salary" value="{{ old('net_salary', $employee->net_salary ?? '') }}">
-                                        <label for="net_salary">Net Salary</label>
-                                    </div>
-                                    @error('net_salary')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                </div>                             
                                 <div class="col-lg-12">
                                     <hr>
                                 </div>

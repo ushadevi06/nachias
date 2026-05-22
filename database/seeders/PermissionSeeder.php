@@ -99,12 +99,11 @@ class PermissionSeeder extends Seeder
             'manage-payments' => ['create', 'edit', 'delete', 'view', 'view_details'],
 
             /* Payroll */
-            'attendance' => ['create', 'edit', 'delete', 'view'],
-            'manage-leaves' => ['create', 'edit', 'delete', 'view'],
-            'overtime-bonus' => ['create', 'edit', 'delete', 'view'],
-            'salary-calculation' => ['create', 'edit', 'delete', 'view'],
-            'payslip-generation' => ['create', 'edit', 'delete', 'view'],
-            'payroll-reports' => ['create', 'edit', 'delete', 'view'],
+            'attendance' => ['edit', 'view', 'view_details'],
+            'manage-leaves' => ['create', 'edit', 'view', 'view_details'],
+            'overtime' => ['edit', 'view', 'view_details'],
+            'monthly-payroll' => ['create', 'edit', 'view', 'view_details'],
+            'payroll-reports' => ['view'],
 
             /* System  Utilities */
             'document-repository' => ['create', 'edit', 'delete', 'view', 'view_details'],

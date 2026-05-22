@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'View Overtime / Bonus - ' . env('WEBSITE_NAME'))
+@section('title', 'View Overtime - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
@@ -11,7 +11,7 @@
             </div>
             <div class="card mb-6">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">View Overtime / Bonus</h5>
+                    <h5 class="card-title mb-0">View Overtime</h5>
                 </div>
                 <div class="card-body">
                     <div class="row mb-3">
