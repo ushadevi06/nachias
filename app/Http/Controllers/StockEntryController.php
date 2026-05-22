@@ -14,6 +14,8 @@ use App\Models\Uom;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log as LaravelLog;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FinishedGoodsStockExport;
@@ -366,27 +368,6 @@ class StockEntryController extends Controller
                     addLog('create', 'Stock Entry', 'stock_entries', $stockEntry->id, null, $headerData);
                 }
 
-                // if ($request->has('items') && is_array($request->items)) {
-                //     foreach ($request->items as $item) {
-                //         if (isset($item['selected']) && $item['selected'] == 1) {
-                //             $grnEntryItem = GrnEntryItem::find($item['grn_entry_item_id']);
-                //             StockEntryItem::create([
-                //                 'stock_entry_id' => $stockEntry->id,
-                //                 'stock_type' => 'raw_material',
-                //                 'grn_entry_item_id' => $item['grn_entry_item_id'] ?? null,
-                //                 'art_no' => $grnEntryItem->art_no ?? null,
-                //                 'raw_material_id' => $item['raw_material_id'] ?? null,
-                //                 'store_category_id' => $item['store_category_id'] ?? null,
-                //                 'store_location_id' => $item['store_location_id'],
-                //                 'uom_id' => $item['uom_id'] ?? null,
-                //                 'qty_in' => $item['qty_in'] ?? 0,
-                //                 'qty_out' => 0,
-                //                 'price' => $item['price'] ?? 0,
-                //                 'fabric_type_id' => $item['fabric_type_id'] ?? null,
-                //             ]);
-                //         }
-                //     }
-                // }
                 if ($request->has('items') && is_array($request->items)) {
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == 1) {
@@ -655,8 +636,16 @@ class StockEntryController extends Controller
         try {
             Excel::import(new RawMaterialStockImport, $request->file('import_file'));
             return redirect('stock_entries')->with('success', 'Raw Materials Stock imported successfully.');
+        } catch (ValidationException $e) {
+            return redirect('stock_entries')->withErrors($e->errors());
         } catch (\Exception $e) {
-            return redirect('stock_entries')->with('error', $e->getMessage());
+            LaravelLog::error('Raw material stock import failed', ['exception' => $e]);
+
+            $message = config('app.debug')
+                ? $e->getMessage()
+                : 'Import failed. Please check the file and try again.';
+
+            return redirect('stock_entries')->with('error', $message);
         }
     }
     public function importFinishedGoods(Request $request)
@@ -681,9 +670,12 @@ class StockEntryController extends Controller
     {
         $headers = [
             'Stock Date',
-            'GRN No',
             'Store Category',
             'Raw Material',
+            'Style',
+            'Fabric Width',
+            'Color',
+            'Brand',
             'Art No',
             'UOM',
             'Qty In',
@@ -698,9 +690,12 @@ class StockEntryController extends Controller
             fputcsv($file, $headers);
             fputcsv($file, [
                 date('d-m-Y'),
-                '',
                 'Category Code / Name',
                 'Raw Material Code / Name',
+                'PRINT',
+                '58',
+                'Red',
+                'CASINO FORMAL',
                 'ART-1234',
                 'PCS',
                 '100',

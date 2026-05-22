@@ -112,6 +112,7 @@ class RawMaterialController extends Controller
                 'material_type' => 'nullable|string|max:100',
                 'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1024',
                 'specification' => 'nullable|string|min:5|max:255',
+                'min_stock' => 'nullable|numeric|min:0',
                 'status' => 'required|in:Active,Inactive',
             ];
 
@@ -132,6 +133,7 @@ class RawMaterialController extends Controller
                 'uom_id' => $request->uom_id,
                 'material_type' => $request->material_type,
                 'specification' => $request->specification,
+                'min_stock' => $request->min_stock,
                 'status' => $request->status,
             ];
 

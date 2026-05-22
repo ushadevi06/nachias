@@ -114,6 +114,17 @@
                                     @enderror
                                 </div>
 
+                                <!-- Minimum Stock -->
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="number" class="form-control @error('min_stock') is-invalid @enderror" id="min_stock" placeholder="Enter Minimum Stock" name="min_stock" min="0" step="0.01" value="{{ old('min_stock', $rawMaterial->min_stock ?? '') }}">
+                                        <label for="min_stock">Minimum Stock</label>
+                                    </div>
+                                    @error('min_stock')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
                                 <!-- Status -->
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
@@ -140,4 +151,4 @@
         </div>
     </div>
 @endsection
-
+
