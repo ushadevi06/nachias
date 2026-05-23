@@ -363,20 +363,29 @@ class SalesOrderController extends Controller
                     $reqSleeve = is_array($item['sleeve'] ?? null) ? $item['sleeve'][0] : ($item['sleeve'] ?? 'Full');
                     $reqQty = floatval($item['qty'] ?? 1);
 
-                    $stockQuery = DB::table('stock_entry_items')->where('finished_item_code', 'like', $itemModel->code . '%')->where('size', $reqSize)->whereNull('deleted_at');
+                    $stockQuery = DB::table('stock_entry_items')
+                        ->where('stock_type', 'finished_goods')
+                        ->where('size', $reqSize)
+                        ->whereNull('deleted_at');
 
-                    if ($reqSleeve == 'Half') {
-                        $stockQuery->where(function ($q) {
-                            $q->where('finished_item_code', 'like', '%Half%')->orWhere('finished_item_code', 'like', '%H/S%');
-                        });
-                    }
-                    elseif ($reqSleeve == 'Full') {
-                        $stockQuery->where(function ($q) {
-                            $q->where('finished_item_code', 'like', '%Full%')->orWhere('finished_item_code', 'like', '%F/S%');
-                        });
-                    }
-                    else {
-                        $stockQuery->where('finished_item_code', 'not like', '%Half%')->where('finished_item_code', 'not like', '%H/S%');
+                    if (!empty($item['sku'])) {
+                        $stockQuery->where('sku', $item['sku']);
+                    } else {
+                        $stockQuery->where('finished_item_code', 'like', $itemModel->code . '%');
+
+                        if ($reqSleeve == 'Half') {
+                            $stockQuery->where(function ($q) {
+                                $q->where('finished_item_code', 'like', '%Half%')->orWhere('finished_item_code', 'like', '%H/S%');
+                            });
+                        }
+                        elseif ($reqSleeve == 'Full') {
+                            $stockQuery->where(function ($q) {
+                                $q->where('finished_item_code', 'like', '%Full%')->orWhere('finished_item_code', 'like', '%F/S%');
+                            });
+                        }
+                        else {
+                            $stockQuery->where('finished_item_code', 'not like', '%Half%')->where('finished_item_code', 'not like', '%H/S%');
+                        }
                     }
 
                     $availableStock = $stockQuery->sum('qty_in') - $stockQuery->sum('qty_out');
@@ -732,7 +741,7 @@ class SalesOrderController extends Controller
         $query = DB::table('stock_entry_items')->where('stock_type', 'finished_goods')->whereNull('deleted_at');
 
         if ($exactMatch) {
-            $query->where('finished_item_code', $exactMatch->finished_item_code);
+            $query->where('sku', $code);
         } else {
             $query->where(function($q) use ($code) {
                 $q->where('finished_item_code', $code)
@@ -746,11 +755,11 @@ class SalesOrderController extends Controller
 
         if ($items->isNotEmpty()) {
             $first = $items->first();
-            $target = $exactMatch ?: $first;
+            $target = $exactMatch ? ($items->firstWhere('sku', $code) ?: $first) : $first;
             $item = Item::find($target->item_id);
             $sizeStock = [];
             foreach ($items as $si) {
-                $sizeStock[$si->size] = (float)$si->balance;
+                $sizeStock[$si->size] = ($sizeStock[$si->size] ?? 0) + (float)$si->balance;
             }
 
             $itemPrice = DB::table('item_prices')->where('finished_item_code', $target->finished_item_code)->where('status', 'Active')->whereNull('deleted_at')->orderBy('effective_from', 'desc')->first();
@@ -800,12 +809,13 @@ class SalesOrderController extends Controller
                 'items.name as item_name',
                 'brands.brand_name',
                 'stock_entry_items.art_no',
+                'stock_entry_items.size',
                 'stock_entry_items.price as fallback_price',
                 'ip.unit_price',
                 'ip.selling_price as retail_mrp',
                 'stock_entry_items.sleeve_type',
                 DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance')
-            )->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.sku', 'items.name', 'brands.brand_name', 'stock_entry_items.art_no', 'stock_entry_items.price', 'ip.unit_price', 'ip.selling_price', 'stock_entry_items.sleeve_type')->having('balance', '>', 0)->limit(20)->get();
+            )->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.sku', 'items.name', 'brands.brand_name', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'ip.unit_price', 'ip.selling_price', 'stock_entry_items.sleeve_type')->having('balance', '>', 0)->limit(20)->get();
 
         $formattedResults = [];
         foreach ($results as $item) {
@@ -815,6 +825,9 @@ class SalesOrderController extends Controller
             }
             if ($item->sku) {
                 $label .= ' | SKU: ' . $item->sku;
+            }
+            if ($item->size) {
+                $label .= ' | Size: ' . $item->size;
             }
             
             $finalPrice = $item->unit_price ?? $item->fallback_price;
@@ -828,6 +841,7 @@ class SalesOrderController extends Controller
                 'item_name' => $item->item_name,
                 'brand_name' => $item->brand_name,
                 'art_no' => $item->art_no,
+                'size' => $item->size,
                 'price' => $finalPrice,
                 'mrp' => $finalMrp,
                 'balance' => $item->balance,
@@ -893,4 +907,3 @@ class SalesOrderController extends Controller
         }
     }
 }
-

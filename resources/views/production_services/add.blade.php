@@ -41,12 +41,21 @@
                                     <select name="operation_stage_id" id="operation_stage_id" class="select2 form-select @error('operation_stage_id') is-invalid @enderror" data-placeholder="Select Production Stage">
                                         <option value="">Select Production Stage</option>
                                         @foreach($operationStages as $stage)
-                                            <option value="{{ $stage->id }}" {{ old('operation_stage_id', $service->operation_stage_id ?? '') == $stage->id ? 'selected' : '' }}>{{ $stage->operation_stage_name }}</option>
+                                        <option value="{{ $stage->id }}" {{ old('operation_stage_id', $service->operation_stage_id ?? '') == $stage->id ? 'selected' : '' }}>{{ $stage->operation_stage_name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="operation_stage_id">Production Stage <span class="text-danger">*</span></label>
                                 </div>
                                 @error('operation_stage_id')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="number" class="form-control @error('sequence') is-invalid @enderror" id="sequence" name="sequence" placeholder="Enter Sequence" min="1" value="{{ old('sequence', $service->sequence ?? '') }}">
+                                    <label for="sequence">Sequence <span class="text-danger">*</span></label>
+                                </div>
+                                @error('sequence')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -65,15 +74,15 @@
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number"
-                                           class="form-control @error('cost') is-invalid @enderror"
-                                           id="cost" name="cost"
-                                           placeholder="Enter Cost"
-                                           min="0" step="0.01"
-                                           value="{{ old('cost', $service->cost ?? '') }}">
+                                        class="form-control @error('cost') is-invalid @enderror"
+                                        id="cost" name="cost"
+                                        placeholder="Enter Cost"
+                                        min="0" step="0.01"
+                                        value="{{ old('cost', $service->cost ?? '') }}">
                                     <label for="cost">Cost </label>
                                 </div>
                                 @error('cost')
-                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
 
@@ -85,7 +94,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <select name="applies_to" id="applies_to" class="select2 form-select @error('applies_to') is-invalid @enderror">
                                         @foreach(['ALL', 'Full Sleeve', 'Half Sleeve', 'Both'] as $opt)
-                                            <option value="{{ $opt }}" {{ old('applies_to', $service->applies_to ?? 'ALL') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                        <option value="{{ $opt }}" {{ old('applies_to', $service->applies_to ?? 'ALL') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
                                         @endforeach
                                     </select>
                                     <label for="applies_to">Applies To <span class="text-danger">*</span></label>
@@ -95,7 +104,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <select name="base_quantity_source" id="base_quantity_source" class="select2 form-select @error('base_quantity_source') is-invalid @enderror">
                                         @foreach(['Total Qty', 'FS Qty', 'HS Qty'] as $opt)
-                                            <option value="{{ $opt }}" {{ old('base_quantity_source', $service->base_quantity_source ?? 'Total Qty') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                        <option value="{{ $opt }}" {{ old('base_quantity_source', $service->base_quantity_source ?? 'Total Qty') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
                                         @endforeach
                                     </select>
                                     <label for="base_quantity_source">Base Quantity Source <span class="text-danger">*</span></label>

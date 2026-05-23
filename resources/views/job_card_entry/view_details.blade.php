@@ -36,13 +36,24 @@
                 });
                 $fabricImageMap = [];
                 foreach ($fabricDetails as $detail) {
+                    $prebuiltUrl = trim((string) ($detail->grn_image_url ?? ''));
+                    if ($prebuiltUrl !== '') {
+                        $fabricImageMap[trim((string) $detail->art_no)] = $prebuiltUrl;
+                        continue;
+                    }
+
                     $imageFile = trim((string) ($detail->grn_image ?? ''));
                     $imageUrl = '';
 
                     if ($imageFile !== '') {
-                        $imagePath = public_path('uploads/grn_items/' . $imageFile);
-                        if (file_exists($imagePath)) {
-                            $imageUrl = url('uploads/grn_items/' . $imageFile);
+                        $normalized = str_replace('\\', '/', $imageFile);
+                        $normalized = ltrim($normalized, '/');
+
+                        // Accept either a bare filename OR a relative uploads path.
+                        if (str_starts_with($normalized, 'uploads/')) {
+                            $imageUrl = url($normalized);
+                        } else {
+                            $imageUrl = url('uploads/grn_items/' . basename($normalized));
                         }
                     }
 
@@ -50,6 +61,10 @@
                 }
                 $issueDate = $jobCard->job_card_date ? \Carbon\Carbon::parse($jobCard->job_card_date) : null;
                 $deliveryDate = $jobCard->delivery_date ? \Carbon\Carbon::parse($jobCard->delivery_date) : null;
+                $withinDays = $jobCard->no_of_days;
+                if (($withinDays === null || $withinDays === '') && $issueDate && $deliveryDate) {
+                    $withinDays = $issueDate->diffInDays($deliveryDate);
+                }
 
                 $pDates = ['d1' => '', 'd2' => '', 'd3' => '', 'd4' => '', 'd5' => '', 'd6' => ''];
 
@@ -81,6 +96,14 @@
                             text-overflow: ellipsis;
                             padding: 8px 10px !important;
                         }
+                        .jc-cutting-mark td {
+                            padding: 4px 6px !important;
+                            vertical-align: middle;
+                        }
+                        /* These rows are only used to keep print layout aligned */
+                        .jc-filler-row {
+                            display: none;
+                        }
                         .fw-bold {
                             padding: 10px !important;
                         }
@@ -88,6 +111,9 @@
                             @page { 
                                 size: landscape; 
                                 margin: 5mm; 
+                            }
+                            .jc-filler-row {
+                                display: table-row !important;
                             }
                             body {
                                 padding: 0 !important;
@@ -239,7 +265,7 @@
                                     {{-- Row 4 --}}
                                     <tr>
                                         <td class="fw-bold p-3">WITHIN DAYS</td>
-                                        <td class="p-3">{{ $jobCard->no_of_days ?? '' }}</td>
+                                        <td class="p-3">{{ $withinDays ?? '' }}</td>
                                         <td colspan="4" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING SIZE RATIO</td>
                                         <td colspan="2" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING MARK</td>  
                                         <td class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">H.O / D.C /DATE</td>
@@ -261,11 +287,13 @@
                                             </table>
                                         </td>
                                         <td class="p-0" colspan="2">
-                                            <div class="row g-0">
-                                                <div class="col-5 fw-bold text-center p-3 border-end" style="font-size: 0.7rem;">SIZE</div>
-                                                <div class="col-3 fw-bold text-center p-3 border-end" style="font-size: 0.7rem;">S.TYPE</div>
-                                                <div class="col-4 fw-bold text-center p-3" style="font-size: 0.7rem;">MARK</div>
-                                            </div>
+                                            <table class="table mb-0 job-card-table" style="border: none;">
+                                                <tr class="text-center fw-bold" style="font-size: 0.7rem;">
+                                                    <td class="p-3" style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">SIZE</td>
+                                                    <td class="p-3" style="width: 25%; border-right: 1px solid #eeeeee; border-bottom: none !important;">S.TYPE</td>
+                                                    <td class="p-3" style="width: 35%; border-bottom: none !important;">MARK</td>
+                                                </tr>
+                                            </table>
                                         </td>
                                         @php $currentRow = 1; @endphp
                                         <td class="text-center">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
@@ -386,17 +414,19 @@
                                                 <td class="py-1" colspan="2">
                                                     @php $lm = $allLayMarks[$index] ?? null; @endphp
                                                     @if($lm)
-                                                        <div class="row g-0">
-                                                            <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
-                                                                {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                            </div>
-                                                            <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
-                                                                {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                            </div>
-                                                            <div class="col-4 text-center" style="font-size: 0.75rem;">
-                                                                {{ $lm->lay_mark_meter }}
-                                                            </div>
-                                                        </div>
+                                                        <table class="table mb-0 job-card-table" style="border: none;">
+                                                            <tr class="text-center" style="font-size: 0.75rem;">
+                                                                <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                    {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
+                                                                </td>
+                                                                <td style="width: 25%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                    {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
+                                                                </td>
+                                                                <td style="width: 35%; border-bottom: none !important;">
+                                                                    {{ $lm->lay_mark_meter }}
+                                                                </td>
+                                                            </tr>
+                                                        </table>
                                                     @endif
                                                 </td>
                                                 @php $currentRow++; @endphp
@@ -423,17 +453,19 @@
                                             <td class="py-1" colspan="2">
                                                 @php $lm = $allLayMarks[0] ?? null; @endphp
                                                 @if($lm)
-                                                    <div class="row g-0">
-                                                        <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
-                                                            {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                        </div>
-                                                        <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
-                                                            {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                        </div>
-                                                        <div class="col-4 text-center" style="font-size: 0.75rem;">
-                                                            {{ $lm->lay_mark_meter }}
-                                                        </div>
-                                                    </div>
+                                                    <table class="table mb-0 job-card-table" style="border: none;">
+                                                        <tr class="text-center" style="font-size: 0.75rem;">
+                                                            <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
+                                                            </td>
+                                                            <td style="width: 25%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
+                                                            </td>
+                                                            <td style="width: 35%; border-bottom: none !important;">
+                                                                {{ $lm->lay_mark_meter }}
+                                                            </td>
+                                                        </tr>
+                                                    </table>
                                                 @endif
                                             </td>
                                             @php $currentRow++; @endphp
@@ -470,17 +502,19 @@
                                                     @php $lmIndex = count($fsRows) + $index; @endphp
                                                     @php $lm = $allLayMarks[$lmIndex] ?? null; @endphp
                                                     @if($lm)
-                                                        <div class="row g-0">
-                                                            <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
-                                                                {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                            </div>
-                                                            <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
-                                                                {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                            </div>
-                                                            <div class="col-4 text-center" style="font-size: 0.75rem;">
-                                                                {{ $lm->lay_mark_meter }}
-                                                            </div>
-                                                        </div>
+                                                        <table class="table mb-0 job-card-table" style="border: none;">
+                                                            <tr class="text-center" style="font-size: 0.75rem;">
+                                                                <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                    {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
+                                                                </td>
+                                                                <td style="width: 25%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                    {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
+                                                                </td>
+                                                                <td style="width: 35%; border-bottom: none !important;">
+                                                                    {{ $lm->lay_mark_meter }}
+                                                                </td>
+                                                            </tr>
+                                                        </table>
                                                     @endif
                                                 </td>
                                                 @php $currentRow++; @endphp
@@ -509,17 +543,19 @@
                                                 @php $lmIndex = (count($fsRows) > 0) ? count($fsRows) : 1; @endphp
                                                 @php $lm = $allLayMarks[$lmIndex] ?? null; @endphp
                                                 @if($lm)
-                                                    <div class="row g-0">
-                                                        <div class="col-5 text-center border-end" style="font-size: 0.75rem;">
-                                                            {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                        </div>
-                                                        <div class="col-3 text-center border-end" style="font-size: 0.75rem;">
-                                                            {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                        </div>
-                                                        <div class="col-4 text-center" style="font-size: 0.75rem;">
-                                                            {{ $lm->lay_mark_meter }}
-                                                        </div>
-                                                    </div>
+                                                    <table class="table mb-0 job-card-table" style="border: none;">
+                                                        <tr class="text-center" style="font-size: 0.75rem;">
+                                                            <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
+                                                            </td>
+                                                            <td style="width: 25%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
+                                                            </td>
+                                                            <td style="width: 35%; border-bottom: none !important;">
+                                                                {{ $lm->lay_mark_meter }}
+                                                            </td>
+                                                        </tr>
+                                                    </table>
                                                 @endif
                                             </td>
                                             @php $currentRow++; @endphp
@@ -532,7 +568,7 @@
                                     @endphp
                                     @for($i = $rowsRendered; $i < 4; $i++)
                                         @php $currentRow++; @endphp
-                                        <tr style="height: 40px;">
+                                        <tr class="jc-filler-row" style="height: 40px;">
                                             <td class="fw-bold py-1">&nbsp;</td>
                                             <td class="py-1">&nbsp;</td>
                                             <td class="fw-bold py-1 text-center">&nbsp;</td>
@@ -547,22 +583,24 @@
                                         <td class="fw-bold py-1"></td>
                                         <td class="py-1"></td>
                                         <td class="p-0" colspan="2">
-                                            @for($i = max(1, (count($fsRows) + count($hsRows))); $i < count($allLayMarks); $i++)
-                                                @php $lm = $allLayMarks[$i] ?? null; @endphp
-                                                @if($lm)
-                                                    <div class="row g-0 border-bottom">
-                                                        <div class="col-5 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
-                                                            {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                        </div>
-                                                        <div class="col-3 text-center border-end" style="font-size: 0.75rem; padding: 4px;">
-                                                            {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                        </div>
-                                                        <div class="col-4 text-center" style="font-size: 0.75rem; padding: 4px;">
-                                                            {{ $lm->lay_mark_meter }}
-                                                        </div>
-                                                    </div>
-                                                @endif
-                                            @endfor
+                                            <table class="table mb-0 job-card-table" style="border: none;">
+                                                @for($i = max(1, (count($fsRows) + count($hsRows))); $i < count($allLayMarks); $i++)
+                                                    @php $lm = $allLayMarks[$i] ?? null; @endphp
+                                                    @if($lm)
+                                                        <tr class="text-center" style="font-size: 0.75rem;">
+                                                            <td style="width: 40%; padding: 4px; border-right: 1px solid #eeeeee; border-bottom: 1px solid #eeeeee;">
+                                                                {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
+                                                            </td>
+                                                            <td style="width: 25%; padding: 4px; border-right: 1px solid #eeeeee; border-bottom: 1px solid #eeeeee;">
+                                                                {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
+                                                            </td>
+                                                            <td style="width: 35%; padding: 4px; border-bottom: 1px solid #eeeeee;">
+                                                                {{ $lm->lay_mark_meter }}
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @endfor
+                                            </table>
                                         </td>
                                         <td class="py-1" colspan="2"></td>
                                          <td class="py-1"></td>
@@ -570,7 +608,7 @@
                                 </tbody>
                             </table>
 
-                            @if($jobCard->images->count() > 0)
+                            {{-- @if($jobCard->images->count() > 0)
                             <div class="row g-0 border-bottom" style="border-color: #eeeeee !important;">
                                 @foreach($jobCard->images as $image)
                                     <div class="col text-center p-3 border-end">
@@ -580,10 +618,27 @@
                                     </div>
                                 @endforeach
                             </div>
-                            @endif
+                            @endif --}}
 
                             <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                                 <tbody>
+                                    <tr class="text-center">
+                                        <td class="fw-bold" style="width: 15%;">IMAGE</td>
+                                        @foreach($fabricDetails as $detail)
+                                            @php
+                                                $fabricImgUrl = $fabricImageMap[trim((string) $detail->art_no)] ?? '';
+                                            @endphp
+                                            <td style="padding-top: 6px !important; padding-bottom: 6px !important;">
+                                                @if($fabricImgUrl)
+                                                    <a href="{{ $fabricImgUrl }}" target="_blank" class="d-inline-block">
+                                                        <img src="{{ $fabricImgUrl }}" alt="GRN Image" class="border rounded" style="width: 52px; height: 52px; object-fit: cover;">
+                                                    </a>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                    </tr>
                                     <tr class="text-center">
                                         <td class="fw-bold" style="width: 15%;">ART NO</td>
                                         @foreach($fabricDetails as $detail)

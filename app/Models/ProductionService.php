@@ -16,6 +16,7 @@ class ProductionService extends Model
         'service_code',
         'operation_stage_id',
         'store_category_id',
+        'sequence',
         'status',
         'applies_to',
         'base_quantity_source',

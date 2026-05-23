@@ -271,7 +271,7 @@ class GrnEntryController extends Controller
                     $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     $rules["items.$index.fabric_type_id"] = 'nullable|exists:fabric_types,id';
                     $rules["items.$index.color_id"] = 'nullable|exists:colors,id';
-                    $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048';
+                    $rules["items.$index.item_image"] = 'nullable|image|mimes:jpeg,png,jpg|max:2048';
                 }
             }
 
@@ -293,7 +293,7 @@ class GrnEntryController extends Controller
                 'items.*.quality_check_status.required' => 'This field is required',
                 'items.*.store_location_id.required' => 'This field is required',
                 'items.*.item_image.image' => 'File must be an image.',
-                'items.*.item_image.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp).',
+                'items.*.item_image.mimes' => 'Upload a valid file (jpg, jpeg, or png only).',
                 'items.*.item_image.max' => 'Uploaded file cannot exceed 2MB.',
             ]);
 

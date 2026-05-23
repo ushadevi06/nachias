@@ -253,3 +253,7 @@ ALTER TABLE stock_entry_items
 ADD COLUMN style_id BIGINT UNSIGNED NULL,
 ADD COLUMN fabric_width_id BIGINT UNSIGNED NULL,
 ADD COLUMN brand_id BIGINT UNSIGNED NULL;
+
+ALTER TABLE production_services
+ADD COLUMN sequence INT NOT NULL DEFAULT 1
+AFTER operation_stage_id;

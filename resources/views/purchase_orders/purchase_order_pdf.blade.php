@@ -187,15 +187,15 @@
                             <td>:</td>
                             <td>
                                 @php
-                                    $s = $purchaseOrder->supplier;
-                                    $addr = array_filter([$s->address_line_1, $s->address_line_2, $s->address_line_3]);
-                                    echo implode(', ', $addr);
-                                    if ($s->city)
-                                        echo '<br>' . $s->city->city_name;
-                                    if ($s->state)
-                                        echo ' - ' . $s->state->state_name;
-                                    if ($s->zip_code)
-                                        echo ' (' . $s->zip_code . ')';
+                                $s = $purchaseOrder->supplier;
+                                $addr = array_filter([$s->address_line_1, $s->address_line_2, $s->address_line_3]);
+                                echo implode(', ', $addr);
+                                if ($s->city)
+                                echo '<br>' . $s->city->city_name;
+                                if ($s->state)
+                                echo ' - ' . $s->state->state_name;
+                                if ($s->zip_code)
+                                echo ' (' . $s->zip_code . ')';
                                 @endphp
                             </td>
                         </tr>
@@ -265,50 +265,97 @@
                     <th width="8%">Color</th>
                     <th width="7%">Rate</th>
                     <th width="10%">Amount</th>
+                    <th width="10%">Image</th>
                 </tr>
             </thead>
+
             <tbody>
                 @foreach($purchaseOrder->items as $index => $item)
-                    <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
-                        <td class="text-center">{{ $item->storeCategory->category_name ?? '-' }}</td>
-                        <td class="text-center">{{ $item->brand->brand_name ?? '-' }}</td>
-                        <td><strong>{{ $item->rawMaterial->name ?? '' }}</strong></td>
-                        <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
-                        <td class="text-center">{{ $item->fabricWidth->width ?? '-' }}</td>
-                        <td class="text-center">{{ $item->fabricType->fabric_type ?? '-' }}</td>
-                        <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
-                        <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
-                        <td class="text-center">{{ $item->supplier_design_name ?? '-' }}</td>
-                        <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
-                        <td class="text-right">{{ number_format($item->rate, 2) }}</td>
-                        <td class="text-right">{{ number_format($item->amount, 2) }}</td>
-                    </tr>
+
+                @php
+                $imageSrc = '';
+
+                if (!empty($item->attached_file)) {
+                $imagePath = public_path('uploads/purchase_orders/' . $item->attached_file);
+
+                if (file_exists($imagePath)) {
+                $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+
+                $mimeType = match ($extension) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                default => null,
+                };
+
+                if ($mimeType) {
+                $imageSrc = 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($imagePath));
+                }
+                }
+                }
+                @endphp
+
+                <tr>
+                    <td class="text-center">{{ $index + 1 }}</td>
+                    <td class="text-center">{{ $item->storeCategory->category_name ?? '-' }}</td>
+                    <td class="text-center">{{ $item->brand->brand_name ?? '-' }}</td>
+                    <td><strong>{{ $item->rawMaterial->name ?? '' }}</strong></td>
+                    <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
+                    <td class="text-center">{{ $item->fabricWidth->width ?? '-' }}</td>
+                    <td class="text-center">{{ $item->fabricType->fabric_type ?? '-' }}</td>
+                    <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
+                    <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
+                    <td class="text-center" style="font-weight: bold;">
+                        {{ $item->supplier_design_name ?? '-' }}
+                    </td>
+                    <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
+                    <td class="text-right">{{ number_format($item->rate, 2) }}</td>
+                    <td class="text-right">{{ number_format($item->amount, 2) }}</td>
+
+                    <td class="text-center">
+                        @if($imageSrc)
+                        <img src="{{ $imageSrc }}"
+                            alt="Item Image"
+                            style="width:30px; height:30px; object-fit:cover; border:1px solid #ccc;">
+                        @else
+                        -
+                        @endif
+                    </td>
+                </tr>
                 @endforeach
+
                 @for($i = count($purchaseOrder->items); $i < 10; $i++)
                     <tr>
-                        <td style="height: 15px;">&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
+                    <td style="height: 15px;">&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
                     </tr>
-                @endfor
+                    @endfor
             </tbody>
+
             <tfoot>
                 <tr>
                     <td colspan="8" class="text-right bold">Total</td>
-                    <td class="text-center bold">{{ number_format($purchaseOrder->total_qty, 2) }}</td>
+                    <td class="text-center bold">
+                        {{ number_format($purchaseOrder->total_qty, 2) }}
+                    </td>
                     <td colspan="3"></td>
-                    <td class="text-right bold">{{ number_format($purchaseOrder->taxable_amount, 2) }}</td>
+                    <td class="text-right bold">
+                        {{ number_format($purchaseOrder->taxable_amount, 2) }}
+                    </td>
+                    <td></td>
                 </tr>
             </tfoot>
         </table>
@@ -320,9 +367,9 @@
                         Amount in Words: <strong>{{ strtoupper($totalInWords) }}</strong>
                     </div>
                     @if(isset($purchaseOrder->remarks) && $purchaseOrder->remarks != '')
-                        <div style="margin-top: 10px;">
-                            <strong>Remarks:</strong> {{ $purchaseOrder->remarks }}
-                        </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Remarks:</strong> {{ $purchaseOrder->remarks }}
+                    </div>
                     @endif
                 </td>
                 <td style="width: 40%; padding: 0; vertical-align: top;">
@@ -330,52 +377,58 @@
                         <tr>
                             <td class="text-left" style="padding: 4px;">Total Qty:</td>
                             <td class="text-right" style="padding: 4px;">
-                                {{ number_format($purchaseOrder->total_qty, 2) }}</td>
+                                {{ number_format($purchaseOrder->total_qty, 2) }}
+                            </td>
                         </tr>
                         <tr>
                             <td class="text-left" style="padding: 4px;">Sub Total:</td>
                             <td class="text-right" style="padding: 4px;">
-                                {{ number_format($purchaseOrder->sub_total, 2) }}</td>
+                                {{ number_format($purchaseOrder->sub_total, 2) }}
+                            </td>
                         </tr>
                         @if($purchaseOrder->discount_amount > 0)
-                            <tr>
-                                <td class="text-left" style="padding: 4px;">Discount
-                                    ({{ number_format($purchaseOrder->discount_percent, 2) }}%):</td>
-                                <td class="text-right" style="padding: 4px;">
-                                    -{{ number_format($purchaseOrder->discount_amount, 2) }}</td>
-                            </tr>
+                        <tr>
+                            <td class="text-left" style="padding: 4px;">Discount
+                                ({{ number_format($purchaseOrder->discount_percent, 2) }}%):</td>
+                            <td class="text-right" style="padding: 4px;">
+                                -{{ number_format($purchaseOrder->discount_amount, 2) }}</td>
+                        </tr>
                         @endif
                         <tr>
                             <td class="text-left" style="padding: 4px;">Taxable Amount:</td>
                             <td class="text-right" style="padding: 4px;">
-                                {{ number_format($purchaseOrder->taxable_amount, 2) }}</td>
+                                {{ number_format($purchaseOrder->taxable_amount, 2) }}
+                            </td>
                         </tr>
                         @if($purchaseOrder->commission > 0)
-                            <tr>
-                                <td class="text-left" style="padding: 4px;">Commission
-                                    ({{ number_format($purchaseOrder->commission, 2) }}%):</td>
-                                <td class="text-right" style="padding: 4px;">
-                                    {{ number_format((($purchaseOrder->sub_total * $purchaseOrder->commission) / 100), 2) }}
-                                </td>
-                            </tr>
+                        <tr>
+                            <td class="text-left" style="padding: 4px;">Commission
+                                ({{ number_format($purchaseOrder->commission, 2) }}%):</td>
+                            <td class="text-right" style="padding: 4px;">
+                                {{ number_format((($purchaseOrder->sub_total * $purchaseOrder->commission) / 100), 2) }}
+                            </td>
+                        </tr>
                         @endif
                         @if($purchaseOrder->other_state)
-                            <tr>
-                                <td class="text-left" style="padding: 4px;">IGST ({{ $purchaseOrder->igst_percent }}%):</td>
-                                <td class="text-right" style="padding: 4px;">
-                                    {{ number_format($purchaseOrder->tax_amount, 2) }}</td>
-                            </tr>
+                        <tr>
+                            <td class="text-left" style="padding: 4px;">IGST ({{ $purchaseOrder->igst_percent }}%):</td>
+                            <td class="text-right" style="padding: 4px;">
+                                {{ number_format($purchaseOrder->tax_amount, 2) }}
+                            </td>
+                        </tr>
                         @else
-                            <tr>
-                                <td class="text-left" style="padding: 4px;">CGST ({{ $purchaseOrder->cgst_percent }}%):</td>
-                                <td class="text-right" style="padding: 4px;">
-                                    {{ number_format($purchaseOrder->tax_amount / 2, 2) }}</td>
-                            </tr>
-                            <tr>
-                                <td class="text-left" style="padding: 4px;">SGST ({{ $purchaseOrder->sgst_percent }}%):</td>
-                                <td class="text-right" style="padding: 4px;">
-                                    {{ number_format($purchaseOrder->tax_amount / 2, 2) }}</td>
-                            </tr>
+                        <tr>
+                            <td class="text-left" style="padding: 4px;">CGST ({{ $purchaseOrder->cgst_percent }}%):</td>
+                            <td class="text-right" style="padding: 4px;">
+                                {{ number_format($purchaseOrder->tax_amount / 2, 2) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-left" style="padding: 4px;">SGST ({{ $purchaseOrder->sgst_percent }}%):</td>
+                            <td class="text-right" style="padding: 4px;">
+                                {{ number_format($purchaseOrder->tax_amount / 2, 2) }}
+                            </td>
+                        </tr>
                         @endif
                         <tr>
                             <td class="text-left" style="padding: 4px;">Round Off
@@ -387,7 +440,8 @@
                         <tr style="border-top: 1px solid #000; font-weight: bold;">
                             <td class="text-left" style="padding: 4px;">Grand Total:</td>
                             <td class="text-right" style="padding: 4px;">
-                                {{ number_format($purchaseOrder->total_amount, 2) }}</td>
+                                {{ number_format($purchaseOrder->total_amount, 2) }}
+                            </td>
                         </tr>
                     </table>
                 </td>
@@ -398,10 +452,10 @@
             <tr>
                 <td width="50%">
                     @if(isset($purchaseOrder->payment_terms) && $purchaseOrder->payment_terms != '')
-                        <div style="font-size: 10px;">
-                            <strong>Payment Terms:</strong><br>
-                            {{ $purchaseOrder->payment_terms }}
-                        </div>
+                    <div style="font-size: 10px;">
+                        <strong>Payment Terms:</strong><br>
+                        {{ $purchaseOrder->payment_terms }}
+                    </div>
                     @endif
                 </td>
                 <td width="50%" class="text-right">
@@ -418,11 +472,11 @@
     </div>
 
     @if(isset($is_print) && $is_print)
-        <script>
-            window.onload = function () {
-                window.print();
-            }
-        </script>
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
     @endif
 </body>
 

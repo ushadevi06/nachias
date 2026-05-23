@@ -6,6 +6,7 @@ use App\Models\ProductionService;
 use App\Models\OperationStage;
 use App\Models\TaskAdjustment;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProductionServiceController extends Controller
 {
@@ -16,8 +17,7 @@ class ProductionServiceController extends Controller
         }
 
         if ($request->ajax()) {
-            $services = ProductionService::with('operationStage')->latest()->get();
-
+            $services = ProductionService::with('operationStage')->orderBy('operation_stage_id')->orderBy('sequence')->latest('id')->get();
             $data = [];
             $i = 1;
 
@@ -90,17 +90,30 @@ class ProductionServiceController extends Controller
                 'status'       => 'required|in:Active,Inactive',
                 'applies_to'   => 'required|in:ALL,Full Sleeve,Half Sleeve,Both',
                 'base_quantity_source' => 'required|in:Total Qty,FS Qty,HS Qty',
+                'sequence' => [
+                    'required',
+                    'integer',
+                    'min:1',
+                    Rule::unique('production_services')
+                        ->where(function ($query) use ($request) {
+                            return $query->where('operation_stage_id', $request->operation_stage_id)
+                                ->whereNull('deleted_at');
+                        })
+                        ->ignore($id),
+                ],
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 'cost.numeric' => 'Cost must be a valid number.',
                 'cost.min' => 'Cost must be 0 or greater.',
+                'sequence.unique' => 'This sequence already exists for selected production stage.',
             ];
             $request->validate($rules, $messages);
 
             $data = $request->only([
-                'service_name', 'service_code', 'operation_stage_id', 'status', 'cost',
+                'service_name', 'service_code', 'operation_stage_id',
+                'sequence', 'status', 'cost',
                 'applies_to', 'base_quantity_source'
             ]);
             if (empty($data['cost'])) {

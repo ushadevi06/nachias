@@ -1289,6 +1289,8 @@ $(document).ready(function () {
         $row.data('size-stock', res.size_stock);
         if (res.size && $sizeSelect.val() != res.size) {
             $sizeSelect.val(res.size).trigger('change');
+        } else {
+            updateStockAndRate($row);
         }
         
         $row.find('.qty-input').trigger('input');
@@ -1434,7 +1436,9 @@ $(document).ready(function () {
         let rate = parseFloat($row.find('.rate-input').val()) || 0;
         let available = parseFloat($row.find('.available-stock-display').text()) || 0;
 
-        if (qty > available && available > 0) {
+        let hasStockItem = !!$row.find('.stock-item-select').val();
+
+        if (hasStockItem && qty > available) {
             qtyInput.addClass('is-invalid');
             $row.find('.stock-error-msg').show();
         } else {

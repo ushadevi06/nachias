@@ -323,15 +323,6 @@ class EmployeeController extends Controller
         if ($id == 1) {
             return redirect('employees')->with('danger', 'The super administrator cannot be deleted.');
         }
-        if (JobCardEntry::where('cutting_master_id', $id)->exists()) {
-            return redirect('employees')->with('danger', 'Cannot delete This employee is a Cutting Master in Job Cards.');
-        }
-        if (JobCardOperation::where('employee_id', $id)->orWhere('received_by', $id)->exists()) {
-            return redirect('employees')->with('danger', 'Cannot delete This employee has operations recorded in Job Cards.');
-        }
-        if (JobCardOperation::where('employee_id', $id)->orWhere('received_by', $id)->exists()) {
-            return redirect('employees')->with('danger', 'Cannot delete This employee has operations recorded in Job Cards.');
-        }
         if (Task::where('issued_to', $id)->exists()) {
             return redirect('employees')->with('danger', 'Cannot delete This employee has tasks issued to them.');
         }

@@ -34,7 +34,7 @@
                                                 <th>Others</th>
                                             </tr>
                                         </thead>
-                                        <tbody> 
+                                        <tbody>
                                             @foreach ($permissions as $main => $submodules)
                                             <tr class="table-primary">
                                                 <td colspan="8">
@@ -42,10 +42,10 @@
                                                 </td>
                                             </tr>
                                             @php
-                                                $grouped = $submodules->groupBy('action');
-                                                $availablePermissions = $submodules->pluck('name')->toArray();
-                                                $checkedPermissions = array_intersect($availablePermissions, $rolePermissions ?? []);
-                                                $allChecked = count($checkedPermissions) > 0;
+                                            $grouped = $submodules->groupBy('action');
+                                            $availablePermissions = $submodules->pluck('name')->toArray();
+                                            $checkedPermissions = array_intersect($availablePermissions, $rolePermissions ?? []);
+                                            $allChecked = count($checkedPermissions) > 0;
                                             @endphp
                                             <tr>
                                                 <td class="text-center">
@@ -92,19 +92,19 @@
                                                 </td>
                                                 <td class="text-start">
                                                     @php
-                                                        $others = $submodules->reject(function($p) {
-                                                            return in_array($p->action, ['create', 'edit', 'view', 'delete', 'view_details']);
-                                                        });
+                                                    $others = $submodules->reject(function($p) {
+                                                    return in_array($p->action, ['create', 'edit', 'view', 'delete', 'view_details']);
+                                                    });
                                                     @endphp
                                                     @if($others->isNotEmpty())
-                                                        @foreach($others as $other)
-                                                            <div class="form-check mb-2">
-                                                                <input type="checkbox" class="permission form-check-input" data-sub="{{ $main }}" name="permissions[]" value="{{ $other->name }}" {{ in_array($other->name, $rolePermissions ?? []) ? 'checked' : '' }}>
-                                                                <p class="small">{{ $other->label ?: ucwords(str_replace(['-', '_'], ' ', $other->action)) }}</p>
-                                                            </div>
-                                                        @endforeach
+                                                    @foreach($others as $other)
+                                                    <div class="form-check mb-2">
+                                                        <input type="checkbox" class="permission form-check-input" data-sub="{{ $main }}" name="permissions[]" value="{{ $other->name }}" {{ in_array($other->name, $rolePermissions ?? []) ? 'checked' : '' }}>
+                                                        <p class="small">{{ ucwords(preg_replace('/\s+/', ' ', str_replace(['-', '_'], ' ', $other->name))) }}</p>
+                                                    </div>
+                                                    @endforeach
                                                     @else
-                                                        —
+                                                    —
                                                     @endif
                                                 </td>
                                             </tr>

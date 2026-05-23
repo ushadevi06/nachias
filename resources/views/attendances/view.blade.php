@@ -1039,8 +1039,22 @@
                             <td>${item.code}</td>
                             <td>${item.department}</td>
                             <td>${rowDate}</td>
-                            <td>${inTime}</td>
-                            <td>${outTime}</td>
+                            <td>${
+                                inTime
+                                ? new Date(inTime).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })
+                                : '-'
+                            }</td>
+                            <td>${
+                                outTime != '-' && outTime !== null
+                                ? new Date(outTime).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })
+                                : '-'
+                            }</td>
                             <td>${hours}</td>
                             <td><span class="${getBadgeClass(item.status)}">${item.status}</span></td>
                             <td>
@@ -1055,8 +1069,8 @@
                                     <button class="btn btn-edit editAttendanceBtn"
                                             data-id="${item.id}"
                                             data-status="${item.status}"
-                                            data-in="${item.inTime}"
-                                            data-out="${item.outTime}">
+                                            data-in="${item.in_time ? item.in_time.split(' ')[1].substring(0,5) : '-'}"
+                                            data-out="${item.out_time ? item.out_time.split(' ')[1].substring(0,5) : '-'}">
                                         <i class="icon-base ri ri-edit-box-line"></i>
                                     </button>
                                 ` : ''}

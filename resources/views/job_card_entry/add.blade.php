@@ -434,7 +434,7 @@
                                                     <th class="text-center" style="width: 50px;">S.No</th>
                                                     <th>Raw Material Name</th>
                                                     <th class="text-center" style="width: 150px;">Total Quantity</th>
-                                                    <th class="text-center" style="width: 180px;">Quantity Used</th>
+                                                    <th class="text-center" style="width: 180px;">Quantity Issued</th>
                                                     <th class="text-center" style="width: 150px;">Quantity Remaining</th>
                                                 </tr>
                                             </thead>
@@ -449,7 +449,7 @@
                                                     <th class="text-center" style="width: 50px;">S.No</th>
                                                     <th>Raw Material Name</th>
                                                     <th class="text-center" style="width: 150px;">Total Quantity</th>
-                                                    <th class="text-center" style="width: 180px;">Quantity Used</th>
+                                                    <th class="text-center" style="width: 180px;">Quantity Issued</th>
                                                     <th class="text-center" style="width: 150px;">Quantity Remaining</th>
                                                 </tr>
                                             </thead>
@@ -609,7 +609,7 @@
                                                             </td>
                                                             <td>
                                                                 <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
-                                                                @if($jobCard)
+                                                               @if($jobCard && (auth()->id() == 1 || auth()->user()->can('assign-task job-card')))
                                                                 @php
                                                                     $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
                                                                     $taskData = $stageTaskStatus[$currentStageId] ?? null;
@@ -617,12 +617,25 @@
 
                                                                     $taskStatus = $taskData['status'] ?? null;
                                                                     $taskNo = $taskData['task_no'] ?? null;
-
+                                                                    $previousStage = $existingStages[$index - 1] ?? null;
+                                                                    $previousStageId = $previousStage['stage_id'] ?? $previousStage['operation_stage_id'] ?? null;
+                                                                    if ($index > 0) {
+                                                                        $previousTaskAssigned = !empty($stageTaskStatus[$previousStageId]);
+                                                                    } else {
+                                                                        $previousTaskAssigned = true;
+                                                                    }
+                                                                    $canAssignCurrentStage = $previousTaskAssigned && !$hasTask;
                                                                     $buttonText = $hasTask ? 'Assigned Task (Task: ' . $taskNo . ')' : 'Assign Task';
 
-                                                                    $buttonTitle = $hasTask ? "Task already assigned (Status: $taskStatus)" : 'Assign Task';
+                                                                    if (!$previousTaskAssigned) {
+                                                                        $buttonTitle = 'Previous stage task not assigned';
+                                                                    } elseif ($hasTask) {
+                                                                        $buttonTitle = "Task already assigned (Status: $taskStatus)";
+                                                                    } else {
+                                                                        $buttonTitle = 'Assign Task';
+                                                                    }
                                                                 @endphp
-                                                                <button type="button" class="btn btn-sm btn-outline-primary assign-task-btn ms-1" title="{{ $buttonTitle }}" {{ $hasTask ? 'disabled' : '' }}><i class="ri ri-task-line"></i> {{ $buttonText }}</button>
+                                                                <button type="button" class="btn btn-sm btn-outline-primary assign-task-btn ms-1" title="{{ $buttonTitle }}" {{ !$canAssignCurrentStage ? 'disabled' : '' }}><i class="ri ri-task-line"></i> {{ $buttonText }}</button>
                                                                 @endif
                                                             </td>
                                                         </tr>
@@ -1311,7 +1324,7 @@
                             calcDetails = `Calculated from Lay Marks: ${lmRequired.toFixed(2)}`;
                         } else {
                             matrixTotal = enteredUsed; 
-                            calcDetails = `Manual Entry (Quantity Used - Fabric): ${enteredUsed}`;
+                            calcDetails = `Manual Entry (Quantity Issued - Fabric): ${enteredUsed}`;
                         }
                     }
                 } else {

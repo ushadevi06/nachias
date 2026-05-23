@@ -745,6 +745,8 @@ class JobCardEntryController extends Controller
         $artMaterialMap = $maps['artMaterialMap'];
         $artCategoryMap = $maps['artCategoryMap'];
 
+        $this->hydrateJobCardGrnImages($jobCard);
+
         return view('job_card_entry/view_details', compact('jobCard', 'artMaterialMap', 'artCategoryMap'));
     }
 
@@ -1957,6 +1959,7 @@ class JobCardEntryController extends Controller
         $maps = $this->getJobCardMaps($jobCard);
         $artMaterialMap = $maps['artMaterialMap'];
         $artCategoryMap = $maps['artCategoryMap'];
+        $this->hydrateJobCardGrnImages($jobCard);
 
         if ($is_print) {
             return view('job_card_entry.view_details_pdf', compact('jobCard', 'is_print', 'artCategoryMap', 'artMaterialMap'));
@@ -2160,20 +2163,17 @@ class JobCardEntryController extends Controller
             'brand',
             'fabricDetails.quantities',
             'issueItems.stockEntryItem',
+            'issueItems.rawMaterial',
             'operations.operationStage'
         ])->findOrFail($id);
 
         $totalProduced = (float) ($jobCard->grand_total_qty ?? 0);
-
-        // 1. Fabric Cost
         $totalFabricCost = 0;
         $fabricIssueItems = $jobCard->issueItems->filter(fn($i) => ($i->rawMaterial?->store_category_id == 1));
 
         if ($fabricIssueItems->count() > 0) {
-            // Actual Cost (from Issued Items)
             $totalFabricCost = $fabricIssueItems->sum(fn($i) => ($i->qty_used + $i->qty_wastage) * ($i->stockEntryItem->price ?? 0));
         } else {
-            // Estimated Cost (from Planned Fabric Details)
             foreach ($jobCard->fabricDetails as $fd) {
                 if ($fd->store_category_id == 1) {
                     $latestPrice = StockEntryItem::where('art_no', $fd->art_no)
@@ -2185,28 +2185,12 @@ class JobCardEntryController extends Controller
             }
         }
 
-        // 2. Accessories Cost
         $totalAccessoryCost = 0;
         $accessoryIssueItems = $jobCard->issueItems->filter(fn($i) => ($i->rawMaterial?->store_category_id != 1));
 
         if ($accessoryIssueItems->count() > 0) {
-            // Actual Cost (from Issued Items)
             $totalAccessoryCost = $accessoryIssueItems->sum(fn($i) => ($i->qty_used + $i->qty_wastage) * ($i->stockEntryItem->price ?? 0));
-        } else {
-            // Estimated Cost (from Planned Accessories)
-            foreach ($jobCard->fabricDetails as $fd) {
-                if ($fd->store_category_id != 1) {
-                    $latestPrice = StockEntryItem::where('art_no', $fd->art_no)
-                        ->where('price', '>', 0)
-                        ->latest()
-                        ->value('price') ?? 0;
-                    $totalAccessoryCost += ($fd->mtr * $latestPrice);
-                }
-            }
         }
-
-        // 3. WIP / Process Cost
-        // If saved operations exist but cost is 0, we might need to recalculate based on current qty
         $totalProcessCost = $jobCard->operations->sum(function ($op) use ($totalProduced) {
             if ($op->total_cost > 0)
                 return $op->total_cost;
@@ -2318,7 +2302,6 @@ class JobCardEntryController extends Controller
 
         $artNo = $issueItem->fabricDetail->art_no ?? ($issueItem->rawMaterial->code ?? '');
 
-        // Get style from the stock deduction chain
         $style = $issueItem->stockEntryItem->grnEntryItem->purchaseInvoiceItem->purchaseOrderItem->style ?? null;
 
         if (!$style) {
@@ -2475,11 +2458,7 @@ class JobCardEntryController extends Controller
             return [];
         }
 
-        $items = GrnEntryItem::whereNotNull('image')
-            ->where('image', '!=', '')
-            ->whereIn(DB::raw('TRIM(art_no)'), $normalizedArtNos->all())
-            ->orderByDesc('id')
-            ->get(['art_no', 'image']);
+        $items = GrnEntryItem::whereNotNull('image')->where('image', '!=', '')->whereIn(DB::raw('TRIM(art_no)'), $normalizedArtNos->all())->orderByDesc('id')->get(['art_no', 'image']);
 
         $imageMap = [];
         foreach ($items as $item) {
@@ -2487,15 +2466,28 @@ class JobCardEntryController extends Controller
             if (!$artNo || isset($imageMap[$artNo])) {
                 continue;
             }
-
-            $imageMap[$artNo] = [
-                'art_no' => $artNo,
-                'image' => $item->image,
-                'url' => url('uploads/grn_items/' . $item->image),
-            ];
+            $imageMap[$artNo] = ['art_no' => $artNo, 'image' => $item->image, 'url' => url('uploads/grn_items/' . $item->image),];
         }
 
         return $imageMap;
+    }
+
+    private function hydrateJobCardGrnImages(JobCardEntry $jobCard): void
+    {
+        // Ensure GRN images are available even if job_card_fabric_details.grn_image is empty.
+        $grnImageMap = $this->getGrnImageMapForArtNos($jobCard->fabricDetails->pluck('art_no')->all());
+        foreach ($jobCard->fabricDetails as $detail) {
+            $artNo = trim((string) ($detail->art_no ?? ''));
+            $grnImage = $grnImageMap[$artNo] ?? null;
+            if (!$grnImage) {
+                continue;
+            }
+
+            if (empty($detail->grn_image)) {
+                $detail->grn_image = $grnImage['image'] ?? null;
+            }
+            $detail->grn_image_url = $grnImage['url'] ?? null;
+        }
     }
 
     private function getLatestGrnImageForArtNo(?string $artNo): ?string
@@ -2505,11 +2497,7 @@ class JobCardEntryController extends Controller
             return null;
         }
 
-        return GrnEntryItem::whereRaw('TRIM(art_no) = ?', [$artNo])
-            ->whereNotNull('image')
-            ->where('image', '!=', '')
-            ->orderByDesc('id')
-            ->value('image');
+        return GrnEntryItem::whereRaw('TRIM(art_no) = ?', [$artNo])->whereNotNull('image')->where('image', '!=', '')->orderByDesc('id')->value('image');
     }
 
 

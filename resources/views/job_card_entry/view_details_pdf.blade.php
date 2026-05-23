@@ -58,8 +58,8 @@
             font-size: 5pt;
         }
         .art-img {
-            max-width: 60pt;
-            max-height: 50pt;
+            max-width: 45pt;
+            max-height: 35pt;
             display: block;
             margin: 2px auto;
         }
@@ -197,8 +197,6 @@
                     $mimeType = match ($extension) {
                         'jpg', 'jpeg' => 'image/jpeg',
                         'png' => 'image/png',
-                        'gif' => 'image/gif',
-                        'webp' => 'image/webp',
                         default => null,
                     };
 
@@ -319,15 +317,8 @@
             <col style="width: 12%;">
         </colgroup>
         <tr>
-            <td class="fw-bold" style="width: 8%;">WITHIN DAYS</td>
-            <td style="width: 12%;">14</td>
-            <td colspan="{{ count($allSizes) + 1 }}" class="text-center fw-bold bg-light" style="width: 40%;">CUTTING SIZE RATIO</td>
-            <td colspan="3" class="text-center fw-bold bg-light" style="width: 28%;">CUTTING MARK</td>
-            <td class="fw-bold text-end" style="width: 12%;">H.O / D.C /DATE</td>
-        </tr>
-        <tr>
             <td class="fw-bold" style="width: 8%; font-size: 7px;">WITHIN DAYS</td>
-            <td style="width: 12%; font-size: 7px;">{{ $withinDays ?? '' }}</td>
+            <td style="width: 12%; font-size: 7px;">{{ $jobCard->no_of_days ?? '' }}</td>
             <td colspan="{{ count($allSizes) + 1 }}" class="text-center fw-bold bg-light" style="width: 40%;">CUTTING SIZE RATIO
             </td>
             <td colspan="3" class="text-center fw-bold bg-light" style="width: 28%;">CUTTING MARK</td>
@@ -366,7 +357,7 @@
                     </td>
                 @endforeach
                 @if($index === 0)
-                    <td rowspan="{{ $totalRatioRows }}" colspan="3" style="padding: 0;">
+                    <td rowspan="{{ $totalRatioRows }}" colspan="3" style="padding: 0; vertical-align:top;">
                         <table class="table table-bordered mb-0" style="border: none;">
                             @for($i = 0; $i < count($allLayMarks); $i++)
                                 @php $lm = $allLayMarks[$i] ?? null; @endphp
@@ -400,12 +391,12 @@
                     @php $ratio = $jobCard->cuttingSizeRatios->where('size', $s)->first(); @endphp
                     <td class="text-center">{{ $ratio ? (int) $ratio->qty_fs : '-' }}</td>
                 @endforeach
-                <td rowspan="{{ $totalRatioRows }}" colspan="3" style="padding: 0;">
-                    <table class="table table-bordered mb-0" style="height: 100%; border: none;">
+                <td rowspan="{{ $totalRatioRows }}" colspan="3" style="padding: 0; vertical-align:top;">
+                    <table class="table table-bordered mb-0 w-100" style="border:none;height:100%;">
                         @for($i = 0; $i < count($allLayMarks); $i++)
                             @php $lm = $allLayMarks[$i] ?? null; @endphp
                             @if($lm)
-                                <tr>
+                                <tr style="height:18px;">
                                     <td class="text-center" style="width: 35%; font-size: 7px; border: none; border-bottom: 0.5px solid #ddd; border-right: 0.5px solid #ddd;">
                                         {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
                                     </td>
@@ -489,6 +480,19 @@
                 {{ $jobCard->fabricType->fabric_type ?? 'N/A' }}
             </td>
         </tr> --}}
+        <tr>
+            <td class="bg-light fw-bold" style="width: 15%;">IMAGE</td>
+            @foreach($fabricDetails as $detail)
+                @php $imageSrc = $fabricImageSrcMap[$detail->id] ?? ''; @endphp
+                <td class="text-center">
+                    @if($imageSrc)
+                        <img src="{{ $imageSrc }}" alt="GRN Image" class="art-img">
+                    @else
+                        -
+                    @endif
+                </td>
+            @endforeach
+        </tr>
         <tr>
             <td class="bg-light fw-bold" style="width: 15%;">ART NO</td>
             @foreach($fabricDetails as $detail)

@@ -382,7 +382,7 @@
                                                                     @error("items.$idx.variants") <div class="text-danger small">{{ $message }}</div> @enderror
                                                                 </td>
                                                                 <td class="item-image-cell">
-                                                                    <input type="file" name="items[{{$idx}}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/webp" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
+                                                                    <input type="file" name="items[{{$idx}}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png" {{ (is_array($item) ? ($item['row_selected'] ?? false) : true) ? '' : 'disabled' }}>
                                                                     @if(isset($itemObj->image) && $itemObj->image)
                                                                         <input type="hidden" name="items[{{$idx}}][old_image]" value="{{ $itemObj->image }}">
                                                                         <img src="{{ url('uploads/grn_items/' . $itemObj->image) }}" width="40" class="mt-1 border rounded cursor-pointer view-image" data-image="{{ url('uploads/grn_items/' . $itemObj->image) }}" alt="Item">
@@ -733,7 +733,7 @@
                                         <div class="variants-data-container"></div>
                                     </td>
                                     <td class="item-image-cell">
-                                        <input type="file" name="items[${idx}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                        <input type="file" name="items[${idx}][item_image]" class="form-control" accept="image/jpeg,image/jpg,image/png">
                                     </td>
                                     <td class="art-no-cell">
                                         <input type="hidden" name="items[${idx}][purchase_invoice_item_id]" value="${item.id}">
