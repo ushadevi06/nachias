@@ -1029,8 +1029,8 @@
         function renderRows(records) {
             return records.map((item, index) => {
                 const rowDate = formatDate(item.date) || formatDate(attendanceDate.value);
-                const inTime = item.inTime || '-';
-                const outTime = item.outTime || '-';
+                const inTime = item.in_time || '-';
+                const outTime = item.out_time || '-';
                 const hours = item.hours || '-';
                 return `
                         <tr>

@@ -6,9 +6,12 @@ use App\Models\Item;
 use App\Models\ItemPrice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ItemPricesExport;
+use App\Imports\ItemPricesImport;
 
 class ItemPriceController extends Controller
 {
@@ -206,5 +209,66 @@ class ItemPriceController extends Controller
             return unauthorizedRedirect();
         }
         return Excel::download(new ItemPricesExport, 'item_prices_' . date('Ymd_His') . '.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create item-prices')) {
+            return unauthorizedRedirect();
+        }
+
+        $request->validate([
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+        ]);
+
+        try {
+            Excel::import(new ItemPricesImport, $request->file('import_file'));
+            return redirect('item_prices')->with('success', 'Item prices imported successfully.');
+        } catch (ValidationException $e) {
+            return redirect('item_prices')->withErrors($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Item price import failed', ['exception' => $e]);
+
+            $message = config('app.debug')
+                ? $e->getMessage()
+                : 'Import failed. Please check the file and try again.';
+
+            return redirect('item_prices')->with('error', $message);
+        }
+    }
+
+    public function downloadSample()
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view item-prices')) {
+            return unauthorizedRedirect();
+        }
+
+        $headers = [
+            'Finished Item Code',
+            'Art No',
+            'Selling Price',
+            'Unit Price',
+            'Effective From',
+            'Status',
+        ];
+
+        $callback = function () use ($headers) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($file, $headers);
+            fputcsv($file, [
+                'CDS-PRNT',
+                'CDS30906',
+                '499.00',
+                '',
+                date('d-m-Y'),
+                'Active',
+            ]);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'Item_Prices_Sample.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

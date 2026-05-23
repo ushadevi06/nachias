@@ -138,6 +138,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var ndRight = document.getElementById('nd-right');
     var openLi = null;
 
+    function shouldUseMega() {
+        var layoutMenu = document.getElementById('layout-menu');
+        if (!layoutMenu) return false;
+        if (!layoutMenu.classList.contains('menu-horizontal')) return false;
+        return window.matchMedia && window.matchMedia('(min-width: 1200px)').matches;
+    }
+
     function closeMega() {
         mega.style.display = 'none';
         ndLeft.innerHTML = '';
@@ -239,6 +246,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#layout-menu .menu-inner > .menu-item > .menu-link.menu-toggle')
         .forEach(function (link) {
             link.addEventListener('click', function (e) {
+                if (!shouldUseMega()) {
+                    closeMega();
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 var li = this.closest('.menu-item');
@@ -266,7 +277,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }, true);
 
-    window.addEventListener('resize', closeMega);
+    window.addEventListener('resize', function () {
+        if (!shouldUseMega()) {
+            closeMega();
+        }
+    });
 });
 
 function previewImage(event) {

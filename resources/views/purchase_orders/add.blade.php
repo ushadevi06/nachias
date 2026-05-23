@@ -431,10 +431,9 @@
                                                             <div class="attachment-thumb bg-white position-relative"
                                                                 title="{{ $item->attached_file }}">
                                                                 @if($isImage)
-                                                                    <button type="button" class="btn btn-sm btn-outline-primary view-image" data-image="{{ $fileUrl }}"><i class="ri ri-eye-line"></i> View
-                                                                    </button>
+                                                                    <img src="{{ $fileUrl }}" class="preview-thumb view-image"  data-image="{{ $fileUrl }}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #ddd;" alt="Attachment">
                                                                 @else
-                                                                    <a href="{{ $fileUrl }}" target="_blank" class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border" style="width: 80px; height: 80px;"><i class="ri ri-file-text-line fs-2"></i><span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                                                    <a href="{{ $fileUrl }}" target="_blank" class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border" style="width: 50px; height: 50px;"><i class="ri ri-file-text-line fs-2"></i><span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
                                                                     </a>
                                                                 @endif
                                                             </div>
@@ -1140,9 +1139,7 @@
                         reader.onload = function (e) {
                             $container.html(`
                                                 <div class="attachment-thumb bg-white position-relative">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary view-image" data-image="${e.target.result}">
-                                                        <i class="ri ri-eye-line"></i> View
-                                                    </button>
+                                                    <img src="${e.target.result}" class="preview-thumb view-image" data-image="${e.target.result}" style="width:50px;height:=50px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid #ddd;" alt="Preview">
                                                 </div>
                                             `);
                         };
@@ -1150,7 +1147,7 @@
                     } else {
                         $container.html(`
                                         <div class="attachment-thumb bg-white position-relative">
-                                            <a href="${fileUrl}" target="_blank" class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border" style="width: 80px; height: 80px;">
+                                            <a href="${fileUrl}" target="_blank" class="d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary p-2 border" style="width: 50px; height: 50px;">
                                                 <i class="ri ri-file-text-line fs-2"></i>
                                                 <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">${extension}</span>
                                             </a>
@@ -1192,9 +1189,7 @@
                         reader.onload = function (e) {
                             $(`#${previewId}`).html(`
                                 <div class="d-flex align-items-center p-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary view-image" data-image="${e.target.result}">
-                                        <i class="ri ri-eye-line"></i> View
-                                    </button>
+                                    <img src="${e.target.result}" class="view-image" data-image="${e.target.result}" style="width:50px; height:50px; object-fit:cover; border-radius:8px; border:1px solid #ddd; cursor:pointer;" alt="Preview">
                                     <button type="button" class="btn btn-sm btn-link text-danger ms-2 remove-existing-attachment p-0">
                                         <i class="ri ri-close-line"></i>
                                     </button>

@@ -1,312 +1,320 @@
 @extends('layouts.common')
 @section('title', 'View Purchase Order: ' . $purchaseOrder->po_number . ' - ' . env('WEBSITE_NAME'))
 @section('content')
-    <div class="container-xxl section-padding">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h3 class="fw-bold text-primary mb-1">Purchase Order Details</h3>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="{{ url('purchase_orders/download-pdf/' . $purchaseOrder->id) }}" target="_blank"
-                            class="btn btn-primary d-flex align-items-center shadow-sm">
-                            <i class="ri ri-download-line me-1"></i> Download
-                        </a>
-                        <a href="{{ url('purchase_orders/print/' . $purchaseOrder->id) }}" target="_blank"
-                            class="btn btn-primary d-flex align-items-center shadow-sm">
-                            <i class="ri ri-printer-line me-1"></i> Print
-                        </a>
-                        <a href="{{ url('purchase_orders') }}"
-                            class="btn btn-outline-secondary d-flex align-items-center shadow-sm">
-                            <i class="ri ri-arrow-left-line me-1"></i> Back
-                        </a>
+<div class="container-xxl section-padding">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="fw-bold text-primary mb-1">Purchase Order Details</h3>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url('purchase_orders/download-pdf/' . $purchaseOrder->id) }}" target="_blank"
+                        class="btn btn-primary d-flex align-items-center shadow-sm">
+                        <i class="ri ri-download-line me-1"></i> Download
+                    </a>
+                    <a href="{{ url('purchase_orders/print/' . $purchaseOrder->id) }}" target="_blank"
+                        class="btn btn-primary d-flex align-items-center shadow-sm">
+                        <i class="ri ri-printer-line me-1"></i> Print
+                    </a>
+                    <a href="{{ url('purchase_orders') }}"
+                        class="btn btn-outline-secondary d-flex align-items-center shadow-sm">
+                        <i class="ri ri-arrow-left-line me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-header py-3 bg-light" style="border-radius: 12px 12px 0 0;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-dark text-uppercase small">General Information</h5>
+                        <span class="badge bg-white text-primary px-3 py-2">PO: #{{ $purchaseOrder->po_number }}</span>
                     </div>
                 </div>
-
-                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
-                    <div class="card-header py-3 bg-light" style="border-radius: 12px 12px 0 0;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0 fw-bold text-dark text-uppercase small">General Information</h5>
-                            <span class="badge bg-white text-primary px-3 py-2">PO: #{{ $purchaseOrder->po_number }}</span>
+                <div class="card-body p-4">
+                    <div class="row g-4 text-break">
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">PO Number</div>
+                            <div class="fw-bold text-primary">{{ $purchaseOrder->po_number }}</div>
                         </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-4 text-break">
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">PO Number</div>
-                                <div class="fw-bold text-primary">{{ $purchaseOrder->po_number }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
-                                <div class="fw-bold text-dark">
-                                    {{ $purchaseOrder->supplier->name ?? 'N/A' }}
-                                    @if($purchaseOrder->supplier && $purchaseOrder->supplier->code)
-                                        <span class="text-primary small">({{ $purchaseOrder->supplier->code }})</span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">PO Date</div>
-                                <div class="fw-bold text-dark">{{ $purchaseOrder->po_date->format('d M, Y') }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Due Date</div>
-                                <div class="fw-bold text-dark">{{ $purchaseOrder->due_date->format('d M, Y') }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
-                                <div>
-                                    @php
-                                        $statusColors = [
-                                            'Draft' => 'bg-secondary',
-                                            'Approved' => 'bg-success',
-                                            'Dispatched' => 'bg-info',
-                                            'Received' => 'bg-primary',
-                                        ];
-                                    @endphp
-                                    <span
-                                        class="badge {{ $statusColors[$purchaseOrder->status] ?? 'bg-secondary' }} px-3 py-2 text-uppercase small">{{ $purchaseOrder->status }}</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Agent</div>
-                                <div class="fw-bold text-dark">
-                                    {{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}
-                                    @if($purchaseOrder->purchaseCommissionAgent && $purchaseOrder->purchaseCommissionAgent->code)
-                                        <span class="text-primary small">({{ $purchaseOrder->purchaseCommissionAgent->code }})</span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Commission (%)</div>
-                                <div class="fw-bold text-dark">{{ number_format($purchaseOrder->commission, 2) }}%</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Store Type</div>
-                                <div class="fw-bold text-dark">{{ $purchaseOrder->storeType->store_type_name ?? '-' }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Reference No</div>
-                                <div class="fw-bold text-dark text-break">{{ $purchaseOrder->reference_no ?? '-' }}</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1 text-muted text-uppercase small fw-bold">Payment Terms</div>
-                                <div class="fw-bold text-dark text-break">{{ $purchaseOrder->payment_terms ?? '-' }}</div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Supplier</div>
+                            <div class="fw-bold text-dark">
+                                {{ $purchaseOrder->supplier->name ?? 'N/A' }}
+                                @if($purchaseOrder->supplier && $purchaseOrder->supplier->code)
+                                <span class="text-primary small">({{ $purchaseOrder->supplier->code }})</span>
+                                @endif
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Item Details Card -->
-                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
-                    <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0;">
-                        <h5 class="mb-0 fw-bold text-dark text-uppercase small">Order Item Details</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th class="ps-4 text-uppercase small fw-bold">Sr.#</th>
-                                        <th class="text-uppercase small fw-bold">Store Category</th>
-                                        <th class="text-uppercase small fw-bold">Brand</th>
-                                        <th class="text-uppercase small fw-bold" style="min-width: 150px;">Raw Material</th>
-                                        <th class="text-uppercase small fw-bold">Style</th>
-                                        <th class="text-uppercase small fw-bold">Width</th>
-                                        <th class="text-uppercase small fw-bold">Fabric Type</th>
-                                        <th class="text-center text-uppercase small fw-bold">UOM</th>
-                                        <th class="text-center text-uppercase small fw-bold">Qty</th>
-                                        <th class="text-uppercase small fw-bold">Supplier Design</th>
-                                        <th class="text-uppercase small fw-bold">Color</th>
-                                        <th class="text-end text-uppercase small fw-bold">Rate</th>
-                                        <th class="text-end text-uppercase small fw-bold">Amount</th>
-                                        <th class="text-uppercase small fw-bold">Remarks</th>
-                                        <th class="text-center text-uppercase small fw-bold pe-4">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($purchaseOrder->items as $index => $item)
-                                        <tr>
-                                            <td class="ps-4 fw-bold text-muted small">{{ $index + 1 }}</td>
-                                            <td class="small fw-bold text-dark">
-                                                {{ $item->storeCategory->category_name ?? '-' }}
-                                                @if($item->storeCategory && $item->storeCategory->code)
-                                                    <span class="text-primary small">({{ $item->storeCategory->code }})</span>
-                                                @endif
-                                            </td>
-                                            <td class="small fw-bold text-dark">
-                                                {{ $item->brand->brand_name ?? '-' }}
-                                                @if($item->brand && $item->brand->code)
-                                                    <span class="text-primary small">({{ $item->brand->code }})</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <div class="fw-bold text-dark">
-                                                    {{ $item->rawMaterial->name ?? '-' }}
-                                                    @if($item->rawMaterial && $item->rawMaterial->code)
-                                                        <span class="text-primary small">({{ $item->rawMaterial->code }})</span>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td class="small text-dark">{{ $item->style->style_name ?? '-' }}</td>
-                                            <td class="small text-dark">{{ $item->fabricWidth->width ?? '-' }}</td>
-                                            <td class="small text-dark">{{ $item->fabricType->fabric_type ?? '-' }}</td>
-                                            <td class="text-center">
-                                                <span class="badge bg-light text-dark">{{ $item->uom->uom_code ?? '-' }}</span>
-                                            </td>
-                                            <td class="text-center fw-bold">{{ number_format($item->quantity, 2) }}</td>
-                                            <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
-                                            <td class="small text-dark">{{ $item->color->color_name ?? '-' }}</td>
-                                            <td class="text-end fw-semibold text-dark">₹{{ number_format($item->rate, 2) }}</td>
-                                            <td class="text-end fw-bold text-primary">₹{{ number_format($item->amount, 2) }}</td>
-                                            <td class="small text-dark">{{ $item->remarks ?? '-' }}</td>
-                                            <td class="text-center pe-4">
-                                                @if($item->attached_file)
-                                                    <a href="{{ url('uploads/purchase_orders/' . $item->attached_file) }}"
-                                                        target="_blank" class="btn btn-sm btn-outline-primary"
-                                                        title="View Attachment">
-                                                        <i class="ri ri-eye-line"></i>
-                                                    </a>
-                                                @else
-                                                    <span class="text-muted small">-</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">PO Date</div>
+                            <div class="fw-bold text-dark">{{ $purchaseOrder->po_date->format('d M, Y') }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Due Date</div>
+                            <div class="fw-bold text-dark">{{ $purchaseOrder->due_date->format('d M, Y') }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Status</div>
+                            <div>
+                                @php
+                                $statusColors = [
+                                'Draft' => 'bg-secondary',
+                                'Approved' => 'bg-success',
+                                'Dispatched' => 'bg-info',
+                                'Received' => 'bg-primary',
+                                ];
+                                @endphp
+                                <span
+                                    class="badge {{ $statusColors[$purchaseOrder->status] ?? 'bg-secondary' }} px-3 py-2 text-uppercase small">{{ $purchaseOrder->status }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Agent</div>
+                            <div class="fw-bold text-dark">
+                                {{ $purchaseOrder->purchaseCommissionAgent->name ?? '-' }}
+                                @if($purchaseOrder->purchaseCommissionAgent && $purchaseOrder->purchaseCommissionAgent->code)
+                                <span class="text-primary small">({{ $purchaseOrder->purchaseCommissionAgent->code }})</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Commission (%)</div>
+                            <div class="fw-bold text-dark">{{ number_format($purchaseOrder->commission, 2) }}%</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Store Type</div>
+                            <div class="fw-bold text-dark">{{ $purchaseOrder->storeType->store_type_name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Reference No</div>
+                            <div class="fw-bold text-dark text-break">{{ $purchaseOrder->reference_no ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Payment Terms</div>
+                            <div class="fw-bold text-dark text-break">{{ $purchaseOrder->payment_terms ?? '-' }}</div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="row g-4">
-                    <div class="col-lg-8">
-                        @if($purchaseOrder->remarks)
-                            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
-                                <div class="card-header bg-light py-3">
-                                    <h5 class="mb-0 fw-bold text-dark text-uppercase small">Remarks / Terms</h5>
-                                </div>
-                                <div class="card-body p-4">
-                                    <div class="text-dark small" style="white-space: pre-line;">{{ $purchaseOrder->remarks }}
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if($purchaseOrder->additional_attachments)
-                            <div class="card border-0 shadow-sm" style="border-radius: 12px;">
-                                <div class="card-header bg-light py-3">
-                                    <h5 class="mb-0 fw-bold text-dark text-uppercase small">Attachments</h5>
-                                </div>
-                                <div class="card-body p-4">
-                                    <div class="d-flex flex-wrap gap-3">
+            <!-- Item Details Card -->
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0;">
+                    <h5 class="mb-0 fw-bold text-dark text-uppercase small">Order Item Details</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4 text-uppercase small fw-bold">Sr.#</th>
+                                    <th class="text-uppercase small fw-bold">Store Category</th>
+                                    <th class="text-uppercase small fw-bold">Brand</th>
+                                    <th class="text-uppercase small fw-bold" style="min-width: 150px;">Raw Material</th>
+                                    <th class="text-uppercase small fw-bold">Style</th>
+                                    <th class="text-uppercase small fw-bold">Width</th>
+                                    <th class="text-uppercase small fw-bold">Fabric Type</th>
+                                    <th class="text-center text-uppercase small fw-bold">UOM</th>
+                                    <th class="text-center text-uppercase small fw-bold">Qty</th>
+                                    <th class="text-uppercase small fw-bold">Supplier Design</th>
+                                    <th class="text-uppercase small fw-bold">Color</th>
+                                    <th class="text-end text-uppercase small fw-bold">Rate</th>
+                                    <th class="text-end text-uppercase small fw-bold">Amount</th>
+                                    <th class="text-uppercase small fw-bold">Remarks</th>
+                                    <th class="text-center text-uppercase small fw-bold pe-4">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($purchaseOrder->items as $index => $item)
+                                <tr>
+                                    <td class="ps-4 fw-bold text-muted small">{{ $index + 1 }}</td>
+                                    <td class="small fw-bold text-dark">
+                                        {{ $item->storeCategory->category_name ?? '-' }}
+                                        @if($item->storeCategory && $item->storeCategory->code)
+                                        <span class="text-primary small">({{ $item->storeCategory->code }})</span>
+                                        @endif
+                                    </td>
+                                    <td class="small fw-bold text-dark">
+                                        {{ $item->brand->brand_name ?? '-' }}
+                                        @if($item->brand && $item->brand->code)
+                                        <span class="text-primary small">({{ $item->brand->code }})</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">
+                                            {{ $item->rawMaterial->name ?? '-' }}
+                                            @if($item->rawMaterial && $item->rawMaterial->code)
+                                            <span class="text-primary small">({{ $item->rawMaterial->code }})</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td class="small text-dark">{{ $item->style->style_name ?? '-' }}</td>
+                                    <td class="small text-dark">{{ $item->fabricWidth->width ?? '-' }}</td>
+                                    <td class="small text-dark">{{ $item->fabricType->fabric_type ?? '-' }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark">{{ $item->uom->uom_code ?? '-' }}</span>
+                                    </td>
+                                    <td class="text-center fw-bold">{{ number_format($item->quantity, 2) }}</td>
+                                    <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
+                                    <td class="small text-dark">{{ $item->color->color_name ?? '-' }}</td>
+                                    <td class="text-end fw-semibold text-dark">₹{{ number_format($item->rate, 2) }}</td>
+                                    <td class="text-end fw-bold text-primary">₹{{ number_format($item->amount, 2) }}</td>
+                                    <td class="small text-dark">{{ $item->remarks ?? '-' }}</td>
+                                    <td class="text-center pe-4">
+                                        @if($item->attached_file)
                                         @php
-                                            $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
+                                            $extension = pathinfo($item->attached_file, PATHINFO_EXTENSION);
+                                            $isImage = in_array(strtolower($extension), ['jpg','jpeg','png','webp','gif']);
+                                            $fileUrl = url('uploads/purchase_orders/' . $item->attached_file);
                                         @endphp
-                                        @foreach($attachments as $attachment)
-                                            @php
-                                                $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
-                                                $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
-                                                $url = url('uploads/purchase_orders/' . $attachment);
-                                            @endphp
-                                            <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative"
-                                                style="width: 100px; height: 100px;" title="{{ $attachment }}">
-                                                @if($isImage)
-                                                    <img src="{{ $url }}"
-                                                        class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image"
-                                                        data-image="{{ $url }}" alt="Attachment">
-                                                @else
-                                                    <a href="{{ $url }}" target="_blank"
-                                                        class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
-                                                        <i class="ri ri-file-text-line fs-2 text-primary"></i>
-                                                        <span class="badge bg-primary text-white mt-1"
-                                                            style="font-size: 10px;">{{ strtoupper($extension) }}</span>
-                                                    </a>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
+                                        @if($isImage)
+                                            <img src="{{ $fileUrl }}" class="view-image" data-image="{{ $fileUrl }}" alt="Attachment" style="width:50px; height:50px; object-fit:cover; border-radius:8px; border:1px solid #ddd; cursor:pointer;">
+                                        @else
+                                            <a href="{{ $fileUrl }}" target="_blank" class="d-flex flex-column align-items-center justify-content-center text-decoration-none">
+                                                <i class="ri ri-file-text-line fs-3 text-primary"></i>
+                                                <span class="badge bg-primary text-white mt-1" style="font-size:10px;">{{ strtoupper($extension) }}
+                                                </span>
+                                            </a>
+                                        @endif
+                                        @else
+                                            <span class="text-muted small">-</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+            </div>
 
-                    <div class="col-lg-4">
-                        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
-                            <div class="card-header bg-light py-3">
-                                <h5 class="mb-0 fw-bold text-dark text-uppercase small">Billing Summary</h5>
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    @if($purchaseOrder->remarks)
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase small">Remarks / Terms</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="text-dark small" style="white-space: pre-line;">{{ $purchaseOrder->remarks }}
                             </div>
-                            <div class="card-body p-4">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted small">Total Quantity</span>
-                                    <span
-                                        class="fw-bold text-dark">{{ number_format($purchaseOrder->items->sum('quantity'), 2) }}</span>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($purchaseOrder->additional_attachments)
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase small">Attachments</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex flex-wrap gap-3">
+                                @php
+                                $attachments = is_array($purchaseOrder->additional_attachments) ? $purchaseOrder->additional_attachments : [$purchaseOrder->additional_attachments];
+                                @endphp
+                                @foreach($attachments as $attachment)
+                                @php
+                                $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
+                                $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                $url = url('uploads/purchase_orders/' . $attachment);
+                                @endphp
+                                <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative"
+                                    style="width: 100px; height: 100px;" title="{{ $attachment }}">
+                                    @if($isImage)
+                                    <img src="{{ $url }}"
+                                        class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image"
+                                        data-image="{{ $url }}" alt="Attachment">
+                                    @else
+                                    <a href="{{ $url }}" target="_blank"
+                                        class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none">
+                                        <i class="ri ri-file-text-line fs-2 text-primary"></i>
+                                        <span class="badge bg-primary text-white mt-1"
+                                            style="font-size: 10px;">{{ strtoupper($extension) }}</span>
+                                    </a>
+                                    @endif
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted small">Sub Total</span>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="card-header bg-light py-3">
+                            <h5 class="mb-0 fw-bold text-dark text-uppercase small">Billing Summary</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Total Quantity</span>
+                                <span
+                                    class="fw-bold text-dark">{{ number_format($purchaseOrder->items->sum('quantity'), 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Sub Total</span>
+                                <span
+                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->sub_total, 2) }}</span>
+                            </div>
+                            @if($purchaseOrder->discount_amount > 0)
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Discount
+                                    ({{ number_format($purchaseOrder->discount_percent, 2) }}%)</span>
+                                <span class="fw-bold text-danger">-
+                                    ₹{{ number_format($purchaseOrder->discount_amount, 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Taxable Amount</span>
+                                <span
+                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount, 2) }}</span>
+                            </div>
+                            @endif
+                            @if($purchaseOrder->commission > 0)
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small uppercase">Commission Amount
+                                    ({{ number_format($purchaseOrder->commission, 2) }}%)</span>
+                                {{-- <span class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount * ($purchaseOrder->commission / 100), 2) }}</span> --}}
+                                <span class="fw-bold text-dark">₹{{ number_format(($purchaseOrder->sub_total * $purchaseOrder->commission/100),2) }}</span>
+                            </div>
+                            @endif
+
+                            @if($purchaseOrder->other_state)
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">IGST
+                                    ({{ number_format($purchaseOrder->igst_percent, 2) }}%)</span>
+                                <span
+                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount, 2) }}</span>
+                            </div>
+                            @else
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">CGST
+                                    ({{ number_format($purchaseOrder->cgst_percent, 2) }}%)</span>
+                                <span
+                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">SGST
+                                    ({{ number_format($purchaseOrder->sgst_percent, 2) }}%)</span>
+                                <span
+                                    class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
+                            </div>
+                            @endif
+
+                            @if($purchaseOrder->round_off != 0)
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Round Off ({{ $purchaseOrder->round_off_type }})</span>
+                                <span class="fw-bold text-dark">
+                                    {{ $purchaseOrder->round_off_type == 'Less' ? '-' : '+' }}₹{{ number_format($purchaseOrder->round_off, 2) }}
+                                </span>
+                            </div>
+                            @endif
+
+                            <div class="p-3 rounded-3 mt-4 border-start border-primary border-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-primary small uppercase">Grand Total</span>
                                     <span
-                                        class="fw-bold text-dark">₹{{ number_format($purchaseOrder->sub_total, 2) }}</span>
-                                </div>
-                                @if($purchaseOrder->discount_amount > 0)
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small">Discount
-                                            ({{ number_format($purchaseOrder->discount_percent, 2) }}%)</span>
-                                        <span class="fw-bold text-danger">-
-                                            ₹{{ number_format($purchaseOrder->discount_amount, 2) }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small">Taxable Amount</span>
-                                        <span
-                                            class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount, 2) }}</span>
-                                    </div>
-                                @endif
-                                @if($purchaseOrder->commission > 0)
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small uppercase">Commission Amount
-                                            ({{ number_format($purchaseOrder->commission, 2) }}%)</span>
-                                        {{-- <span class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount * ($purchaseOrder->commission / 100), 2) }}</span> --}}
-                                        <span class="fw-bold text-dark">₹{{ number_format(($purchaseOrder->sub_total * $purchaseOrder->commission/100),2) }}</span>
-                                    </div>
-                                @endif
-
-                                @if($purchaseOrder->other_state)
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small">IGST
-                                            ({{ number_format($purchaseOrder->igst_percent, 2) }}%)</span>
-                                        <span
-                                            class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount, 2) }}</span>
-                                    </div>
-                                @else
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small">CGST
-                                            ({{ number_format($purchaseOrder->cgst_percent, 2) }}%)</span>
-                                        <span
-                                            class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small">SGST
-                                            ({{ number_format($purchaseOrder->sgst_percent, 2) }}%)</span>
-                                        <span
-                                            class="fw-bold text-dark">₹{{ number_format($purchaseOrder->tax_amount / 2, 2) }}</span>
-                                    </div>
-                                @endif
-
-                                @if($purchaseOrder->round_off != 0)
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted small">Round Off ({{ $purchaseOrder->round_off_type }})</span>
-                                        <span class="fw-bold text-dark">
-                                            {{ $purchaseOrder->round_off_type == 'Less' ? '-' : '+' }}₹{{ number_format($purchaseOrder->round_off, 2) }}
-                                        </span>
-                                    </div>
-                                @endif
-
-                                <div class="p-3 rounded-3 mt-4 border-start border-primary border-4">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="fw-bold text-primary small uppercase">Grand Total</span>
-                                        <span
-                                            class="fs-5 fw-bold text-primary">₹{{ number_format($purchaseOrder->total_amount, 2) }}</span>
-                                    </div>
+                                        class="fs-5 fw-bold text-primary">₹{{ number_format($purchaseOrder->total_amount, 2) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -315,37 +323,38 @@
             </div>
         </div>
     </div>
+</div>
 
-    <style>
-        .bg-primary-soft {
-            background-color: #f0f7ff;
-        }
+<style>
+    .bg-primary-soft {
+        background-color: #f0f7ff;
+    }
 
-        .btn-soft-primary {
-            background-color: #f0f7ff;
-            color: #007bff;
-            border: none;
-        }
+    .btn-soft-primary {
+        background-color: #f0f7ff;
+        color: #007bff;
+        border: none;
+    }
 
-        .btn-soft-primary:hover {
-            background-color: #007bff;
-            color: white;
-        }
+    .btn-soft-primary:hover {
+        background-color: #007bff;
+        color: white;
+    }
 
-        .btn-soft-secondary {
-            background-color: #f8f9fa;
-            color: #6c757d;
-            border: none;
-        }
+    .btn-soft-secondary {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        border: none;
+    }
 
-        .btn-soft-secondary:hover {
-            background-color: #6c757d;
-            color: white;
-        }
+    .btn-soft-secondary:hover {
+        background-color: #6c757d;
+        color: white;
+    }
 
-        .text-break {
-            word-wrap: break-word !important;
-            word-break: break-word !important;
-        }
-    </style>
+    .text-break {
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+    }
+</style>
 @endsection

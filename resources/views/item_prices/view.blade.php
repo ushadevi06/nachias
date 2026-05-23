@@ -11,6 +11,11 @@
                         <i class="icon-base ri ri-file-excel-line"></i> Export
                     </a>
                     @if(auth()->id() == 1 || auth()->user()->can('create item-prices'))
+                    <button type="button" class="btn btn-secondary" id="btn-item-prices-import" data-bs-toggle="modal" data-bs-target="#importItemPricesModal">
+                        <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
+                    </button>
+                    @endif
+                    @if(auth()->id() == 1 || auth()->user()->can('create item-prices'))
                     <a class="btn btn-primary" href="{{ url('item_prices/add') }}">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                     </a>
@@ -45,10 +50,48 @@
         </div>
     </div>
 </div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importItemPricesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Item Prices</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url('item_prices/import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">Upload File (CSV, Excel)</label>
+                        <input class="form-control" type="file" id="import_file" name="import_file"
+                            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
+                    </div>
+                    <div class="mb-2">
+                        <a href="{{ url('item_prices/download-sample') }}" class="btn btn-sm btn-outline-info">
+                            <i class="icon-base ri ri-download-2-line"></i> Download Sample Format
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 @section('scripts')
 <script>
     $(function() {
+        // Ensure modal opens even if some scripts stop Bootstrap's data-api handlers
+        $(document).on('click', '#btn-item-prices-import', function() {
+            const el = document.getElementById('importItemPricesModal');
+            if (!el || typeof bootstrap === 'undefined' || !bootstrap.Modal) return;
+            bootstrap.Modal.getOrCreateInstance(el).show();
+        });
+
         $('#itemPriceTable').DataTable({
             responsive: true,
             paging: true,
@@ -58,13 +101,24 @@
             info: true,
             lengthChange: true,
             ajax: "{{ url('item_prices') }}",
-            columns: [
-                { data: 'DT_RowIndex' },
-                { data: 'item_name' },
-                { data: 'art_no' },
-                { data: 'selling_price' },
-                { data: 'unit_price' },
-                { data: 'effective_from' },
+            columns: [{
+                    data: 'DT_RowIndex'
+                },
+                {
+                    data: 'item_name'
+                },
+                {
+                    data: 'art_no'
+                },
+                {
+                    data: 'selling_price'
+                },
+                {
+                    data: 'unit_price'
+                },
+                {
+                    data: 'effective_from'
+                },
                 {
                     data: 'status',
                     orderable: false,

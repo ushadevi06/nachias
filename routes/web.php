@@ -402,6 +402,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('item_prices/delete/{id}', [ItemPriceController::class, 'destroy']);
     Route::post('item_prices/status/{id}', [ItemPriceController::class, 'updateStatus']);
     Route::get('item_prices/export-excel', [ItemPriceController::class, 'exportExcel']);
+    Route::post('item_prices/import', [ItemPriceController::class, 'import']);
+    Route::get('item_prices/download-sample', [ItemPriceController::class, 'downloadSample']);
     Route::get('item_prices/get_art_nos', [ItemPriceController::class, 'getArtNos']);
     Route::get('item_prices/search_items', [ItemPriceController::class, 'searchItems']);
 
