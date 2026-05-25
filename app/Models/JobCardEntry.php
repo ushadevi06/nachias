@@ -161,4 +161,8 @@ class JobCardEntry extends Model
     {
         return $this->belongsTo(FabricType::class, 'fabric_type_id');
     }
+    public function receiptStore()
+    {
+        return $this->belongsTo(StoreType::class, 'receipt_store_id');
+    }
 }

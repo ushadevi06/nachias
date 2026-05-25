@@ -140,6 +140,10 @@
 
                 $fullSleeveRows = [];
                 $halfSleeveRows = [];
+                
+                $receiptStoreName = strtolower($jobCard->receiptStore->store_type_name ?? '');
+                $isFabricStore = str_contains($receiptStoreName, 'fabric');
+                $storeUom = $isFabricStore ? 'MTR' : 'PCS';
 
                 foreach($jobCard->fabricDetails as $detail) {
                     $trimmedArt = trim($detail->art_no ?? '');
@@ -160,7 +164,7 @@
                         ?: $allPOItems->first()
                     ) : null;
 
-                    $uom = ($matchingPOItem && $matchingPOItem->uom) ? $matchingPOItem->uom->uom_code : (($matchingPOItem && $matchingPOItem->rawMaterial && $matchingPOItem->rawMaterial->uom) ? $matchingPOItem->rawMaterial->uom->uom_code : ($artUomMap[$detail->art_no] ?? '-'));
+                    $uom = $storeUom;
                     $style = $matchingPOItem?->style?->style_name ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->style_name ?? '';
                     $brandCode = $jobCard->brand->code ?? '';
                     $brandName = $jobCard->brand->brand_name ?? '';

@@ -15,6 +15,7 @@
     }
 
     $sizes = !empty($dynamicSizes) ? array_values(array_unique($dynamicSizes)) : ['36', '38', '40', '42', '44'];
+    sort($sizes, SORT_NUMERIC);
     $ratios = [];
     foreach ($sizes as $s) {
         $found = false;
@@ -709,19 +710,21 @@
                                                 <div id="no-sleeve-msg" class="text-muted small mt-2">
                                                     <i class="ri ri-information-line me-1"></i> No sleeves added yet.
                                                 </div>
-
-                                                {{-- 
-                                                <hr class="my-3">
-                                                <label class="d-block mb-2 fw-bold text-secondary small">Add Extra Size (Optional)</label>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="text" id="extra_size_input" class="form-control" placeholder="e.g. 36 or 48">
-                                                    <button class="btn btn-dark" type="button" id="add-extra-size-btn">
-                                                        <i class="ri ri-add-line me-1"></i> Add Size
-                                                    </button>
-                                                </div>
-                                                --}}
                                             </div>
                                             @error('sleeve_types') <span class="text-danger">{{ $message }}</span> @enderror
+                                        </div>
+                                        <div class="col-md-6 col-xl-8">
+                                            <div id="size-selector-container" class="p-3 border rounded shadow-sm">
+                                                <label class="d-block mb-2 fw-bold text-primary">Select Sizes</label>
+                                                <div class="d-flex flex-wrap gap-2" id="size-selector">
+                                                    @foreach(['36','38','40','42','44','46','48','50'] as $sz)
+                                                        <label class="btn btn-sm btn-outline-primary size-toggle-btn {{ in_array($sz, $sizes) ? 'active' : '' }}" style="cursor: pointer;">
+                                                            <input type="checkbox" class="size-checkbox d-none" value="{{ $sz }}" 
+                                                                   {{ in_array($sz, $sizes) ? 'checked' : '' }}> {{ $sz }}
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -773,7 +776,7 @@
                                                 <tr class="qty-fs-info-row">
                                                     <td><strong>{{ $fsInfoLabel }}</strong></td>
                                                     <td colspan="{{ count($sizes) }}">
-                                                        <input type="text" name="matrix_items_info[fs]" class="form-control form-control-sm text-center text-muted" value="{{ $sizeStr }}">
+                                                        <input type="text" id="size_ratio_display" name="matrix_items_info[fs]" class="form-control form-control-sm text-center text-muted" value="{{ $sizeStr }}">
                                                     </td>
                                                     <td class=""></td><td class=""></td><td></td><td></td>
                                                 </tr>
@@ -1013,6 +1016,30 @@
             </div>
 
 <style>
+    .size-toggle-btn {
+        border: 1px solid #dee2e6 !important;
+        background-color: #f8f9fa !important;
+        color: #495057 !important;
+        transition: all 0.2s ease-in-out;
+        font-weight: 500;
+    }
+    .size-toggle-btn.active {
+        background-color: #6a1b9a !important;
+        border-color: #6a1b9a !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 6px rgba(98, 0, 238, 0.2) !important;
+    }
+    .size-toggle-btn:hover {
+        background-color: #e9ecef !important;
+        border-color: #ced4da !important;
+        color: #212529 !important;
+    }
+    .size-toggle-btn.active:hover {
+        background-color: #5000d6 !important;
+        border-color: #5000d6 !important;
+        color: #ffffff !important;
+    }
+
     .extra-small { font-size: 0.65rem; }
     .hover-lift:hover { transform: translateY(-2px); color: #333 !important; }
     .hover-glow:hover { box-shadow: 0 8px 25px rgba(98, 0, 238, 0.4) !important; transform: translateY(-1px); opacity: 0.95; }
@@ -2212,29 +2239,41 @@
         $('#add-fs-instance').on('click', function() { addSleeveInstance('fs'); });
         $('#add-hs-instance').on('click', function() { addSleeveInstance('hs'); });
 
-        $('#add-extra-size-btn').on('click', function() {
-            const val = $('#extra_size_input').val().trim();
-            if (val && !currentSizes.includes(val)) {
-                currentSizes.push(val);
-                currentSizes.sort((a, b) => {
-                    const numA = parseFloat(a);
-                    const numB = parseFloat(b);
-                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-                    return String(a).localeCompare(String(b));
+        $(document).on('change', '.size-checkbox', function() {
+            if (sleeveInstances.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sleeve Configuration Required',
+                    text: 'Please add a sleeve configuration (F/S or H/S) first.',
+                    confirmButtonColor: '#6200ee'
                 });
-                $('#extra_size_input').val('');
-                renderCuttingSizeTable(currentSizes, currentRatios);
-                syncMatrixWithMasterTable(true);
-            } else if (currentSizes.includes(val)) {
-                $('#extra_size_input').val('');
+                $(this).prop('checked', false);
+                $(this).closest('label').removeClass('active');
+                return;
             }
-        });
 
-        $('#extra_size_input').on('keypress', function(e) {
-            if (e.which == 13) {
-                e.preventDefault();
-                $('#add-extra-size-btn').click();
+            const size = $(this).val();
+            const checked = $(this).is(':checked');
+            
+            $(this).closest('label').toggleClass('active', checked);
+
+            if (checked) {
+                if (!currentSizes.includes(size)) {
+                    currentSizes.push(size);
+                }
+            } else {
+                currentSizes = currentSizes.filter(s => s !== size);
             }
+
+            currentSizes.sort((a, b) => {
+                const numA = parseFloat(a);
+                const numB = parseFloat(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return String(a).localeCompare(String(b));
+            });
+
+            renderCuttingSizeTable(currentSizes, currentRatios);
+            syncMatrixWithMasterTable(true);
         });
 
         function addSleeveInstance(type) {

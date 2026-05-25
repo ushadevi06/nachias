@@ -1899,7 +1899,7 @@ class JobCardEntryController extends Controller
         $jobCard = JobCardEntry::with([
             'brand',
             'item',
-            'serviceProvider',
+            'serviceProvider', 'receiptStore', 
             'fabricDetails.quantities',
             'purchaseOrder.items.brand',
             'purchaseOrder.items.uom',

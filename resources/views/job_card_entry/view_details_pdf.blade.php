@@ -630,7 +630,7 @@
     <table class="table table-bordered page-break-avoid" style="margin-top: 3pt; font-size: 6pt; table-layout: fixed;">
         <thead>
             <tr class="bg-light fw-bold text-center">
-                <td colspan="7" style="vertical-align: middle;" class="text-start">AUTHORISED SIGNATURES</td>
+                <td colspan="7" class="text-start" style="vertical-align: middle;">AUTHORISED SIGNATURES</td>
                 <td style="width: 10%; vertical-align: middle;">TOTAL MTRS</td>
                 <td style="width: 8%; vertical-align: middle;">{{ (int) $grandTotal }}</td>
                 <td style="width: 16%; vertical-align: middle;" class="text-start">REMARKS:</td>
@@ -638,12 +638,12 @@
         </thead>
         <tbody>
             <tr>
-                <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
-                <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
-                <td class="bg-light fw-bold" style="width: 8%;">PLANING DATE</td>
-                <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
-                <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
-                <td class="bg-light fw-bold" style="width: 8%;">DATE</td>
+                <td class="bg-light fw-bold text-center" style="width: 10%;">SECTION</td>
+                <td class="bg-light fw-bold text-center" style="width: 10%;">INCHARGE SIGN</td>
+                <td class="bg-light fw-bold text-center" style="width: 8%;">PLANING DATE</td>
+                <td class="bg-light fw-bold text-center" style="width: 10%;">SECTION</td>
+                <td class="bg-light fw-bold text-center" style="width: 10%;">INCHARGE SIGN</td>
+                <td class="bg-light fw-bold text-center" style="width: 8%;">DATE</td>
                 <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
                 <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
                 <td class="bg-light fw-bold" style="width: 8%;">DATE</td>
