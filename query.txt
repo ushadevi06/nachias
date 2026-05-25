@@ -260,3 +260,15 @@ AFTER operation_stage_id;
 
 ALTER TABLE production_receipt_items
 ADD COLUMN mrp DECIMAL(15,2) DEFAULT 0 AFTER unit_price;
+
+ALTER TABLE `production_receipt_items`
+ADD COLUMN `mrp` DECIMAL(15,2) NOT NULL DEFAULT 0 AFTER `unit_price`;
+
+ALTER TABLE `sales_order_items`
+ADD COLUMN `commission_percent` DECIMAL(8,2) NOT NULL DEFAULT 0 AFTER `amount`,
+ADD COLUMN `commission_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER `commission_percent`;
+
+ALTER TABLE settings
+ADD COLUMN terms_and_conditions LONGTEXT NULL AFTER address;
+
+ALTER TABLE `sales_orders` CHANGE `terms_conditions` `terms_conditions` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;

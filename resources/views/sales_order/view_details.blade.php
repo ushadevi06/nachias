@@ -113,21 +113,17 @@
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Payment Terms</div>
                             <div class="text-dark small">{{ $salesOrder->payment_terms ?? '-' }}</div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Shipping Method</div>
                             <div class="fw-bold text-dark">{{ $salesOrder->shippingMethod->name ?? '-' }}</div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Transport Mode</div>
                             <div class="fw-bold text-dark">{{ $salesOrder->transportMode->name ?? '-' }}</div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Dispatch From</div>
                             <div class="fw-bold text-dark">{{ $salesOrder->dispatchFrom->name ?? '-' }}</div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Transporter</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->transporter_name ?? '-' }}</div>
                         </div>
                     </div>
                 </div>
@@ -145,10 +141,14 @@
                                 <tr>
                                     <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="80">S.No</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold">Item Description</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold">Barcode</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Color/Size</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Qty/UOM</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">MRP</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Amount</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">MRP</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-center">Selling Price</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Commission %</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Commission Amount</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -168,11 +168,6 @@
                                                 
                                                 $displayName = array_filter([$brand, $style]);
                                                 $displayName = implode(' - ', $displayName);
-
-                                                // if (($displayName == '-' || empty($displayName) || $item->stockEntryItem) && $item->art_no) {
-                                                //     $displayName = $item->art_no;
-                                                // }
-                                                // {{ dd($displayName) }}
                                             @endphp
                                             <div class="fw-medium text-dark">{{ $displayName }}</div>
                                             @if($sleeve)
@@ -181,6 +176,9 @@
                                             @if($item->art_no)
                                                 <div class="text-muted" style="font-size: 11px;">Art No: {{ $item->art_no }}</div>
                                             @endif
+                                        </td>
+                                        <td>
+                                            <div class="badge bg-light text-dark border fw-medium">{{ $item->sku ?? '-' }}</div>
                                         </td>
                                         <td class="text-center">
                                             <div class="small fw-bold">{{ $item->color->color_name ?? '-' }}</div>
@@ -192,7 +190,16 @@
                                             </span>
                                         </td>
                                         <td class="text-end">
+                                            <div>₹{{ number_format($item->rate, 2) }}</div>
+                                        </td>
+                                        <td class="text-end">
                                             <div>₹{{ number_format($item->mrp, 2) }}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div>₹{{ number_format($item->commission_percent, 2) }}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div>₹{{ number_format($item->commission_amount, 2) }}</div>
                                         </td>
                                         <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
                                     </tr>
@@ -223,6 +230,32 @@
                                 <div class="col-12 mt-3">
                                     <div class="text-muted text-uppercase small fw-bold mb-1">Internal Remarks</div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->internal_remarks ?? '-' }}</p>
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <div class="text-muted text-uppercase small fw-bold mb-1">Pre - GST</div>
+                                    @php $preGstCharges = $salesOrder->charges->where('tax_type', 'Pre-GST'); @endphp
+                                    @if($preGstCharges->count() > 0)
+                                        @foreach($preGstCharges as $charge)
+                                            <div class="col-12 d-flex justify-content-between align-items-center border-bottom pb-3 mb-1">
+                                                <span class="text-muted small fw-bold text-uppercase">{{ $charge->charge_name }}</span>
+                                                <span class="fw-bold text-dark fs-6">₹{{ number_format($charge->charge_amount, 2) }}</span>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="col-12 text-muted small fst-italic py-2">No pre-GST charges applied.</div>
+                                    @endif
+                                    <div class="text-muted text-uppercase small fw-bold mb-1">Post - GST</div>
+                                    @php $postGstCharges = $salesOrder->charges->where('tax_type', 'Post-GST'); @endphp
+                                    @if($postGstCharges->count() > 0)
+                                        @foreach($postGstCharges as $charge)
+                                            <div class="col-12 d-flex justify-content-between align-items-center border-bottom pb-3 mb-1">
+                                                <span class="text-muted small fw-bold text-uppercase">{{ $charge->charge_name }}</span>
+                                                <span class="fw-bold text-dark fs-6">₹{{ number_format($charge->charge_amount, 2) }}</span>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="col-12 text-muted small fst-italic py-2">No post-GST charges applied.</div>
+                                    @endif
                                 </div>
                                 @if($salesOrder->attachment)
                                 <div class="col-12 mt-3">

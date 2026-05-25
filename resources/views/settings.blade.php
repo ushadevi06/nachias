@@ -4,17 +4,14 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card">
                 <div class="card-body">
                     <div class="card-header-box">
                         <h4>Settings</h4>
                     </div>
-                    @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    @endif
                     <form action="{{ url('settings/update') }}" method="POST" enctype="multipart/form-data" class="common-form">
                         @csrf
                         <div class="row g-4">
@@ -92,7 +89,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-md-4 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <select id="state_id" name="state_id" class="select2 form-select @error('state_id') is-invalid @enderror" data-placeholder="Select State">
                                         <option value="">Select State</option>
@@ -107,7 +104,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-md-4 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <select id="city_id" name="city_id" class="select2 form-select @error('city_id') is-invalid @enderror" data-placeholder="Select City">
                                         <option value="">Select City</option>
@@ -122,7 +119,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-md-4 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <textarea class="form-control h-px-100 @error('address') is-invalid @enderror" id="address" name="address" placeholder="Enter Address">{{ old('address', $setting->address ?? '') }}</textarea>
                                     <label for="address">Address *</label>
@@ -132,7 +129,7 @@
                                 </div>
                             </div>
                             
-                            <div class="col-md-6 col-xl-4">
+                            <div class="col-md-4 col-xl-3">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('zip_code') is-invalid @enderror" id="zip_code" placeholder="Enter Zip Code" name="zip_code" value="{{ old('zip_code', $setting->zip_code ?? '') }}">
                                     <label for="zip_code">Zip Code *</label>
@@ -141,7 +138,7 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-lg-12">
+                            {{-- <div class="col-lg-12">
                                 <hr>
                             </div>
 
@@ -158,17 +155,6 @@
                                     @enderror
                                 </div>
                             </div>
-                            
-                            {{-- <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('purchase_invoice_prefix') is-invalid @enderror" id="purchase_invoice_prefix" placeholder="Inv Prefix (e.g., INV/24-25/)" name="purchase_invoice_prefix" value="{{ old('purchase_invoice_prefix', $setting->purchase_invoice_prefix ?? '') }}">
-                                    <label for="purchase_invoice_prefix">Purchase Invoice Prefix</label>
-                                    @error('purchase_invoice_prefix')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div> --}}
-                            
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('so_prefix') is-invalid @enderror" id="so_prefix" placeholder="SO Prefix (e.g., SO/24-25/)" name="so_prefix" value="{{ old('so_prefix', $setting->so_prefix ?? '') }}">
@@ -177,7 +163,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                            </div>
+                            </div>  --}}
 
                             <div class="col-lg-12">
                                 <hr>
@@ -361,6 +347,22 @@
                                     <input class="form-control timepicker @error('closing_time') is-invalid @enderror" id="closing_time" name="closing_time" placeholder="Closing Time" value="{{ old('closing_time', $setting->closing_time ?? '') }}" />
                                     <label for="closing_time">Closing Time</label>
                                     @error('closing_time')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-lg-12">
+                                <hr>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <h6>Other:</h6>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-floating form-floating-outline">
+                                    <textarea class="form-control h-px-100 @error('terms_and_conditions') is-invalid @enderror" id="terms_and_conditions" name="terms_and_conditions" placeholder="Enter Terms and Conditions">{{ old('terms_and_conditions', $setting->terms_and_conditions ?? '') }}</textarea>
+                                    <label for="terms_and_conditions">Terms and Conditions *</label>
+                                    @error('terms_and_conditions')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>

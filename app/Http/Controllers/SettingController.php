@@ -68,6 +68,7 @@ class SettingController extends Controller
             'branch_location' => 'nullable|string|max:255',
             'account_no' => 'nullable|string|max:50',
             'ifsc_code' => 'nullable|string|max:20',
+            'terms_and_conditions' => 'required|string',
         ];
 
         $messages = [
@@ -88,6 +89,7 @@ class SettingController extends Controller
             'state_id' => $request->state_id,
             'city_id' => $request->city_id,
             'address' => $request->address,
+            'terms_and_conditions' => $request->terms_and_conditions,
             'zip_code' => $request->zip_code,
             'cgst' => $request->cgst ?? 0,
             'sgst' => $request->sgst ?? 0,

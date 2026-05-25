@@ -13,7 +13,7 @@ class PurchaseReportController extends Controller
     {
         if ($request->ajax() || $request->has('fetch_report')) {
             $purchaseOrders = $this->getPurchaseOrders(1, $request);
-            $stockData = $this->getStockData(1, $request); // Store Category 1 is Fabric
+            $stockData = $this->getStockData(1, $request); 
             
             $html = [
                 'po-report' => view('reports.purchase_reports._po_supplier_wise', [
@@ -55,7 +55,7 @@ class PurchaseReportController extends Controller
     {
         if ($request->ajax() || $request->has('fetch_report')) {
             $purchaseOrders = $this->getPurchaseOrders(2, $request);
-            $stockData = $this->getStockData(2, $request); // Store Category 2 is Accessories
+            $stockData = $this->getStockData(2, $request); 
             
             $html = [
                 'po-report' => view('reports.purchase_reports._po_supplier_wise', [
@@ -93,7 +93,6 @@ class PurchaseReportController extends Controller
         return view('reports.purchase_reports.accessories_store', compact('suppliers'));
     }
 
-    // General supplier performance (used internally)
     private function buildSupplierPerformanceData($suppliers, Request $request)
     {
         $performanceData = [];
@@ -132,12 +131,9 @@ class PurchaseReportController extends Controller
         return $performanceData;
     }
 
-    // Fabric store (store type 1)
     private function getFabricSupplierPerformanceData(Request $request)
     {
-        $query = Supplier::with(['purchaseOrders', 'debitNotes', 'storeType'])
-            ->where('status', 'Active')
-            ->whereHas('storeType', function($q) { $q->where('id', 1); }); // fabric store type
+        $query = Supplier::with(['purchaseOrders', 'debitNotes', 'storeType'])->where('status', 'Active')->whereHas('storeType', function($q) { $q->where('id', 1); }); 
         if ($request->supplier_id) {
             $query->where('id', $request->supplier_id);
         }
@@ -145,12 +141,11 @@ class PurchaseReportController extends Controller
         return $this->buildSupplierPerformanceData($suppliers, $request);
     }
 
-    // Accessories store (store type 2)
     private function getAccessoriesSupplierPerformanceData(Request $request)
     {
         $query = Supplier::with(['purchaseOrders', 'debitNotes', 'storeType'])
             ->where('status', 'Active')
-            ->whereHas('storeType', function($q) { $q->where('id', 2); }); // accessories store type
+            ->whereHas('storeType', function($q) { $q->where('id', 2); }); 
         if ($request->supplier_id) {
             $query->where('id', $request->supplier_id);
         }
@@ -241,8 +236,7 @@ class PurchaseReportController extends Controller
 
     private function getStockData($storeCategoryId, Request $request)
     {
-        $query = \App\Models\StockEntryItem::with(['rawMaterial', 'item.brand', 'brand', 'style', 'color', 'fabricType', 'fabricWidth'])
-            ->where('store_category_id', $storeCategoryId);
+        $query = \App\Models\StockEntryItem::with(['rawMaterial', 'item.brand', 'brand', 'style', 'color', 'fabricType', 'fabricWidth'])->where('store_category_id', $storeCategoryId);
 
         if ($request->supplier_id) {
             $query->whereHas('grnEntryItem.grnEntry', function($q) use ($request) {
@@ -284,6 +278,7 @@ class PurchaseReportController extends Controller
                 }
 
                 $grouped[$key] = [
+                    'raw_material_id' => $item->raw_material_id ?: 0,
                     'brand' => $brandName,
                     'item_name' => $itemName,
                     'style' => $item->style ? $item->style->style_name : 'N/A',
@@ -295,6 +290,8 @@ class PurchaseReportController extends Controller
                     'inward' => 0,
                     'outward' => 0,
                     'closing' => 0,
+                    'avg_cost'        => 0,
+                    'closing_cost'    => 0,
                 ];
             }
 
@@ -307,11 +304,36 @@ class PurchaseReportController extends Controller
                 $grouped[$key]['outward'] += $item->qty_out;
             }
         }
+        $rawMaterialIds = collect($grouped)->pluck('raw_material_id')->filter()->unique()->toArray();
+        $avgCosts = [];
+        if (!empty($rawMaterialIds)) {
+            $costQuery = \App\Models\PurchaseInvoiceItem::whereIn('raw_material_id', $rawMaterialIds);
 
-        foreach ($grouped as &$group) {
-            $group['closing'] = $group['opening'] + $group['inward'] - $group['outward'];
+            if ($request->to_date) {
+                $costQuery->whereHas('purchaseInvoice', function($q) use ($request) {
+                    $q->whereDate('invoice_date', '<=', date('Y-m-d', strtotime($request->to_date)));
+                });
+            }
+
+            $costItems = $costQuery->select(
+                'raw_material_id',
+                \Illuminate\Support\Facades\DB::raw('SUM(amount) as total_amount'),
+                \Illuminate\Support\Facades\DB::raw('SUM(quantity) as total_qty')
+            )->groupBy('raw_material_id')->get();
+
+            foreach ($costItems as $c) {
+                $avgCosts[$c->raw_material_id] = $c->total_qty > 0
+                    ? (float) $c->total_amount / (float) $c->total_qty
+                    : 0;
+            }
         }
 
+        foreach ($grouped as &$group) {
+            $group['closing']      = $group['opening'] + $group['inward'] - $group['outward'];
+            $group['avg_cost']     = $avgCosts[$group['raw_material_id']] ?? 0;
+            $group['closing_cost'] = $group['closing'] * $group['avg_cost'];
+        }
+        unset($group);
         return array_values(array_filter($grouped, function($g) {
             return $g['opening'] != 0 || $g['inward'] != 0 || $g['outward'] != 0 || $g['closing'] != 0;
         }));

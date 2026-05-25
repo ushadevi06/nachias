@@ -266,23 +266,9 @@
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
                             @php
-                                $brand = $item->item->brand->name ?? $item->brandCategory->name ?? '-';
-                                $style = $item->item->style->name ?? $item->item->name ?? '';
-                                
-                                if ($brand == '-' && $item->stockEntryItem) {
-                                    $brand = $item->stockEntryItem->finished_item_code;
-                                }
-                                
-                                $displayName = array_filter([$brand, $style]);
-                                $displayName = implode(' - ', $displayName);
-                                
-                                $sleeveStr = '';
-                                if ($item->sleeve) {
-                                    $sleeve = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
-                                    $sleeveStr = ' ('.$sleeve.')';
-                                }
+                                $item_code = $item->stockEntryItem?->finished_item_code ?? '';
                             @endphp
-                            {{ $displayName }}{{ $sleeveStr }}
+                            {{ $item_code }}
                         </td>
                         <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->size->size ?? $item->size_id ?? '-' }}</td>

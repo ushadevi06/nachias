@@ -191,9 +191,8 @@ class SalesOrderController extends Controller
                 'shipping_address' => 'nullable|string|regex:/^[^<>]*$/',
                 'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
                 'transporter_name' => 'nullable|string|max:50',
-                'freight_type' => 'nullable|in:Paid,To Pay',
-                'freight_amount' => 'nullable|numeric|min:0',
-                'transport_gst_no' => 'nullable|string|max:50',
+                //'freight_type' => 'nullable|in:Paid,To Pay',
+                //'freight_amount' => 'nullable|numeric|min:0',
                 'terms_conditions' => 'nullable|string|regex:/^[^<>]*$/',
             ];
 
@@ -291,9 +290,8 @@ class SalesOrderController extends Controller
                     'shipping_address' => $request->shipping_address,
                     'payment_terms' => $request->payment_terms,
                     'transporter_name' => $request->transporter_name,
-                    'freight_type' => $request->freight_type,
-                    'freight_amount' => $request->freight_amount ?? 0,
-                    'transport_gst_no' => $request->transport_gst_no,
+                    //'freight_type' => $request->freight_type,
+                    //'freight_amount' => $request->freight_amount ?? 0,
                     'terms_conditions' => $request->terms_conditions,
                     'apply_box_discount' => $request->apply_box_discount == '1',
                 ];

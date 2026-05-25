@@ -165,7 +165,16 @@
                     ) : null;
 
                     $uom = $storeUom;
-                    $style = $matchingPOItem?->style?->style_name ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->style_name ?? '';
+                    //$style = $matchingPOItem?->style?->style_name ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->style_name ?? '';
+                    $style = '';
+                    if ($detail->art_no) {
+                        $stockEntryItem = \App\Models\StockEntryItem::with('style')->where('art_no', $detail->art_no)->whereNotNull('style_id')->first();
+                        $style = $stockEntryItem?->style?->code ?? ''; 
+                    }
+                    if (!$style) {
+                       $style = $matchingPOItem?->style?->code ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->code ?? '';
+                    }
+
                     $brandCode = $jobCard->brand->code ?? '';
                     $brandName = $jobCard->brand->brand_name ?? '';
                     $artNo = $detail->art_no;

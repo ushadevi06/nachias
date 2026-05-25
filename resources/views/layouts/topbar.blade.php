@@ -687,7 +687,7 @@ $isSuper = $user->id == 1;
                                     </li>
                                 @endif
 
-                                @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime-bonus') || $user->can('view salary-calculation') || $user->can('view payslip-generation') || $user->can('view payroll-reports')))
+                                @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime') || $user->can('view monthly-payroll') || $user->can('view payroll-reports')))
                                     <li
                                         class="menu-item {{ (request()->is('attendances*') || request()->is('leave*') || request()->is('overtime*') || request()->is('salary_calculation*') || request()->is('payslip*') || request()->is('payroll_reports*')) ? 'active' : '' }}">
 
@@ -711,32 +711,32 @@ $isSuper = $user->id == 1;
                                                     </a>
                                                 </li>
                                             @endif
-
-                                            @if($isSuper || $user->can('view overtime-bonus'))
+                                            @if($isSuper || $user->can('view overtime'))
                                                 <li class="menu-item {{ request()->is('overtime*') ? 'active' : '' }}">
                                                     <a href="{{ url('overtime') }}" class="menu-link">
                                                         <div>Overtime</div>
                                                     </a>
                                                 </li>
                                             @endif
-
-                                            @if($isSuper || $user->can('view salary-calculation'))
-                                                <li
-                                                    class="menu-item {{ request()->is('salary_calculation*') ? 'active' : '' }}">
-                                                    <a href="{{ url('salary_calculation') }}" class="menu-link">
-                                                        <div>Salary Calculation</div>
+                                            @if($isSuper || $user->can('view monthly-payroll'))
+                                                <li class="menu-item
+                                                    {{ request()->is('monthly_payroll*') ||
+                                                    request()->is('add_monthly_payroll*') ||
+                                                    request()->is('view_monthly_payroll*')
+                                                    ? 'active' : '' }}">
+                                                    <a href="{{ url('monthly_payroll') }}"
+                                                    class="menu-link">
+                                                        <div>Monthly Payroll</div>
                                                     </a>
                                                 </li>
                                             @endif
-
-                                            @if($isSuper || $user->can('view payslip-generation'))
+                                            {{-- @if($isSuper || $user->can('view payslip-generation'))
                                                 <li class="menu-item {{ request()->is('payslip*') ? 'active' : '' }}">
                                                     <a href="{{ url('payslip') }}" class="menu-link">
                                                         <div>Payslip Generation</div>
                                                     </a>
                                                 </li>
-                                            @endif
-
+                                            @endif --}}
                                             @if($isSuper || $user->can('view payroll-reports'))
                                                 <li class="menu-item {{ request()->is('payroll_reports*') ? 'active' : '' }}">
                                                     <a href="{{ url('payroll_reports') }}" class="menu-link">

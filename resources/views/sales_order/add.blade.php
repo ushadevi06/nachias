@@ -78,7 +78,6 @@
                                 </div>
                                 @error('customer_po_ref')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                             </div>
-
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="store_id" name="store_id" class="select2 form-select @error('store_id') is-invalid @enderror" data-placeholder="Select Store">
@@ -92,30 +91,26 @@
                                 @error('store_id')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-4">
-                                <div class="row gx-2">
-                                    <div class="col-6">
-                                        <div class="form-floating form-floating-outline">
-                                            <select id="zone_id" name="zone_id" class="select2 form-select" data-placeholder="Select Zone">
-                                                <option value="">Select Zone</option>
-                                                @foreach($zones as $zone)
-                                                <option value="{{ $zone->id }}" {{ old('zone_id', $salesOrder->zone_id ?? '') == $zone->id ? 'selected' : '' }}>{{ $zone->zone_name }}</option>
-                                                @endforeach
-                                            </select>
-                                            <label for="zone_id">Select Zone</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="form-floating form-floating-outline">
-                                            <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Agent/Executive">
-                                                <option value="">Select Sales Agent/Executive</option>
-                                                @foreach($sales_agent as $agent)
-                                                <option value="{{ $agent->id }}" {{ old('agent_id', $salesOrder->agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }}({{ $agent->code }})</option>
-                                                @endforeach
-                                            </select>
-                                            <label for="agent_id">Sales Agent/Executive</label>
-                                        </div>
-                                    </div>
+                                <div class="form-floating form-floating-outline">
+                                    <select id="zone_id" name="zone_id" class="select2 form-select" data-placeholder="Select Zone">
+                                        <option value="">Select Zone</option>
+                                        @foreach($zones as $zone)
+                                        <option value="{{ $zone->id }}" {{ old('zone_id', $salesOrder->zone_id ?? '') == $zone->id ? 'selected' : '' }}>{{ $zone->zone_name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="zone_id">Select Zone</label>
                                 </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Agent/Executive">
+                                        <option value="">Select Sales Agent/Executive</option>
+                                        @foreach($sales_agent as $agent)
+                                        <option value="{{ $agent->id }}" {{ old('agent_id', $salesOrder->agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }}({{ $agent->code }})</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="agent_id">Sales Agent/Executive</label>
+                                </div> 
                             </div>
                             <div class="col-md-4">
                                 <div class="input-group input-group-merge">
@@ -198,10 +193,7 @@
                                     <label for="dispatch_from_id">Dispatch From</label>
                                 </div>
                             </div>
-
-
-
-                            <div class="col-md-4">
+                            {{-- <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="freight_type" name="freight_type" class="select2 form-select" data-placeholder="Freight Type">
                                         <option value="">Select Freight Type</option>
@@ -212,21 +204,12 @@
                                     <label for="freight_type">Freight Type</label>
                                 </div>
                             </div>
-
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" class="form-control" id="freight_amount" name="freight_amount" placeholder="Freight Amount" value="{{ old('freight_amount', $salesOrder->freight_amount ?? '0') }}" min="0" step="0.01" {{ old('freight_type', $salesOrder->freight_type ?? '') === 'Paid' ? '' : 'readonly' }}>
                                     <label for="freight_amount">Freight Amount</label>
                                 </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control" id="transport_gst_no" name="transport_gst_no" placeholder="Transport GST No" value="{{ old('transport_gst_no', $salesOrder->transport_gst_no ?? '') }}">
-                                    <label for="transport_gst_no">Transport GST No</label>
-                                </div>
-                            </div>
-
+                            </div> --}}
                         </div>
                     </div>
                 </div>
@@ -730,15 +713,21 @@
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
-                                            <textarea class="form-control" id="terms_conditions" name="terms_conditions" rows="3" placeholder="Terms & Conditions">{{ old('terms_conditions', $salesOrder->terms_conditions ?? '') }}</textarea>
+                                            <textarea class="form-control h-px-100" id="terms_conditions" name="terms_conditions" rows="3" placeholder="Terms & Conditions">{{ old('terms_conditions', $salesOrder->terms_conditions ?? $web_settings->terms_and_conditions ?? '') }}</textarea>
                                             <label for="terms_conditions">Terms & Conditions</label>
                                         </div>
+                                        @error('terms_conditions')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
                                             <textarea class="form-control" id="internal_remarks" name="internal_remarks" rows="2" placeholder="Internal Notes">{{ old('internal_remarks', $salesOrder->internal_remarks ?? '') }}</textarea>
                                             <label for="internal_remarks">Internal Notes</label>
                                         </div>
+                                        @error('internal_remarks')
+                                            <div class="text-danger mt-1">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
@@ -1411,14 +1400,14 @@ $(document).ready(function () {
         }
     });
 
-    $('#freight_type').on('change', function() {
-        if ($(this).val() === 'Paid') {
-            $('#freight_amount').prop('readonly', false);
-        } else {
-            $('#freight_amount').val('0').trigger('input').prop('readonly', true);
-        }
-        calculateTotals();
-    });
+    // $('#freight_type').on('change', function() {
+    //     if ($(this).val() === 'Paid') {
+    //         $('#freight_amount').prop('readonly', false);
+    //     } else {
+    //         $('#freight_amount').val('0').trigger('input').prop('readonly', true);
+    //     }
+    //     calculateTotals();
+    // });
 
     $('#freight_amount').on('input', function() {
         calculateTotals();
@@ -1590,9 +1579,9 @@ $(document).ready(function () {
         }
         let finalTotal = taxableAmount + taxAmount + postGstCharges;
         
-        if ($('#freight_type').val() === 'Paid') {
-            finalTotal += parseFloat($('#freight_amount').val()) || 0;
-        }
+        // if ($('#freight_type').val() === 'Paid') {
+        //     finalTotal += parseFloat($('#freight_amount').val()) || 0;
+        // }
 
         const roundOffVal = parseFloat($('#round_off').val()) || 0;
         const roundOffType = $('input[name="round_off_type"]:checked').val();

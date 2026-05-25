@@ -30,6 +30,17 @@
             </tr>
             @endforeach
         </tbody>
+        @if(count($purchaseOrders) > 0)
+        <tfoot>
+            <tr class="fw-bold" style="background: #f1f5f9;">
+                <td colspan="3" class="text-end">TOTAL</td>
+                <td>{{ number_format(collect($purchaseOrders)->sum('total_ordered'), 2) }}</td>
+                <td>{{ number_format(collect($purchaseOrders)->sum('total_received'), 2) }}</td>
+                <td>{{ number_format(collect($purchaseOrders)->sum('total_pending'), 2) }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+        @endif
     </table>
 </div>
 

@@ -962,13 +962,11 @@ class JobCardEntryController extends Controller
                             return $item->job_card_article_matrix_id == $matrixId;
                         });
 
-                        // 1. Revert previous deduction if updating
                         if ($existingItem) {
                             $oldQtyToDeduct = floatval($existingItem->qty_used ?? 0) + floatval($existingItem->qty_adjusted ?? 0);
                             if ($oldQtyToDeduct > 0) {
                                 $qtyToRevert = $oldQtyToDeduct;
 
-                                // Try to revert from the exact StockEntryItem if stored
                                 if ($existingItem->stock_entry_item_id) {
                                     $stockItem = StockEntryItem::find($existingItem->stock_entry_item_id);
                                     if ($stockItem) {
@@ -980,7 +978,6 @@ class JobCardEntryController extends Controller
                                 }
 
                                 if ($qtyToRevert > 0 && $artNo) {
-                                    // Fallback: revert remaining from other items of same art_no
                                     $revQuery = StockEntryItem::whereRaw('qty_out > 0')->orderBy('id', 'desc');
                                     if ($jobCard->purchase_order_id)
                                         $revQuery->whereIn('grn_entry_item_id', $grnItemIds);
@@ -1000,7 +997,6 @@ class JobCardEntryController extends Controller
                             }
                         }
 
-                        // 2. Perform new deduction
                         $unitPrice = 0;
                         $firstStockItemId = null;
                         if ($artNo && $totalToDeduct > 0) {
@@ -1056,12 +1052,11 @@ class JobCardEntryController extends Controller
                         $totalCost = $totalToDeduct * $unitPrice;
                         $costPerPc = ($producedQty > 0) ? ($totalCost / $producedQty) : 0;
 
-                        // 3. Generate Barcode and QR Data
                         preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $artNo, $matches);
                         $numericBase = $matches[2] ?? '';
                         $suffix = $matches[3] ?? '1';
                         $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
-                        $formattedSize = "00"; // Raw materials usually don't have size-wise barcodes here
+                        $formattedSize = "00"; 
                         $sleeveCode = "00";
 
                         $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
@@ -1105,11 +1100,9 @@ class JobCardEntryController extends Controller
                             JobCardIssueItem::create($data);
                         }
 
-                        // 4. Automatically create/update BarcodeMaster records for all planned sizes/sleeves
                         $matrixQuantities = JobCardMatrixQuantity::where('job_card_fabric_detail_id', $matrixId)->get();
                         $brand = $jobCard->brand;
 
-                        // Get style from the stock deduction chain (Stock -> GRN -> PI -> PO)
                         $style = null;
                         if ($firstStockItemId) {
                             $stockItem = StockEntryItem::with(['grnEntryItem.purchaseInvoiceItem.purchaseOrderItem.style'])->find($firstStockItemId);

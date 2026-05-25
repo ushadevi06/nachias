@@ -37,6 +37,7 @@ class Setting extends Model
         'branch_location',
         'account_no',
         'ifsc_code',
+        'terms_and_conditions',
     ];
 
     protected $casts = [
