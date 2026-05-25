@@ -409,6 +409,8 @@ class SalesOrderController extends Controller
                         'qty' => $item['qty'],
                         'rate' => $item['rate'] ?? 0,
                         'mrp' => $item['mrp'] ?? 0,
+                        'commission_percent' => $item['commission_percent'] ?? 0,
+                        'commission_amount'  => $item['commission_amount'] ?? 0,
                         'amount' => $item['qty'] * ($item['mrp'] ?? 0),
                         'sleeve' => isset($item['sleeve']) ? (is_array($item['sleeve']) ? $item['sleeve'] : [$item['sleeve']]) : null,
                         'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? (int)$item['stock_entry_item_id'] : null,

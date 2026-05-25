@@ -114,6 +114,20 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="order_type" name="order_type" class="select2 form-select @error('order_type') is-invalid @enderror" data-placeholder="Select Order Type">
+                                        <option value="">Select Order Type</option>
+                                        @foreach(['Core Order', 'Repeat Order', 'New Order', 'Sample Order', 'Urgent Order'] as $type)
+                                            <option value="{{ $type }}" {{ old('order_type', $purchaseOrder->order_type ?? '') == $type ? 'selected' : '' }}>{{ $type }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="order_type">Order Type <span class="text-danger">*</span></label>
+                                </div>
+                                @error('order_type')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -159,6 +159,7 @@ class ProductionReceiptController extends Controller
 
             DB::beginTransaction();
             try {
+
                 $data = [
 
                     'job_card_id' => $request->job_card_id,
@@ -203,7 +204,6 @@ class ProductionReceiptController extends Controller
                 if (!$hasQty) {
                     throw new \Exception('Please enter Qty To Receive for at least one item.');
                 }
-
                 if ($request->has('items') && is_array($request->items)) {
                     foreach ($request->items as $itemData) {
                         $scanQty = floatval($itemData['scan_qty'] ?? 0);
@@ -221,7 +221,6 @@ class ProductionReceiptController extends Controller
                             $balanceQty = $maxAllowed - $qtyToReceive;
                             $unitPrice = floatval($itemData['unit_price'] ?? 0);
                             $resolvedArtNo = $this->resolveReceiptItemArtNo($jobCardForArtResolution, $itemData);
-
                             ProductionReceiptItem::create([
                                 'production_receipt_id' => $receipt->id,
                                 'item_id' => $itemData['item_id'] ?? null,
@@ -233,6 +232,7 @@ class ProductionReceiptController extends Controller
                                 'description' => $itemData['description'] ?? '',
                                 'size_variant' => $itemData['size_variant'] ?? '',
                                 'unit_price' => $unitPrice,
+                                'mrp' => floatval($itemData['mrp'] ?? 0), 
                                 'total_value' => $qtyToReceive * $unitPrice,
                                 'uom_id' => $itemData['uom_id'] ?? null,
                                 'uom_code' => $itemData['uom_code'] ?? '',
@@ -530,6 +530,7 @@ class ProductionReceiptController extends Controller
             return $row?->store_category_id ?? null;
         };
 
+
         $allMaterials = $jobCard->fabricDetails->values();
         $fabricDetails = $allMaterials->filter(function ($fd) use ($getStoreCategoryIdForArtNo) {
             return $getStoreCategoryIdForArtNo($fd->art_no) === 1;
@@ -582,7 +583,7 @@ class ProductionReceiptController extends Controller
             ->when($excludeReceiptId, function ($q) use ($excludeReceiptId) {
             return $q->where('id', '!=', $excludeReceiptId);
         })->pluck('id');
-
+        
         $existingReceiptsItems = ProductionReceiptItem::whereIn('production_receipt_id', $existingReceiptIds)
             ->get()
             ->groupBy(function ($item) {
@@ -749,25 +750,38 @@ class ProductionReceiptController extends Controller
 
                 if (!isset($tempGrouped[$key])) {
                     $pricing = $calculateItemUnitPrice($normalizedArtNo, $size, $sleeve);
-                    $unitPrice = $pricing['total_cost'];
-                    
-                    $brandCode = ($jobCard->brand ? $jobCard->brand->code : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->code : ''));
-                    $brandName = ($jobCard->brand ? $jobCard->brand->brand_name : ($jobCard->item && $jobCard->item->brand ? $jobCard->item->brand->brand_name : ''));
-                    
-                    $styleCode = ($jobCard->item && $jobCard->item->style ? $jobCard->item->style->code : $fallbackStyleCode);
-                    $styleName = ($jobCard->item && $jobCard->item->style ? $jobCard->item->style->style_name : $fallbackStyleName);
+                    $brandCode = $jobCard->brand ? $jobCard->brand->code : '';
+                    $brandName = $jobCard->brand ? $jobCard->brand->brand_name : '';
+
+                    $stockStyle = \DB::table('stock_entry_items')
+                        ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
+                        ->join('styles', 'stock_entry_items.style_id', '=', 'styles.id')
+                        ->where('grn_entry_items.art_no', $normalizedArtNo)
+                        ->select(
+                            'styles.code as style_code',
+                            'styles.style_name'
+                        )
+                        ->first();
+                    $styleCode = $stockStyle->style_code ?? $fallbackStyleCode;
+                    $styleName = $stockStyle->style_name ?? $fallbackStyleName;
+                    $itemCode = trim($brandCode.'-'.$styleCode.'-'.$sleeve,'-');
+                    $itemName = $brandName . ' ' . $styleName . ' ' . $sleeve;
+                    $itemPrice = \App\Models\ItemPrice::where('finished_item_code', $itemCode)->first();
+                    $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
+                    $mrp = $itemPrice ? $itemPrice->selling_price : $pricing['total_cost'];
 
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
-                        'item_code' => trim($brandCode . ' - ' . $styleCode . ' - ' . $sleeve, ' - '),
+                        'item_code' => $itemCode,
                         'service_name' => $serviceName,
                         'sleeve' => $sleeve,
                         'size' => $size,
-                        'item_name' => $serviceName,
+                        'item_name' => $itemName,
                         'art_no' => $normalizedArtNo ?: null,
                         'description' => trim($brandName . ' ' . $styleName . ' ' . $sleeve),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
+                        'mrp' => floatval($mrp),
                         'uom_id' => $jobCard->item ? $jobCard->item->uom_id : null,
                         'uom_code' => 'PCS',
                         'ordered_qty' => 0,
@@ -936,7 +950,7 @@ class ProductionReceiptController extends Controller
         foreach ($receipt->items as $item) {
             $item->resolved_art_no = $this->resolveReceiptItemArtNo($receipt->jobCard, $item->toArray());
         }
-
+        
         return view('production_receipts.view_details', compact('receipt'));
     }
 
@@ -962,7 +976,9 @@ class ProductionReceiptController extends Controller
         }
 
         $is_print = true;
-        return view('production_receipts.pdf', compact('receipt', 'is_print'));
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('production_receipts.pdf', compact('receipt', 'is_print'));
+        $pdf->setPaper('A4', 'landscape');
+        return $pdf->stream('production_receipt.pdf');
     }
 
     public function downloadPdf($id)

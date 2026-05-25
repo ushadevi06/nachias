@@ -134,6 +134,7 @@
                                         <th>Color</th>
                                         <th>Size</th>
                                         <th>Unit Price</th>
+                                        <th>MRP</th>
                                         <th>Qty Ordered</th>
                                         <th>Qty Received</th>
                                         <th>Qty Balance</th>
@@ -179,7 +180,7 @@
                         </tbody>
                         <tfoot class="border-top bg-light">
                             <tr>
-                                <th colspan="5" class="text-end pe-3 py-3 fs-6">Grand Total (Per Shirt)</th>
+                                <th colspan="5" class="text-end pe-3 py-3 fs-6">Grand Total (Per Shirt) <br>Estimate Cost </th>
                                 <th class="text-end pe-3 py-3 fs-6 text-primary" id="consumption-footer-total">₹0.00</th>
                             </tr>
                         </tfoot>
@@ -217,7 +218,7 @@
                     '<td>' + (item.item_code || '') + '<input type="hidden" name="items[' + index + '][item_name]" value="' + (item.item_name || '') + '"></td>' +
                     '<td>' + (item.art_no || '-') + '</td>' +
                     '<td>' + 
-                        (item.description || '') + ' (' + (item.sleeve || '') + ') ' +
+                        (item.description || '') + 
                         '<button type="button" class="btn btn-sm btn-link p-0 ms-1 btn-show-consumption" data-index="' + index + '" title="View Consumption Details">' +
                         '<i class="icon-base ri ri-information-line fs-5"></i></button>' +
                     '</td>' +
@@ -229,6 +230,11 @@
                         '</button>' +
                         '<input type="hidden" class="unit-price" name="items[' + index + '][unit_price]" value="' + parseFloat(item.unit_price || 0).toFixed(2) + '">' +
                     '</td>' +
+                    '<td class="text-end">' + 
+                        '<button type="button" class="btn btn-sm btn-label-secondary p-1" data-index="' + index + '">' +
+                            parseFloat(item.mrp || 0).toFixed(2) + 
+                        '</button>' +
+                        '<input type="hidden" class="mrp" name="items[' + index + '][mrp]" value="' + parseFloat(item.mrp || 0).toFixed(2) + '">' +
                     '<td class="text-end">' + orderedQty.toFixed(2) + '<input type="hidden" class="ordered-qty" name="items[' + index + '][ordered_qty]" value="' + orderedQty.toFixed(2) + '"></td>' +
                     '<td class="text-end"><span class="qty-received-text">' + (alreadyRec + scanQty).toFixed(2) + '</span><input type="hidden" class="qty-already-received" name="items[' + index + '][qty_already_received]" value="' + alreadyRec.toFixed(2) + '"></td>' +
                     '<td class="text-end"><span class="qty-balance-text">' + currentBalance.toFixed(2) + '</span><input type="hidden" class="balance-qty" name="items[' + index + '][balance_qty]" value="' + currentBalance.toFixed(2) + '"></td>' +

@@ -23,6 +23,7 @@ class PurchaseOrder extends Model
         'store_type_id',
 
         'payment_terms',
+        'order_type',
         'status',
         'total_qty',
         'sub_total',

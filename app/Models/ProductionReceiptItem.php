@@ -21,6 +21,7 @@ class ProductionReceiptItem extends Model
         'description',
         'size_variant',
         'unit_price',
+        'mrp',
         'total_value',
         'uom_id',
         'uom_code',

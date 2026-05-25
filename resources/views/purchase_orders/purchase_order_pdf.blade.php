@@ -209,6 +209,11 @@
                             <td>:</td>
                             <td>{{ $purchaseOrder->supplier->gst_no ?? '-' }}</td>
                         </tr>
+                        <tr>
+                            <td>Order Type</td>
+                            <td>:</td>
+                            <td>{{ strtoupper($purchaseOrder->order_type ?? '') }}</td>
+                        </tr>
                     </table>
                 </td>
                 <td width="50%" style="padding: 0; vertical-align: top; border-bottom: none;">

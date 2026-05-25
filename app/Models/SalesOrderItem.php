@@ -23,6 +23,8 @@ class SalesOrderItem extends Model
         'qty',
         'rate',
         'mrp',
+        'commission_percent',
+        'commission_amount',
         'amount',
         'sleeve',
         'stock_entry_item_id',

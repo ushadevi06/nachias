@@ -257,3 +257,6 @@ ADD COLUMN brand_id BIGINT UNSIGNED NULL;
 ALTER TABLE production_services
 ADD COLUMN sequence INT NOT NULL DEFAULT 1
 AFTER operation_stage_id;
+
+ALTER TABLE production_receipt_items
+ADD COLUMN mrp DECIMAL(15,2) DEFAULT 0 AFTER unit_price;

@@ -260,6 +260,8 @@
                                         <th style="min-width: 120px;">Quantity *</th>
                                         <th style="min-width: 120px;">MRP *</th>
                                         <th style="min-width: 120px;">Selling Price *</th>
+                                        <th style="min-width: 100px;">Commission %</th>
+                                        <th style="min-width: 120px;">Commission Amt</th>
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 50px;">Action</th>
                                     </tr>
@@ -345,6 +347,16 @@
                                                         <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input @error("items.$index.rate") is-invalid @enderror" placeholder="0.00" value="{{ $item['rate'] ?? '' }}" step="0.01">
                                                     </div>
                                                     @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][commission_percent]" class="form-control item-commission-percent" value="{{ old('items.'.$index.'.commission_percent', '') }}" min="0" step="0.01" placeholder="0.00" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][commission_amount]" class="form-control item-commission-amount" value="{{ old('items.'.$index.'.commission_amount', '0.00') }}" placeholder="0.00" readonly>
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
@@ -438,6 +450,22 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][commission_percent]" 
+                                                            class="form-control item-commission-percent" 
+                                                            value="{{ $item->commission_percent ?? '' }}"
+                                                            min="0" step="0.01" placeholder="0.00" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][commission_amount]" 
+                                                            class="form-control item-commission-amount" 
+                                                            value="{{ $item->commission_amount ?? '0.00' }}"
+                                                            placeholder="0.00" readonly>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
                                                         <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->qty * ($item->rate ?: 0), 2, '.', '') }}" readonly>
                                                     </div>
                                                 </td>
@@ -520,6 +548,20 @@
                                         <td>
                                             <div class="form-floating form-floating-outline">
                                                 <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="number" name="items[0][commission_percent]" 
+                                                    class="form-control item-commission-percent" 
+                                                    min="0" step="0.01" placeholder="0.00" readonly>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-floating form-floating-outline">
+                                                <input type="text" name="items[0][commission_amount]" 
+                                                    class="form-control item-commission-amount" 
+                                                    placeholder="0.00" readonly>
                                             </div>
                                         </td>
                                         <td>
@@ -1087,6 +1129,20 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[${itemIndex}][commission_percent]" 
+                            class="form-control item-commission-percent" 
+                            min="0" step="0.01" placeholder="0.00" readonly>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[${itemIndex}][commission_amount]" 
+                            class="form-control item-commission-amount" 
+                            placeholder="0.00" readonly>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
                         <input type="text" name="items[${itemIndex}][amount]" class="form-control amount-input" value="0.00" readonly>
                     </div>
                 </td>
@@ -1297,6 +1353,14 @@ $(document).ready(function () {
         if (typeof calculateTotals === 'function') {
             calculateTotals();
         }
+        let globalCommPercent = parseFloat($('#commission_percent').val()) || 0;
+        if (globalCommPercent > 0) {
+            let rate = parseFloat(res.price || 0);
+            let qty = parseFloat($row.find('.qty-input').val()) || 1;
+            let commAmt = (rate * qty * globalCommPercent) / 100;
+            $row.find('.item-commission-percent').val(globalCommPercent.toFixed(2));
+            $row.find('.item-commission-amount').val(commAmt.toFixed(2));
+        }
     }
 
     $(document).on('focus', '.stock-item-autocomplete', function() {
@@ -1434,6 +1498,7 @@ $(document).ready(function () {
         let qty = parseFloat(qtyInput.val()) || 0;
         let mrp = parseFloat($row.find('.mrp-input').val()) || 0;
         let rate = parseFloat($row.find('.rate-input').val()) || 0;
+        let commPercent = parseFloat($row.find('.item-commission-percent').val()) || 0;
         let available = parseFloat($row.find('.available-stock-display').text()) || 0;
 
         let hasStockItem = !!$row.find('.stock-item-select').val();
@@ -1447,7 +1512,9 @@ $(document).ready(function () {
         }
 
         let price = rate;
-        $row.find('.amount-input').val((qty * price).toFixed(2));
+        let commAmt = (qty * rate * commPercent) / 100;
+        $row.find('.amount-input').val((qty * rate).toFixed(2));
+        $row.find('.item-commission-amount').val(commAmt.toFixed(2));
         calculateTotals();
         validateSubmit();
     });
@@ -1507,20 +1574,20 @@ $(document).ready(function () {
 
         const taxAmount = (taxableAmount * taxPercent) / 100;
         $('#tax_amount').val(taxAmount.toFixed(2));
+        let totalCommissionAmount = 0;
+        $('.item-row').each(function() {
+            totalCommissionAmount += parseFloat($(this).find('.item-commission-amount').val()) || 0;
+        });
 
-        let commissionPercent = parseFloat($('#commission_percent').val()) || 0;
-        let commissionAmount = 0;
-        if (commissionPercent > 0) {
-            commissionAmount = (subTotal * commissionPercent) / 100;
-            $('#commission_amount_display').text(commissionAmount.toFixed(2));
-            $('#commission_amount').val(commissionAmount.toFixed(2));
+        if (totalCommissionAmount > 0) {
+            $('#commission_amount_display').text(totalCommissionAmount.toFixed(2));
+            $('#commission_amount').val(totalCommissionAmount.toFixed(2));
             $('#commission_row').removeClass('d-none');
         } else {
             $('#commission_amount_display').text('0.00');
             $('#commission_amount').val('0.00');
             $('#commission_row').addClass('d-none');
         }
-
         let finalTotal = taxableAmount + taxAmount + postGstCharges;
         
         if ($('#freight_type').val() === 'Paid') {
@@ -1545,16 +1612,25 @@ $(document).ready(function () {
     $(document).on('change', 'input[name="discount_type"]', function() {
         let type = $(this).val();
         $('#apply_box_discount_hidden').val(type === 'box' ? 1 : 0);
-        
         if (type === 'box') {
             $('#discount_percent').val($('#customer_box_discount').val() || 0);
         } else {
             $('#discount_percent').val(0);
         }
-        
         calculateTotals();
     });
-
+    $('#commission_percent').on('input', function() {
+        let percent = parseFloat($(this).val()) || 0;
+        $('.item-row').each(function() {
+            let $row = $(this);
+            let rate = parseFloat($row.find('.rate-input').val()) || 0;
+            let qty = parseFloat($row.find('.qty-input').val()) || 0;
+            let commAmt = (rate * qty * percent) / 100;
+            $row.find('.item-commission-percent').val(percent > 0 ? percent.toFixed(2) : '');
+            $row.find('.item-commission-amount').val(commAmt.toFixed(2));
+        });
+        calculateTotals();
+    });
     function initDiscountState() {
         $('#discount_percent').prop('disabled', false);
     }

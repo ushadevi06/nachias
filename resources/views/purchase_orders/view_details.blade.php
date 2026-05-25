@@ -91,8 +91,8 @@
                             <div class="fw-bold text-dark text-break">{{ $purchaseOrder->reference_no ?? '-' }}</div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Payment Terms</div>
-                            <div class="fw-bold text-dark text-break">{{ $purchaseOrder->payment_terms ?? '-' }}</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Order Type</div>
+                            <div class="fw-bold text-dark text-break">{{ strtoupper($purchaseOrder->order_type ?? '-') }}</div>
                         </div>
                     </div>
                 </div>
