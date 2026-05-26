@@ -83,6 +83,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-report" type="button" role="tab">Sales Comparison</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="credit-note-tab" data-bs-toggle="tab" data-bs-target="#credit-note-report" type="button" role="tab">Credit Note Report</button>
+                </li>
                 {{-- <li class="nav-item" role="presentation">
                     <button class="nav-link" id="outstanding-tab" data-bs-toggle="tab" data-bs-target="#outstanding-report" type="button" role="tab">Zone Wise Outstanding</button>
                 </li>
@@ -137,6 +140,11 @@
                 <!-- 4. Sales Comparison -->
                 <div class="tab-pane fade" id="comparison-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._comparison_report')
+                </div>
+
+                <!-- 12. Credit Note Report -->
+                <div class="tab-pane fade" id="credit-note-report" role="tabpanel">
+                    @include('reports.sales_marketing_reports._credit_note_report')
                 </div>
 
                 <!-- 5. Zonewise Outstanding Report -->

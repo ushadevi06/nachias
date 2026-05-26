@@ -146,7 +146,11 @@
                 <span class="eq">=</span>
                 <span class="val-party">{{ strtoupper($invoice->customer->name ?? 'N/A') }}</span>
             </div>
-
+            <div class="row">
+                <span class="lbl">PHONE</span>
+                <span class="eq">=</span>
+                <span class="val" style="font-size: 18px;">{{ $invoice->customer->mobile_no ?? $invoice->customer->phone ?? 'N/A' }}</span>
+            </div>
             <div class="row">
                 <span class="lbl">ADDRESS</span>
                 <span class="eq">=</span>

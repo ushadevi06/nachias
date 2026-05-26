@@ -220,7 +220,7 @@
                             <td>{{ $salesOrder->customer_po_ref ?? 'N/A' }}</td>
                         </tr>
                         <tr>
-                            <td>Sales Person</td>
+                            <td>Sales Executive</td>
                             <td>:</td>
                             <td>{{ $salesOrder->salesAgent->name ?? 'N/A' }}</td>
                         </tr>

@@ -243,9 +243,10 @@ class SalesOrderController extends Controller
             try {
                 $taxableAmount = $request->taxable_amount ?? 0;
                 $taxAmount = $request->tax_amount ?? 0;
+                $otherCharges = $request->other_charges ?? 0;
                 $roundOffAmount = $request->round_off ?? 0;
                 $roundOffType = $request->round_off_type ?? 'Add';
-                $finalTotal = $taxableAmount + $taxAmount;
+                $finalTotal = $taxableAmount + $taxAmount + $otherCharges;
                 if ($roundOffType === 'Add') {
                     $finalTotal += $roundOffAmount;
                 }
@@ -409,7 +410,7 @@ class SalesOrderController extends Controller
                         'mrp' => $item['mrp'] ?? 0,
                         'commission_percent' => $item['commission_percent'] ?? 0,
                         'commission_amount'  => $item['commission_amount'] ?? 0,
-                        'amount' => $item['qty'] * ($item['mrp'] ?? 0),
+                        'amount' => $item['qty'] * ($item['rate'] ?? $item['mrp'] ?? 0),
                         'sleeve' => isset($item['sleeve']) ? (is_array($item['sleeve']) ? $item['sleeve'] : [$item['sleeve']]) : null,
                         'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? (int)$item['stock_entry_item_id'] : null,
                         'sku' => $item['sku'] ?? null,

@@ -460,6 +460,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/download/{id}', [SalesInvoiceController::class, 'downloadPdf']);
     Route::post('sales_invoices/status/{id}', [SalesInvoiceController::class, 'updateStatus']);
     Route::get('sales_invoices/get-sale-order-details/{id}', [SalesInvoiceController::class, 'getSaleOrderDetails']);
+    Route::get('sales_invoices/get-customer-sales-orders', [SalesInvoiceController::class, 'getCustomerSalesOrders']);
+    Route::match(['GET', 'POST'], 'sales_invoices/get-multiple-sale-orders-details', [SalesInvoiceController::class, 'getMultipleSaleOrdersDetails']);
     Route::get('sales_invoices/calculate-distance', [SalesInvoiceController::class, 'calculateDistance']);
     Route::get('sales_invoices/print-sticker/{id}', [SalesInvoiceController::class, 'printSticker']);
     Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
@@ -474,6 +476,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('credit_notes/view/{id}', [CreditNoteController::class, 'view']);
     Route::get('credit_notes/delete/{id}', [CreditNoteController::class, 'destroy']);
     Route::get('credit_notes/get-invoice-details/{id}', [CreditNoteController::class, 'getInvoiceDetails']);
+    Route::get('credit_notes/get-customer-invoices/{id}', [CreditNoteController::class, 'getCustomerInvoices']);
     Route::post('credit_notes/status/{id}', [CreditNoteController::class, 'updateStatus']);
     Route::get('credit_notes/print/{id}', [CreditNoteController::class, 'print']);
     Route::get('credit_notes/download/{id}', [CreditNoteController::class, 'download']);

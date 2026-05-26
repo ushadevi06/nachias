@@ -71,10 +71,16 @@
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Season</div>
-                            <div class="fw-bold text-dark">{{ $salesOrder->season->name ?? '-' }}</div>
+                            <div class="fw-bold text-dark">
+                                @if($salesOrder->season)
+                                    {{ $salesOrder->season->name }} <span class="text-primary small">({{ $salesOrder->season->season_code }}) </span>
+                                @else
+                                    -
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Agent</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Executive</div>
                             <div class="fw-bold text-dark">
                                 {{ $salesOrder->salesAgent->name ?? '-' }}
                                 @if($salesOrder->salesAgent && $salesOrder->salesAgent->code)
@@ -231,32 +237,6 @@
                                     <div class="text-muted text-uppercase small fw-bold mb-1">Internal Remarks</div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->internal_remarks ?? '-' }}</p>
                                 </div>
-                                <div class="col-12 mt-3">
-                                    <div class="text-muted text-uppercase small fw-bold mb-1">Pre - GST</div>
-                                    @php $preGstCharges = $salesOrder->charges->where('tax_type', 'Pre-GST'); @endphp
-                                    @if($preGstCharges->count() > 0)
-                                        @foreach($preGstCharges as $charge)
-                                            <div class="col-12 d-flex justify-content-between align-items-center border-bottom pb-3 mb-1">
-                                                <span class="text-muted small fw-bold text-uppercase">{{ $charge->charge_name }}</span>
-                                                <span class="fw-bold text-dark fs-6">₹{{ number_format($charge->charge_amount, 2) }}</span>
-                                            </div>
-                                        @endforeach
-                                    @else
-                                        <div class="col-12 text-muted small fst-italic py-2">No pre-GST charges applied.</div>
-                                    @endif
-                                    <div class="text-muted text-uppercase small fw-bold mb-1">Post - GST</div>
-                                    @php $postGstCharges = $salesOrder->charges->where('tax_type', 'Post-GST'); @endphp
-                                    @if($postGstCharges->count() > 0)
-                                        @foreach($postGstCharges as $charge)
-                                            <div class="col-12 d-flex justify-content-between align-items-center border-bottom pb-3 mb-1">
-                                                <span class="text-muted small fw-bold text-uppercase">{{ $charge->charge_name }}</span>
-                                                <span class="fw-bold text-dark fs-6">₹{{ number_format($charge->charge_amount, 2) }}</span>
-                                            </div>
-                                        @endforeach
-                                    @else
-                                        <div class="col-12 text-muted small fst-italic py-2">No post-GST charges applied.</div>
-                                    @endif
-                                </div>
                                 @if($salesOrder->attachment)
                                 <div class="col-12 mt-3">
                                     <div class="text-muted text-uppercase small fw-bold mb-2">Attachments</div>
@@ -267,7 +247,7 @@
                                                 $isImg = in_array(strtolower($ext), ['jpg','jpeg','png','webp','gif']);
                                                 $url = url('uploads/so/' . $salesOrder->id . '/' . $file);
                                             @endphp
-                                            <div class="p-2 border rounded bg-white shadow-sm d-flex align-items-center mb-2" style="min-width: 120px;">
+                                            <div class="p-2 border rounded bg-white shadow-sm d-flex align-items-center mb-2">
                                                 @if($isImg)
                                                     <img src="{{ $url }}" class="rounded cursor-pointer view-image border" data-image="{{ $url }}" width="60" height="60" style="object-fit: cover;" alt="Attachment">
                                                     <div class="ms-3">
@@ -277,14 +257,10 @@
                                                 @else
                                                     <a href="{{ $url }}" target="_blank" class="text-decoration-none d-flex align-items-center">
                                                         @if(strtolower($ext) == 'pdf')
-                                                            <i class="ri-file-pdf-fill text-danger ri-3x"></i>
+                                                            <i class="ri ri-file-pdf-2-line text-danger ri-3x"></i>
                                                         @else
-                                                            <i class="ri-file-text-fill text-primary ri-3x"></i>
+                                                            <i class="ri ri-file-text-line text-primary ri-3x"></i>
                                                         @endif
-                                                        <div class="ms-2">
-                                                            <div class="fw-bold text-dark small text-uppercase">{{ $ext }} Document</div>
-                                                            <div class="text-muted small" style="font-size: 10px;">Click to view</div>
-                                                        </div>
                                                     </a>
                                                 @endif
                                             </div>
@@ -321,7 +297,18 @@
                                 <span class="fw-bold">-₹{{ number_format($salesOrder->discount_amount, 2) }}</span>
                             </div>
                             @endif
-
+                            @if($salesOrder->commission_amount > 0)
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="fw-medium">Commission</span>
+                                <span class="fw-bold">₹{{ number_format($salesOrder->commission_amount, 2) }}</span>
+                            </div>
+                            @endif
+                            @if(!empty($salesOrder->pre_gst_total) && $salesOrder->pre_gst_total > 0)
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-muted fw-medium">Pre-GST Charges</span>
+                                    <span class="fw-bold">₹{{ number_format($salesOrder->pre_gst_total, 2) }}</span>
+                                </div>
+                            @endif
                             <div class="d-flex justify-content-between mb-3 pt-3 border-top">
                                 <span class="text-dark fw-bold">Taxable Amount</span>
                                 <span class="fw-bold text-dark">₹{{ number_format($salesOrder->taxable_amount, 2) }}</span>
@@ -342,7 +329,12 @@
                                     <span>₹{{ number_format($salesOrder->taxable_amount * ($salesOrder->sgst_percent / 100), 2) }}</span>
                                 </div>
                             @endif
-
+                            @if(!empty($salesOrder->other_charges) && $salesOrder->other_charges > 0)
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted fw-medium">Post-GST Charges</span>
+                                <span class="fw-bold">₹{{ number_format($salesOrder->other_charges, 2) }}</span>
+                            </div>
+                            @endif
                             @if($salesOrder->round_off > 0)
                             <div class="d-flex justify-content-between mb-3 text-muted italic small">
                                 <span>Round Off ({{ $salesOrder->round_off_type }})</span>

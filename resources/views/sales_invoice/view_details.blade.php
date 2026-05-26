@@ -26,9 +26,25 @@
                         <button type="button" class="btn btn-warning text-white" disabled>
                             <i class="ri ri-close-circle-line"></i> E-Invoice Cancelled
                         </button>
+                        @php
+                            $recreatedInvoice = \App\Models\SalesInvoice::where('customer_id', $invoice->customer_id)
+                                ->where('so_ids', $invoice->so_ids)
+                                ->where('id', '!=', $invoice->id)
+                                ->where(function($q) {
+                                    $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+                                })
+                                ->orderBy('id', 'desc')
+                                ->first();
+                        @endphp
+                        @if($recreatedInvoice)
+                        <a href="{{ url('sales_invoices/view/' . $recreatedInvoice->id) }}" class="btn btn-outline-success" title="View Recreated Invoice">
+                            <i class="ri ri-check-double-line"></i> Recreated as {{ $recreatedInvoice->inv_no }}
+                        </a>
+                        @else
                         <a href="{{ url('sales_invoices/recreate/' . $invoice->id) }}" class="btn btn-outline-primary" title="Recreate / Copy to New Invoice">
                             <i class="ri ri-file-copy-line"></i> Recreate Invoice
                         </a>
+                        @endif
                         @elseif($invoice->irn)
                             @php
                                 $ackDateTime = $invoice->ack_date ? \Carbon\Carbon::parse($invoice->ack_date) : null;
@@ -220,7 +236,19 @@
                                                         (GST/IGST)</label>
                                                 </div>
                                             </div>
+                                            <div class="col-md-4 col-lg-3">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="showMrp" {{ is_array($invoice->show_fields) && in_array('mrp', $invoice->show_fields) ? 'checked' : '' }} disabled>
+                                                    <label class="form-check-label" for="showMrp">Show MRP</label>
+                                                </div>
+                                            </div>
 
+                                            <div class="col-md-4 col-lg-3">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="showPrice" {{ is_array($invoice->show_fields) && in_array('price', $invoice->show_fields) ? 'checked' : '' }} disabled>
+                                                    <label class="form-check-label" for="showPrice">Show Price</label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -325,22 +353,16 @@
                                                             $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
                                                             $sigUrl = asset($invoice->signature_file);
                                                         @endphp
-                                                        <div
-                                                            class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
+                                                        <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
                                                             @if($isSigImage)
-                                                                <img src="{{ $sigUrl }}" class="rounded cursor-pointer view-image"
-                                                                    data-image="{{ $sigUrl }}" width="45" height="45"
-                                                                    style="object-fit: cover;" alt="Signature">
+                                                                <img src="{{ $sigUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $sigUrl }}" width="45" height="45" style="object-fit: cover;" alt="Signature">
                                                             @else
-                                                                <a href="{{ $sigUrl }}" target="_blank"
-                                                                    class="text-decoration-none d-flex align-items-center px-2">
+                                                                <a href="{{ $sigUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
                                                                     @if(strtolower($sigExt) == 'pdf')
-                                                                        <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                                        <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
                                                                     @else
-                                                                        <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                                        <i class="ri ri-file-text-fill text-primary fs-3"></i>
                                                                     @endif
-                                                                    <span class="ms-1 small text-dark fw-bold text-uppercase"
-                                                                        style="font-size: 10px;">{{ $sigExt }}</span>
                                                                 </a>
                                                             @endif
                                                         </div>
@@ -368,9 +390,9 @@
                                                                 <a href="{{ $attUrl }}" target="_blank"
                                                                     class="text-decoration-none d-flex align-items-center px-2">
                                                                     @if(strtolower($attExt) == 'pdf')
-                                                                        <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                                        <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
                                                                     @else
-                                                                        <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                                        <i class="ri ri-file-text-fill text-primary fs-3"></i>
                                                                     @endif
                                                                     <span class="ms-1 small text-dark fw-bold text-uppercase"
                                                                         style="font-size: 10px;">{{ $attExt }}</span>

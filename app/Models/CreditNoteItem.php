@@ -13,13 +13,8 @@ class CreditNoteItem extends Model
     protected $fillable = [
         'credit_note_id',
         'sales_invoice_item_id',
-        'item_id',
-        'brand_category_id',
-        'size',
         'quantity',
-        'sleeve_type',
         'mrp',
-        'uom_id',
         'rate',
         'amount',
     ];

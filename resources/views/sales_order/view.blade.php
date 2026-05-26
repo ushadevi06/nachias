@@ -64,7 +64,7 @@
                                         <th>Customer Name</th>
                                         <th>Customer PO Ref</th>
                                         <th>Total Qty</th>
-                                        <th>Sales Agent</th>
+                                        <th>Sales Executive</th>
                                         <th>Status</th>
                                         <th>Total Amount</th>
                                         <th>Actions</th>

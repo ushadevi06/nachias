@@ -43,8 +43,14 @@
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Invoice</div>
-                            <div class="fw-bold text-dark">{{ $creditNote->salesInvoice ? $creditNote->salesInvoice->inv_no : '-' }}</div>
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Invoices</div>
+                            <div class="fw-bold text-dark">
+                                @if(!empty($salesInvoices) && count($salesInvoices) > 0)
+                                    {{ implode(', ', $salesInvoices->pluck('inv_no')->toArray()) }}
+                                @else
+                                    {{ $creditNote->salesInvoice ? $creditNote->salesInvoice->inv_no : '-' }}
+                                @endif
+                            </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Issue Date</div>
@@ -54,6 +60,25 @@
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Reason</div>
                             <div class="fw-bold text-dark">{{ $creditNote->reason ?? '-' }}</div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Zone</div>
+                            <div class="fw-bold text-dark">{{ $creditNote->zone ? $creditNote->zone->zone_name : '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Sales Executive</div>
+                            <div class="fw-bold text-dark">
+                                {{ $creditNote->salesAgent ? $creditNote->salesAgent->name : '-' }}
+                                @if($creditNote->salesAgent && $creditNote->salesAgent->code)
+                                    <span class="text-primary small">({{ $creditNote->salesAgent->code }})</span>
+                                @endif
+                            </div>
+                        </div>
+                        @if($creditNote->reason_detail)
+                        <div class="col-md-6">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Reason Detail</div>
+                            <div class="fw-bold text-dark small" style="white-space: pre-line;">{{ $creditNote->reason_detail }}</div>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -84,31 +109,76 @@
                                     </tr>
                                 @else
                                     @foreach($creditNote->items as $index => $item)
-                                    @php
-                                        $sleeveShort = '';
-                                        if ($item->sleeve_type) {
-                                            $sleeveShort = ' - ' . (strtolower($item->sleeve_type) == 'full' ? 'F/S' : 'H/S');
-                                        }
-                                    @endphp
-                                    <tr>
-                                        <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
-                                        <td>
-                                            <div class="fw-bold text-dark">
-                                                {{ $item->brandCategory ? $item->brandCategory->name : '' }}
-                                                {{ $item->item ? $item->item->name : 'N/A' }}{{ $sleeveShort }}
-                                            </div>
-                                            @if($item->item && $item->item->code)
-                                                <small class="text-primary fw-medium">{{ $item->item->code }}</small>
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark px-3 py-2 fw-medium">
-                                                {{ number_format($item->quantity, 2) }} {{ $item->uom ? $item->uom->uom_code : '' }}
-                                            </span>
-                                        </td>
-                                        <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
-                                    </tr>
-                                    @endforeach
+                                        @php
+                                            $invoiceItem = $item->salesInvoiceItem;
+
+                                            // Item name
+                                            $itemName = 'N/A';
+                                            if ($invoiceItem) {
+                                                if ($invoiceItem->stockEntryItem && $invoiceItem->stockEntryItem->finished_item_code) {
+                                                    $itemName = $invoiceItem->stockEntryItem->finished_item_code;
+                                                } elseif ($invoiceItem->item) {
+                                                    $itemName = $invoiceItem->item->name;
+                                                }
+                                            }
+
+                                            // Brand/Category
+                                            $brandName = '';
+                                            if ($invoiceItem && $invoiceItem->brandCategory) {
+                                                $brandName = $invoiceItem->brandCategory->name;
+                                            }
+
+                                            // Item code
+                                            $itemCode = $invoiceItem && $invoiceItem->sku ? $invoiceItem->sku : '';
+
+                                            // Sleeve
+                                            $sleeveShort = '';
+                                            if ($invoiceItem && $invoiceItem->sleeve_type) {
+                                                $sleeveShort = ' - ' . (strtolower($invoiceItem->sleeve_type) == 'full' ? 'F/S' : 'H/S');
+                                            }
+
+                                            // UOM
+                                            $uomCode = $invoiceItem && $invoiceItem->uom ? $invoiceItem->uom->uom_code : 'PCS';
+
+                                            // Color
+                                            $colorName = $invoiceItem && $invoiceItem->color ? $invoiceItem->color->color_name : '';
+
+                                            // Size
+                                            $sizeName = '';
+                                            if ($invoiceItem) {
+                                                $sizeName = $invoiceItem->sizeRatio ? $invoiceItem->sizeRatio->size : $invoiceItem->size;
+                                            }
+
+                                            // Art No
+                                            $artNo = $invoiceItem ? $invoiceItem->art_no : '';
+                                        @endphp
+                                        <tr>
+                                            <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
+                                            <td>
+                                                <div class="fw-bold text-dark">
+                                                    {{ $brandName }} {{ $itemName }}
+                                                </div>
+                                                @if($itemCode)
+                                                    <small class="text-primary fw-medium">{{ $itemCode }}</small>
+                                                @endif
+                                                @if($colorName)
+                                                    <small class="text-muted"> | Color: {{ $colorName }}</small>
+                                                @endif
+                                                @if($artNo && $artNo != '-')
+                                                    <small class="text-muted"> | Art No: {{ $artNo }}</small>
+                                                @endif
+                                                @if($sizeName)
+                                                    <small class="text-muted"> | Size: {{ $sizeName }}</small>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-light text-dark px-3 py-2 fw-medium">
+                                                    {{ number_format($item->quantity, 2) }} {{ $uomCode }}
+                                                </span>
+                                            </td>
+                                            <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
+                                        </tr>
+                                        @endforeach
                                 @endif
                             </tbody>
                         </table>
@@ -167,6 +237,27 @@
                                 <span class="fw-bold">₹{{ number_format($creditNote->sub_total, 2) }}</span>
                             </div>
 
+                            @if($creditNote->discount > 0)
+                            <div class="d-flex justify-content-between mb-3 text-muted small">
+                                <span>Discount ({{ number_format($creditNote->discount_percent, 2) }}%)</span>
+                                <span>-₹{{ number_format($creditNote->discount, 2) }}</span>
+                            </div>
+                            @endif
+
+                            @php
+                                $preGstCharges = $creditNote->charges->where('tax_type', 'Pre-GST');
+                                $postGstCharges = $creditNote->charges->where('tax_type', 'Post-GST');
+                            @endphp
+
+                            @if($preGstCharges->count() > 0)
+                                @foreach($preGstCharges as $charge)
+                                <div class="d-flex justify-content-between mb-3 text-muted small">
+                                    <span>{{ $charge->charge_name }} (Pre-GST)</span>
+                                    <span>+₹{{ number_format($charge->charge_amount, 2) }}</span>
+                                </div>
+                                @endforeach
+                            @endif
+
                             @if($creditNote->other_state)
                                 <div class="d-flex justify-content-between mb-3 text-muted small">
                                     <span>IGST ({{ $creditNote->igst_percent }}%)</span>
@@ -187,6 +278,15 @@
                                 <span class="text-dark fw-bold">Total Tax</span>
                                 <span class="fw-bold">₹{{ number_format($creditNote->tax_amount, 2) }}</span>
                             </div>
+
+                            @if($postGstCharges->count() > 0)
+                                @foreach($postGstCharges as $charge)
+                                <div class="d-flex justify-content-between mb-3 text-muted small">
+                                    <span>{{ $charge->charge_name }} (Post-GST)</span>
+                                    <span>+₹{{ number_format($charge->charge_amount, 2) }}</span>
+                                </div>
+                                @endforeach
+                            @endif
 
                             @if($creditNote->round_off > 0)
                             <div class="d-flex justify-content-between mb-3 text-muted italic">

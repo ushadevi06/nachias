@@ -193,6 +193,8 @@ $showSubTotal = in_array('subtotal', $showFields);
 $showDiscount = in_array('discount', $showFields);
 $showTax = in_array('tax', $showFields);
 $showGrandTotal = in_array('grandtotal', $showFields);
+$showMrp       = in_array('mrp', $showFields);
+$showPrice     = in_array('price', $showFields);
 @endphp
     <div class="container">
         <div style="position: relative;">
@@ -378,7 +380,7 @@ $showGrandTotal = in_array('grandtotal', $showFields);
                             <td>{{ is_object($invoice->customer->zone) || is_array($invoice->customer->zone) ? ($invoice->customer->zone->zone_name ?? $invoice->customer->zone['zone_name'] ?? 'N/A') : (is_string($invoice->customer->zone) ? json_decode($invoice->customer->zone)->zone_name ?? $invoice->customer->zone : 'N/A') }}</td>
                         </tr>
                         <tr>
-                            <td>Sales Person</td>
+                            <td>Sales Executive</td>
                             <td>:</td>
                             <td>{{ $invoice->salesOrder->salesAgent->name ?? 'N/A' }}</td>
                         </tr>
@@ -401,9 +403,13 @@ $showGrandTotal = in_array('grandtotal', $showFields);
                     <th width="6%">UOM</th>
                     <th width="8%">Size</th>
                     <th width="8%">Qty</th>
+                    @if($showMrp)
                     <th width="10%">MRP</th>
-                    @if($showAmount)
+                    @endif
+                    @if($showPrice)
                     <th width="10%">Price</th>
+                    @endif
+                    @if($showAmount)
                     <th width="12%">Amount</th>
                     @endif
                 </tr>
@@ -414,23 +420,23 @@ $showGrandTotal = in_array('grandtotal', $showFields);
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
                             @php
-    $brandName = '';
-    $itemName = '';
-    if ($item->item) {
-        $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : ''));
-        $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
-    } elseif ($item->stockEntryItem) {
-        if ($item->stockEntryItem->item) {
-            $seItem = $item->stockEntryItem->item;
-            $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : ''));
-            $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
-        } else {
-            $brandName = $item->stockEntryItem->finished_item_code;
-        }
-    } else {
-        $brandName = $item->brandCategory ? $item->brandCategory->name : '';
-        $itemName = $item->item ? $item->item->name : '';
-    }
+                            $brandName = '';
+                            $itemName = '';
+                            if ($item->item) {
+                                $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : ''));
+                                $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+                            } elseif ($item->stockEntryItem) {
+                                if ($item->stockEntryItem->item) {
+                                    $seItem = $item->stockEntryItem->item;
+                                    $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : ''));
+                                    $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+                                } else {
+                                    $brandName = $item->stockEntryItem->finished_item_code;
+                                }
+                            } else {
+                                $brandName = $item->brandCategory ? $item->brandCategory->name : '';
+                                $itemName = $item->item ? $item->item->name : '';
+                            }
                             @endphp
                             <div class="bold">{{ $brandName }}</div>
                             <div>{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</div>
@@ -440,35 +446,39 @@ $showGrandTotal = in_array('grandtotal', $showFields);
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
+                        @if($showMrp)
                         <td class="text-right">{{ number_format($item->mrp, 2) }}</td>
-                        @if($showAmount)
+                        @endif
+                        @if($showPrice)
                         <td class="text-right">{{ number_format($item->rate, 2) }}</td>
+                        @endif
+                        @if($showAmount)
                         <td class="text-right bold">{{ number_format($item->amount, 2) }}</td>
                         @endif
                     </tr>
                 @endforeach
                 @for($i = count($invoice->items); $i < 10; $i++)
-                    <tr>
-                        <td style="height: 15px;">&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        @if($showAmount)
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
-                        @endif
-                    </tr>
+                <tr>
+                    <td style="height: 15px;">&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    @if($showMrp)<td>&nbsp;</td>@endif
+                    @if($showPrice)<td>&nbsp;</td>@endif
+                    @if($showAmount)<td>&nbsp;</td>@endif
+                </tr>
                 @endfor
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="6" class="text-right bold">Total</td>
                     <td class="text-center bold">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
-                    <td class="text-right" colspan="{{ $showAmount ? 3 : 1 }}"></td>
+                    @if($showMrp)<td>&nbsp;</td>@endif
+                    @if($showPrice)<td>&nbsp;</td>@endif
+                    @if($showAmount)<td>&nbsp;</td>@endif
                 </tr>
             </tfoot>
         </table>

@@ -18,7 +18,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : $nextInvNumber) }}">
-                                    <label for="inv_no">Invoice No. * </label>
+                                    <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
                                     @error('inv_no')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                     @enderror
@@ -27,22 +27,8 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control form-control inv_date @error('inv_date') is-invalid @enderror" name="inv_date" placeholder="Enter Invoice Date" value="{{ old('inv_date', isset($invoice) ? $invoice->inv_date->format('d-m-Y') : date('d-m-Y')) }}" />
-                                    <label for="inv_date">Invoice Date * </label>
+                                    <label for="inv_date">Invoice Date <span class="text-danger">*</span> </label>
                                     @error('inv_date')
-                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-4">
-                                <div class="form-floating form-floating-outline">
-                                    <select id="so_id" name="so_id" class="select2 form-select @error('so_id') is-invalid @enderror" data-placeholder="Select Sales Order">
-                                        <option value="">Select Sales Order</option>
-                                        @foreach($saleOrders as $so)
-                                            <option value="{{ $so->id }}" {{ (old('so_id', isset($invoice) ? $invoice->so_id : '') == $so->id) ? 'selected' : '' }}>{{ $so->so_no }}</option>
-                                        @endforeach
-                                    </select>
-                                    <label for="so_id">Sales Order *</label>
-                                    @error('so_id')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -55,7 +41,7 @@
                                             <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-pincode="{{ $customer->zip_code }}" {{ (old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
-                                    <label for="customer_id">Customer / Buyer *</label>
+                                    <label for="customer_id">Customer <span class="text-danger">*</span></label>
                                     @error('customer_id')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                     @enderror
@@ -63,8 +49,21 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
+                                    <select id="so_ids" name="so_ids[]" class="select2 form-select @error('so_ids') is-invalid @enderror" multiple data-placeholder="Select Sales Orders">
+                                        @foreach($saleOrders as $so)
+                                            <option value="{{ $so->id }}" {{ (is_array(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : [])) && in_array($so->id, old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []))) ? 'selected' : '' }}>{{ $so->so_no }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="so_ids">Sales Order <span class="text-danger">*</span></label>
+                                    @error('so_ids')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
                                     <textarea class="form-control @error('delivery_address') is-invalid @enderror" id="address" name="delivery_address" placeholder="Enter Delivery Address">{{ old('delivery_address', isset($invoice) ? $invoice->delivery_address : '') }}</textarea>
-                                    <label for="address">Delivery Address *</label>
+                                    <label for="address">Delivery Address <span class="text-danger">*</span></label>
                                     @error('delivery_address')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                     @enderror
@@ -89,13 +88,13 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Agent/Executive">
-                                        <option value="">Select Sales Agent/Executive</option>
+                                    <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Executive">
+                                        <option value="">Select Sales Executive</option>
                                         @foreach($sales_agent as $agent)
                                             <option value="{{ $agent->id }}" {{ (old('agent_id', isset($invoice) ? $invoice->agent_id : '') == $agent->id) ? 'selected' : '' }}>{{ $agent->name }}({{ $agent->code }})</option>
                                         @endforeach
                                     </select>
-                                    <label for="agent_id">Sales Agent/Executive</label>
+                                    <label for="agent_id">Sales Executive</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-4">
@@ -120,7 +119,7 @@
                                     <input type="text" class="form-control @error('hsn_sac') is-invalid @enderror"
                                         id="hsn_sac" name="hsn_sac" placeholder="HSN Code"
                                         value="{{ old('hsn_sac', isset($invoice) ? $invoice->hsn_sac : '') }}">
-                                    <label for="hsn_sac">HSN Code</label>
+                                    <label for="hsn_sac">HSN Code <span class="text-danger">*</span></label>
                                     @error('hsn_sac')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                     @enderror
@@ -341,7 +340,7 @@
                                                 <option value="Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Paid' ? 'selected' : '' }}>Paid</option>
                                                 <option value="Partially Paid" {{ old('invoice_status', isset($invoice) ? $invoice->invoice_status : '') == 'Partially Paid' ? 'selected' : '' }}>Partially Paid</option>
                                             </select>
-                                            <label for="invoice_status">Invoice Status *</label>
+                                            <label for="invoice_status">Invoice Status <span class="text-danger">*</span></label>
                                             @error('invoice_status')
                                                 <div class="text-danger small mt-1">{{ $message }}</div>
                                             @enderror
@@ -394,12 +393,12 @@
 
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
-                                            <input type="file" class="form-control" id="signature_file" name="signature_file">
+                                            <input type="file" class="form-control" id="signature_file" name="signature_file" accept="image/*">
                                             <label for="signature_file">Authorized Signature / Stamp Upload</label>
                                             @if(isset($invoice) && $invoice->signature_file)
                                                 @php
                                                     $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
-                                                    $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                    $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png']);
                                                     $sigUrl = asset($invoice->signature_file);
                                                 @endphp
                                                 <div class="mt-2 p-1 border rounded d-inline-flex align-items-center bg-light shadow-sm">
@@ -408,16 +407,15 @@
                                                     @else
                                                         <a href="{{ $sigUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
                                                             @if(strtolower($sigExt) == 'pdf')
-                                                                <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                                <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
                                                             @else
-                                                                <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                                <i class="ri ri-file-text-line text-primary fs-3"></i>
                                                             @endif
-                                                            <span class="ms-1 small text-dark fw-bold text-uppercase" style="font-size: 10px;">{{ $sigExt }}</span>
                                                         </a>
                                                     @endif
                                                 </div>
                                             @endif
-                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG</small>
                                         </div>
                                     </div>
 
@@ -437,11 +435,10 @@
                                                     @else
                                                         <a href="{{ $attUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
                                                             @if(strtolower($attExt) == 'pdf')
-                                                                <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                                <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
                                                             @else
-                                                                <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                                <i class="ri ri-file-text-line text-primary fs-3"></i>
                                                             @endif
-                                                            <span class="ms-1 small text-dark fw-bold text-uppercase" style="font-size: 10px;">{{ $attExt }}</span>
                                                         </a>
                                                     @endif
                                                 </div>
@@ -454,7 +451,7 @@
                                         <h6 class="fw-bold mb-2">Show in Customer Invoice PDF</h6>
                                         <div class="row">
                                             @php
-                                                $selected_fields = old('show_fields', isset($invoice->show_fields) ? $invoice->show_fields : ['amount', 'discount', 'tax', 'subtotal', 'grandtotal']);
+                                                $selected_fields = old('show_fields', isset($invoice->show_fields) ? $invoice->show_fields : ['amount', 'discount', 'tax', 'subtotal', 'grandtotal','mrp','price']);
                                             @endphp
                                             <div class="col-md-6 col-lg-4">
                                                 <div class="form-check">
@@ -462,14 +459,12 @@
                                                     <label class="form-check-label" for="show_amount">Show Amount</label>
                                                 </div>
                                             </div>
-
                                             <div class="col-md-6 col-lg-4">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="show_discount" name="show_fields[]" value="discount" {{ in_array('discount', $selected_fields) ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="show_discount">Show Discount</label>
                                                 </div>
                                             </div>
-
                                             <div class="col-md-6 col-lg-4">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="show_tax" name="show_fields[]" value="tax" {{ in_array('tax', $selected_fields) ? 'checked' : '' }}>
@@ -490,7 +485,20 @@
                                                     <label class="form-check-label" for="show_grandtotal">Show Grand Total</label>
                                                 </div>
                                             </div>
+            
+                                            <div class="col-md-6 col-lg-4 mt-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="show_mrp" name="show_fields[]" value="mrp" {{ in_array('mrp', $selected_fields) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="show_mrp">Show MRP</label>
+                                                </div>
+                                            </div>
 
+                                            <div class="col-md-6 col-lg-4 mt-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="show_price" name="show_fields[]" value="price" {{ in_array('price', $selected_fields) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="show_price">Show Price</label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -682,8 +690,8 @@
                     <?php if(isset($invoice) && (!empty($invoice->ack_no) || !empty($invoice->eway_bill_no))) { ?>
                         <button type="submit" class="btn btn-primary" disabled>Submit</button>
                     <?php } else { ?>
-                        <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary">Submit</button>
+                        <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
                     <?php } ?>
                 </div>
             </form>
@@ -697,7 +705,45 @@
             width: '100%',
             dropdownParent: $('body')
         });
+        var preselectedCustomer = $('#customer_id').val();
+        var preselectedSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []));
 
+        if (preselectedCustomer && preselectedSoIds.length > 0 && $('#so_ids option').length === 0) {
+            $.ajax({
+                url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
+                type: "GET",
+                data: { customer_id: preselectedCustomer },
+                success: function(response) {
+                    if (response.success) {
+                        var soSelect = $('#so_ids');
+                        soSelect.empty();
+                        $.each(response.data, function(index, so) {
+                            var selected = preselectedSoIds.map(String).includes(so.id.toString());
+                            soSelect.append(new Option(
+                                so.so_no + ' (Pending: ' + so.pending_qty + ')',
+                                so.id,
+                                selected,
+                                selected
+                            ));
+                        });
+                        soSelect.trigger('change.select2');
+
+                        if (preselectedSoIds.length > 0) {
+                            $.ajax({
+                                url: "{{ url('sales_invoices/get-multiple-sale-orders-details') }}",
+                                type: "POST",
+                                data: { so_ids: preselectedSoIds, _token: "{{ csrf_token() }}" },
+                                success: function(data) {
+                                    if (data.success) {
+                                        window.availableSOItems = data.items;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }
         if ($('input[name="other_state"]:checked').val() == 'yes') {
             $('#igst_section').show();
             $('#cgst_sgst_section').hide();
@@ -710,24 +756,50 @@
             calculateTotals();
         }
 
-        $('#so_id').on('change', function() {
-            var soId = $(this).val();
-            if (soId) {
+        
+        $('#customer_id').on('change', function() {
+            var customerId = $(this).val();
+            if (customerId) {
                 $.ajax({
-                    url: "{{ url('sales_invoices/get-sale-order-details') }}/" + soId,
+                    url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
                     type: "GET",
+                    data: { customer_id: customerId },
+                    success: function(response) {
+                        if (response.success) {
+                            var soSelect = $('#so_ids');
+                            var currentValue = soSelect.val() || [];
+                            soSelect.empty();
+                            $.each(response.data, function(index, so) {
+                                var selected = currentValue.includes(so.id.toString());
+                                soSelect.append(new Option(so.so_no + ' (Pending: ' + so.pending_qty + ')', so.id, false, selected));
+                            });
+                            soSelect.trigger('change.select2');
+                        }
+                    }
+                });
+            } else {
+                $('#so_ids').empty().trigger('change.select2');
+            }
+        });
+
+        $('#so_ids').on('change', function() {
+            var soIds = $(this).val();
+            if (soIds && soIds.length > 0) {
+                $.ajax({
+                    url: "{{ url('sales_invoices/get-multiple-sale-orders-details') }}",
+                    type: "POST",
+                    data: { so_ids: soIds, _token: "{{ csrf_token() }}" },
                     success: function(data) {
                         if (data.success) {
-                            $('#customer_id').val(data.customer_id).trigger('change');
-                            $('#store_id').val(data.store_id).trigger('change');
-                            $('#agent_id').val(data.agent_id).trigger('change');
-                            $('#commission_percent').val(data.commission_percent);
-                            $('#address').val(data.shipping_address);
-                            $('#transporter_name').val(data.transporter_name);
-                            if(data.transport_gst_no) {
+                            if (!$('#store_id').val()) $('#store_id').val(data.store_id).trigger('change');
+                            if (!$('#agent_id').val()) $('#agent_id').val(data.agent_id).trigger('change');
+                            if (!$('#commission_percent').val()) $('#commission_percent').val(data.commission_percent);
+                            if (!$('#address').val()) $('#address').val(data.shipping_address);
+                            if (!$('#transporter_name').val()) $('#transporter_name').val(data.transporter_name);
+                            if(data.transport_gst_no && !$('#transporter_id').val()) {
                                 $('#transporter_id').val(data.transport_gst_no);
                             }
-                            if(data.transport_mode_id) {
+                            if(data.transport_mode_id && !$('#transport_mode').val()) {
                                 $('#transport_mode').val(data.transport_mode_id).trigger('change');
                             }
                             if (data.other_state == 'yes') {
@@ -740,25 +812,24 @@
                                 $('#cgst_sgst_section').show();
                             }
 
-                            $('#discount_percent').val(data.discount_percent || 0);
-                            $('#igst_percent').val(data.igst_percent || 18);
-                            $('#cgst_percent').val(data.cgst_percent || 9);
-                            $('#sgst_percent').val(data.sgst_percent || 9);
+                            if (!$('#discount_percent').val() || $('#discount_percent').val() == '0.00') {
+                                $('#discount_percent').val(data.discount_percent || 0);
+                            }
+                            if (!$('#igst_percent').val() || $('#igst_percent').val() == '18.00') $('#igst_percent').val(data.igst_percent || 18);
+                            if (!$('#cgst_percent').val() || $('#cgst_percent').val() == '9.00') $('#cgst_percent').val(data.cgst_percent || 9);
+                            if (!$('#sgst_percent').val() || $('#sgst_percent').val() == '9.00') $('#sgst_percent').val(data.sgst_percent || 9);
 
                             window.availableSOItems = data.items;
                             if (window.isEditMode !== true) {
-                                $('#item-rows').empty();
-                                if (data.items && data.items.length > 0) {
-                                    data.items.forEach(function(item) {
-                                        addInvoiceItem(item, item.qty, item.qty);
-                                    });
-                                }
+                                // Do not auto populate item rows as per new requirements
                             }
                             $('#barcode_scanner').focus();
                             calculateTotals();
                         }
                     }
                 });
+            } else {
+                window.availableSOItems = [];
             }
         });
 
@@ -784,7 +855,7 @@
 
                 if (currentQty + 1 > maxVal) {
                     var errorMsg = existingRow.find('.qty-error');
-                    errorMsg.text('Max allowed: ' + maxVal).show();
+                    errorMsg.text('Quantity exceeds pending quantity').show();
                     qtyInput.addClass('is-invalid');
                     return;
                 }
@@ -886,6 +957,7 @@
                     var label = (item.brand_name || '') + ' - ' + (item.item_name || '');
                     if (item.sleeve) label += ' (' + item.sleeve + ')';
                     if (item.sku) label += ' | SKU: ' + item.sku;
+                    if (item.size_name || item.size_id) label += ' | Size: ' + (item.size_name || item.size_id);
 
                     return {
                         label: label,
@@ -926,6 +998,7 @@
 
             var it = item.itemData;
             var skuInfo = it.sku ? ` | SKU: ${it.sku}` : '';
+            var sizeInfo = it.size_name ? ` | Size: ${it.size_name}` : (it.size_id ? ` | Size: ${it.size_id}` : '');
             return $("<li>")
                 .append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
@@ -965,7 +1038,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Item Not Found',
-                        text: 'Barcode does not match any item in the selected Sales Order.',
+                        text: 'Item not found in selected Sales Orders',
                         timer: 2000,
                         showConfirmButton: false
                     });

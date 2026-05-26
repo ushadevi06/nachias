@@ -272,3 +272,41 @@ ALTER TABLE settings
 ADD COLUMN terms_and_conditions LONGTEXT NULL AFTER address;
 
 ALTER TABLE `sales_orders` CHANGE `terms_conditions` `terms_conditions` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL;
+
+ALTER TABLE `credit_note_items` DROP COLUMN `item_id`, DROP COLUMN `brand_category_id`, DROP COLUMN `size`, DROP COLUMN `sleeve_type`, DROP COLUMN `uom_id`;
+
+-- credit_note_charges table
+CREATE TABLE `credit_note_charges` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `credit_note_id` BIGINT UNSIGNED NOT NULL,
+    `charge_id` BIGINT UNSIGNED NOT NULL,
+    `charge_name` VARCHAR(255) NULL,
+    `charge_amount` DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    `tax_type` VARCHAR(255) NULL,
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    `deleted_at` TIMESTAMP NULL,
+    CONSTRAINT `credit_note_charges_credit_note_id_foreign` 
+        FOREIGN KEY (`credit_note_id`) REFERENCES `credit_notes`(`id`) ON DELETE CASCADE,
+    CONSTRAINT `credit_note_charges_charge_id_foreign` 
+        FOREIGN KEY (`charge_id`) REFERENCES `charges`(`id`)
+);
+
+-- Add columns to credit_notes
+ALTER TABLE `credit_notes`
+    ADD COLUMN `reason_detail` TEXT NULL AFTER `reason`,
+    ADD COLUMN `zone_id` BIGINT UNSIGNED NULL AFTER `customer_id`,
+    ADD COLUMN `agent_id` BIGINT UNSIGNED NULL AFTER `zone_id`,
+    ADD COLUMN `show_fields` TEXT NULL AFTER `status`,
+    ADD COLUMN `discount_percent` DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER `sub_total`,
+    ADD COLUMN `discount` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `discount_percent`,
+    ADD COLUMN `other_charges` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `tax_amount`;
+
+-- Add sales_invoice_ids to credit_notes
+ALTER TABLE `credit_notes`
+    ADD COLUMN `sales_invoice_ids` JSON NULL AFTER `sales_invoice_id`;
+
+-- Add so_ids to sales_invoices and make so_id nullable
+ALTER TABLE `sales_invoices`
+    ADD COLUMN `so_ids` JSON NULL AFTER `so_id`,
+    MODIFY COLUMN `so_id` BIGINT UNSIGNED NULL;

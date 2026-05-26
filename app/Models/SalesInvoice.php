@@ -14,6 +14,7 @@ class SalesInvoice extends Model
         'inv_no',
         'inv_date',
         'so_id',
+        'so_ids',
         'customer_id',
         'store_id',
         'agent_id',

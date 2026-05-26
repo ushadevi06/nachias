@@ -85,7 +85,18 @@ class SalesInvoiceController extends Controller
                 $eInvoiceBtn = '';
                 if ($inv->einvoice_status === 'cancelled') {
                     $eInvoiceBtn = '<button type="button" class="btn btn-warning" title="E-Invoice Cancelled" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;" disabled><i class="ri ri-close-circle-line"></i> Cancelled</button>';
-                    $eInvoiceBtn .= '<a href="' . url('sales_invoices/recreate/' . $inv->id) . '" class="btn btn-outline-primary" title="Recreate / Copy to New Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-file-copy-line"></i></a>';
+                    
+                    $recreatedInvoice = \App\Models\SalesInvoice::where('customer_id', $inv->customer_id)
+                        ->where('so_ids', $inv->so_ids)
+                        ->where('id', '!=', $inv->id)
+                        ->where(function($q) {
+                            $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+                        })
+                        ->exists();
+                    
+                    if (!$recreatedInvoice) {
+                        $eInvoiceBtn .= '<a href="' . url('sales_invoices/recreate/' . $inv->id) . '" class="btn btn-outline-primary" title="Recreate / Copy to New Invoice" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-file-copy-line"></i></a>';
+                    }
                 } elseif ($inv->irn) {
                     $ackDateTime = $inv->ack_date ? \Carbon\Carbon::parse($inv->ack_date) : null;
                     $isExpired = $ackDateTime ? $ackDateTime->diffInHours(now()) >= 24 : false;
@@ -145,7 +156,8 @@ class SalesInvoiceController extends Controller
             $request->validate([
                 'inv_no' => 'required|min:3|max:50|unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'inv_date' => 'required|date',
-                'so_id' => 'required|exists:sales_orders,id',
+                'so_ids' => 'required|array',
+                'so_ids.*' => 'exists:sales_orders,id',
                 'customer_id' => 'required|exists:customers,id',
                 'delivery_address' => 'required|min:3|max:255|regex:/^[^<>]*$/',
                 'remarks' => 'nullable|min:3|max:255|regex:/^[^<>]*$/',
@@ -175,7 +187,7 @@ class SalesInvoiceController extends Controller
             DB::beginTransaction();
             try {
                 $invoiceData = $request->only([
-                    'inv_no', 'so_id', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
+                    'inv_no', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
                     'invoice_status', 'payment_mode', 'extra_input', 'due_date',
                     'notes', 'transporter_name', 'transporter_id', 'transport_mode',
                     'vehicle_no', 'veh_type', 'transport_distance', 'tran_doc_no', 'tran_doc_date',
@@ -185,7 +197,6 @@ class SalesInvoiceController extends Controller
                     'other_charges', 'round_off_type', 'round_off',
                     'grand_total', 'due_amount'
                 ]);
-
                 if ($request->tran_doc_date) {
                     $invoiceData['tran_doc_date'] = Carbon::createFromFormat('d-m-Y', $request->tran_doc_date)->format('Y-m-d');
                 }
@@ -197,6 +208,8 @@ class SalesInvoiceController extends Controller
                 }
                 $invoiceData['show_fields'] = $request->show_fields ?? [];
                 $invoiceData['other_state'] = $request->other_state == 'yes';
+                $invoiceData['so_ids'] = json_encode($request->so_ids);
+                $invoiceData['so_id'] = $request->so_ids[0] ?? null;
 
                 if ($request->hasFile('signature_file')) {
                     $dir = public_path('uploads/sales_invoices/signatures');
@@ -223,9 +236,6 @@ class SalesInvoiceController extends Controller
                 if ($id) {
                     $invoice = SalesInvoice::with('items')->findOrFail($id);
                     $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
-                    if (in_array($invoice->invoice_status, $activeStatuses)) {
-                        $this->revertStockDeduction($invoice);
-                    }
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
                     $invoice->update($invoiceData);                     
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
@@ -235,7 +245,7 @@ class SalesInvoiceController extends Controller
                     $invoice = SalesInvoice::create($invoiceData);
                 }
                 foreach ($request->items as $item) {
-                    SalesInvoiceItem::updateOrCreate(
+                    $invoice = SalesInvoiceItem::updateOrCreate(
                         ['id' => $item['id'] ?? null],
                         [
                             'sales_invoice_id' => $invoice->id,
@@ -245,7 +255,7 @@ class SalesInvoiceController extends Controller
                             'rate' => $item['rate'] ?? 0,
                             'mrp' => $item['mrp'] ?? 0,
                             'amount' => $item['amount'] ?? 0,
-                            'hsn_sac' => $invoice->hsn_sac ?? $item['hsn_sac'] ?? null,
+                            'hsn_sac' => $item['hsn_sac'] ?? null,
                             'art_no' => $item['art_no'] ?? null,
                             'size' => $item['size'] ?? null,
                             'color_id' => $item['color_id'] ?? null,
@@ -274,34 +284,23 @@ class SalesInvoiceController extends Controller
         if ($invoice && $invoice->einvoice_status === 'cancelled') {
             return redirect('sales_invoices')->with('error', 'Cancelled invoices cannot be edited.');
         }
-        $customers = Customer::active()->orderBy('id','desc')->get();
-
-        $usedSoIds = SalesInvoice::whereNotNull('so_id')
-            ->where(function($query) {
-                $query->where('einvoice_status', '!=', 'cancelled')
-                      ->orWhereNull('einvoice_status');
-            })
-            ->when($id, function($query) use ($id) {
-                return $query->where('id', '!=', $id);
-            })->pluck('so_id')->toArray();
-
-        $saleOrders = SalesOrder::where('status', 'Approved')->whereNotIn('id', $usedSoIds)->orderBy('id', 'desc')->get();
-
-        if ($invoice && $invoice->so_id) {
-            $currentSo = SalesOrder::find($invoice->so_id);
-            if ($currentSo && !$saleOrders->contains('id', $invoice->so_id)) {
-                $saleOrders->push($currentSo);
-            }
-        }
+        $customers = Customer::active()->orderBy('id', 'desc')->get();
         $brandCategories = BrandCategory::active()->get();
         $uoms = Uom::active()->get();
         $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
-        
+
         $nextInvNumber = '';
         if (!$id) {
             $lastInv = SalesInvoice::orderBy('id', 'desc')->first();
             $nextInvNumber = 'SV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+        }
+
+        if ($invoice) {
+            $soIds = $invoice->so_ids ? json_decode($invoice->so_ids, true) : ($invoice->so_id ? [$invoice->so_id] : []);
+            $saleOrders = SalesOrder::whereIn('id', $soIds)->orderBy('id', 'desc')->get();
+        } else {
+            $saleOrders = collect(); 
         }
 
         return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent'));
@@ -316,6 +315,194 @@ class SalesInvoiceController extends Controller
         return view('sales_invoice.view_details', compact('invoice'));
     }
     
+    public function getCustomerSalesOrders(Request $request)
+    {
+        $customerId = $request->customer_id;
+        if (!$customerId) {
+            return response()->json(['success' => false, 'message' => 'Customer ID required']);
+        }
+
+        $saleOrders = SalesOrder::with(['items'])->where('customer_id', $customerId)->where('status', 'Approved')->orderBy('id', 'desc')->get();
+
+        $data = $saleOrders->map(function($so) {
+            $totalQty = $so->items->sum('qty');
+
+           $alreadyInvoiced = DB::table('sales_invoices')
+                ->where(function($q) use ($so) {
+                    $q->where('so_id', $so->id)
+                    ->orWhereRaw('JSON_CONTAINS(so_ids, ?)', ['"' . $so->id . '"']);
+                })
+                ->where(function($q) {
+                    $q->whereNull('einvoice_status')
+                    ->orWhere('einvoice_status', '!=', 'cancelled');
+                })
+                ->exists();
+    
+            if ($alreadyInvoiced) {
+                return null;
+            }
+
+            $pendingQty = $totalQty;
+
+            return [
+                'id'          => $so->id,
+                'so_no'       => $so->so_no,
+                'order_no'    => $so->order_no,
+                'so_date'     => $so->so_date ? $so->so_date->format('d-m-Y') : '',
+                'total_qty'   => $totalQty,
+                'pending_qty' => $pendingQty,
+            ];
+        })->filter(fn($so) => $so !== null)->values();
+
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    public function getMultipleSaleOrdersDetails(Request $request)
+    {
+        $soIds = $request->so_ids;
+        if (empty($soIds) || !is_array($soIds)) {
+            return response()->json(['success' => false, 'message' => 'No Sales Orders selected']);
+        }
+
+        $saleOrders = SalesOrder::with([
+            'items.brandCategory', 
+            'items.item.brand', 
+            'items.item.style', 
+            'items.stockEntryItem.item.brand', 
+            'items.stockEntryItem.item.style', 
+            'items.uom', 
+            'items.size', 
+            'items.color', 
+            'customer'
+        ])->whereIn('id', $soIds)->get();
+
+        if ($saleOrders->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Sale Orders not found']);
+        }
+
+        $allItems = collect();
+        $billingAddress = '';
+        $shippingAddress = '';
+        $transporterName = '';
+        $transportModeId = null;
+
+        foreach ($saleOrders as $so) {
+            if (empty($billingAddress) && $so->customer) {
+                $c = $so->customer;
+                $billingAddress = implode(', ', array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3, $c->city, $c->state, $c->pincode]));
+                $shippingAddress = $so->shipping_address;
+                $transporterName = $so->transporter_name;
+                $transportModeId = $so->transport_mode_id;
+            }
+
+            foreach ($so->items as $item) {
+                $invoicedQty = DB::table('sales_invoice_items')
+                    ->join('sales_invoices', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
+                    ->whereRaw('JSON_CONTAINS(sales_invoices.so_ids, ?)', ['"'.$so->id.'"'])
+                    ->where('sales_invoice_items.stock_entry_item_id', $item->stock_entry_item_id)
+                    ->where(function($q) {
+                        $q->whereNull('sales_invoices.einvoice_status')
+                          ->orWhere('sales_invoices.einvoice_status', '!=', 'cancelled');
+                    })
+                    ->sum('sales_invoice_items.quantity');
+                
+                $pendingQty = max(0, $item->qty - $invoicedQty);
+                
+                if ($pendingQty > 0) {
+                    $brandName = '';
+                    $itemName = '';
+                    $sleeveType = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
+
+                    if ($item->item) {
+                        if ($item->item->brand) $brandName = $item->item->brand->brand_name;
+                        elseif ($item->brandCategory) $brandName = $item->brandCategory->name;
+                        
+                        if ($item->item->style) $itemName = $item->item->style->style_name;
+                        else $itemName = $item->item->name;
+                    } elseif ($item->stockEntryItem) {
+                        if ($item->stockEntryItem->item) {
+                            $seItem = $item->stockEntryItem->item;
+                            if ($seItem->brand) $brandName = $seItem->brand->brand_name;
+                            elseif ($seItem->brandCategory) $brandName = $seItem->brandCategory->name;
+
+                            if ($seItem->style) $itemName = $seItem->style->style_name;
+                            else $itemName = $seItem->name;
+                        } else {
+                            $brandName = $item->stockEntryItem->finished_item_code;
+                        }
+                        if (empty($sleeveType)) $sleeveType = $item->stockEntryItem->sleeve_type;
+                    } elseif ($item->brandCategory) {
+                        $brandName = $item->brandCategory->name;
+                    }
+
+                    $itemData = [
+                        'brand_id' => $item->brand_cat_id,
+                        'brand_name' => $brandName ?: '',
+                        'item_id' => $item->item_id,
+                        'item_name' => $itemName ?: '',
+                        'item_code' => $item->item ? $item->item->code : '',
+                        'uom_id' => $item->uom_id,
+                        'uom_code' => $item->uom_id ?: '',
+                        'qty' => $pendingQty, 
+                        'rate' => $item->rate,
+                        'mrp' => $item->mrp ?? 0,
+                        'amount' => $item->amount,
+                        'art_no' => $item->art_no,
+                        'hsn_sac' => $item->hsn_sac ?? null,
+                        'sku' => $item->sku,
+                        'size_id' => $item->size_id,
+                        'size_name' => $item->size ? $item->size->size : '',
+                        'color_id' => $item->color_id,
+                        'color_name' => $item->color ? $item->color->color_name : '',
+                        'sleeve' => $sleeveType ?: '',
+                        'stock_entry_item_id' => $item->stock_entry_item_id,
+                    ];
+
+                    $existingItemKey = $allItems->search(function($i) use ($item) {
+                        return $i['stock_entry_item_id'] == $item->stock_entry_item_id && $i['rate'] == $item->rate;
+                    });
+                    
+                    if ($existingItemKey !== false) {
+                        $existingItem = $allItems[$existingItemKey];
+                        $existingItem['qty'] += $pendingQty;
+                        $allItems[$existingItemKey] = $existingItem;
+                    } else {
+                        $allItems->push($itemData);
+                    }
+                }
+            }
+        }
+
+        $firstSo = $saleOrders->first();
+
+        $totalSubTotal = 0;
+        $totalDiscountAmount = 0;
+        foreach ($saleOrders as $so) {
+            $totalSubTotal += $so->sub_total ?? 0;
+            $totalDiscountAmount += $so->discount_amount ?? 0;
+        }
+        $weightedDiscountPercent = $totalSubTotal > 0 ? round(($totalDiscountAmount / $totalSubTotal) * 100, 2) : ($firstSo->discount_percent ?? 0);
+
+        return response()->json([
+            'success' => true,
+            'customer_id' => $firstSo->customer_id,
+            'store_id' => $firstSo->store_id,
+            'agent_id' => $firstSo->agent_id,
+            'commission_percent' => $firstSo->commission_percent,
+            'billing_address' => $billingAddress,
+            'shipping_address' => $shippingAddress,
+            'other_state' => $firstSo->other_state ? 'yes' : 'no',
+            'discount_percent' => $weightedDiscountPercent,
+            'igst_percent' => $firstSo->igst_percent,
+            'cgst_percent' => $firstSo->cgst_percent,
+            'sgst_percent' => $firstSo->sgst_percent,
+            'transporter_name' => $transporterName,
+            'transport_gst_no' => $firstSo->transport_gst_no,
+            'transport_mode_id' => $transportModeId,
+            'items' => $allItems->values()
+        ]);
+    }
+
     public function getSaleOrderDetails($id)
     {
         $so = SalesOrder::with([
@@ -444,9 +631,7 @@ class SalesInvoiceController extends Controller
         $isNowActive = in_array($newStatus, $activeStatuses);
 
         if (!$wasActive && $isNowActive) {
-            // $this->applyStockDeduction($invoice);
         } elseif ($wasActive && !$isNowActive) {
-            // $this->revertStockDeduction($invoice);
         }
 
         return response()->json(['success' => true, 'message' => 'Status updated successfully']);
@@ -458,11 +643,6 @@ class SalesInvoiceController extends Controller
         
         DB::beginTransaction();
         try {
-            $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
-            if (in_array($invoice->invoice_status, $activeStatuses)) {
-                $this->revertStockDeduction($invoice);
-            }
-
             addLog('delete', 'Sales Invoice', 'sales_invoices', $id, $invoice->toArray(), null);
             $invoice->delete();
             

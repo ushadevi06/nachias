@@ -14,8 +14,12 @@ class CreditNote extends Model
         'note_no',
         'note_date',
         'sales_invoice_id',
+        'sales_invoice_ids',
         'customer_id',
         'reason',
+        'reason_detail',
+        'zone_id',
+        'agent_id',
         'other_state',
         'igst_percent',
         'igst',
@@ -24,13 +28,17 @@ class CreditNote extends Model
         'sgst_percent',
         'sgst',
         'sub_total',
+        'discount_percent',
+        'discount',
         'tax_amount',
+        'other_charges',
         'round_off',
         'round_off_type',
         'grand_total',
         'remarks',
         'reference_doc',
         'status',
+        'show_fields',
         'created_by',
         'updated_by',
     ];
@@ -38,6 +46,8 @@ class CreditNote extends Model
     protected $casts = [
         'note_date' => 'date',
         'other_state' => 'boolean',
+        'sales_invoice_ids' => 'array',
+        'show_fields' => 'array',
     ];
 
     public function salesInvoice()
@@ -50,9 +60,24 @@ class CreditNote extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function salesAgent()
+    {
+        return $this->belongsTo(SalesAgent::class, 'agent_id');
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
     public function items()
     {
         return $this->hasMany(CreditNoteItem::class);
+    }
+
+    public function charges()
+    {
+        return $this->hasMany(CreditNoteCharge::class);
     }
 
     public function createdBy()

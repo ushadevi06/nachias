@@ -103,13 +103,13 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Agent/Executive">
-                                        <option value="">Select Sales Agent/Executive</option>
+                                    <select id="agent_id" name="agent_id" class="select2 form-select" data-placeholder="Select Sales Executive">
+                                        <option value="">Select Sales Executive</option>
                                         @foreach($sales_agent as $agent)
                                         <option value="{{ $agent->id }}" {{ old('agent_id', $salesOrder->agent_id ?? '') == $agent->id ? 'selected' : '' }}>{{ $agent->name }}({{ $agent->code }})</option>
                                         @endforeach
                                     </select>
-                                    <label for="agent_id">Sales Agent/Executive</label>
+                                    <label for="agent_id">Sales Executive</label>
                                 </div> 
                             </div>
                             <div class="col-md-4">
@@ -749,11 +749,10 @@
                                                     @else
                                                         <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
                                                             @if(strtolower($ext) == 'pdf')
-                                                                <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                                <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
                                                             @else
-                                                                <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                                <i class="ri ri-file-text-fill text-primary fs-3"></i>
                                                             @endif
-                                                            <span class="ms-1 small text-dark fw-bold text-uppercase" style="font-size: 10px;">{{ $ext }}</span>
                                                         </a>
                                                     @endif
                                                 </div>
@@ -782,28 +781,16 @@
                                                 <span class="input-group-text px-1">%</span>
                                             </div>
                                         </div>
-                                        <div class="mb-4">
-                                            <label class="fw-bold mb-2">Box Discount Option:</label>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div class="d-flex flex-wrap gap-3 align-items-center">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="discount_type" id="disc_none" value="none" {{ (old('discount_type', $salesOrder ? ($salesOrder->apply_box_discount ? 'box' : 'none') : 'none')) == 'none' ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="disc_none">Without Box Discount</label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" name="discount_type" id="disc_box" value="box" {{ (old('discount_type', $salesOrder ? ($salesOrder->apply_box_discount ? 'box' : '') : '')) == 'box' ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="disc_box">With Box Discount</label>
-                                                    </div>
-                                                </div>
-                                                <div class="input-group input-group-sm" style="width:100px;">
-                                                    <input type="number" class="form-control form-control-sm text-end" id="discount_percent" name="discount_percent" step="0.01" min="0" max="100" value="{{ old('discount_percent', $salesOrder->discount_percent ?? '0') }}">
-                                                    <span class="input-group-text px-1">%</span>
-                                                </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <label class="fw-bold">Box Discount:</label>
+                                            <div class="input-group input-group-sm" style="width:100px;">
+                                                <input type="number" class="form-control form-control-sm text-end" id="discount_percent" name="discount_percent" step="0.01" min="0" max="100" value="{{ old('discount_percent', $salesOrder->discount_percent ?? '0') }}">
+                                                <span class="input-group-text px-1">%</span>
                                             </div>
-                                            <input type="hidden" name="apply_box_discount" id="apply_box_discount_hidden" value="{{ old('apply_box_discount', $salesOrder->apply_box_discount ?? false) ? '1' : '0' }}">
-                                            <input type="hidden" id="customer_sales_discount" value="0">
-                                            <input type="hidden" id="customer_box_discount" value="0">
                                         </div>
+                                        <input type="hidden" name="apply_box_discount" id="apply_box_discount_hidden" value="1">
+                                        <input type="hidden" id="customer_sales_discount" value="0">
+                                        <input type="hidden" id="customer_box_discount" value="0">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Total Qty:</label>
                                             <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="total_qty" name="total_qty" value="{{ old('total_qty', $salesOrder->total_qty ?? '0.00') }}" readonly>
@@ -1027,11 +1014,7 @@ $(document).ready(function () {
                         $('#customer_box_discount').val(res.box_discount || 0);
                         $('#customer_sales_discount').val(res.sales_discount || 0);
                         $('#sales_discount_percent').val(res.sales_discount || 0);
-                        if ($('input[name="discount_type"]:checked').val() === 'box') {
-                            $('#discount_percent').val(res.box_discount || 0);
-                        } else {
-                            $('#discount_percent').val(0);
-                        }
+                        $('#discount_percent').val(res.box_discount || 0);
                         calculateTotals();
                     }
                 }
@@ -1050,7 +1033,7 @@ $(document).ready(function () {
             <tr class="item-row">
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Search Item (Code/SKU)" value="" autocomplete="off">
+                        <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="" autocomplete="off">
                         <input type="hidden" name="items[${itemIndex}][stock_item_key]" class="stock-item-select" value="">
                         <label>Search Stock Item (Code/SKU) *</label>
                     </div>
@@ -1375,7 +1358,10 @@ $(document).ready(function () {
                         if (c.payment_terms) $('#payment_terms').val(c.payment_terms);
                         if (c.transport_name) $('#transporter_name').val(c.transport_name);
                         
-                        $('#discount_percent').val('');
+                        $('#customer_box_discount').val(c.box_discount || 0);
+                        $('#customer_sales_discount').val(c.sales_discount || 0);
+                        $('#sales_discount_percent').val(c.sales_discount || 0);
+                        $('#discount_percent').val(c.box_discount || 0);
 
                         let customerStateId = c.state_id;
                         let companyStateId = "{{ $web_settings->state_id ?? '' }}";
@@ -1598,16 +1584,6 @@ $(document).ready(function () {
     $(document).on('input', '#discount_percent, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off, #commission_percent', calculateTotals);
     $(document).on('change', 'input[name="other_state"], input[name="round_off_type"]', calculateTotals);
 
-    $(document).on('change', 'input[name="discount_type"]', function() {
-        let type = $(this).val();
-        $('#apply_box_discount_hidden').val(type === 'box' ? 1 : 0);
-        if (type === 'box') {
-            $('#discount_percent').val($('#customer_box_discount').val() || 0);
-        } else {
-            $('#discount_percent').val(0);
-        }
-        calculateTotals();
-    });
     $('#commission_percent').on('input', function() {
         let percent = parseFloat($(this).val()) || 0;
         $('.item-row').each(function() {
@@ -1653,7 +1629,7 @@ $(document).ready(function () {
                 url: `{{ url('get-agents-by-zone') }}/${zoneId}`,
                 type: 'GET',
                 success: function(data) {
-                    let opts = '<option value="">Select Sales Agent/Executive</option>';
+                    let opts = '<option value="">Select Sales Executive</option>';
                     data.forEach(agent => {
                         opts += `<option value="${agent.id}">${agent.name}(${agent.code})</option>`;
                     });
@@ -1665,7 +1641,7 @@ $(document).ready(function () {
                 url: `{{ url('get-agents-by-zone') }}/0`, 
                 type: 'GET',
                 success: function(data) {
-                    let opts = '<option value="">Select Sales Agent/Executive</option>';
+                    let opts = '<option value="">Select Sales Executive</option>';
                     data.forEach(agent => {
                         opts += `<option value="${agent.id}">${agent.name}</option>`;
                     });

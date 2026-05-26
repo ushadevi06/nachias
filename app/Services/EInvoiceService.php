@@ -63,7 +63,7 @@ class EInvoiceService
             ],
             "ItemList" => [],
             "ValDtls" => [
-                "AssVal" => (float) number_format((float) ($invoice->taxable_amount ?? $invoice->sub_total), 2, '.', ''),
+                "AssVal" => (float) number_format((float) ($invoice->taxable_amount ?? $invoice->total), 2, '.', ''),
                 "CgstVal" => $isInterState ? 0.00 : (float) number_format((float) $invoice->cgst, 2, '.', ''),
                 "SgstVal" => $isInterState ? 0.00 : (float) number_format((float) $invoice->sgst, 2, '.', ''),
                 "IgstVal" => $isInterState ? (float) number_format((float) $invoice->igst, 2, '.', '') : 0.00,
@@ -78,7 +78,10 @@ class EInvoiceService
         foreach ($invoice->items as $item) {
             $taxRate = $isInterState ? (float) $invoice->igst_percent : (float) ($invoice->cgst_percent + $invoice->sgst_percent);
 
-            $assAmt = (float) number_format((float) $item->amount, 2, '.', '');
+            $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
+            $itemDiscount = (float) number_format(($totAmt * (float) ($invoice->discount_percent ?? 0)) / 100, 2, '.', '');
+            $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
+            
             $cgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->cgst_percent) / 100, 2, '.', '');
             $sgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->sgst_percent) / 100, 2, '.', '');
             $igstAmt = $isInterState ? (float) number_format(($assAmt * (float) $invoice->igst_percent) / 100, 2, '.', '') : 0.00;
@@ -101,8 +104,8 @@ class EInvoiceService
                 "Qty" => (float) number_format((float) $item->quantity, 2, '.', ''),
                 "Unit" => "PCS",
                 "UnitPrice" => (float) number_format((float) $item->rate, 2, '.', ''),
-                "TotAmt" => $assAmt,
-                "Discount" => 0.00,
+                "TotAmt" => $totAmt,
+                "Discount" => $itemDiscount,
                 "AssAmt" => $assAmt,
                 "GstRt" => (float) number_format($taxRate, 2, '.', ''),
                 "IgstAmt" => $igstAmt,
@@ -143,11 +146,13 @@ class EInvoiceService
             ]);
             $invoice->refresh();
             $ewayBillResult = null;
-            if (!empty($transporterData) && (
+            if ($invoice->grand_total >= 50000 && !empty($transporterData) && (
                 !empty($transporterData['vehicle_no']) || 
                 (!empty($transporterData['transporter_id']) && !empty($transporterData['tran_doc_no']))
             )) {
                 $ewayBillResult = $this->generateEWayBill($invoice, $transporterData);
+            } elseif ($invoice->grand_total < 50000) {
+                $ewayBillResult = ['success' => false, 'message' => 'Invoice value is under 50,000. E-Way Bill must be generated manually.'];
             }
 
             return [
@@ -242,7 +247,7 @@ class EInvoiceService
         $buyerStateCode  = $invoice->customer->state->state_code ?? '33';
         $isInterState    = $sellerStateCode !== $buyerStateCode;
 
-        $taxableAmount = (float) ($invoice->taxable_amount ?? $invoice->sub_total);
+        $taxableAmount = (float) ($invoice->taxable_amount ?? $invoice->total);
         $totalValue    = (float) $invoice->grand_total;
 
         $cleanFromAddr = preg_replace('/\s+/', ' ', trim($setting->address ?? 'NA'));
@@ -250,6 +255,10 @@ class EInvoiceService
 
         $itemList = [];
         foreach ($invoice->items as $idx => $item) {
+            $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
+            $itemDiscount = (float) number_format(($totAmt * (float) ($invoice->discount_percent ?? 0)) / 100, 2, '.', '');
+            $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
+
             $itemList[] = [
                 'itemNo'        => $idx + 1,
                 'productName'   => substr($item->item->name ?? 'Garment', 0, 100),
@@ -257,7 +266,7 @@ class EInvoiceService
                 'hsnCode'       => $item->hsn_sac ?? '61099090',
                 'quantity'      => (float) $item->quantity,
                 'qtyUnit'       => 'PCS',
-                'taxableAmount' => (float) $item->amount,
+                'taxableAmount' => $assAmt,
                 'sgstRate'      => $isInterState ? 0.0 : (float) $invoice->sgst_percent,
                 'cgstRate'      => $isInterState ? 0.0 : (float) $invoice->cgst_percent,
                 'igstRate'      => $isInterState ? (float) $invoice->igst_percent : 0.0,

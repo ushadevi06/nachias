@@ -166,6 +166,24 @@ class SalesMarketingReportController extends Controller
             return strcmp($a['zone'], $b['zone']);
         });
 
+        // Credit Note Report Logic
+        $creditNotesQuery = \App\Models\CreditNote::with(['customer', 'salesAgent', 'zone'])->whereNull('deleted_at');
+
+        if ($request->from_date) {
+            $creditNotesQuery->where('note_date', '>=', date('Y-m-d', strtotime($request->from_date)));
+        }
+        if ($request->to_date) {
+            $creditNotesQuery->where('note_date', '<=', date('Y-m-d', strtotime($request->to_date)));
+        }
+        if ($request->customer_id) {
+            $creditNotesQuery->where('customer_id', $request->customer_id);
+        }
+        if ($request->agent_id) {
+            $creditNotesQuery->where('agent_id', $request->agent_id);
+        }
+
+        $creditNotes = $creditNotesQuery->orderBy('id', 'desc')->get();
+
         if ($request->ajax()) {
             return response()->json([
                 'order-report' => view('reports.sales_marketing_reports._order_report', compact('orders'))->render(),
@@ -179,9 +197,10 @@ class SalesMarketingReportController extends Controller
                 'expense-report' => view('reports.sales_marketing_reports._expense_report')->render(),
                 'swatch-report' => view('reports.sales_marketing_reports._swatch_report')->render(),
                 'complaint-report' => view('reports.sales_marketing_reports._complaint_report')->render(),
+                'credit-note-report' => view('reports.sales_marketing_reports._credit_note_report', compact('creditNotes'))->render(),
             ]);
         }
 
-        return view('reports/sales_marketing_report', compact('orders', 'customers', 'executives', 'incentiveReport', 'comparisonReport', 'outstandingReport'));
+        return view('reports/sales_marketing_report', compact('orders', 'customers', 'executives', 'incentiveReport', 'comparisonReport', 'outstandingReport', 'creditNotes'));
     }
 }

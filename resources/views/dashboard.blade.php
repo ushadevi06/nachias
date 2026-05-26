@@ -137,7 +137,8 @@
         </div>
     </div>
     @endif
-    <!-- SECTION 2: ATTENDANCE DASHBOARD -->
+
+	<!-- SECTION 2: ATTENDANCE DASHBOARD -->
     @if(auth()->id() == 1 || auth()->user()->can('view-attendance dashboard'))
     <div class="row g-3 mb-4">
         <div class="col-xl-3 col-md-6">
@@ -217,7 +218,7 @@
             <div class="section-indicator bg-success me-2"></div>
             <h5 class="fw-bold mb-0">Accounts & Financial Dashboard</h5>
         </div>
-
+        
         <!-- Financial KPI Grid -->
         <div class="row g-3 mb-4">
             <div class="col-md-3">
@@ -238,7 +239,7 @@
                     <h5 class="mb-0 fw-bold text-primary">₹{{ number_format($total_debtors, 2) }}</h5>
                 </div>
             </div>
-            <div class="col-md-3">
+             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-primary">
                     <p class="text-muted small mb-1">Bill Disc. ({{ $bill_discount_percent }}%)</p>
                     <h5 class="mb-0 fw-bold">₹{{ number_format($bill_discount, 2) }}</h5>
@@ -256,7 +257,7 @@
                     <h5 class="mb-0 fw-bold text-navy">₹{{ number_format($total_purchase, 2) }}</h5>
                 </div>
             </div>
-            <div class="col-md-3">
+             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-danger">
                     <p class="text-muted small mb-1">Purchase Return</p>
                     <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($purchase_return, 2) }}</h5>
@@ -292,16 +293,16 @@
                                 </thead>
                                 <tbody class="small">
                                     @if($debtors_aging->count() > 0)
-                                    @foreach ($debtors_aging as $row)
-                                    <tr>
-                                        <td><strong>{{ $row->zone_name }}</strong></td>
-                                        <td>{{ number_format($row->total_due, 2) }}</td>
-                                        <td class="text-success">{{ number_format($row->bucket_30, 2) }}</td>
-                                        <td>{{ number_format($row->bucket_60, 2) }}</td>
-                                        <td class="text-warning">{{ number_format($row->bucket_90, 2) }}</td>
-                                        <td class="text-danger fw-bold">{{ number_format($row->bucket_above_90, 2) }}</td>
-                                    </tr>
-                                    @endforeach
+                                        @foreach ($debtors_aging as $row)
+                                        <tr>
+                                            <td><strong>{{ $row->zone_name }}</strong></td>
+                                            <td>{{ number_format($row->total_due, 2) }}</td>
+                                            <td class="text-success">{{ number_format($row->bucket_30, 2) }}</td>
+                                            <td>{{ number_format($row->bucket_60, 2) }}</td>
+                                            <td class="text-warning">{{ number_format($row->bucket_90, 2) }}</td>
+                                            <td class="text-danger fw-bold">{{ number_format($row->bucket_above_90, 2) }}</td>
+                                        </tr>
+                                        @endforeach
                                     @else
                                     <tr>
                                         <td colspan="6" class="text-center text-muted">No pending debtors found for any zone.</td>
@@ -335,16 +336,16 @@
                                 </thead>
                                 <tbody class="small">
                                     @if($creditors_aging->count() > 0)
-                                    @foreach ($creditors_aging as $row)
-                                    <tr>
-                                        <td><strong>{{ $row->supplier_name }}</strong></td>
-                                        <td>{{ number_format($row->total_due, 2) }}</td>
-                                        <td class="text-success">{{ number_format($row->bucket_30, 2) }}</td>
-                                        <td>{{ number_format($row->bucket_60, 2) }}</td>
-                                        <td class="text-warning">{{ number_format($row->bucket_90, 2) }}</td>
-                                        <td class="text-danger fw-bold">{{ number_format($row->bucket_above_90, 2) }}</td>
-                                    </tr>
-                                    @endforeach
+                                        @foreach ($creditors_aging as $row)
+                                        <tr>
+                                            <td><strong>{{ $row->supplier_name }}</strong></td>
+                                            <td>{{ number_format($row->total_due, 2) }}</td>
+                                            <td class="text-success">{{ number_format($row->bucket_30, 2) }}</td>
+                                            <td>{{ number_format($row->bucket_60, 2) }}</td>
+                                            <td class="text-warning">{{ number_format($row->bucket_90, 2) }}</td>
+                                            <td class="text-danger fw-bold">{{ number_format($row->bucket_above_90, 2) }}</td>
+                                        </tr>
+                                        @endforeach
                                     @else
                                     <tr>
                                         <td colspan="6" class="text-center text-muted">No pending creditors found.</td>
@@ -422,7 +423,7 @@
             <div class="section-indicator bg-warning me-2"></div>
             <h5 class="fw-bold mb-0">Production Dashboard</h5>
         </div>
-
+        
         <div class="row g-4">
             <!-- 1. Production WIP -->
             <div class="col-lg-7">
@@ -447,19 +448,17 @@
                                 </thead>
                                 <tbody class="small">
                                     @if($production_wip->count() > 0)
-                                    @foreach($production_wip as $wip)
-                                    <tr class="wip-row">
-                                        <td class="wip-process-name"><strong>{{ $wip->operation_stage_name }}</strong></td>
-                                        <td class="text-center">{{ number_format($wip->opening ?: 0, 2) }}</td>
-                                        <td class="text-center text-success">{{ number_format($wip->inward ?: 0, 2) }}</td>
-                                        <td class="text-center text-primary">{{ number_format($wip->outward ?: 0, 2) }}</td>
-                                        <td class="text-center fw-bold">{{ number_format($wip->wip ?: 0, 2) }}</td>
-                                    </tr>
-                                    @endforeach
+                                        @foreach($production_wip as $wip)
+                                        <tr class="wip-row">
+                                            <td class="wip-process-name"><strong>{{ $wip->operation_stage_name }}</strong></td>
+                                            <td class="text-center">{{ number_format($wip->opening ?: 0, 2) }}</td>
+                                            <td class="text-center text-success">{{ number_format($wip->inward ?: 0, 2) }}</td>
+                                            <td class="text-center text-primary">{{ number_format($wip->outward ?: 0, 2) }}</td>
+                                            <td class="text-center fw-bold">{{ number_format($wip->wip ?: 0, 2) }}</td>
+                                        </tr>
+                                        @endforeach
                                     @else
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">No WIP data available</td>
-                                    </tr>
+                                     <tr><td colspan="5" class="text-center text-muted py-4">No WIP data available</td></tr>
                                     @endif
                                 </tbody>
                             </table>
@@ -467,8 +466,8 @@
                     </div>
                     <div class="card-footer bg-light border-0 py-2">
                         <p class="mb-0 x-small text-muted">
-                            <strong>Note:</strong>
-                            1. Stages show if work is in progress or a task is assigned.
+                            <strong>Note:</strong> 
+                            1. Stages show if work is in progress or a task is assigned. 
                             2. Completed stages are hidden to keep the overview clean.
                         </p>
                     </div>
@@ -554,20 +553,20 @@
                     <div class="card-body p-0">
                         <div class="list-group list-group-flush">
                             @if($delivery_overdue->count() > 0)
-                            @foreach($delivery_overdue as $od)
-                            <div class="list-group-item py-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="small fw-bold">{{ $od->job_card_no }}</span>
-                                    <span class="badge bg-soft-danger text-danger">{{ $od->overdue_days }} Days Overdue</span>
+                                @foreach($delivery_overdue as $od)
+                                <div class="list-group-item py-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small fw-bold">{{ $od->job_card_no }}</span>
+                                        <span class="badge bg-soft-danger text-danger">{{ $od->overdue_days }} Days Overdue</span>
+                                    </div>
+                                    <p class="text-muted x-small mb-0">Target: {{ date('d-M-y', strtotime($od->delivery_date)) }} | Qty: {{ $od->grand_total_qty }}</p>
                                 </div>
-                                <p class="text-muted x-small mb-0">Target: {{ date('d-M-y', strtotime($od->delivery_date)) }} | Qty: {{ $od->grand_total_qty }}</p>
-                            </div>
-                            @endforeach
+                                @endforeach
                             @else
-                            <div class="list-group-item py-4 text-center text-muted">
-                                <i class="ri ri-checkbox-circle-line fs-2 text-success"></i><br>
-                                No Overdue Job Cards
-                            </div>
+                                <div class="list-group-item py-4 text-center text-muted">
+                                    <i class="ri ri-checkbox-circle-line fs-2 text-success"></i><br>
+                                    No Overdue Job Cards
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -593,18 +592,16 @@
                                 </thead>
                                 <tbody class="small">
                                     @if($process_wise_status->count() > 0)
-                                    @foreach($process_wise_status as $ps)
-                                    <tr>
-                                        <td>{{ $ps->operation_stage_name }}</td>
-                                        <td class="text-center text-success fw-bold">{{ $ps->completed ?: 0 }}</td>
-                                        <td class="text-center text-warning">{{ $ps->in_progress ?: 0 }}</td>
-                                        <td class="text-center text-danger">{{ $ps->planned ?: 0 }}</td>
-                                    </tr>
-                                    @endforeach
+                                        @foreach($process_wise_status as $ps)
+                                        <tr>
+                                            <td>{{ $ps->operation_stage_name }}</td>
+                                            <td class="text-center text-success fw-bold">{{ $ps->completed ?: 0 }}</td>
+                                            <td class="text-center text-warning">{{ $ps->in_progress ?: 0 }}</td>
+                                            <td class="text-center text-danger">{{ $ps->planned ?: 0 }}</td>
+                                        </tr>
+                                        @endforeach
                                     @else
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-2">No data</td>
-                                    </tr>
+                                        <tr><td colspan="4" class="text-center text-muted py-2">No data</td></tr>
                                     @endif
                                 </tbody>
                             </table>
@@ -648,13 +645,13 @@
                                         <td>{{ date('d-M-y', strtotime($doc->validity_date)) }}</td>
                                         <td class="text-center">
                                             @php
-                                            $daysLeft = \Carbon\Carbon::parse($doc->validity_date)->diffInDays(\Carbon\Carbon::today());
-                                            $isExpired = \Carbon\Carbon::parse($doc->validity_date)->isPast();
+                                                $daysLeft = \Carbon\Carbon::parse($doc->validity_date)->diffInDays(\Carbon\Carbon::today());
+                                                $isExpired = \Carbon\Carbon::parse($doc->validity_date)->isPast();
                                             @endphp
                                             @if($isExpired)
-                                            <span class="badge bg-soft-danger text-danger border border-danger px-2 py-1">Expired</span>
+                                                <span class="badge bg-soft-danger text-danger border border-danger px-2 py-1">Expired</span>
                                             @else
-                                            <span class="badge bg-soft-warning text-warning border border-warning px-2 py-1">{{ $daysLeft }} Days Left</span>
+                                                <span class="badge bg-soft-warning text-warning border border-warning px-2 py-1">{{ $daysLeft }} Days Left</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -756,11 +753,9 @@
     .kpi-widget {
         transition: transform 0.3s ease;
     }
-
     .kpi-widget:hover {
         transform: translateY(-5px);
     }
-
     .kpi-icon {
         width: 48px;
         height: 48px;
@@ -772,33 +767,13 @@
     }
 
     /* Color Variances */
-    .bg-light-primary {
-        background: #eef2ff;
-    }
-
-    .bg-light-info {
-        background: #ecfeff;
-    }
-
-    .bg-light-success {
-        background: #f0fdf4;
-    }
-
-    .bg-light-warning {
-        background: #fffbeb;
-    }
-
-    .bg-light-danger {
-        background: #fef2f2;
-    }
-
-    .bg-light-secondary {
-        background: #f8fafc;
-    }
-
-    .bg-light-dark {
-        background: #f1f5f9;
-    }
+    .bg-light-primary { background: #eef2ff; }
+    .bg-light-info { background: #ecfeff; }
+    .bg-light-success { background: #f0fdf4; }
+    .bg-light-warning { background: #fffbeb; }
+    .bg-light-danger { background: #fef2f2; }
+    .bg-light-secondary { background: #f8fafc; }
+    .bg-light-dark { background: #f1f5f9; }
 
     /* Financial Stat Cards */
     .financial-stat {
@@ -821,51 +796,23 @@
         border: 1px solid #fee2e2;
         color: #991b1b;
     }
-
     .alert-soft-warning {
         background-color: #fffbeb;
         border: 1px solid #fef3c7;
         color: #92400e;
     }
 
-    .x-small {
-        font-size: 0.65rem;
-    }
+    .x-small { font-size: 0.65rem; }
+    .badge.bg-label-success { background: #dcfce7; color: #166534; }
+    .badge.bg-label-primary { background: #dbeafe; color: #1e40af; }
+    .badge.bg-label-warning { background: #fef9c3; color: #854d0e; }
 
-    .badge.bg-label-success {
-        background: #dcfce7;
-        color: #166534;
-    }
+    .bg-soft-danger { background-color: #fef2f2; }
+    .bg-soft-warning { background-color: #fffbeb; }
+    .bg-soft-info { background-color: #eff6ff; }
+    .bg-light-danger-soft { background-color: #fff5f5; }
 
-    .badge.bg-label-primary {
-        background: #dbeafe;
-        color: #1e40af;
-    }
-
-    .badge.bg-label-warning {
-        background: #fef9c3;
-        color: #854d0e;
-    }
-
-    .bg-soft-danger {
-        background-color: #fef2f2;
-    }
-
-    .bg-soft-warning {
-        background-color: #fffbeb;
-    }
-
-    .bg-soft-info {
-        background-color: #eff6ff;
-    }
-
-    .bg-light-danger-soft {
-        background-color: #fff5f5;
-    }
-
-    .border-dashed {
-        border-style: dashed !important;
-    }
+    .border-dashed { border-style: dashed !important; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -876,7 +823,7 @@
             wipSearchInput.addEventListener('keyup', function() {
                 const value = this.value.toLowerCase();
                 const rows = document.querySelectorAll('.wip-row');
-
+                
                 rows.forEach(row => {
                     const text = row.querySelector('.wip-process-name').textContent.toLowerCase();
                     row.style.display = text.includes(value) ? '' : 'none';
@@ -889,7 +836,7 @@
             costSearchInput.addEventListener('keyup', function() {
                 const value = this.value.toLowerCase();
                 const rows = document.querySelectorAll('.cost-row');
-
+                
                 rows.forEach(row => {
                     const text = row.querySelector('.cost-jc-no').textContent.toLowerCase();
                     row.style.display = text.includes(value) ? '' : 'none';
@@ -905,23 +852,7 @@
             data: {
                 labels: ['Fabric', 'Accessories', 'WIP', 'Finished Goods'],
                 datasets: [{
-                    data: [{
-                        {
-                            $fabric_value
-                        }
-                    }, {
-                        {
-                            $accessories_value
-                        }
-                    }, {
-                        {
-                            $wip_value
-                        }
-                    }, {
-                        {
-                            $finished_goods_value
-                        }
-                    }],
+                    data: [{{ $fabric_value }}, {{ $accessories_value }}, {{ $wip_value }}, {{ $finished_goods_value }}],
                     backgroundColor: ['#1e3a8a', '#06b6d4', '#f59e0b', '#10b981'],
                     borderWidth: 0,
                     hoverOffset: 10
@@ -931,9 +862,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false
-                    }
+                    legend: { display: false }
                 },
                 cutout: '70%'
             }
@@ -942,14 +871,10 @@
         new Chart(document.getElementById('salesCollectionChart'), {
             type: 'line',
             data: {
-                labels: {
-                    !!json_encode($months_labels) !!
-                },
+                labels: {!! json_encode($months_labels) !!},
                 datasets: [{
                     label: 'Sales',
-                    data: {
-                        !!json_encode($sales_chart_data) !!
-                    },
+                    data: {!! json_encode($sales_chart_data) !!},
                     borderColor: '#1e3a8a',
                     backgroundColor: 'rgba(30, 58, 138, 0.1)',
                     fill: true,
@@ -957,9 +882,7 @@
                     borderWidth: 3
                 }, {
                     label: 'Collection',
-                    data: {
-                        !!json_encode($collection_chart_data) !!
-                    },
+                    data: {!! json_encode($collection_chart_data) !!},
                     borderColor: '#10b981',
                     backgroundColor: 'transparent',
                     tension: 0.4,
@@ -971,31 +894,11 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        align: 'end',
-                        labels: {
-                            boxWidth: 8,
-                            usePointStyle: true,
-                            padding: 20
-                        }
-                    }
+                    legend: { position: 'top', align: 'end', labels: { boxWidth: 8, usePointStyle: true, padding: 20 } }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#f1f5f9'
-                        },
-                        border: {
-                            display: false
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                    x: { grid: { display: false } }
                 }
             }
         });
@@ -1003,21 +906,15 @@
         new Chart(document.getElementById('purchasePaymentChart'), {
             type: 'bar',
             data: {
-                labels: {
-                    !!json_encode($months_labels) !!
-                },
+                labels: {!! json_encode($months_labels) !!},
                 datasets: [{
                     label: 'Purchase',
-                    data: {
-                        !!json_encode($purchase_chart_data) !!
-                    },
+                    data: {!! json_encode($purchase_chart_data) !!},
                     backgroundColor: '#1e3a8a',
                     borderRadius: 4
                 }, {
                     label: 'Payment',
-                    data: {
-                        !!json_encode($payment_chart_data) !!
-                    },
+                    data: {!! json_encode($payment_chart_data) !!},
                     backgroundColor: '#94a3b8',
                     borderRadius: 4
                 }]
@@ -1026,31 +923,11 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        align: 'end',
-                        labels: {
-                            boxWidth: 8,
-                            usePointStyle: true,
-                            padding: 20
-                        }
-                    }
+                    legend: { position: 'top', align: 'end', labels: { boxWidth: 8, usePointStyle: true, padding: 20 } }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#f1f5f9'
-                        },
-                        border: {
-                            display: false
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                    x: { grid: { display: false } }
                 }
             }
         });

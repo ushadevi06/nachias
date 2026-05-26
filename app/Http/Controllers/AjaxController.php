@@ -234,7 +234,7 @@ class AjaxController extends Controller
 
     public function getCustomerDetails($id)
     {
-        $customer = Customer::with(['tax'])->find($id);
+        $customer = Customer::with(['tax', 'zone'])->find($id);
         if (!$customer) {
             return response()->json(['success' => false, 'message' => 'Customer not found']);
         }

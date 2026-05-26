@@ -138,7 +138,7 @@
                                     @enderror
                                 </div>
                             </div>
-                            {{-- <div class="col-lg-12">
+                            <div class="col-lg-12">
                                 <hr>
                             </div>
 
@@ -163,7 +163,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                            </div>  --}}
+                            </div>  
 
                             <div class="col-lg-12">
                                 <hr>
