@@ -1563,7 +1563,7 @@ $(document).ready(function () {
             $('#commission_amount').val('0.00');
             $('#commission_row').addClass('d-none');
         }
-        let finalTotal = taxableAmount + taxAmount + postGstCharges;
+        let finalTotal = taxableAmount + taxAmount + postGstCharges + totalCommissionAmount;
         
         // if ($('#freight_type').val() === 'Paid') {
         //     finalTotal += parseFloat($('#freight_amount').val()) || 0;

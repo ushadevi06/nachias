@@ -272,7 +272,6 @@ class SalaryController extends Controller
             $incentive = 0;
             $misc = 0;
             $salaryAdvance = 0;
-            $lateFine = 0;
             $otherDeduction = 0;
             $busFare = $employee->bus_fare
                 ? $presentDays * $employee->bus_fare
@@ -290,6 +289,20 @@ class SalaryController extends Controller
                 $esi = ($wage * 0.75) / 100;
             } else {
                 $esi = (21000 * 0.75) / 100;
+            }
+            $totalPermissionHours = 0;
+            foreach ($attendance as $att) {
+                if (!empty($att->permission_hours)) {
+                    $totalPermissionHours += (float) $att->permission_hours;
+                }
+            }
+            // Free 2 hours permission
+            $freePermissionHours = 2;
+            $lateFine = 0;
+            if ($totalPermissionHours > $freePermissionHours) {
+                $excessHours =
+                    $totalPermissionHours - $freePermissionHours;
+                $lateFine = $excessHours * $perHourSalary;
             }
             $totalDeduction =
                 $pf

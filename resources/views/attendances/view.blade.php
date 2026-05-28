@@ -1522,74 +1522,37 @@
             }
         });
         const syncLoader = document.getElementById('syncLoader');
-        function syncAttendance() {
+        function loadAttendanceData() {
             const device = deviceSelect.value;
             const date = attendanceDate.value;
             if (!device || !date) {
                 return;
             }
             syncLoader.classList.remove('d-none');
-            showStatus(
-                'info',
-                'Attendance sync started...'
-            );
-            fetch(`${APP_URL}/sync-attendance`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN':
-                        document.querySelector(
-                            'meta[name="csrf-token"]'
-                        ).content
-                },
-                body: JSON.stringify({
-                    device,
-                    date
-                })
-            })
-            .then(res => res.json())
-            .then(res => {
-                console.log(res);
-                pollAttendanceData(date);
-            })
-            .catch(err => {
-                console.error(err);
-                showStatus(
-                    'danger',
-                    'Failed to start attendance sync.'
-                );
-                syncLoader.classList.add('d-none');
-            });
-        }
-        attendanceDate.addEventListener('input', function () {
-            syncAttendance();
-        });
-        $('#deviceSelect').on('change', syncAttendance);
-        function pollAttendanceData(date)
-        {
-            const interval = setInterval(() => {
-                fetch(`${APP_URL}/attendance-records?date=${date}`)
+            fetch(`${APP_URL}/attendance-records?date=${date}&device=${device}`)
                 .then(res => res.json())
                 .then(res => {
-                    if (res.data.length > 0) {
-                        attendanceRecords = res.data;
-                        renderTable();
-                        syncLoader.classList.add('d-none');
-                        showStatus(
-                            'success',
-                            'Attendance synced successfully.'
-                        );
-                        // STOP polling
-                        clearInterval(interval);
-                    }
+                    attendanceRecords = res.data || [];
+                    renderTable();
+                    syncLoader.classList.add('d-none');
+                    showStatus(
+                        'success',
+                        'Attendance loaded successfully.'
+                    );
+                })
+                .catch(err => {
+                    console.error(err);
+                    syncLoader.classList.add('d-none');
+                    showStatus(
+                        'danger',
+                        'Failed to load attendance records.'
+                    );
                 });
-            }, 3000);
         }
-        /* searchInput.addEventListener('input', function() {
-            if (attendanceDataTable) {
-                attendanceDataTable.search(this.value.trim()).draw();
-            }
-        }); */
+
+        attendanceDate.addEventListener('input', loadAttendanceData);
+
+        $('#deviceSelect').on('change', loadAttendanceData);
 
         populateStaffEmployeeOptions();
         staffReportMonth.value = attendanceDate.value.slice(0, 7);

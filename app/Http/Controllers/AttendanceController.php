@@ -16,9 +16,9 @@ class AttendanceController extends Controller
             xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
             <soap:Body>
                 <GetTransactionsLog xmlns="http://tempuri.org/">
-                    <FromDateTime>' . $from . '</FromDateTime>
-                    <ToDateTime>' . $to . '</ToDateTime>
-                    <SerialNumber>' . $device . '</SerialNumber>
+                    <FromDateTime>2026-04-01 00:00:00</FromDateTime>
+                    <ToDateTime>2026-04-30 23:59:59</ToDateTime>
+                    <SerialNumber>'.$device.'</SerialNumber>
                     <UserName>test</UserName>
                     <UserPassword>Test@123</UserPassword>
                     <strDataList>123</strDataList>
@@ -39,6 +39,11 @@ class AttendanceController extends Controller
         ->post(
             'http://106.51.22.181:85/iclock/webAPIservice.asmx'
         );
+        \Log::info('eBio Response', [
+            'status' => $response->status(),
+            'successful' => $response->successful(),
+            'body' => $response->body(),
+        ]);
         if (!$response->successful()) {
             dd('API Error', $response->body());
         }
@@ -98,9 +103,6 @@ class AttendanceController extends Controller
     }
     public function formatAttendance($grouped, $selectedDate)
     {
-        \Log::info('FORMAT ATTENDANCE STARTED', [
-            'date' => $selectedDate
-        ]);
         $final = [];
         foreach ($grouped as $emp => $dates) {
             foreach ($dates as $date => $times) {
@@ -110,12 +112,7 @@ class AttendanceController extends Controller
                 $hours = ($in && $out)
                     ? (strtotime($out) - strtotime($in)) / 3600
                     : 0;
-                $status = $this->getStatus(
-                    $date,
-                    $in,
-                    $out,
-                    $hours
-                );
+                $status = $this->getStatus($date, $in, $out, $hours);
                 $permissionMinutes = 0;
                 if ($in) {
                     $allowedTime = strtotime($date . ' 09:05:00');
@@ -128,11 +125,6 @@ class AttendanceController extends Controller
                         $permissionMinutes = ceil($lateMinutes / 15) * 15;
                     }
                 }
-                /*
-                |--------------------------------------------------------------------------
-                | CHECK MANUAL ATTENDANCE
-                |--------------------------------------------------------------------------
-                */
                 $existingAttendance = DB::table('attendances')
                     ->where('emp_code', $emp)
                     ->where('date', $date)
@@ -143,8 +135,8 @@ class AttendanceController extends Controller
                         ->where('emp_id', $emp)
                         ->value('name');
                     $department_id = DB::table('users')
-                        ->where('emp_id', $emp)
-                        ->value('department_id');
+                    ->where('emp_id', $emp)
+                    ->value('department_id');
                     $department = DB::table('departments')
                         ->where('id', $department_id)
                         ->value('department');
@@ -166,80 +158,20 @@ class AttendanceController extends Controller
                     ];
                     continue;
                 }
-                /*
-                |--------------------------------------------------------------------------
-                | COMMON DATA
-                |--------------------------------------------------------------------------
-                */
-                $data = [
-                    'emp_code' => $emp,
-                    'date' => $date,
-                    'in_time' => $in,
-                    'out_time' => $out,
-                    'work_hours' => round($hours, 2),
-                    'permission_hours' => $permissionMinutes,
-                    'status' => $status,
-                    'is_manual' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-                /*
-                |--------------------------------------------------------------------------
-                | LOCAL DB INSERT
-                |--------------------------------------------------------------------------
-                */
-                try {
-                    DB::table('attendances')->updateOrInsert(
-                        [
-                            'emp_code' => $emp,
-                            'date' => $date
-                        ],
-                        $data
-                    );
-                    \Log::info('LOCAL INSERT SUCCESS', [
+                DB::table('attendances')->updateOrInsert(
+                    [
                         'emp_code' => $emp,
                         'date' => $date
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('LOCAL INSERT FAILED', [
-                        'emp_code' => $emp,
-                        'date' => $date,
-                        'message' => $e->getMessage()
-                    ]);
-                }
-                /*
-                |--------------------------------------------------------------------------
-                | LIVE DB INSERT
-                |--------------------------------------------------------------------------
-                */
-                try {
-                    DB::connection('live_mysql')
-                        ->table('attendances')
-                        ->updateOrInsert(
-                            [
-                                'emp_code' => $emp,
-                                'date' => $date
-                            ],
-                            $data
-                        );
-                    \Log::info('LIVE INSERT SUCCESS', [
-                        'emp_code' => $emp,
-                        'date' => $date
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('LIVE INSERT FAILED', [
-                        'emp_code' => $emp,
-                        'date' => $date,
-                        'message' => $e->getMessage(),
-                        'line' => $e->getLine(),
-                        'file' => $e->getFile()
-                    ]);
-                }
-                /*
-                |--------------------------------------------------------------------------
-                | FINAL ARRAY
-                |--------------------------------------------------------------------------
-                */
+                    ],
+                    [
+                        'in_time' => $in,
+                        'out_time' => $out,
+                        'work_hours' => round($hours, 2),
+                        'permission_hours' => $permissionMinutes,
+                        'status' => $status,
+                        'is_manual' => 0
+                    ]
+                );
                 $name = DB::table('users')
                     ->where('emp_id', $emp)
                     ->value('name');
@@ -267,17 +199,12 @@ class AttendanceController extends Controller
                     'hours' => $hours
                         ? round($hours, 2)
                         : '-',
-                    'status' => $status,
                     'permission_hours' => $permissionMinutes ?: '-',
+                    'status' => $status,
                     'department' => $department ?? '-'
                 ];
             }
         }
-        /*
-        |--------------------------------------------------------------------------
-        | ABSENT EMPLOYEES
-        |--------------------------------------------------------------------------
-        */
         $allEmployees = DB::table('users')
             ->where('id', '!=', 1)
             ->pluck('emp_id')
@@ -289,6 +216,31 @@ class AttendanceController extends Controller
                     ->where('date', $selectedDate)
                     ->first();
                 if ($existingAttendance && $existingAttendance->is_manual) {
+                    $name = DB::table('users')
+                        ->where('emp_id', $emp)
+                        ->value('name');
+                    $department_id = DB::table('users')
+                        ->where('emp_id', $emp)
+                        ->value('department_id');
+                    $department = DB::table('departments')
+                        ->where('id', $department_id)
+                        ->value('department');
+                    $final[] = [
+                        'id' => $existingAttendance->id,
+                        'name' => $name ?? 'Unknown',
+                        'code' => $emp,
+                        'date' => date('d-m-Y', strtotime($selectedDate)),
+                        'inTime' => $existingAttendance->in_time
+                            ? date('h:i A', strtotime($existingAttendance->in_time))
+                            : '-',
+                        'outTime' => $existingAttendance->out_time
+                            ? date('h:i A', strtotime($existingAttendance->out_time))
+                            : '-',
+                        'hours' => $existingAttendance->work_hours ?: '-',
+                        'permission_hours' => $existingAttendance->permission_hours ?: '-',
+                        'status' => $existingAttendance->status,
+                        'department' => $department ?? '-'
+                    ];
                     continue;
                 }
                 $status = $this->getStatus(
@@ -297,73 +249,46 @@ class AttendanceController extends Controller
                     null,
                     0
                 );
-                $absentData = [
-                    'emp_code' => $emp,
-                    'date' => $selectedDate,
-                    'in_time' => null,
-                    'out_time' => null,
-                    'work_hours' => 0,
+                DB::table('attendances')->updateOrInsert(
+                    [
+                        'emp_code' => $emp,
+                        'date' => $selectedDate
+                    ],
+                    [
+                        'in_time' => null,
+                        'out_time' => null,
+                        'work_hours' => 0,
+                        'permission_hours' => 0,
+                        'status' => $status,
+                        'is_manual' => 0
+                    ]
+                );
+                $name = DB::table('users')
+                    ->where('emp_id', $emp)
+                    ->value('name');
+                $department_id = DB::table('users')
+                    ->where('emp_id', $emp)
+                    ->value('department_id');
+                $department = DB::table('departments')
+                    ->where('id', $department_id)
+                    ->value('department');
+                $attendanceId = DB::table('attendances')
+                    ->where('emp_code', $emp)
+                    ->where('date', $selectedDate)
+                    ->value('id');
+                $final[] = [
+                    'id' => $attendanceId,
+                    'name' => $name ?? 'Unknown',
+                    'code' => $emp,
+                    'date' => date('d-m-Y', strtotime($selectedDate)),
+                    'inTime' => '-',
+                    'outTime' => '-',
+                    'hours' => '-',
                     'status' => $status,
-                    'is_manual' => 0,
-                    'permission_hours' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'department' => $department ?? '-'
                 ];
-                /*
-                |--------------------------------------------------------------------------
-                | LOCAL DB INSERT
-                |--------------------------------------------------------------------------
-                */
-                try {
-                    DB::table('attendances')->updateOrInsert(
-                        [
-                            'emp_code' => $emp,
-                            'date' => $selectedDate
-                        ],
-                        $absentData
-                    );
-                    \Log::info('LOCAL ABSENT INSERT SUCCESS', [
-                        'emp_code' => $emp,
-                        'date' => $selectedDate
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('LOCAL ABSENT INSERT FAILED', [
-                        'emp_code' => $emp,
-                        'date' => $selectedDate,
-                        'message' => $e->getMessage()
-                    ]);
-                }
-                /*
-                |--------------------------------------------------------------------------
-                | LIVE DB INSERT
-                |--------------------------------------------------------------------------
-                */
-                try {
-                    DB::connection('live_mysql')
-                        ->table('attendances')
-                        ->updateOrInsert(
-                            [
-                                'emp_code' => $emp,
-                                'date' => $selectedDate
-                            ],
-                            $absentData
-                        );
-                    \Log::info('LIVE ABSENT INSERT SUCCESS', [
-                        'emp_code' => $emp,
-                        'date' => $selectedDate
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('LIVE ABSENT INSERT FAILED', [
-                        'emp_code' => $emp,
-                        'date' => $selectedDate,
-                        'message' => $e->getMessage(),
-                        'line' => $e->getLine(),
-                        'file' => $e->getFile()
-                    ]);
-                }
             }
         }
-        \Log::info('FORMAT ATTENDANCE COMPLETED');
         return $final;
     }
     private function getStatus($date, $inTime, $outTime, $hours)
@@ -421,6 +346,7 @@ class AttendanceController extends Controller
     public function getAttendanceRecords(Request $request)
     {
         $date = $request->date;
+        $device = $request->device;
 
         $records = DB::table('attendances')
             ->join('users', function ($join) {
@@ -448,6 +374,9 @@ class AttendanceController extends Controller
                 'departments.department'
             )
             ->whereDate('attendances.date', $date)
+            ->when($device, function ($query) use ($device) {
+                $query->where('attendances.device_serial_number', $device);
+            })
             ->orderBy('users.emp_id')
             ->get();
 
