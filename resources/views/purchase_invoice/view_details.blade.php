@@ -187,7 +187,7 @@
                                 </tbody>
                                 <tfoot class="bg-light fw-bold border-top">
                                     <tr>
-                                        <td colspan="12" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
+                                        <td colspan="13" class="text-end py-3 ps-4 border-end">Subtotal (Items)</td>
                                         <td class="text-end pe-4 py-3">₹{{ number_format($invoice->sub_total, 2) }}</td>
                                     </tr>
                                 </tfoot>

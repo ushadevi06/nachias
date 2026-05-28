@@ -198,7 +198,7 @@ class PurchaseOrderController extends Controller
                 'supplier_id' => 'required|exists:suppliers,id',
                 'reference_no' => 'required|string|min:3|max:100',
                 'reference_date' => 'required|date',
-                'due_date' => 'required|date|after_or_equal:po_date',
+                'due_date' => 'required|date',
                 'store_type_id' => 'required|exists:store_types,id',
                 'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
                 'order_type' => 'required|string|in:Core Order,Repeat Order,New Order,Sample Order,Urgent Order',

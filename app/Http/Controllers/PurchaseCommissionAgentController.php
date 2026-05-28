@@ -233,7 +233,6 @@ class PurchaseCommissionAgentController extends Controller
         ]);
     }
 
-
     public function destroy($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('delete purchase-commission-agent')) {

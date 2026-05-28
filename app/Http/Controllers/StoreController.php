@@ -134,15 +134,19 @@ class StoreController extends Controller
         }
 
         $storeType = StoreType::findOrFail($id);
-        
+
+        if (PurchaseOrder::where('store_type_id', $id)->exists()) {
+            return redirect('stores')->with('danger', 'This store is currently referenced in Purchase Order\'s and cannot be deleted.');
+        }
+
         if (JobCardEntry::where('issue_store_id', $id)->exists()) {
             return redirect('stores')->with('danger', 'This store is currently referenced in Job Card Entries (Issue Store) and cannot be deleted.');
         }
-        
+
         if (JobCardEntry::where('receipt_store_id', $id)->exists()) {
             return redirect('stores')->with('danger', 'This store is currently referenced in Job Card Entries (Receipt Store) and cannot be deleted.');
         }
-        
+
         if (JobCardEntry::where('receipt_store_id', $id)->exists()) {
             return redirect('stores')->with('danger', 'This store is currently referenced in Job Card Entries (Receipt Store) and cannot be deleted.');
         }

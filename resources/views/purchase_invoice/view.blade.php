@@ -52,6 +52,7 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Invoice No</th>
+                                        <th>PO Number</th>
                                         <th>Invoice Date</th>
                                         <th>Supplier Name</th>
                                         <th>Total Amount</th>
@@ -144,6 +145,10 @@
                 {
                     data: 'invoice_no',
                     name: 'invoice_no'
+                },
+                {
+                    data: 'po_number',
+                    name: 'po_number'
                 },
                 {
                     data: 'invoice_date',

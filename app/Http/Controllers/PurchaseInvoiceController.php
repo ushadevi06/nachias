@@ -25,7 +25,7 @@ class PurchaseInvoiceController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = PurchaseInvoice::with(['supplier'])->withCount('grnEntries')->orderBy('id', 'desc');
+            $query = PurchaseInvoice::with(['supplier', 'purchaseOrder'])->withCount('grnEntries')->orderBy('id', 'desc');
 
             if (!empty($request->supplier_id)) {
                 $query->where('supplier_id', $request->supplier_id);
@@ -43,9 +43,15 @@ class PurchaseInvoiceController extends Controller
                     $q->where('invoice_no', 'like', "%{$search}%")
                         ->orWhere('po_reference', 'like', "%{$search}%")
                         ->orWhere('destination', 'like', "%{$search}%")
+                        ->orWhere('invoice_status', 'like', "%{$search}%")
+                        ->orWhereDate('invoice_date', $search)
+                        ->orWhereRaw("DATE_FORMAT(invoice_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
                         ->orWhereHas('supplier', function ($q2) use ($search) {
                             $q2->where('name', 'like', "%{$search}%")
                                ->orWhere('code', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('purchaseOrder', function ($q2) use ($search) {
+                            $q2->where('po_number', 'like', "%{$search}%");
                         });
                 });
             }
@@ -109,6 +115,7 @@ class PurchaseInvoiceController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'invoice_no' => $invoice->invoice_no,
+                    'po_number' => $invoice->purchaseOrder ? $invoice->purchaseOrder->po_number : '-',
                     'invoice_date' => $invoice->invoice_date->format('d-m-Y'),
                     'supplier_name' => $invoice->supplier ? $invoice->supplier->name . ' <a href="' . url('suppliers/view_details/' . $invoice->supplier->id) . '" target="_blank"><span class="mini-title">(' . $invoice->supplier->code . ')</span></a>' : '-',
                     'destination' => $invoice->destination ?? '-',

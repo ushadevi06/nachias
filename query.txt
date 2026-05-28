@@ -310,3 +310,5 @@ ALTER TABLE `credit_notes`
 ALTER TABLE `sales_invoices`
     ADD COLUMN `so_ids` JSON NULL AFTER `so_id`,
     MODIFY COLUMN `so_id` BIGINT UNSIGNED NULL;
+
+ALTER TABLE `purchase_orders` ADD COLUMN `order_type` VARCHAR(15) NULL DEFAULT 'New Order' AFTER `po_date`;

@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Item;
 use App\Models\StockEntryItem;
 use App\Models\ItemPrice;
+use App\Models\SalesAgent;
 use Illuminate\Support\Facades\Log;
 
 class OrderaxeService
@@ -107,6 +108,15 @@ class OrderaxeService
                 return false;
             }
 
+            $agentId = null;
+            if (!empty($orderData['updated_by'][0]['name'])) {
+                $agentName = trim($orderData['updated_by'][0]['name']);
+                $salesAgent = SalesAgent::whereRaw('LOWER(name) = ?', [strtolower($agentName)])->first();
+                if ($salesAgent) {
+                    $agentId = $salesAgent->id;
+                }
+            }
+
             $salesOrder = SalesOrder::create([
                 'so_no'        => SalesOrder::generateSoNo(),
                 'order_no'     => $orderNo,
@@ -114,6 +124,7 @@ class OrderaxeService
                 'so_date'      => date('Y-m-d', ($orderData['created_at'] / 1000)),
                 'request_date' => date('Y-m-d', ($orderData['created_at'] / 1000)),
                 'customer_id'  => $customer->id,
+                'agent_id'     => $agentId,
                 'status'       => 'Pending',
                 'total_qty'    => $orderData['overall_quantity'] ?? 0,
                 'total_amount' => $orderData['total_amount'] ?? 0,
