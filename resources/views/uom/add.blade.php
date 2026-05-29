@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'Add UOM - ' . env('WEBSITE_NAME'))
+@section('title', ($uom ? 'Edit' : 'Add') . ' UOM - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row justify-content-center">

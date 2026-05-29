@@ -109,9 +109,9 @@ class OrderaxeService
             }
 
             $agentId = null;
-            if (!empty($orderData['updated_by'][0]['name'])) {
-                $agentName = trim($orderData['updated_by'][0]['name']);
-                $salesAgent = SalesAgent::whereRaw('LOWER(name) = ?', [strtolower($agentName)])->first();
+            if (!empty($orderData['distributor']['name'])) {
+                $distributorName = trim($orderData['distributor']['name']);
+                $salesAgent = SalesAgent::whereRaw('LOWER(name) = ?', [strtolower($distributorName)])->first();
                 if ($salesAgent) {
                     $agentId = $salesAgent->id;
                 }

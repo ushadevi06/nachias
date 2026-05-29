@@ -59,11 +59,12 @@ class GrnEntryController extends Controller
             $start = $request->input('start', 0);
             $length = $request->input('length', 10);
 
+            $query->orderBy('id', 'desc');
             if ($length != -1) {
                 $query->skip($start)->take($length);
             }
 
-            $grnEntries = $query->with(['purchaseInvoice.purchaseOrder', 'supplier', 'grnEntryItems'])->latest()->get();
+            $grnEntries = $query->with(['purchaseInvoice.purchaseOrder', 'supplier', 'grnEntryItems'])->get();
             $data = [];
             $count = $start + 1;
 
@@ -86,9 +87,6 @@ class GrnEntryController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('edit grn-entry')) {
                     $action .= '<a href="' . url('grn_entries/add/' . $grn->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-                // if (auth()->id() == 1 || auth()->user()->can('delete grn-entry')) {
-                //     $action .= '<button class="btn btn-delete" onclick="delete_data(`' . url('grn_entries/delete/' . $grn->id) . '`)"><i class="icon-base ri ri-delete-bin-line"></i></button>';
-                // }
                 $action .= '</div>';
 
                 $qcStatuses = $grn->grnEntryItems->pluck('quality_check_status')->unique();
@@ -107,9 +105,9 @@ class GrnEntryController extends Controller
                     'DT_RowIndex' => $count++,
                     'grn_number' => $grn->grn_number,
                     'grn_date' => $grn->grn_date->format('d-m-Y'),
-                    'po_invoice_no' => ($grn->purchaseInvoice->invoice_no ?? 'N/A') . (isset($grn->purchaseInvoice->purchaseOrder) ? ' <br><small class="text-primary fw-bold">PO: ' . $grn->purchaseInvoice->purchaseOrder->po_number . '</small>' : ''),
-                    'supplier_name' => ($grn->supplier->name ?? 'N/A') . ' <span class="mini-title">(' . ($grn->supplier->code ?? '') . ')</span>',
-                    'supplier_invoice_no' => $grn->purchaseInvoice->po_reference ?? 'N/A',
+                    'po_invoice_no' => ($grn->purchaseInvoice->invoice_no ?? '-') . (isset($grn->purchaseInvoice->purchaseOrder) ? ' <br><small class="text-primary fw-bold">PO: ' . $grn->purchaseInvoice->purchaseOrder->po_number . '</small>' : ''),
+                    'supplier_name' => ($grn->supplier->name ?? '-') . ' <span class="mini-title">(' . ($grn->supplier->code ?? '') . ')</span>',
+                    'supplier_invoice_no' => $grn->purchaseInvoice->po_reference ?? '-',
                     'total_items' => $grn->grnEntryItems->count(),
                     'amount' => '₹' . number_format($grn->grnEntryItems->sum('amount'), 2),
                     'qc_status' => '<span class="badge ' . $badgeClass . '">' . $finalQcStatus . '</span>',

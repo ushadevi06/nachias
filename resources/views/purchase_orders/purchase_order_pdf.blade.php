@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            font-size: 10px;
+            font-size: 8px;
             color: #333;
             margin: 0;
             padding: 0;
@@ -254,23 +254,23 @@
             </tr>
         </table>
 
-        <table class="item-table" style="margin-top: 0;">
+        <table class="item-table" style="margin-top: 0; table-layout: fixed; word-wrap: break-word;">
             <thead style="border-bottom: 1px solid #000; border-top:1px solid #000;">
                 <tr>
                     <th width="3%">S.No</th>
-                    <th width="10%">Store Category</th>
-                    <th width="8%">Brand</th>
-                    <th width="12%">Raw Material</th>
-                    <th width="8%">Style</th>
-                    <th width="8%">Fabric Width</th>
-                    <th width="8%">Fabric Type</th>
-                    <th width="5%">UOM</th>
-                    <th width="7%">Quantity</th>
-                    <th width="10%">Supplier Design</th>
-                    <th width="8%">Color</th>
-                    <th width="7%">Rate</th>
-                    <th width="10%">Amount</th>
-                    <th width="10%">Image</th>
+					<th width="8%">Store Category</th>
+					<th width="8%">Brand</th>
+					<th width="10%">Raw Material</th>
+					<th width="8%">Style</th>
+					<th width="6%">Fabric Width</th>
+					<th width="7%">Fabric Type</th>
+					<th width="5%">UOM</th>
+					<th width="7%">Quantity</th>
+					<th width="8%">Supplier Design</th>
+					<th width="7%">Color</th>
+					<th width="6%">Rate</th>
+					<th width="8%">Amount</th>
+					<th width="9%">Image</th>
                 </tr>
             </thead>
 
@@ -322,7 +322,7 @@
                         @if($imageSrc)
                         <img src="{{ $imageSrc }}"
                             alt="Item Image"
-                            style="width:30px; height:30px; object-fit:cover; border:1px solid #ccc;">
+                            style="width:40px; height:40px; object-fit:cover; border:1px solid #ccc; display:block; max-width:100%;">
                         @else
                         -
                         @endif
@@ -399,13 +399,7 @@
                                 -{{ number_format($purchaseOrder->discount_amount, 2) }}</td>
                         </tr>
                         @endif
-                        <tr>
-                            <td class="text-left" style="padding: 4px;">Taxable Amount:</td>
-                            <td class="text-right" style="padding: 4px;">
-                                {{ number_format($purchaseOrder->taxable_amount, 2) }}
-                            </td>
-                        </tr>
-                        @if($purchaseOrder->commission > 0)
+						@if($purchaseOrder->commission > 0)
                         <tr>
                             <td class="text-left" style="padding: 4px;">Commission
                                 ({{ number_format($purchaseOrder->commission, 2) }}%):</td>
@@ -414,6 +408,13 @@
                             </td>
                         </tr>
                         @endif
+                        <tr>
+                            <td class="text-left" style="padding: 4px;">Taxable Amount:</td>
+                            <td class="text-right" style="padding: 4px;">
+                                {{ number_format($purchaseOrder->taxable_amount, 2) }}
+                            </td>
+                        </tr>
+                        
                         @if($purchaseOrder->other_state)
                         <tr>
                             <td class="text-left" style="padding: 4px;">IGST ({{ $purchaseOrder->igst_percent }}%):</td>

@@ -3,6 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\OperationStage;
+use App\Models\JobCardOperation;
+use App\Models\ProcessSchedule;
+use App\Models\ProductionMovement;
+use App\Models\ProductionService;
+use App\Models\ServiceProvider;
+use App\Models\Ticket;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -30,10 +37,14 @@ class OperationStageController extends Controller
                 </label>
                 <div class="status_msg_' . $stage->id . '"></div>';
 
-                $action = '';
+                $action = '<div class="button-box">';
                 if (auth()->id() == 1 || auth()->user()->can('edit operation-stages')) {
                     $action .= '<a href="' . url('operation_stages/add/' . $stage->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
+                if (auth()->id() == 1 || auth()->user()->can('delete operation-stages')) {
+                    $action .= '<button class="btn btn-delete" onclick="delete_data(`' . url('operation_stages/delete/' . $stage->id) . '`)"><i class="icon-base ri ri-delete-bin-line"></i></button>';
+                }
+                $action .= '</div>';
 
                 $data[] = [
                     'DT_RowIndex' => $count++,
@@ -119,6 +130,29 @@ class OperationStageController extends Controller
             return unauthorizedRedirect();
         }
         $operationStage = OperationStage::findOrFail($id);
+
+        if (JobCardOperation::where('operation_stage_id', $id)->exists()) {
+            return redirect('operation_stages')->with('danger', 'This operation stage is currently referenced in Job Card Operations and cannot be deleted.');
+        }
+        if (ProcessSchedule::where('operation_stage_id', $id)->exists()) {
+            return redirect('operation_stages')->with('danger', 'This operation stage is currently referenced in Process Schedules and cannot be deleted.');
+        }
+        if (ProductionMovement::where('operation_stage_id', $id)->exists()) {
+            return redirect('operation_stages')->with('danger', 'This operation stage is currently referenced in Production Movements and cannot be deleted.');
+        }
+        if (ProductionService::where('operation_stage_id', $id)->exists()) {
+            return redirect('operation_stages')->with('danger', 'This operation stage is currently referenced in Production Services and cannot be deleted.');
+        }
+        if (ServiceProvider::where('operation_stage_id', $id)->exists()) {
+            return redirect('operation_stages')->with('danger', 'This operation stage is currently referenced in Service Providers and cannot be deleted.');
+        }
+        if (Ticket::where('operation_stage_id', $id)->exists()) {
+            return redirect('operation_stages')->with('danger', 'This operation stage is currently referenced in Tickets and cannot be deleted.');
+        }
+        if (User::where('operation_stage_id', $id)->exists()) {
+            return redirect('operation_stages')->with('danger', 'This operation stage is currently referenced in Users and cannot be deleted.');
+        }
+
         $oldData = $operationStage->toArray();
         $operationStage->delete();
         addLog('delete', 'Operation Stage', 'operation_stages', $id, $oldData, null);

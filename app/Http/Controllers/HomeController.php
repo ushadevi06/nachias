@@ -17,6 +17,7 @@ use App\Models\DocumentRepository;
 use App\Models\ProcessSchedule;
 use App\Models\JobCardOperation;
 use App\Models\Attendance;
+use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -56,10 +57,18 @@ class HomeController extends Controller
         $cash_discount = 0;
         $cash_discount_percent = 0;
 
-        $total_debtors = SalesInvoice::whereNull('deleted_at')->sum('due_amount');
+        $total_customer_collections = Payment::where('payment_type', 'Customer Collection')
+            ->whereNull('deleted_at')
+            ->sum('amount');
+        $total_debtors = max(0, $total_sales_value - $total_customer_collections);
+
         $total_purchase = PurchaseInvoice::whereNull('deleted_at')->sum('grand_total');
         $purchase_return = DebitNote::whereNull('deleted_at')->sum('grand_total');
-        $total_creditors = PurchaseInvoice::whereNull('deleted_at')->sum('due_amount');
+
+        $total_supplier_payments = Payment::where('payment_type', 'Supplier Payment')
+            ->whereNull('deleted_at')
+            ->sum('amount');
+        $total_creditors = max(0, $total_purchase - $total_supplier_payments);
         
         /* Debtors Outstanding & Aging Report */
         $debtors_aging = DB::table('sales_invoices')

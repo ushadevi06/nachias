@@ -11,10 +11,8 @@
                 method="POST" enctype="multipart/form-data" class="common-form" autocomplete="off">
                 @csrf
                 <input type="hidden" id="isEditMode" value="{{ isset($invoice) ? 1 : 0 }}">
-                <input type="hidden" name="purchase_commission_agent_id" id="purchase_commission_agent_id"
-                    value="{{ old('purchase_commission_agent_id', $invoice->purchase_commission_agent_id ?? '') }}">
-                <input type="hidden" id="agent_commission_percentage"
-                    value="{{ old('agent_commission_percentage', $invoice->supplier->commission_percentage ?? '') }}">
+                <input type="hidden" name="purchase_commission_agent_id" id="purchase_commission_agent_id" value="{{ old('purchase_commission_agent_id', $invoice->purchase_commission_agent_id ?? '') }}">
+                <input type="hidden" id="agent_commission_percentage" value="{{ old('agent_commission_percentage', $invoice->supplier->commission_percentage ?? '') }}">
                 <div class="card mb-4">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -77,14 +75,12 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="purchase_commission_agent_name" placeholder="Commission Agent" readonly value="{{ old('purchase_commission_agent_name', $invoice->purchaseCommissionAgent->name ?? '') }}">
                                     <label for="purchase_commission_agent_name">Purchase Commission Agent</label>
                                 </div>
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('transport') is-invalid @enderror" id="transport" placeholder="Enter Transport" name="transport" value="{{ old('transport', $invoice->transport ?? '') }}">
@@ -94,7 +90,6 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('destination') is-invalid @enderror" id="destination" placeholder="Enter Destination" name="destination" value="{{ old('destination', $invoice->destination ?? '') }}">
@@ -104,7 +99,6 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('lr_no') is-invalid @enderror" id="lr_no" placeholder="Enter LR No" name="lr_no" value="{{ old('lr_no', $invoice->lr_no ?? '') }}">
@@ -114,7 +108,6 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control date-picker @error('lr_date') is-invalid @enderror" placeholder="Enter LR Date" name="lr_date" autocomplete="off" value="{{ old('lr_date', $invoice && $invoice->lr_date ? $invoice->lr_date->format('d-m-Y') : '') }}" />
@@ -124,7 +117,6 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('eway_billno') is-invalid @enderror" id="eway_billno" placeholder="Enter Eway Bill No" name="eway_billno" value="{{ old('eway_billno', $invoice->eway_billno ?? '') }}">
@@ -134,7 +126,6 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('indent_no') is-invalid @enderror" id="indent_no" placeholder="Enter Indent No" name="indent_no" value="{{ old('indent_no', $invoice->indent_no ?? '') }}">
@@ -144,7 +135,6 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control date-picker @error('indent_date') is-invalid @enderror" placeholder="Enter Indent Date" name="indent_date" autocomplete="off" value="{{ old('indent_date', $invoice && $invoice->indent_date ? $invoice->indent_date->format('d-m-Y') : '') }}" />
@@ -356,8 +346,6 @@
                                     @endif
 
                                 </tbody>
-
-
                             </table>
                         </div>
                     </div>
@@ -826,35 +814,6 @@
 
 @endsection
 @section('scripts')
-<style>
-    .purchase-items-scroll {
-        overflow-x: auto;
-        overflow-y: visible;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .purchase-items-table {
-        min-width: 1600px;
-        table-layout: auto;
-    }
-
-    .purchase-items-table .hsn-column {
-        min-width: 170px;
-        width: 170px;
-    }
-
-    .purchase-items-table .item-hsn {
-        min-width: 140px;
-    }
-    .purchase-items-table .invoice-qty-column {
-        min-width: 230px;
-        width: 230px;
-    }
-
-    .purchase-items-table .invoice-qty-column .item-quantity {
-        max-width: 160px;
-    }
-</style>
 <script>
     @php
         $hasFabricItems = false;
@@ -939,14 +898,14 @@
 
                             $('#discount_input').val(response.discount_percent);
 
-                             let commissionVal = parseFloat(response.commission || 0);
-                             $('#commission_input').val(commissionVal);
-                             $('#commission_percent_display').text(commissionVal.toFixed(2));
-                             $('#commission_amount_input').val('0.00');
-                             $('#commission_value').text('0.00');
-                             $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
-                             $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
-                             $('#agent_commission_percentage').val(response.agent_commission_percentage);
+                            let commissionVal = parseFloat(response.commission || 0);
+                            $('#commission_input').val(commissionVal);
+                            $('#commission_percent_display').text(commissionVal.toFixed(2));
+                            $('#commission_amount_input').val('0.00');
+                            $('#commission_value').text('0.00');
+                            $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
+                            $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
+                            $('#agent_commission_percentage').val(response.agent_commission_percentage);
 
                             if (response.round_off) {
                                 $('#round_off_input').val(parseFloat(response.round_off).toFixed(2)).trigger('change');
@@ -1488,8 +1447,6 @@
             }
 
             if (chargeText.trim().toUpperCase() === 'BROKERAGE') {
-                // For brokerage, we don't add it as a tax & charges row in the table.
-                // It is already shown and calculated in the native Commission summary row.
                 $('#charges_select').val('').trigger('change');
                 $('#charge_amount').val('');
                 return;
@@ -1538,15 +1495,12 @@
             let amount = parseFloat($row.find('input[name="charges[amount][]"]').val()) || 0;
             let taxType = $row.attr('data-tax-type') || $row.data('tax-type') || 'Post-GST';
 
-            // Populate inputs
             $('#charges_select').val(chargeId).trigger('change');
             $('#charge_amount').val(amount.toFixed(2));
             $('#charge_tax_type').val(taxType).trigger('change');
 
-            // Remove the row
             $row.remove();
 
-            // Recalculate and refresh
             if ($('#added_charges_list tr').length === 0) {
                 $('#charges_table').addClass('d-none');
             }
@@ -1641,12 +1595,10 @@
 
         function updateOtherCharges() {
             let total = 0;
-
             $('#added_charges_list tr').each(function () {
                 let amt = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
                 total += amt;
             });
-
             $('#other_charges').text(total.toFixed(2));
             $('#other_charges_input').val(total.toFixed(2));
         }
@@ -1674,20 +1626,14 @@
             let taxAmount = 0;
 
             if ($('input[name="other_state"]:checked').val() === 'Y') {
-
                 let igstPercent = parseFloat($('#igst_percent').val()) || 0;
                 let igstAmount = (taxableAmount * igstPercent) / 100;
-
                 $('#igst_amt').text(igstAmount.toFixed(2));
                 $('#igst_amount_input').val(igstAmount.toFixed(2));
-
                 $('#cgst_amt').text('0.00');
                 $('#sgst_amt').text('0.00');
-
                 taxAmount = igstAmount;
-
             } else {
-
                 let cgstPercent = parseFloat($('#cgst_percent').val()) || 0;
                 let sgstPercent = parseFloat($('#sgst_percent').val()) || 0;
                 let cgstAmount = (taxableAmount * cgstPercent) / 100;
@@ -1841,50 +1787,6 @@
             $('#due_amount').text(due.toFixed(2));
             $('#due_amount_input').val(due.toFixed(2));
         }
-
-        @if(isset($invoice))
-            $('#view_history_btn').click(function (e) {
-                e.preventDefault();
-                let invoiceId = "{{ $invoice->id }}";
-                $('#payment_history_body').html('<tr><td colspan="2" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading history...</td></tr>');
-                $('#paymentHistoryModal').modal('show');
-
-                $.ajax({
-                    url: "{{ url('purchase_invoices/payment-history') }}/" + invoiceId,
-                    type: "GET",
-                    success: function (response) {
-                        if (response.success) {
-                            let html = "";
-                            let total = 0;
-                            response.payments.forEach(function (payment) {
-                                let date = new Date(payment.payment_date);
-                                let formattedDate = date.toLocaleString('en-IN', {
-                                    day: '2-digit', month: '2-digit', year: 'numeric',
-                                    hour: '2-digit', minute: '2-digit', second: '2-digit',
-                                    hour12: true
-                                });
-                                html += `
-                                        <tr>
-                                            <td>${formattedDate}</td>
-                                            <td class="text-end fw-bold">₹${parseFloat(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                        </tr>`;
-                                total += parseFloat(payment.amount);
-                            });
-
-                            if (response.payments.length === 0) {
-                                html = '<tr><td colspan="2" class="text-center py-3 text-muted">No transaction logs found</td></tr>';
-                            }
-
-                            $('#payment_history_body').html(html);
-                            $('#history_total_paid').text('₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
-                        }
-                    },
-                    error: function () {
-                        $('#payment_history_body').html('<tr><td colspan="2" class="text-center text-danger py-3">Error loading history</td></tr>');
-                    }
-                });
-            });
-        @endif
 
         $(document).on('change', 'input[name="round_off_type"]', function () {
             calculateSummaryOnly();

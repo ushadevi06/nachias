@@ -39,16 +39,18 @@ class PurchaseInvoiceController extends Controller
 
             if ($request->has('search') && !empty($request->input('search')['value'])) {
                 $search = $request->input('search')['value'];
-                $query->where(function ($q) use ($search) {
+                $numericSearch = preg_replace('/[₹,\s]/', '', $search);
+                $query->where(function ($q) use ($search, $numericSearch) {
                     $q->where('invoice_no', 'like', "%{$search}%")
                         ->orWhere('po_reference', 'like', "%{$search}%")
                         ->orWhere('destination', 'like', "%{$search}%")
                         ->orWhere('invoice_status', 'like', "%{$search}%")
                         ->orWhereDate('invoice_date', $search)
                         ->orWhereRaw("DATE_FORMAT(invoice_date, '%d-%m-%Y') LIKE ?", ["%{$search}%"])
+                        ->orWhereRaw("CAST(grand_total AS CHAR) LIKE ?", ["%{$numericSearch}%"])
                         ->orWhereHas('supplier', function ($q2) use ($search) {
                             $q2->where('name', 'like', "%{$search}%")
-                               ->orWhere('code', 'like', "%{$search}%");
+                            ->orWhere('code', 'like', "%{$search}%");
                         })
                         ->orWhereHas('purchaseOrder', function ($q2) use ($search) {
                             $q2->where('po_number', 'like', "%{$search}%");
@@ -106,10 +108,6 @@ class PurchaseInvoiceController extends Controller
                 if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid' && $invoice->grn_entries_count == 0) {
                     $action .= '<a href="' . url('purchase_invoices/add/' . $invoice->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-
-                // if (auth()->id() == 1 || auth()->user()->can('delete purchase-invoice')) {
-                //     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('purchase_invoices/delete/' . $invoice->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                // }
                 $action .= '</div>';
 
                 $data[] = [

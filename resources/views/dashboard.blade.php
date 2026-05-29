@@ -141,6 +141,10 @@
 	<!-- SECTION 2: ATTENDANCE DASHBOARD -->
     @if(auth()->id() == 1 || auth()->user()->can('view-attendance dashboard'))
     <div class="row g-3 mb-4">
+        <div class="d-flex align-items-center mb-2">
+            <div class="section-indicator bg-secondary me-2"></div>
+            <h5 class="fw-bold mb-0">Employee's Attendance Dashboard</h5>
+        </div>
         <div class="col-xl-3 col-md-6">
             <div class="card attendance-card present-card border-0 shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center">

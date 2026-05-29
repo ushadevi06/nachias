@@ -163,9 +163,7 @@
                                         </td>
                                         <td class="text-center">
                                             @if($item->image)
-                                                <a href="{{ url('uploads/grn_items/' . $item->image) }}" target="_blank">
-                                                    <img src="{{ url('uploads/grn_items/' . $item->image) }}" alt="GRN Item Image" class="img-fluid border rounded" style="max-width: 70px; max-height: 70px;">
-                                                </a>
+                                                <img src="{{ url('uploads/grn_items/' . $item->image) }}" alt="GRN Item Image" class="img-fluid border rounded mt-1 border rounded cursor-pointer view-image" style="max-width: 70px; max-height: 70px;" data-image="{{ url('uploads/grn_items/'.$item->image) }}">
                                             @else
                                                 <span class="text-muted small">No Image</span>
                                             @endif

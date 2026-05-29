@@ -270,6 +270,7 @@
                                     class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount, 2) }}</span>
                             </div>
                             @endif
+                            
                             @if($purchaseOrder->commission > 0)
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small uppercase">Commission Amount
@@ -278,7 +279,6 @@
                                 <span class="fw-bold text-dark">₹{{ number_format(($purchaseOrder->sub_total * $purchaseOrder->commission/100),2) }}</span>
                             </div>
                             @endif
-
                             @if($purchaseOrder->other_state)
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small">IGST
