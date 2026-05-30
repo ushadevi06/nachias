@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Style;
 use App\Models\PurchaseOrderItem;
+use App\Models\StockEntryItem;
 use App\Models\Item;
 use Illuminate\Http\Request;
 
@@ -118,7 +119,7 @@ class StyleController extends Controller
         $style = Style::findOrFail($id);
         $references = [
             [PurchaseOrderItem::class, 'style_id', 'Purchase Order Items'],
-            
+            [StockEntryItem::class, 'style_id', 'Stock Entry Items'],
         ];
         foreach ($references as [$model, $column, $label]) {
             if ($model::where($column, $id)->exists()) {

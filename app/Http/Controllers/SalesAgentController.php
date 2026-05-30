@@ -6,6 +6,7 @@ use App\Models\SalesAgent;
 use App\Models\State;
 use App\Models\City;
 use App\Models\Place;
+use App\Models\SalesOrder;
 use Illuminate\Http\Request;
 
 class SalesAgentController extends Controller
@@ -218,6 +219,10 @@ class SalesAgentController extends Controller
             return unauthorizedRedirect();
         }
         $agent = SalesAgent::findOrFail($id);
+
+        if (SalesOrder::where('agent_id', $id)->exists()) {
+            return redirect('sales_agents')->with('danger', 'This agent is referenced in Sales Orders and cannot be deleted.');
+        }
         $oldData = $agent->toArray();
         $agent->delete();
         addLog('delete', 'Sales Agent', 'sales_agents', $id, $oldData, null);

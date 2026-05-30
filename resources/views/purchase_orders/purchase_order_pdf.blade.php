@@ -281,23 +281,14 @@
                 $imageSrc = '';
 
                 if (!empty($item->attached_file)) {
-                $imagePath = public_path('uploads/purchase_orders/' . $item->attached_file);
-
-                if (file_exists($imagePath)) {
-                $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
-
-                $mimeType = match ($extension) {
-                'jpg', 'jpeg' => 'image/jpeg',
-                'png' => 'image/png',
-                'gif' => 'image/gif',
-                'webp' => 'image/webp',
-                default => null,
-                };
-
-                if ($mimeType) {
-                $imageSrc = 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($imagePath));
-                }
-                }
+                    $imagePath = public_path('uploads/purchase_orders/' . $item->attached_file);
+                    if (file_exists($imagePath)) {
+                        if (isset($is_print) && $is_print) {
+                            $imageSrc = url('uploads/purchase_orders/' . $item->attached_file);
+                        } else {
+                            $imageSrc = $imagePath;
+                        }
+                    }
                 }
                 @endphp
 

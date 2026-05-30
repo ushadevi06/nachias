@@ -133,7 +133,7 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline position-relative">
                                     @php
                                         $sizeRatioDisplay = '';
@@ -154,7 +154,7 @@
                                 @error('size_ratio_id')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
-                            </div>
+                            </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     @php
@@ -214,7 +214,7 @@
                             <div class="col-lg-12">
                                 <hr>
                             </div>
-                            <div class="col-lg-12">
+                            {{-- <div class="col-lg-12">
                                 <h6>Material Consumption and Cost (BOM)</h6>
                             </div>
                             <div class="col-md-6 col-xl-4">
@@ -244,7 +244,7 @@
                                 @error('material_select')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
-                            </div>
+                            </div> 
                             <div class="col-lg-12">
                                 <table class="table table-bordered" id="bom_table">
                                     <thead>
@@ -335,7 +335,7 @@
                                 @error('operation_stages')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
-                            </div>
+                            </div> --}}
                             <div class="col-lg-12">
                                 <hr>
                             </div>

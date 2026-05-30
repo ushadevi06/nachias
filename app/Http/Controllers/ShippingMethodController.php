@@ -111,11 +111,10 @@ class ShippingMethodController extends Controller
             return unauthorizedRedirect();
         }
         $shippingMethod = ShippingMethod::findOrFail($id);
-        
-        // Potential reference check in SalesOrder (currently stored as string, but maybe future-proof)
-        // if (SalesOrder::where('shipping_method', $shippingMethod->name)->exists()) {
-        //     return redirect('shipping_methods')->with('danger', 'This method is currently referenced in Sales Orders.');
-        // }
+
+        if (SalesOrder::where('shipping_method_id', $id)->exists()) {
+            return redirect('shipping_methods')->with('danger', 'This method is currently referenced in Sales Orders.');
+        }
 
         $oldData = $shippingMethod->toArray();
         $shippingMethod->delete();

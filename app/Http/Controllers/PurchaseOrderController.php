@@ -382,6 +382,8 @@ class PurchaseOrderController extends Controller
                         }
 
                         $file->move($uploadPath, $fileName);
+                        $filePath = $uploadPath . '/' . $fileName;
+                        $this->compressImage($filePath, $filePath, 60);
                         $itemData['attached_file'] = $fileName;
                     }
                     PurchaseOrderItem::create($itemData);
@@ -449,6 +451,7 @@ class PurchaseOrderController extends Controller
 
     public function downloadPdf($id)
     {
+        ini_set('memory_limit', '512M');
         if (auth()->id() != 1 && !auth()->user()->can('view purchase-order')) {
             return unauthorizedRedirect();
         }
@@ -553,5 +556,99 @@ class PurchaseOrderController extends Controller
         $newData = $purchaseOrder->toArray();
         addLog('update_self_close', 'Purchase Order Self Close', 'purchase_orders', $id, $oldData, $newData);
         return response()->json(['success' => true, 'message' => 'Self-close status updated successfully']);
+    }   
+     private function compressImage($sourcePath, $destinationPath, $quality = 60)
+    {
+        if (!file_exists($sourcePath)) {
+            return false;
+        }
+
+        $info = getimagesize($sourcePath);
+
+        if (!$info || !isset($info['mime'])) {
+            return false;
+        }
+
+        $mime = $info['mime'];
+        $width = $info[0];
+        $height = $info[1];
+        $max_width = 1000;
+        $max_height = 1000;
+
+        if ($width > $max_width || $height > $max_height) {
+            $ratio = $width / $height;
+            if ($ratio > 1) {
+                $new_width = $max_width;
+                $new_height = round($max_width / $ratio);
+            } else {
+                $new_height = $max_height;
+                $new_width = round($max_height * $ratio);
+            }
+        } else {
+            $new_width = $width;
+            $new_height = $height;
+        }
+
+        $resize = function($src) use ($new_width, $new_height, $width, $height) {
+            $dst = imagecreatetruecolor($new_width, $new_height);
+            imagecopyresampled($dst, $src, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+            return $dst;
+        };
+
+        switch ($mime) {
+            case 'image/jpeg':
+            case 'image/jpg':
+                $image = imagecreatefromjpeg($sourcePath);
+                if (!$image) {
+                    return false;
+                }
+                if ($width > $max_width || $height > $max_height) {
+                    $resized = $resize($image);
+                    imagedestroy($image);
+                    $image = $resized;
+                }
+                imagejpeg($image, $destinationPath, $quality);
+                imagedestroy($image);
+                return true;
+
+            case 'image/png':
+                $image = imagecreatefrompng($sourcePath);
+                if (!$image) {
+                    return false;
+                }
+                if ($width > $max_width || $height > $max_height) {
+                    $resized = imagecreatetruecolor($new_width, $new_height);
+                    imagealphablending($resized, false);
+                    imagesavealpha($resized, true);
+                    imagecopyresampled($resized, $image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+                    imagedestroy($image);
+                    $image = $resized;
+                } else {
+                    imagealphablending($image, false);
+                    imagesavealpha($image, true);
+                }
+                imagepng($image, $destinationPath, 6);
+                imagedestroy($image);
+                return true;
+
+            case 'image/webp':
+                if (!function_exists('imagecreatefromwebp')) {
+                    return false;
+                }
+                $image = imagecreatefromwebp($sourcePath);
+                if (!$image) {
+                    return false;
+                }
+                if ($width > $max_width || $height > $max_height) {
+                    $resized = $resize($image);
+                    imagedestroy($image);
+                    $image = $resized;
+                }
+                imagewebp($image, $destinationPath, $quality);
+                imagedestroy($image);
+                return true;
+        }
+
+        return false;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\SalesOrder;
 use App\Models\Zone;
 use App\Models\State;
 use App\Models\City;
@@ -257,7 +258,12 @@ class CustomerController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete customers')) {
             return unauthorizedRedirect();
         }
+
         $customer = Customer::findOrFail($id);
+        $salesOrder = SalesOrder::where('customer_id', $id)->exists();
+        if ($salesOrder) {
+            return redirect('customers')->with('error', 'Customer cannot be deleted as it is used in sales orders');
+        }
         $oldData = $customer->toArray();
         $customer->delete();
         addLog('delete', 'Customer', 'customers', $id, $oldData, null);

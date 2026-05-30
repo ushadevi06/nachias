@@ -127,11 +127,6 @@ class BrandCategoryController extends Controller
         if (Item::where('brand_category_id', $id)->exists()) {
             return redirect('brand_categories')->with('danger', 'This brand category is currently referenced in Items and cannot be deleted.');
         }
-
-        if (JobCardEntry::where('brand_category_id', $id)->exists()) {
-            return redirect('brand_categories')->with('danger', 'This brand category is currently referenced in Job Card Entries and cannot be deleted.');
-        }
-
         $oldData = $brandCategory->toArray();
         $brandCategory->delete();
         addLog('delete', 'Brand Category', 'brand_categories', $id, $oldData, null);

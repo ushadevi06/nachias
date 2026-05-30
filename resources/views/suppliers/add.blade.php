@@ -263,7 +263,7 @@
                                 <hr>
                             </div>
 
-                            <div class="col-lg-12">
+                            {{-- <div class="col-lg-12">
                                 <h6>Commission Information: </h6>
                             </div>
 
@@ -294,7 +294,7 @@
                                 @error('commission_percentage')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
-                            </div>
+                            </div> --}}
 
                             <div class="col-lg-12">
                                 <hr>

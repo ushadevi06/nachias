@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TransportMode;
+use App\Models\SalesOrder;
 use Illuminate\Http\Request;
 
 class TransportModeController extends Controller
@@ -109,7 +110,12 @@ class TransportModeController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('delete transport-mode')) {
             return unauthorizedRedirect();
         }
+
         $transportMode = TransportMode::findOrFail($id);
+
+        if (SalesOrder::where('transport_mode_id', $id)->exists()) {
+            return redirect('transport_modes')->with('danger', 'This method is currently referenced in Sales Orders.');
+        }
 
         $oldData = $transportMode->toArray();
         $transportMode->delete();

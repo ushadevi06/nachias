@@ -7,6 +7,7 @@ use App\Models\State;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\SalesAgent;
+use App\Models\SaleOrder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -159,6 +160,7 @@ class ZoneController extends Controller
         $references = [
             [Customer::class, 'zone_id', 'Customers'],
             [SalesAgent::class, 'zone_id', 'Sales Agents'],
+            [SalesOrder::class, 'zone_id', 'Sale Orders'],
         ];
         foreach ($references as [$model, $column, $label]) {
             if ($model::where($column, $id)->exists()) {

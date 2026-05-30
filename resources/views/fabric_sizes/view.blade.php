@@ -22,7 +22,7 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Fabric Width</th>
+                                    <th>Fabric Size</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>

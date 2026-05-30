@@ -248,11 +248,6 @@ class ServiceProviderController extends Controller
         if (User::where('service_provider_id', $id)->exists()) {
             return redirect('service_providers')->with('danger', 'This service provider is referenced in Employees and cannot be deleted.');
         }
-
-        if (Resource::where('service_provider_id', $id)->exists()) {
-            return redirect('service_providers')->with('danger', 'This service provider is referenced in Resources and cannot be deleted.');
-        }
-
         if (JobCardEntry::where('service_provider_id', $id)->exists()) {
             return redirect('service_providers')->with('danger', 'This service provider is referenced in Job Card Entries and cannot be deleted.');
         }

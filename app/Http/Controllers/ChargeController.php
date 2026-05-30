@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Charge;
 use App\Models\PurchaseInvoiceCharge;
+use App\Models\SalesOrderCharge;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 
@@ -136,6 +137,7 @@ class ChargeController extends Controller
         }
         $references = [
             [PurchaseInvoiceCharge::class, 'charge_id', 'Purchase Invoice Charges'],
+            [SalesOrderCharge::class, 'charge_id', 'Sales Order Charges'],
         ];
         foreach ($references as $reference) {
             $model = $reference[0];
