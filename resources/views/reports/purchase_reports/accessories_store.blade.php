@@ -224,7 +224,17 @@ $(document).ready(function() {
 
     $('#accessoriesReportForm').on('submit', function(e) {
         e.preventDefault();
-        fetchReport();
+        if ($('.datatables-po-supplier').length && $.fn.DataTable.isDataTable('.datatables-po-supplier')) {
+            $('.datatables-po-supplier').DataTable().ajax.reload();
+            $('.datatables-stock').DataTable().ajax.reload();
+            $('.datatables-ageing').DataTable().ajax.reload();
+            if ($('.datatables-cost').length) $('.datatables-cost').DataTable().ajax.reload();
+            $('.datatables-minstock').DataTable().ajax.reload();
+            $('.datatables-return').DataTable().ajax.reload();
+            $('.datatables-performance').DataTable().ajax.reload();
+        } else {
+            fetchReport();
+        }
     });
 
     // Initial load

@@ -2,7 +2,7 @@
     <table class="table premium-table mb-0 datatables-performance" style="width:100%">
         <thead>
             <tr>
-                
+                <th>#</th>
                 <th>SUPPLIER NAME</th>
                 <th>PO COUNT</th>
                 <th>TOTAL PO VALUE</th>
@@ -10,40 +10,48 @@
                 <th>RETURN RATE (%)</th>
             </tr>
         </thead>
-        <tbody>
-            @foreach($performanceData as $data)
-            <tr>
-
-                <td>{{ $data['supplier_name'] }}</td>
-                <td class="text-center">{{ $data['po_count'] }}</td>
-                <td class="text-end fw-semibold">₹{{ number_format($data['total_po_value'], 2) }}</td>
-                <td class="text-center">{{ $data['dn_count'] }}</td>
-                <td class="text-center">
-                    @if($data['return_rate'] > 10)
-                        <span class="badge bg-label-danger">{{ $data['return_rate'] }}%</span>
-                    @elseif($data['return_rate'] > 0)
-                        <span class="badge bg-label-warning">{{ $data['return_rate'] }}%</span>
-                    @else
-                        <span class="badge bg-label-success">{{ $data['return_rate'] }}%</span>
-                    @endif
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
+        <tbody></tbody>
     </table>
 </div>
+
 <script>
-    if ($.fn.DataTable.isDataTable('.datatables-performance')) {
-        $('.datatables-performance').DataTable().destroy();
-    }
-    $('.datatables-performance').DataTable({
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><t><"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-        displayLength: 10,
-        lengthMenu: [10, 25, 50, 75, 100],
-        buttons: [
-            { extend: 'excelHtml5', className: 'buttons-excel d-none', title: 'Supplier Performance Report' },
-            { extend: 'pdfHtml5', className: 'buttons-pdf d-none', title: 'Supplier Performance Report' },
-            { extend: 'print', className: 'buttons-print d-none', title: 'Supplier Performance Report' }
-        ]
-    });
+    (function() {
+        const $table = $('.datatables-performance');
+        if (!$table.length || !$.fn.DataTable) return;
+
+        if ($.fn.DataTable.isDataTable($table)) {
+            $table.DataTable().clear().destroy();
+        }
+
+        $table.DataTable({
+            destroy: true,
+            processing: true,
+            serverSide: true,
+            pageLength: 10,
+            bLengthChange: true,
+            bFilter: true,
+            bInfo: true,
+            bAutoWidth: false,
+            ajax: {
+                url: window.location.pathname,
+                data: function(d) {
+                    d.report_type = 'performance-report';
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
+                    d.supplier_id = $('select[name="supplier_id"]').val();
+                }
+            },
+            columns: [
+                { data: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'supplier_name' },
+                { data: 'po_count', className: 'text-center' },
+                { data: 'total_po_value', className: 'text-end fw-semibold' },
+                { data: 'dn_count', className: 'text-center' },
+                { data: 'return_rate', className: 'text-center', orderable: false, searchable: false }
+            ],
+            language: {
+                emptyTable: 'No supplier performance data found.'
+            }
+        });
+    })();
 </script>

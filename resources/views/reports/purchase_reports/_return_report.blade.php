@@ -1,7 +1,8 @@
 <div class="table-responsive">
-    <table class="table premium-table mb-0 datatable-return" style="width:100%">
+    <table class="table premium-table mb-0 datatables-return" style="width:100%">
         <thead>
             <tr>
+                <th>#</th>
                 <th>RETURN DATE</th>
                 <th>DEBIT NOTE NO</th>
                 <th>SUPPLIER NAME</th>
@@ -12,50 +13,67 @@
                 <th>REASON</th>
             </tr>
         </thead>
-        <tbody>
-            @foreach($returnGoodsData as $row)
-                <tr>
-                    <td>{{ \Carbon\Carbon::parse($row->return_date)->format('d-m-Y') }}</td>
-                    <td>{{ $row->return_no }}</td>
-                    <td>{{ $row->supplier_name }}</td>
-                    <td>{{ $row->item_name }}</td>
-                    <td>{{ number_format($row->quantity, 2) }}</td>
-                    <td>{{ number_format($row->rate, 2) }}</td>
-                    <td>{{ number_format($row->amount, 2) }}</td>
-                    <td>{{ $row->reason ?: '-' }}</td>
-                </tr>
-            @endforeach
-        </tbody>
+        <tbody></tbody>
+        <tfoot>
+            <tr class="fw-bold" style="background: #f1f5f9;">
+                <td colspan="5" class="text-end">TOTAL</td>
+                <td id="footer-return-qty">0.00</td>
+                <td></td>
+                <td id="footer-return-amount">0.00</td>
+                <td></td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 
 <script>
-$(document).ready(function() {
-    if ($.fn.DataTable.isDataTable('#return-report .datatable-return')) {
-        $('#return-report .datatable-return').DataTable().destroy();
-    }
-    
-    $('#return-report .datatable-return').DataTable({
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 d-flex justify-content-center justify-content-md-end"f>><t><"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-        displayLength: 10,
-        lengthMenu: [10, 25, 50, 75, 100],
-        buttons: [
-            {
-                extend: 'excelHtml5',
-                className: 'buttons-excel d-none',
-                title: 'Return Goods'
+    (function() {
+        const $table = $('.datatables-return');
+        if (!$table.length || !$.fn.DataTable) return;
+
+        if ($.fn.DataTable.isDataTable($table)) {
+            $table.DataTable().clear().destroy();
+        }
+
+        $table.DataTable({
+            destroy: true,
+            processing: true,
+            serverSide: true,
+            pageLength: 10,
+            bLengthChange: true,
+            bFilter: true,
+            bInfo: true,
+            bAutoWidth: false,
+            ajax: {
+                url: window.location.pathname,
+                data: function(d) {
+                    d.report_type = 'return-report';
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
+                    d.supplier_id = $('select[name="supplier_id"]').val();
+                }
             },
-            {
-                extend: 'pdfHtml5',
-                className: 'buttons-pdf d-none',
-                title: 'Return Goods'
+            columns: [
+                { data: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'return_date' },
+                { data: 'return_no' },
+                { data: 'supplier_name' },
+                { data: 'item_name' },
+                { data: 'quantity' },
+                { data: 'rate' },
+                { data: 'amount' },
+                { data: 'reason' }
+            ],
+            drawCallback: function(settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    $('#footer-return-qty').html(json.totals.quantity);
+                    $('#footer-return-amount').html(json.totals.amount);
+                }
             },
-            {
-                extend: 'print',
-                className: 'buttons-print d-none',
-                title: 'Return Goods'
+            language: {
+                emptyTable: 'No return goods found.'
             }
-        ]
-    });
-});
+        });
+    })();
 </script>

@@ -1940,6 +1940,13 @@ class JobCardEntryController extends Controller
             }
         }
 
+        foreach ($jobCard->issueItems as $issueItem) {
+            $artNo = trim($issueItem->fabricDetail->art_no ?? ($issueItem->rawMaterial?->code ?? ''));
+            if ($artNo && !isset($artMaterialMap[$artNo]) && $issueItem->rawMaterial) {
+                $artMaterialMap[$artNo] = $issueItem->rawMaterial->name;
+            }
+        }
+
         $pdf = Pdf::loadView('job_card_entry.accessories_consumption_pdf', compact('jobCard', 'issueItems', 'artMaterialMap', 'artUomMap', 'artLocationMap'));
         $pdf->setPaper('A4', 'landscape');
 

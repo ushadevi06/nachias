@@ -1,22 +1,34 @@
 <div class="table-responsive">
     <table class="table premium-table mb-0 datatables-stock">
+        @if($isFabric)
         <thead>
-            @if($isFabric)
             <tr>
-                <th>MATERIAL NAME</th>
-                <th>BRAND</th>
-                <th>STYLE</th>
-                <th>COLOR</th>
-                <th>FABRIC TYPE</th>
+                <th>#</th>
+                <th class="text-start ps-3">PRODUCT GROUP</th>
                 <th>WIDTH</th>
+                <th>PLAIN METERS</th>
+                <th>PRINT METERS</th>
+                <th>CHECKED METERS</th>
                 <th>OPENING METERS</th>
                 <th>INWARD METERS</th>
                 <th>OUTWARD METERS</th>
                 <th>CLOSING METERS</th>
-                <th>CLOSING COST (₹)</th>
             </tr>
-            @else
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+            <tr class="fw-bold" style="background: #f1f5f9;">
+                <td colspan="6" class="text-end">TOTAL</td>
+                <td id="footer-stock-opening">0.00</td>
+                <td id="footer-stock-inward" class="text-success">0.00</td>
+                <td id="footer-stock-outward" class="text-danger">0.00</td>
+                <td id="footer-stock-closing">0.00</td>
+            </tr>
+        </tfoot>
+        @else
+        <thead>
             <tr>
+                <th>#</th>
                 <th>ITEM NAME</th>
                 <th>OPENING QTY</th>
                 <th>INWARD QTY</th>
@@ -24,54 +36,92 @@
                 <th>CLOSING QTY</th>
                 <th>CLOSING COST (₹)</th>
             </tr>
-            @endif
         </thead>
-        <tbody>
-            @foreach($stockData as $stock)
-            <tr>
-                @if($isFabric)
-                    <td>{{ $stock['item_name'] }}</td>
-                    <td>{{ $stock['brand'] }}</td>
-                    <td>{{ $stock['style'] }}</td>
-                    <td>{{ $stock['color'] }}</td>
-                    <td>{{ $stock['fabric_type'] }}</td>
-                    <td>{{ $stock['width'] }}</td>
-                    <td class="text-end">{{ number_format($stock['opening'], 2) }}</td>
-                    <td class="text-end text-success fw-semibold">{{ number_format($stock['inward'], 2) }}</td>
-                    <td class="text-end text-danger fw-semibold">{{ number_format($stock['outward'], 2) }}</td>
-                    <td class="text-end fw-bold">{{ number_format($stock['closing'], 2) }}</td>
-                    <td class="text-end fw-bold text-primary">₹ {{ number_format($stock['closing_cost'], 2) }}</td>
-                @else
-                    <td>{{ $stock['item_name'] }}</td>
-                    <td class="text-end">{{ number_format($stock['opening'], 2) }}</td>
-                    <td class="text-end text-success fw-semibold">{{ number_format($stock['inward'], 2) }}</td>
-                    <td class="text-end text-danger fw-semibold">{{ number_format($stock['outward'], 2) }}</td>
-                    <td class="text-end fw-bold">{{ number_format($stock['closing'], 2) }}</td>
-                    <td class="text-end fw-bold text-primary">₹ {{ number_format($stock['closing_cost'], 2) }}</td>
-                @endif
-            </tr>
-            @endforeach
-        </tbody>
+        <tbody></tbody>
         <tfoot>
-            @if(count($stockData) > 0)
             <tr class="fw-bold" style="background: #f1f5f9;">
-                @if($isFabric)
-                    <td colspan="6" class="text-end">TOTAL</td>
-                    <td class="text-end">{{ number_format(collect($stockData)->sum('opening'), 2) }}</td>
-                    <td class="text-end text-success">{{ number_format(collect($stockData)->sum('inward'), 2) }}</td>
-                    <td class="text-end text-danger">{{ number_format(collect($stockData)->sum('outward'), 2) }}</td>
-                    <td class="text-end">{{ number_format(collect($stockData)->sum('closing'), 2) }}</td>
-                    <td class="text-end text-primary">₹ {{ number_format(collect($stockData)->sum('closing_cost'), 2) }}</td>
-                @else
-                    <td colspan="1" class="text-end">TOTAL</td>
-                    <td class="text-end">{{ number_format(collect($stockData)->sum('opening'), 2) }}</td>
-                    <td class="text-end text-success">{{ number_format(collect($stockData)->sum('inward'), 2) }}</td>
-                    <td class="text-end text-danger">{{ number_format(collect($stockData)->sum('outward'), 2) }}</td>
-                    <td class="text-end">{{ number_format(collect($stockData)->sum('closing'), 2) }}</td>
-                    <td class="text-end text-primary">₹ {{ number_format(collect($stockData)->sum('closing_cost'), 2) }}</td>
-                @endif
+                <td colspan="2" class="text-end">TOTAL</td>
+                <td id="footer-acc-opening">0.00</td>
+                <td id="footer-acc-inward" class="text-success">0.00</td>
+                <td id="footer-acc-outward" class="text-danger">0.00</td>
+                <td id="footer-acc-closing">0.00</td>
+                <td id="footer-acc-cost" class="text-primary">₹ 0.00</td>
             </tr>
-            @endif
         </tfoot>
+        @endif
     </table>
 </div>
+
+<script>
+    (function() {
+        const $table = $('.datatables-stock');
+        if (!$table.length || !$.fn.DataTable) return;
+
+        if ($.fn.DataTable.isDataTable($table)) {
+            $table.DataTable().clear().destroy();
+        }
+
+        const isFabric = {{ $isFabric ? 'true' : 'false' }};
+        const columns = isFabric ? [
+            { data: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'brand', className: 'text-start ps-3 fw-bold' },
+            { data: 'width' },
+            { data: 'plain' },
+            { data: 'print' },
+            { data: 'checked' },
+            { data: 'opening' },
+            { data: 'inward', className: 'text-success fw-semibold' },
+            { data: 'outward', className: 'text-danger fw-semibold' },
+            { data: 'closing', className: 'fw-bold' }
+        ] : [
+            { data: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'item_name' },
+            { data: 'opening' },
+            { data: 'inward', className: 'text-success fw-semibold' },
+            { data: 'outward', className: 'text-danger fw-semibold' },
+            { data: 'closing', className: 'fw-bold' },
+            { data: 'closing_cost', className: 'fw-bold text-primary' }
+        ];
+
+        $table.DataTable({
+            destroy: true,
+            processing: true,
+            serverSide: true,
+            pageLength: 25,
+            bLengthChange: true,
+            bFilter: true,
+            bInfo: true,
+            bAutoWidth: false,
+            ajax: {
+                url: window.location.pathname,
+                data: function(d) {
+                    d.report_type = 'stock-report';
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
+                    d.supplier_id = $('select[name="supplier_id"]').val();
+                }
+            },
+            columns: columns,
+            drawCallback: function(settings) {
+                var json = settings.json;
+                if (json && json.totals) {
+                    if (isFabric) {
+                        $('#footer-stock-opening').html(json.totals.opening);
+                        $('#footer-stock-inward').html(json.totals.inward);
+                        $('#footer-stock-outward').html(json.totals.outward);
+                        $('#footer-stock-closing').html(json.totals.closing);
+                    } else {
+                        $('#footer-acc-opening').html(json.totals.opening);
+                        $('#footer-acc-inward').html(json.totals.inward);
+                        $('#footer-acc-outward').html(json.totals.outward);
+                        $('#footer-acc-closing').html(json.totals.closing);
+                        $('#footer-acc-cost').html(json.totals.closing_cost);
+                    }
+                }
+            },
+            language: {
+                emptyTable: 'No stock data found.'
+            }
+        });
+    })();
+</script>

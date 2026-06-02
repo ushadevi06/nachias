@@ -1,47 +1,55 @@
 <div class="table-responsive">
-    <table class="table premium-table mb-0 datatable">
+    <table class="table premium-table mb-0 datatables-cost">
         <thead>
             <tr>
+                <th>#</th>
                 <th>ITEM NAME</th>
                 <th class="text-center">TOTAL PURCHASED QTY</th>
                 <th class="text-end">TOTAL AMOUNT (₹)</th>
                 <th class="text-end text-primary">AVERAGE COST (₹)</th>
             </tr>
         </thead>
-        <tbody>
-            @foreach($costData as $row)
-                <tr>
-                    <td>{{ $row['item_name'] }}</td>
-                    <td class="text-center">{{ number_format($row['total_qty'], 2) }}</td>
-                    <td class="text-end">{{ number_format($row['total_amount'], 2) }}</td>
-                    <td class="text-end text-primary font-weight-bold">{{ number_format($row['average_cost'], 2) }}</td>
-                </tr>
-            @endforeach
-        </tbody>
+        <tbody></tbody>
     </table>
 </div>
 
 <script>
-    $(document).ready(function() {
-        if ($.fn.DataTable.isDataTable('#cost-report .datatable')) {
-            $('#cost-report .datatable').DataTable().destroy();
+    (function() {
+        const $table = $('.datatables-cost');
+        if (!$table.length || !$.fn.DataTable) return;
+
+        if ($.fn.DataTable.isDataTable($table)) {
+            $table.DataTable().clear().destroy();
         }
-        $('#cost-report .datatable').DataTable({
-                "pageLength": 25,
-                "ordering": true,
-                "info": true,
-                "searching": true,
-                "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-                 "language": {
-                     "search": "",
-                     "searchPlaceholder": "Search records...",
-                     "emptyTable": "No data available in table"
-                 },
-                 "buttons": [
-                     { extend: 'excel', title: 'Average Cost Report', className: 'd-none' },
-                     { extend: 'pdf', title: 'Average Cost Report', className: 'd-none' },
-                     { extend: 'print', title: 'Average Cost Report', className: 'd-none' }
-                ]
-            });
-    });
+
+        $table.DataTable({
+            destroy: true,
+            processing: true,
+            serverSide: true,
+            pageLength: 25,
+            bLengthChange: true,
+            bFilter: true,
+            bInfo: true,
+            bAutoWidth: false,
+            ajax: {
+                url: window.location.pathname,
+                data: function(d) {
+                    d.report_type = 'cost-report';
+                    d.from_date = $('.start_date').val();
+                    d.to_date = $('.end_date').val();
+                    d.supplier_id = $('select[name="supplier_id"]').val();
+                }
+            },
+            columns: [
+                { data: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'item_name' },
+                { data: 'total_qty', className: 'text-center' },
+                { data: 'total_amount', className: 'text-end' },
+                { data: 'average_cost', className: 'text-end text-primary fw-bold' }
+            ],
+            language: {
+                emptyTable: 'No data available in table'
+            }
+        });
+    })();
 </script>

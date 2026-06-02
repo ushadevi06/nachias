@@ -79,6 +79,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="performance-tab" data-bs-toggle="tab" data-bs-target="#performance-report" type="button" role="tab">Supplier Performance</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="casino-po-tab" data-bs-toggle="tab" data-bs-target="#casino-po-report" type="button" role="tab">Casino Purchase Order Report</button>
+                </li>
             </ul>
         </div>
         <div class="card-body py-4">
@@ -110,6 +113,9 @@
                     <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
                 </div>
                 <div class="tab-pane fade" id="performance-report" role="tabpanel">
+                    <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
+                </div>
+                <div class="tab-pane fade" id="casino-po-report" role="tabpanel">
                     <div class="text-center py-4 text-muted">Data will be populated dynamically</div>
                 </div>
             </div>
@@ -224,7 +230,18 @@ $(document).ready(function() {
 
     $('#fabricReportForm').on('submit', function(e) {
         e.preventDefault();
-        fetchReport();
+        if ($('.datatables-po-supplier').length && $.fn.DataTable.isDataTable('.datatables-po-supplier')) {
+            $('.datatables-po-supplier').DataTable().ajax.reload();
+            $('.datatables-stock').DataTable().ajax.reload();
+            $('.datatables-ageing').DataTable().ajax.reload();
+            $('.datatables-consumption').DataTable().ajax.reload();
+            $('.datatables-minstock').DataTable().ajax.reload();
+            $('.datatables-return').DataTable().ajax.reload();
+            $('.datatables-performance').DataTable().ajax.reload();
+            $('.datatables-casino-po').DataTable().ajax.reload();
+        } else {
+            fetchReport();
+        }
     });
 
     // Initial load
