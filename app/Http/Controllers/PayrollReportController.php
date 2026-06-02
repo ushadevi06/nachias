@@ -64,7 +64,7 @@ class PayrollReportController extends Controller
                     'report_name' => 'Payroll Report',
                     'report_type' => 'Monthly',
                     'month_year' => Carbon::createFromFormat(
-                        'F Y',
+                        'm  Y',
                         $report->salary_month . ' ' . $report->salary_year
                     )->format('M Y'),
                     'employee' => $report->name .
@@ -77,7 +77,7 @@ class PayrollReportController extends Controller
                     'net_salary' => '₹' .
                         number_format($report->net_salary ?? 0, 2),
                     'status' => $statusBadge,
-                    'action' => $action,
+                    // 'action' => $action,
                 ];
             }
             return response()->json([

@@ -588,20 +588,36 @@ class SalaryController extends Controller
     public function printPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->join('users', function ($join) {
-                $join->on(
-                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
+                ->join('users', function ($join) {
+                    $join->on(
+                        DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
+                        '=',
+                        DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
+                    );
+                })
+                ->leftJoin(
+                    'departments',
+                    'users.department_id',
                     '=',
-                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
-                );
-            })
-            ->select(
-                'salary_generations.*',
-                'users.name',
-                'users.emp_id'
-            )
-            ->where('salary_generations.id', $id)
-            ->first();
+                    'departments.id'
+                )
+                ->leftJoin(
+                    'roles',
+                    'users.role_id',
+                    '=',
+                    'roles.id'
+                )
+                ->select(
+                    'salary_generations.*',
+                    'users.name',
+                    'users.emp_id',
+                    'users.esi_no',
+                    'users.pf_no',
+                    'departments.department as department_name',
+                    'roles.name as role_name'
+                )
+                ->where('salary_generations.id', $id)
+                ->first();
         $setting = Setting::with(['state', 'city'])->first();
         $is_print = true;
         return view('salary_calculations.payslip_pdf',compact('salary','is_print','setting'));

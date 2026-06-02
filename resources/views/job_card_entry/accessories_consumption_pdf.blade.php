@@ -114,7 +114,6 @@
                 <th>Material</th>
                 <th>Qty Produced</th>
                 <th>Qty Issued</th>
-                <th>Qty Wastage</th>
                 <th>Qty Used</th>
                 <th>Qty Adjusted</th>
                 <th>Qty Balanced</th>
@@ -128,7 +127,6 @@
             @php
                 $totalQtyProduced = 0;
                 $totalQtyIssued = 0;
-                $totalQtyWastage = 0;
                 $totalQtyUsed = 0;
                 $totalQtyAdjusted = 0;
                 $totalQtyConsumed = 0;
@@ -139,15 +137,13 @@
                 @php
                     $artNo = $item->art_no;
                     $materialName = $artMaterialMap[trim($artNo)] ?? $artNo;
-                    $qtyConsumed = $item->qty_used + $item->qty_adjusted + $item->qty_wastage;
-                    // Average includes wastage as per user's latest requirement
-                    $qtyPerPc = $item->produced_qty > 0 ? ($item->qty_used + $item->qty_wastage) / $item->produced_qty : 0;
+                    $qtyConsumed = $item->qty_used + $item->qty_adjusted;
+                    $qtyPerPc = $item->produced_qty > 0 ? ($item->qty_used) / $item->produced_qty : 0;
                     $costPerPc = $qtyPerPc * $item->unit_price;
-                    $lineCost = ($item->qty_used + $item->qty_wastage) * $item->unit_price;
+                    $lineCost = ($item->qty_used ) * $item->unit_price;
                     
                     $totalQtyProduced += $item->produced_qty;
                     $totalQtyIssued += $item->qty_issue;
-                    $totalQtyWastage += $item->qty_wastage;
                     $totalQtyUsed += $item->qty_used;
                     $totalQtyAdjusted += $item->qty_adjusted;
                     $totalQtyConsumed += $qtyConsumed;
@@ -160,7 +156,6 @@
                     <td>{{ $materialName }}</td>
                     <td>{{ number_format($item->produced_qty, 0) }}</td>
                     <td class="text-end">{{ number_format($item->qty_issue, 2) }}</td>
-                    <td class="text-end">{{ number_format($item->qty_wastage, 2) }}</td>
                     <td class="text-end">{{ number_format($item->qty_used, 2) }}</td>
                     <td class="text-end">{{ number_format($item->qty_adjusted, 2) }}</td>
                     <td class="text-end">{{ number_format($item->balance, 2) }}</td>
@@ -176,11 +171,10 @@
                 <td colspan="3" class="text-end">Total</td>
                 <td>{{ number_format($totalQtyProduced, 0) }}</td>
                 <td class="text-end">{{ number_format($totalQtyIssued, 2) }}</td>
-                <td class="text-end">{{ number_format($totalQtyWastage, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyUsed, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyAdjusted, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyBalance, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format(($totalQtyUsed + $totalQtyWastage) / $totalQtyProduced, 4) : '-' }}</td>
+                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format(($totalQtyUsed) / $totalQtyProduced, 4) : '-' }}</td>
                 <td class="text-end">-</td>
                 <td class="text-end">{{ number_format($totalCost, 2) }}</td>
                 <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td>

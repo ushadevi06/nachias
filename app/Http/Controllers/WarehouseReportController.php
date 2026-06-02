@@ -23,7 +23,8 @@ class WarehouseReportController extends Controller
 
 
         // --- 1. Brandwise Sales with Trend ---
-        $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-01');
+        //$fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-01');
+        $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : date('Y-m-d', strtotime('-30 days'));
         $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : date('Y-m-d');
 
         // Current Period Sales

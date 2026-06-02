@@ -1741,7 +1741,7 @@ class JobCardEntryController extends Controller
             return ($item->rawMaterial?->store_category_id == 1) || (($artCategoryMap[$artNo] ?? 1) == 1);
         })->groupBy(function ($item) {
             return trim($item->fabricDetail->art_no ?? ($item->rawMaterial?->code ?? 'N/A'));
-        })->map(function ($items, $artNo) use ($artTotalMap) {
+        })->map(function ($items, $artNo) use ($artTotalMap, $jobCard) {
             $stockUnitPrice = $items->map(function ($item) {
                 return $item->stockEntryItem->price ?? null;
             })->filter(function ($price) {
@@ -1754,6 +1754,36 @@ class JobCardEntryController extends Controller
                 return !is_null($width) && $width !== '';
             })->first();
 
+            $finalPrice = $stockUnitPrice > 0 ? $stockUnitPrice : $items->average('unit_price');
+            if ($finalPrice <= 0) {
+                $seIds = [];
+                if ($jobCard->stock_entry_ids) {
+                    $ids = json_decode($jobCard->stock_entry_ids, true);
+                    if ($ids) {
+                        foreach ($ids as $idStr) {
+                            $seIds[] = strpos($idStr, '::') !== false ? explode('::', $idStr)[0] : $idStr;
+                        }
+                    }
+                }
+                if (!empty($seIds)) {
+                    $finalPrice = \App\Models\StockEntryItem::whereIn('stock_entry_id', $seIds)
+                        ->where('art_no', $artNo)
+                        ->where('price', '>', 0)
+                        ->value('price') ?? 0;
+                }
+                if ($finalPrice <= 0 && $jobCard->purchase_order_id) {
+                    $invoiceIds = \App\Models\PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
+                    $grnItem = \App\Models\GrnEntryItem::whereIn('grn_entry_id', function ($query) use ($invoiceIds) {
+                        $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
+                    })->where('art_no', $artNo)
+                      ->with('purchaseInvoiceItem')
+                      ->first();
+                    if ($grnItem) {
+                        $finalPrice = $grnItem->purchaseInvoiceItem->rate ?? ($grnItem->rate ?? 0);
+                    }
+                }
+            }
+
             return (object) [
                 'art_no' => $artNo,
                 'raw_material_id' => $items->pluck('raw_material_id')->filter()->first(),
@@ -1763,7 +1793,7 @@ class JobCardEntryController extends Controller
                 'qty_used' => $items->sum('qty_used'),
                 'qty_adjusted' => $items->sum('qty_adjusted'),
                 'balance' => $items->sum('balance'),
-                'unit_price' => $stockUnitPrice > 0 ? $stockUnitPrice : $items->average('unit_price'),
+                'unit_price' => $finalPrice,
                 'size_label' => $sizeLabel,
             ];
         })->values();
@@ -1843,6 +1873,36 @@ class JobCardEntryController extends Controller
                 return $price !== null && $price > 0;
             })->avg();
 
+            $finalPrice = $stockUnitPrice > 0 ? $stockUnitPrice : $items->average('unit_price');
+            if ($finalPrice <= 0) {
+                $seIds = [];
+                if ($jobCard->stock_entry_ids) {
+                    $ids = json_decode($jobCard->stock_entry_ids, true);
+                    if ($ids) {
+                        foreach ($ids as $idStr) {
+                            $seIds[] = strpos($idStr, '::') !== false ? explode('::', $idStr)[0] : $idStr;
+                        }
+                    }
+                }
+                if (!empty($seIds)) {
+                    $finalPrice = \App\Models\StockEntryItem::whereIn('stock_entry_id', $seIds)
+                        ->where('art_no', $artNo)
+                        ->where('price', '>', 0)
+                        ->value('price') ?? 0;
+                }
+                if ($finalPrice <= 0 && $jobCard->purchase_order_id) {
+                    $invoiceIds = \App\Models\PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
+                    $grnItem = \App\Models\GrnEntryItem::whereIn('grn_entry_id', function ($query) use ($invoiceIds) {
+                        $query->select('id')->from('grn_entries')->whereIn('purchase_invoice_id', $invoiceIds);
+                    })->where('art_no', $artNo)
+                      ->with('purchaseInvoiceItem')
+                      ->first();
+                    if ($grnItem) {
+                        $finalPrice = $grnItem->purchaseInvoiceItem->rate ?? ($grnItem->rate ?? 0);
+                    }
+                }
+            }
+
             return (object) [
                 'art_no' => $artNo,
                 'raw_material_id' => $items->pluck('raw_material_id')->filter()->first(),
@@ -1852,7 +1912,7 @@ class JobCardEntryController extends Controller
                 'qty_used' => $items->sum('qty_used'),
                 'qty_adjusted' => $items->sum('qty_adjusted'),
                 'balance' => $items->sum('balance'),
-                'unit_price' => $stockUnitPrice > 0 ? $stockUnitPrice : $items->average('unit_price'),
+                'unit_price' => $finalPrice,
             ];
         })->values();
 

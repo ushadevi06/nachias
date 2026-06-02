@@ -689,7 +689,7 @@ $isSuper = $user->id == 1;
 
                                 @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime') || $user->can('view monthly-payroll') || $user->can('view payroll-reports')))
                                     <li
-                                        class="menu-item {{ (request()->is('attendances*') || request()->is('leave*') || request()->is('overtime*') || request()->is('salary_calculation*') || request()->is('payslip*') || request()->is('payroll_reports*')) ? 'active' : '' }}">
+                                        class="menu-item {{ (request()->is('attendances*') || request()->is('view_attendance/*') || request()->is('leave*') || request()->is('add_leave') || request()->is('view_leave/*') || request()->is('overtime*') || request()->is('view_overtime/*') || request()->is('monthly_payroll*') || request()->is('add_monthly_payroll') || request()->is('payslip*') || request()->is('payroll_reports*')) ? 'active' : '' }}">
 
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-money-rupee-circle-line"></i>
@@ -697,7 +697,7 @@ $isSuper = $user->id == 1;
                                         </a>
                                         <ul class="menu-sub">
                                             @if($isSuper || $user->can('view attendance'))
-                                                <li class="menu-item {{ request()->is('attendances*') ? 'active' : '' }}">
+                                                <li class="menu-item {{ request()->is('attendances*') || request()->is('view_attendance/*') ? 'active' : '' }}">
                                                     <a href="{{ url('attendances') }}" class="menu-link">
                                                         <div>Attendances</div>
                                                     </a>
@@ -705,14 +705,14 @@ $isSuper = $user->id == 1;
                                             @endif
 
                                             @if($isSuper || $user->can('view manage-leaves'))
-                                                <li class="menu-item {{ request()->is('leave*') ? 'active' : '' }}">
+                                                <li class="menu-item {{ request()->is('leave*') || request()->is('add_leave') || request()->is('view_leave/*') ? 'active' : '' }}">
                                                     <a href="{{ url('leave') }}" class="menu-link">
                                                         <div>Manage Leaves</div>
                                                     </a>
                                                 </li>
                                             @endif
                                             @if($isSuper || $user->can('view overtime'))
-                                                <li class="menu-item {{ request()->is('overtime*') ? 'active' : '' }}">
+                                                <li class="menu-item {{ request()->is('overtime*') || request()->is('view_overtime/*') ? 'active' : '' }}">
                                                     <a href="{{ url('overtime') }}" class="menu-link">
                                                         <div>Overtime</div>
                                                     </a>

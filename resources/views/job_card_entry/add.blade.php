@@ -2535,7 +2535,7 @@
                 }
 
                 let vWidth = captured.width[art] || (oldF ? oldF.width : '') || '';
-                let vMtr = captured.mtr[art] || (oldF ? oldF.mtr : '') || '';
+                let vMtr = captured.mtr[art] || (oldF ? (oldF.used_qty !== undefined ? oldF.used_qty : oldF.mtr) : '') || '';
                 let vInOut = captured.in_out[art] || (oldF ? oldF.in_out : '') || '';
                 let vNPatti = captured.n_patti[art] || (oldF ? oldF.n_patti : '') || '';
 
@@ -2548,7 +2548,7 @@
                     const m = existingMatrix.find(m => m.art_no == art);
                     if (m) {
                         vWidth = m.width || '';
-                        vMtr = m.mtr || '';
+                        vMtr = m.used_qty !== undefined && m.used_qty !== null ? m.used_qty : (m.mtr || '');
                         vInOut = m.in_out || '';
                         vNPatti = m.n_patti || '';
                     }
@@ -2561,7 +2561,7 @@
                 } else if (currentArtData && currentArtData.length > 0) {
                     const d = currentArtData.find(d => d.art_no == art);
                     if (d) {
-                        vMtr = d.mtr || '';
+                        vMtr = d.already_issued !== undefined && d.already_issued !== null ? d.already_issued : (d.mtr || '');
                     }
                 }
 

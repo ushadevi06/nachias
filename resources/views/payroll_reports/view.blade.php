@@ -25,7 +25,7 @@
                                     <th>Gross Salary</th>
                                     <th>Net Salary</th>
                                     <th>Status</th>
-                                    <th>Actions</th>
+                                    {{-- <th>Actions</th> --}}
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -59,7 +59,7 @@ let table = $('#payrollTable').DataTable({
         { data: 'gross_salary' },
         { data: 'net_salary' },
         { data: 'status', orderable: false, searchable: false },
-        { data: 'action', orderable: false, searchable: false }
+        // { data: 'action', orderable: false, searchable: false }
     ]
 });
 $('#filterBtn').click(function () {

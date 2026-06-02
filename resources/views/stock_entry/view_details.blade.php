@@ -12,19 +12,19 @@
                     <div class="card-body">
                         <div class="row g-4">
                             @php
-    $itemId = request('item_id');
-    $firstItem = null;
-    if ($itemId) {
-        $firstItem = $stockEntry->stockEntryItems->where('id', $itemId)->first();
-    }
-    if (!$firstItem) {
-        $firstItem = $stockEntry->stockEntryItems->first();
-    }
+                                $itemId = request('item_id');
+                                $firstItem = null;
+                                if ($itemId) {
+                                    $firstItem = $stockEntry->stockEntryItems->where('id', $itemId)->first();
+                                }
+                                if (!$firstItem) {
+                                    $firstItem = $stockEntry->stockEntryItems->first();
+                                }
 
-    $totalQtyIn = $stockEntry->stockEntryItems->sum('qty_in');
-    $totalQtyOut = $stockEntry->stockEntryItems->sum('qty_out');
-    $isRawMaterial = ($stockEntry->entry_type === 'Raw Material');
-    $isFinishedGoods = ($stockEntry->entry_type === 'Finished Goods');
+                                $totalQtyIn = $stockEntry->stockEntryItems->sum('qty_in');
+                                $totalQtyOut = $stockEntry->stockEntryItems->sum('qty_out');
+                                $isRawMaterial = ($stockEntry->entry_type === 'Raw Material');
+                                $isFinishedGoods = ($stockEntry->entry_type === 'Finished Goods');
                             @endphp
 
                             @if($isRawMaterial)
