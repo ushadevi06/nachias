@@ -37,6 +37,7 @@ class PermissionSeeder extends Seeder
             'taxes' => ['create', 'edit', 'delete', 'view'],
             'styles' => ['create', 'edit', 'delete', 'view'],
             'stores' => ['create', 'edit', 'delete', 'view'],
+            'devices' => ['create', 'edit', 'view'],
 
             /* Logistics Master */
             'shipping-methods' => ['create', 'edit', 'delete', 'view'],

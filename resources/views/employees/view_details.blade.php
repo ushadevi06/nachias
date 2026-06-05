@@ -17,7 +17,7 @@
                         <img src="{{ $employee->profile_image_url }}" alt="Profile Image" class="rounded-circle shadow" width="120" height="120" style="object-fit: cover;">
                         <div class="text-center text-sm-start">
                             <h3 class="mb-1">{{ $employee->name }}</h3>
-                            <p class="text-muted mb-2"><i class="ri ri-id-card-line"></i> {{ $employee->emp_id }} | <span class="badge bg-label-primary">{{ $employee->role->name ?? '-' }}</span></p>
+                            <p class="text-muted mb-2"><i class="ri ri-id-card-line"></i> {{ $employee->emp_id }} | <span class="badge bg-label-primary">{{ $employee->role->name ?? '-' }}</span> | <span class="badge bg-label-info"><i class="ri ri-computer-line"></i> {{ $employee->devices ? $employee->devices->device_name : '' }}</span></p>
                             <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-sm-start">
                                 <span class="badge {{ $employee->status == 'Active' ? 'bg-success' : 'bg-danger' }}">{{ $employee->status }}</span>
                                 <span class="badge bg-info"><i class="ri ri-briefcase-line"></i> {{ $employee->department->department ?? '-' }}</span>

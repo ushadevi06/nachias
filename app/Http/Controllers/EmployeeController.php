@@ -16,6 +16,7 @@ use App\Models\JobCardOperation;
 use App\Models\Task;
 use App\Models\TaskAdjustment;
 use App\Models\OperationStage;
+use App\Models\Device;
 class EmployeeController extends Controller
 {
     public function index(Request $request)
@@ -105,6 +106,7 @@ class EmployeeController extends Controller
         $bloodGroups = BloodGroup::orderBy('id', 'desc')->get();
         $serviceProviders = ServiceProvider::active()->orderBy('id', 'desc')->get();
         $operationStages = OperationStage::active()->orderBy('id', 'desc')->get();
+        $devices = Device::orderBy('id', 'desc')->get();
         $states = State::active()->orderBy('id', 'desc')->get();
         $cities = [];
         $stateId = old('state_id') ?? ($employee->state_id ?? null);
@@ -132,6 +134,7 @@ class EmployeeController extends Controller
                     Rule::unique('users', 'emp_id')->ignore($id ?? null)->whereNull('deleted_at'),
                 ],
                 'department_id' => 'required|exists:departments,id',
+                'device' => 'required|exists:devices,serial_number',
                 'service_provider_id' => 'nullable|exists:service_providers,id',
                 'operation_stage_id' => 'nullable|array',
                 'operation_stage_id.*' => 'exists:operation_stages,id',
@@ -196,6 +199,7 @@ class EmployeeController extends Controller
                 'emp_id' => $request->emp_id,
                 'service_provider_id' => $request->service_provider_id,
                 'department_id' => $request->department_id,
+                'device' => $request->device,
                 'operation_stage_id' => $request->operation_stage_id ?? null,
                 'role_id' => $request->role_id,
                 'blood_group_id' => $request->blood_group_id,
@@ -317,14 +321,14 @@ class EmployeeController extends Controller
             }
             return redirect('employees')->with('success', $message);
         }
-        return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities', 'serviceProviders', 'operationStages'));
+        return view('employees.add', compact('employee', 'departments', 'roles', 'bloodGroups', 'states', 'cities', 'serviceProviders', 'operationStages', 'devices'));
     }
     public function view($id)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view_details employees')) {
             return unauthorizedRedirect();
         }
-        $employee = User::with(['department', 'role', 'bloodGroup', 'state', 'city', 'serviceProvider'])->findOrFail($id);
+        $employee = User::with(['department', 'role', 'bloodGroup', 'state', 'city', 'serviceProvider', 'devices'])->findOrFail($id);
         return view('employees.view_details', compact('employee'));
     }
     public function destroy($id)
@@ -381,7 +385,7 @@ class EmployeeController extends Controller
     public function downloadSample()
     {
         $headers = [
-            'Emp Code', 'Name',  'Date of Joining', 'Phone', 'Email', 'Department', 'Designation', 'ESI No', 'PF No', 'Fixed Gross', 'Bus Fare'
+            'Emp Code', 'Name',  'Date of Joining', 'Phone', 'Email', 'Department', 'Designation', 'Device', 'ESI No', 'PF No', 'Fixed Gross', 'Bus Fare'
         ];
         $callback = function() use ($headers) {
             $file = fopen('php://output', 'w');

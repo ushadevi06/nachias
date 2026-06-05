@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\Department;
 use App\Models\User;
+use App\Models\Device;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -41,12 +42,22 @@ class EmployeeImport implements ToCollection, WithHeadingRow
             }
             $departmentId = null;
 
-            if (!empty($row['departme'])) {
+            if (!empty($row['department'])) {
                 $departmentId = Department::where(
                     'department',
-                    trim($row['departme'])
+                    trim($row['department'])
                 )->value('id');
             }
+
+            $deviceSerialNumber = null;
+
+            if (!empty($row['device'])) {
+                $deviceSerialNumber = Device::where(
+                    'device_name',
+                    trim($row['device'])
+                )->value('serial_number');
+            }
+
             $phone = !empty($row['phone'])
                 ? preg_replace('/[^0-9]/', '', (string)$row['phone'])
                 : '9' . str_pad($empId, 9, '0', STR_PAD_LEFT);
@@ -82,6 +93,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 'fixed_gross' => $fixedGross,
                 'bus_fare' => $busFare,
                 'role_id' => $roleId,
+                'device' => $deviceSerialNumber,
             ];
             // Duplicate inside Excel
             if (in_array($empId, $seenEmpIds)) {
@@ -102,6 +114,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 'pf_no' => 'nullable|max:30',
                 'fixed_gross' => 'nullable|numeric',
                 'bus_fare' => 'nullable|numeric',
+                'device' => 'required|exists:devices,serial_number',
             ]);
             if ($validator->fails()) {
                 $errors[] =
@@ -123,6 +136,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     'fixed_gross' => $fixedGross,
                     'bus_fare' => $busFare,
                     'role_id' => $roleId,
+                    'device' => $deviceSerialNumber,
                     'updated_at' => now(),
                 ];
             } else {
@@ -134,6 +148,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     'email' => $email,
                     'date_of_joining' => $dateOfJoining,
                     'department_id' => $departmentId,
+                    'device' => $deviceSerialNumber,
                     'esi_no' => $esiNo,
                     'pf_no' => $pfNo,
                     'fixed_gross' => $fixedGross,

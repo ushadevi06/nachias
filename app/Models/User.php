@@ -24,6 +24,7 @@ class User extends Authenticatable implements JWTSubject
         'service_provider_id',
         'operation_stage_id',
         'department_id',
+        'device',
         'role_id',
         'emp_id',
         'name',
@@ -123,6 +124,11 @@ class User extends Authenticatable implements JWTSubject
     public function operationStage()
     {
         return $this->belongsTo(OperationStage::class);
+    }
+
+    public function devices()
+    {
+        return $this->belongsTo(Device::class, 'device', 'serial_number');
     }
 
     /* ===========================

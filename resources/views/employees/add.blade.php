@@ -92,6 +92,20 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
+                                        <select id="device" name="device" class="form-select select2 @error('device') is-invalid @enderror" data-placeholder="Select Device">
+                                            <option value="">Select Device</option>
+                                            @foreach($devices as $device)
+                                            <option value="{{ $device->serial_number }}" {{ old('device', $employee->device ?? '') == $device->serial_number ? 'selected' : '' }}>{{ $device->device_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="device">Device <span class="text-danger">*</span></label>
+                                    </div>
+                                    @error('device')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
                                         <input type="text" class="form-control @error('emp_id') is-invalid @enderror" id="emp_id" placeholder="Employee ID" name="emp_id" value="{{ old('emp_id', $employee->emp_id ?? '') }}">
                                         <label for="emp_id">Employee ID <span class="text-danger">*</span></label>
                                     </div>

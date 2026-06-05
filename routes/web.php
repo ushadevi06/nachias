@@ -56,6 +56,7 @@ use App\Http\Controllers\PurchaseCommissionAgentController;
 use App\Http\Controllers\SizeRatioController;
 use App\Http\Controllers\StoreLocationController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\ZoneController;
 use App\Http\Controllers\SalesMarketingReportController;
 use App\Http\Controllers\WarehouseReportController;
@@ -134,6 +135,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('employees/add/{id?}', [EmployeeController::class, 'add']);
     Route::post('employees/status/{id}', [EmployeeController::class, 'updateStatus']);
     Route::get('employees/delete/{id}', [EmployeeController::class, 'destroy']);
+    Route::post('employees/import', [EmployeeController::class, 'import']);
+    Route::get('employees/download-sample', [EmployeeController::class, 'downloadSample']);
 
     /* Shipping Methods */
     Route::get('shipping_methods', [ShippingMethodController::class, 'index']);
@@ -220,6 +223,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], '/departments/add/{id?}', [DepartmentController::class, 'add']);
     Route::get('/department/delete/{id}', [DepartmentController::class, 'destroy']);
     Route::post('/department/status/{id}', [DepartmentController::class, 'updateStatus']);
+
+    /* Devices */
+    Route::get('/devices', [DeviceController::class, 'index']);
+    Route::match(['GET', 'POST'], '/devices/add/{id?}', [DeviceController::class, 'add']);
 
     /* Styles */
     Route::get('/styles', [StyleController::class, 'index']);
@@ -564,12 +571,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('production_services/delete/{id}', [ProductionServiceController::class, 'destroy']);
     Route::post('production_services/status/{id}', [ProductionServiceController::class, 'updateStatus']);
     Route::get('production-services/get-next-sequence/{stageId}', [ProductionServiceController::class, 'getNextSequence']);
-
-    /* Resources */
-    Route::get('resources', [ResourceController::class, 'index']);
-    Route::match(['GET', 'POST'], 'resources/add/{id?}', [ResourceController::class, 'add']);
-    Route::get('resources/delete/{id}', [ResourceController::class, 'destroy']);
-    Route::post('resources/status/{id}', [ResourceController::class, 'updateStatus']);
 
     /* Production Stores */
     Route::get('stores', [StoreController::class, 'index']);
