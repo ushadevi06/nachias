@@ -1332,6 +1332,7 @@
 
         viewHolidaysButton.addEventListener('click', function() {
             setActiveView('holiday');
+            fetchHolidays();
         });
 
         viewStaffWiseButton.addEventListener('click', function() {
@@ -1437,6 +1438,7 @@
             updateAttendanceDateForMonth(nextDate.getFullYear(), nextDate.getMonth());
             updateHolidayBanner();
             renderHolidayPanel();
+            fetchHolidays();
         });
 
         holidayNextMonthButton.addEventListener('click', function() {

@@ -137,6 +137,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('employees/delete/{id}', [EmployeeController::class, 'destroy']);
     Route::post('employees/import', [EmployeeController::class, 'import']);
     Route::get('employees/download-sample', [EmployeeController::class, 'downloadSample']);
+    Route::get('employees/export-excel', [EmployeeController::class, 'exportExcel']);
 
     /* Shipping Methods */
     Route::get('shipping_methods', [ShippingMethodController::class, 'index']);

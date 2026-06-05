@@ -17,6 +17,8 @@ use App\Models\Task;
 use App\Models\TaskAdjustment;
 use App\Models\OperationStage;
 use App\Models\Device;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\EmployeeExport;
 class EmployeeController extends Controller
 {
     public function index(Request $request)
@@ -395,5 +397,12 @@ class EmployeeController extends Controller
         return response()->streamDownload($callback, 'Employee_Sample_Format.csv', [
             'Content-Type' => 'text/csv',
         ]);
+    }
+    public function exportExcel()
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view employees')) {
+            return unauthorizedRedirect();
+        }
+        return Excel::download(new EmployeeExport, 'employees_' . date('Ymd_His') . '.xlsx');
     }
 }
