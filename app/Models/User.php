@@ -82,6 +82,7 @@ class User extends Authenticatable implements JWTSubject
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'operation_stage_id' => 'array',
     ];
 
     /* ===========================
@@ -127,6 +128,24 @@ class User extends Authenticatable implements JWTSubject
     /* ===========================
         ACCESSORS
     ============================ */
+
+    public function getOperationStagesListAttribute()
+    {
+        $ids = $this->operation_stage_id;
+        if (empty($ids) || !is_array($ids)) {
+            return collect();
+        }
+        return OperationStage::whereIn('id', $ids)->get();
+    }
+
+    public function getOperationStagesNamesAttribute()
+    {
+        $stages = $this->operation_stages_list;
+        if ($stages->isEmpty()) {
+            return '-';
+        }
+        return $stages->pluck('operation_stage_name')->implode(', ');
+    }
 
     public function getProfileImageUrlAttribute()
     {

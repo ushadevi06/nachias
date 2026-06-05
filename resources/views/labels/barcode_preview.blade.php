@@ -256,6 +256,7 @@
             const printUrl = `{{ route('job_card_entries.print_label', $labelData['id']) }}?` + 
                 `size={{ urlencode($labelData['size']) }}&` +
                 `sleeve={{ urlencode($labelData['sleeve']) }}&` +
+                `bulk_print={{ request('bulk_print') ? 1 : 0 }}&` +
                 `orientation=${orientation}&` +
                 `width=${w}&` +
                 `height=${h}&` +

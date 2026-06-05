@@ -81,11 +81,10 @@ class AjaxController extends Controller
         if ($plantId && $plantId != 'null' && $plantId != 'undefined' && $plantId != 'all') {
             $query->where('service_provider_id', $plantId);
         }
-
         if ($stageId && $stageId != 'null' && $stageId != 'undefined') {
-            $query->where(function($q) use ($stageId) {
-                $q->where('operation_stage_id', $stageId)
-                  ->orWhereNull('operation_stage_id');
+            $query->where(function ($q) use ($stageId) {
+                $q->whereJsonContains('operation_stage_id', (string) $stageId)
+                ->orWhere('operation_stage_id', (string) $stageId);
             });
         }
         
@@ -102,6 +101,7 @@ class AjaxController extends Controller
         }
 
         $employees = $query->get(['id', 'name', 'emp_id']);
+        // dd($employees);
         
         $formatted = $employees->map(function($e) {
             return [

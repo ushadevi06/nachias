@@ -155,9 +155,9 @@
                                         <th style="width: 120px;">INVOICE NO</th>
                                         <th style="width: 220px;">ITEM NAME</th>
                                         <th style="width: 100px;">COLOR</th>
-                                        <th style="width: 100px;">ART NO</th>
+                                        <th style="width: 130px;">ART NO</th>
                                         <th style="width: 70px;">UOM</th>
-                                        <th style="width: 80px;" class="text-center">SIZE</th>
+                                        <th style="width: 90px;" class="text-center">SIZE</th>
                                         <th style="width: 90px;" class="text-end">INV QTY</th>
                                         <th style="width: 90px;" class="text-end">RET QTY</th>
                                         <th style="width: 90px;" class="text-end">BAL QTY</th>
@@ -697,7 +697,7 @@ $(document).ready(function() {
                     <input type="hidden" name="items[${index}][sleeve_type]" value="${item.sleeve_type || ''}">
                     <span class="d-block fw-bold" style="font-size: 13px;">${item.item_name}</span>
                     <small class="text-muted">
-                        Code: ${item.item_code}
+                        Code: 
                         ${item.product_barcode ? ' | <i class="ri-barcode-line"></i> ' + item.product_barcode : ''}
                     </small>
                 </td>

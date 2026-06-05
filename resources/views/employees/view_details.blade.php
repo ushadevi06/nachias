@@ -77,7 +77,7 @@
                                 </li>
                                 <li>
                                     <span class="fw-bold d-block text-muted small text-uppercase">Operation Stage</span>
-                                    <span>{{ $employee->operationStage->operation_stage_name ?? '-' }}</span>
+                                    <span>{{ $employee->operation_stages_names }}</span>
                                 </li>
                             </ul>
                         </div>

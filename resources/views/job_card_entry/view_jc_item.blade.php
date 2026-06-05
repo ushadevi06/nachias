@@ -516,7 +516,14 @@ $(document).ready(function() {
         const calcQty = parseFloat($btn.attr('data-calc-qty')) || 0;
         
         $('#std-cons-warning').remove();
+        $('#qty-issued-warning').remove();
+        $('#qty-used-required-warning').remove();
         $('#modal_qty_used').removeClass('is-invalid');
+
+        if (qtyUsed > qtyIssue) {
+            $('#modal_qty_used').addClass('is-invalid');
+            $('#modal_qty_used').after(`<div id="qty-issued-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">limit exceds</div>`);
+        }
 
         if (calcQty > 0) {
             if (qtyUsed > (calcQty + 0.001)) {
@@ -570,6 +577,30 @@ $(document).ready(function() {
             const was = $('#modal_qty_wastage').val();
             const use = $('#modal_qty_used').val();
             const pro = $('#modal_produced_qty').val();
+
+            // Validation for empty or 0 Used qty
+            if (use.trim() === '' || parseFloat(use) <= 0) {
+                $('#modal_qty_used').addClass('is-invalid');
+                $('#qty-used-required-warning').remove();
+                $('#modal_qty_used').after(`<div id="qty-used-required-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">Qty used is required</div>`);
+                return false;
+            }
+
+            // Validation for Used greater than Issued
+            const qtyIssue = parseFloat($('#modal_qty_issue').val()) || 0;
+            if (parseFloat(use) > qtyIssue) {
+                $('#modal_qty_used').addClass('is-invalid');
+                if ($('#qty-issued-warning').length === 0) {
+                    $('#modal_qty_used').after(`<div id="qty-issued-warning" class="invalid-feedback d-block" style="font-size: 10px; font-weight: bold;">limit exceds</div>`);
+                }
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Limit Exceeded',
+                    text: 'Used quantity cannot be greater than issued quantity.',
+                    confirmButtonColor: '#6200ee'
+                });
+                return false;
+            }
 
             // Strict Validation for Standard Consumption
             const $btnRef = $('.edit-item-btn').filter(function() { return $(this).attr('data-matrix-id') == matrixId; });

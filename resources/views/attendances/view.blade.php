@@ -263,7 +263,7 @@
                                 </div>
                                 <div class="col-sm-6 col-lg-3">
                                     <label class="form-label small fw-semibold">Select Employee</label>
-                                    <select class="form-select" id="staffReportEmployee">
+                                    <select class="select2 form-select" id="staffReportEmployee" data-placeholder="Choose employee">
                                         <option value="">Choose employee</option>
                                     </select>
                                 </div>
@@ -1026,6 +1026,24 @@
                 }));
         }
 
+        function formatAttendanceTime(time) {
+            if (!time || time === '-') {
+                return '-';
+            }
+
+            const date = new Date(time);
+
+            if (isNaN(date.getTime())) {
+                return '-';
+            }
+
+            return date.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        }
+
         function renderRows(records) {
             return records.map((item, index) => {
                 const rowDate = formatDate(item.date) || formatDate(attendanceDate.value);
@@ -1039,22 +1057,8 @@
                             <td>${item.code}</td>
                             <td>${item.department}</td>
                             <td>${rowDate}</td>
-                            <td>${
-                                inTime
-                                ? new Date(inTime).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })
-                                : '-'
-                            }</td>
-                            <td>${
-                                outTime != '-' && outTime !== null
-                                ? new Date(outTime).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })
-                                : '-'
-                            }</td>
+                            <td>${formatAttendanceTime(inTime)}</td>
+                            <td>${formatAttendanceTime(outTime)}</td>
                             <td>${hours}</td>
                             <td><span class="${getBadgeClass(item.status)}">${item.status}</span></td>
                             <td>
@@ -1079,6 +1083,7 @@
                     `;
             }).join('');
         }
+    
         function formatTime(time) {
             if (!time || time === '-') {
                 return '';
@@ -1155,7 +1160,7 @@
                     $('#editAttendanceModal').modal('hide');
                     showStatus('success', res.message);
                     // syncButton.click();
-                    syncAttendance();
+                    loadAttendanceData();
                 } else {
                     showStatus('danger', res.message);
                 }
@@ -1198,7 +1203,7 @@
                 searching: true,
                 info: false,
                 lengthChange: false,
-                pageLength: 5,
+                pageLength: 10,
                 responsive: true,
                 autoWidth: false,
                 columnDefs: [{

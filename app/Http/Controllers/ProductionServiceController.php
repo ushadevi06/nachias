@@ -126,6 +126,8 @@ class ProductionServiceController extends Controller
                 addLog('update', 'Production Service', 'production_services', $id, null, $data);
                 $msg = 'Production Service updated successfully';
             } else {
+                $maxSequence = ProductionService::where('operation_stage_id',$request->operation_stage_id)->whereNull('deleted_at')->max('sequence');
+                $data['sequence'] = ($maxSequence ?? 0) + 1;
                 $data['created_by'] = auth()->id();
                 $newService = ProductionService::create($data);
                 addLog('create', 'Production Service', 'production_services', $newService->id, null, $data);
@@ -139,6 +141,12 @@ class ProductionServiceController extends Controller
         $uoms = \App\Models\Uom::active()->orderBy('id','desc')->get();
 
         return view('production_services.add', compact('service', 'operationStages', 'uoms'));
+    }
+    
+    public function getNextSequence($stageId)
+    {
+        $nextSequence = ProductionService::where('operation_stage_id', $stageId)->whereNull('deleted_at')->max('sequence');
+        return response()->json(['sequence' => ($nextSequence ?? 0) + 1]);
     }
 
     public function destroy($id)

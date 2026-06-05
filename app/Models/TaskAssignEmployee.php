@@ -30,7 +30,9 @@ class TaskAssignEmployee extends Model
         'qc_checked_qty',
         'qc_passed_qty',
         'qc_rejected_qty',
-        'qc_status'
+        'qc_status',
+        'unit_rate',
+        'total_cost'
     ];
 
     protected $casts = [

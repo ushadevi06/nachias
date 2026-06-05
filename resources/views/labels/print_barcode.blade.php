@@ -93,7 +93,11 @@
     </style>
 </head>
 <body onload="window.print()">
-    <div class="label-container">
+    @php
+        $labelCollection = isset($labels) ? $labels : [$labelData];
+    @endphp
+    @foreach($labelCollection as $labelData)
+    <div class="label-container" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
         <div class="header-section">
             <div class="mkt-by">MANUFACTURED & MARKETED BY</div>
             <div class="comp-name">{{ strtoupper($labelData['company_name']) }}</div>
@@ -231,5 +235,6 @@
             </div>
         </div>
     </div>
+    @endforeach
 </body>
 </html>

@@ -111,13 +111,20 @@ class SalaryController extends Controller
                             <i class="icon-base ri ri-printer-line"></i>
 
                         </a>';
+                    $action .= '
+                        <a href="'.url('download-payslip/'.$salary->id).'"
+                            target="_blank"
+                            class="btn btn-cancel">
+                            <i class="ri ri-download-line me-1"></i>
+
+                        </a>';
                 }
                 $action .= '</div>';
                 $data[] = [
                     'checkbox' => $checkbox,
                     'DT_RowIndex' => $count++,
                     'month_year' =>
-                        $salary->salary_month.' '.$salary->salary_year,
+                        $salary->salary_month.'/'.$salary->salary_year,
                     'employee' =>
                         $salary->name.'
                         <span class="mini-title">
@@ -190,7 +197,6 @@ class SalaryController extends Controller
         $totHolidays = $sundays + $holidays;
         $employees = User::where('id', '!=', 1)
         ->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
-
             $query->select(
                 DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
             )
@@ -217,6 +223,7 @@ class SalaryController extends Controller
                     'employee_id'      => $employee->emp_id,
                     'employee_name'    => $employee->name,
                     'emp_code'         => $employee->emp_id,
+                    'total_days'     => $totalDays,
                     'present_days'     => 0,
                     'absent_days'      => $absentDays,
                     'holidays'         => $totHolidays,
@@ -234,6 +241,7 @@ class SalaryController extends Controller
                     'esi'              => 0,
                     'other_deduction'  => 0,
                     'salary_advance'   => 0,
+                    'late_hours'       => 0,
                     'late_fine'        => 0,
                     'gross_salary'     => 0,
                     'total_deduction'  => 0,
@@ -280,9 +288,7 @@ class SalaryController extends Controller
             $perHourSalary = $perDaySalary / 8;
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
-            $grossSalary =
-                $fixedGross
-                - $lopAmount;
+            $grossSalary = $fixedGross - $lopAmount;
             $wage = $basic + $da;
             $pf = ($wage * 12) / 100;
             if ($wage <= 21000) {
@@ -300,21 +306,25 @@ class SalaryController extends Controller
             $freePermissionHours = 2;
             $lateFine = 0;
             if ($totalPermissionHours > $freePermissionHours) {
-                $excessHours =
-                    $totalPermissionHours - $freePermissionHours;
-                $lateFine = $excessHours * $perHourSalary;
+                $lateHours = $totalPermissionHours - $freePermissionHours;
+            } else {
+                $lateHours = $totalPermissionHours;
             }
+            $lateFine = $lateHours * $perHourSalary;
+            // dd($lateHours, $perHourSalary, $lateFine);
             $totalDeduction =
                 $pf
                 + $esi
                 + $otherDeduction
                 + $salaryAdvance
                 + $lateFine;
-            $netSalary = $grossSalary - $totalDeduction;
+            $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
+            $netSalary = $totalEarnings - $totalDeduction;
             $payroll[] = [
                 'employee_id'      => $employee->emp_id,
                 'employee_name'    => $employee->name,
                 'emp_code'         => $employee->emp_id,
+                'total_days'     => $totalDays,
                 'present_days'     => $presentDays,
                 'absent_days'      => $absentDays,
                 'holidays'         => $totHolidays,
@@ -332,8 +342,9 @@ class SalaryController extends Controller
                 'esi'              => round($esi, 2),
                 'other_deduction'  => round($otherDeduction, 2),
                 'salary_advance'   => round($salaryAdvance, 2),
+                'late_hours'       => round($lateHours, 2),
                 'late_fine'        => round($lateFine, 2),
-                'gross_salary'     => round($grossSalary, 2),
+                'gross_salary'     => round($totalEarnings, 2),
                 'total_deduction'  => round($totalDeduction, 2),
                 'net_salary'       => round($netSalary, 2),
                 'can_generate'     => true,
@@ -392,28 +403,20 @@ class SalaryController extends Controller
                         'hra'             => $row['hra'],
                         'da'              => $row['da'],
                         'oa'              => $row['oa'],
-
                         'incentive'       => $row['incentive'],
                         'misc_amount'     => $row['misc'],
-
                         'present_days'    => $row['present_days'],
                         'absent_days'     => $row['absent_days'],
                         'holidays'        => $row['holidays'],
-
                         'ot_hours'        => $row['ot_hours'],
+                        'late_hours'        => $row['late_hours'],
                         'overtime_amount' => $row['overtime_amount'],
-
                         'bus_fare'        => $row['bus_fare'],
-
                         'pf'              => $row['pf'],
                         'esi'             => $row['esi'],
-
                         'salary_advance'  => $row['salary_advance'],
-
                         'gross_salary'    => $row['gross_salary'],
-
                         'net_salary'      => $row['net_salary'],
-
                         'updated_at'      => now()
                     ]);
             } else {
@@ -422,7 +425,6 @@ class SalaryController extends Controller
                     ->where('salary_year', $salaryYear)
                     ->where('employee_id', $row['employee_id'])
                     ->exists();
-
                 if($alreadyGenerated) {
                     continue;
                 }
@@ -437,10 +439,12 @@ class SalaryController extends Controller
                     'oa'               => $row['oa'],
                     'incentive'        => $row['incentive'],
                     'misc_amount'      => $row['misc'],
+                    'total_days'       => $row['total_days'],
                     'present_days'     => $row['present_days'],
                     'absent_days'      => $row['absent_days'],
                     'holidays'         => $row['holidays'],
                     'ot_hours'         => $row['ot_hours'],
+                    'late_hours'       => $row['late_hours'],
                     'overtime_amount'  => $row['overtime_amount'],
                     'bus_fare'         => $row['bus_fare'],
                     'pf'               => $row['pf'],
@@ -588,38 +592,211 @@ class SalaryController extends Controller
     public function printPayslip($id)
     {
         $salary = DB::table('salary_generations')
-                ->join('users', function ($join) {
-                    $join->on(
-                        DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
-                        '=',
-                        DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
-                    );
-                })
-                ->leftJoin(
-                    'departments',
-                    'users.department_id',
+            ->join('users', function ($join) {
+                $join->on(
+                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
                     '=',
-                    'departments.id'
-                )
-                ->leftJoin(
-                    'roles',
-                    'users.role_id',
-                    '=',
-                    'roles.id'
-                )
-                ->select(
-                    'salary_generations.*',
-                    'users.name',
-                    'users.emp_id',
-                    'users.esi_no',
-                    'users.pf_no',
-                    'departments.department as department_name',
-                    'roles.name as role_name'
-                )
-                ->where('salary_generations.id', $id)
-                ->first();
+                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
+                );
+            })
+            ->leftJoin(
+                'departments',
+                'users.department_id',
+                '=',
+                'departments.id'
+            )
+            ->leftJoin(
+                'roles',
+                'users.role_id',
+                '=',
+                'roles.id'
+            )
+            ->select(
+                'salary_generations.*',
+                'users.name',
+                'users.emp_id',
+                'users.esi_no',
+                'users.pf_no',
+                'departments.department as department_name',
+                'roles.name as role_name'
+            )
+            ->where('salary_generations.id', $id)
+            ->first();
         $setting = Setting::with(['state', 'city'])->first();
         $is_print = true;
         return view('salary_calculations.payslip_pdf',compact('salary','is_print','setting'));
+    }
+    public function downloadPayslip($id)
+    {
+        $salary = DB::table('salary_generations')
+            ->where('id', $id)
+            ->first();
+        $filePath = public_path($salary->payslip_pdf);
+        if (!file_exists($filePath)) {
+            abort(404, 'File not found');
+        }
+        return response()->download(
+            $filePath,
+            basename($filePath)
+        );
+    }
+    public function searchSalaryGeneration(Request $request)
+    {
+        $search = trim($request->search);
+        $month = $request->month;
+        $date = Carbon::parse($month);
+        $year = $date->year;
+        $monthNumber = $date->month;
+        $startDate = $date->copy()->startOfMonth()->toDateString();
+        $endDate = $date->copy()->endOfMonth()->toDateString();
+        $totalDays = $date->daysInMonth;
+        $totHolidays = DB::table('declared_holidays')
+            ->whereMonth('date', $monthNumber)
+            ->whereYear('date', $year)
+            ->count();
+        $employees = DB::table('users')
+            ->where('id', '!=', 1)
+            ->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                ->orWhere('emp_id', 'like', "%{$search}%");
+            })
+            ->get();
+        $payroll = [];
+        foreach ($employees as $employee) {
+            $attendance = DB::table('attendances')
+                ->where('emp_code', $employee->emp_id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->get();
+            $presentDays = $attendance
+                ->whereIn('status', ['Present', 'Late', 'Overtime'])
+                ->count();
+            $absentDays = $attendance
+                ->where('status', 'Absent')
+                ->count();
+            if ($presentDays == 0) {
+                $payroll[] = [
+                    'employee_id'      => $employee->emp_id,
+                    'employee_name'    => $employee->name,
+                    'emp_code'         => $employee->emp_id,
+                    'total_days'     => $totalDays,
+                    'present_days'     => 0,
+                    'absent_days'      => $absentDays,
+                    'holidays'         => $totHolidays,
+                    'fixed_gross'      => 0,
+                    'basic_salary'     => 0,
+                    'hra'              => 0,
+                    'da'               => 0,
+                    'oa'               => 0,
+                    'ot_hours'         => 0,
+                    'overtime_amount'  => 0,
+                    'incentive'        => 0,
+                    'misc'             => 0,
+                    'bus_fare'         => 0,
+                    'pf'               => 0,
+                    'esi'              => 0,
+                    'other_deduction'  => 0,
+                    'salary_advance'   => 0,
+                    'late_hours'       => 0,
+                    'late_fine'        => 0,
+                    'gross_salary'     => 0,
+                    'total_deduction'  => 0,
+                    'net_salary'       => 0,
+                    'can_generate'     => false,
+                    'is_selected'      => false,
+                ];
+                continue;
+            }
+            $otHours = 0;
+            foreach ($attendance as $att) {
+                if ($att->in_time && $att->out_time) {
+                    $inTime = Carbon::parse($att->in_time);
+                    $outTime = Carbon::parse($att->out_time);
+                    $workedHours = floor($inTime->diffInMinutes($outTime) / 60);
+                    $isSunday = Carbon::parse($att->date)->isSunday();
+                    $isHoliday = DB::table('declared_holidays')
+                        ->whereDate('date', $att->date)
+                        ->exists();
+                    if ($isSunday || $isHoliday) {
+                        $otHours += $workedHours;
+                    } else {
+                        if ($workedHours > 9) {
+                            $otHours += ($workedHours - 9);
+                        }
+                    }
+                }
+            }
+            $fixedGross = $employee->fixed_gross ?? 0;
+            $basic = ($fixedGross * 50) / 100;
+            $hra   = ($fixedGross * 20) / 100;
+            $da    = ($fixedGross * 20) / 100;
+            $oa    = ($fixedGross * 10) / 100;
+            $perDaySalary = $fixedGross / $totalDays;
+            $perHourSalary = $perDaySalary / 8;
+            $otAmount = $perHourSalary * $otHours;
+            $lopAmount = $perDaySalary * $absentDays;
+            $grossSalary = $fixedGross - $lopAmount;
+            $incentive = 0;
+            $misc = 0;
+            $otherDeduction = 0;
+            $salaryAdvance = 0;
+            $busFare = $employee->bus_fare
+                ? $presentDays * $employee->bus_fare
+                : 0;
+            $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
+            $wage = $basic + $da;
+            $pf = ($wage * 12) / 100;
+            $esi = ($wage <= 21000)
+                ? ($wage * 0.75) / 100
+                : (21000 * 0.75) / 100;
+            $totalPermissionHours = 0;
+            foreach ($attendance as $att) {
+                if (!empty($att->permission_hours)) {
+                    $totalPermissionHours += (float) $att->permission_hours;
+                }
+            }
+            $freePermissionHours = 2;
+            $lateHours = 0;
+            $lateFine = 0;
+            if ($totalPermissionHours > $freePermissionHours) {
+                $lateHours = $totalPermissionHours - $freePermissionHours;
+                $lateFine = $lateHours * $perHourSalary;
+            }
+            $totalDeduction = $pf + $esi + $otherDeduction + $salaryAdvance + $lateFine;
+            $netSalary = $totalEarnings - $totalDeduction;
+            $payroll[] = [
+                'employee_id'      => $employee->emp_id,
+                'employee_name'    => $employee->name,
+                'emp_code'         => $employee->emp_id,
+                'total_days'     => $totalDays,
+                'present_days'     => $presentDays,
+                'absent_days'      => $absentDays,
+                'holidays'         => $totHolidays,
+                'fixed_gross'      => round($fixedGross, 2),
+                'basic_salary'     => round($basic, 2),
+                'hra'              => round($hra, 2),
+                'da'               => round($da, 2),
+                'oa'               => round($oa, 2),
+                'ot_hours'         => round($otHours, 2),
+                'overtime_amount'  => round($otAmount, 2),
+                'incentive'        => 0,
+                'misc'             => 0,
+                'bus_fare'         => 0,
+                'pf'               => round($pf, 2),
+                'esi'              => round($esi, 2),
+                'other_deduction'  => 0,
+                'salary_advance'   => 0,
+                'late_hours'       => round($lateHours, 2),
+                'late_fine'        => round($lateFine, 2),
+                'gross_salary'     => round($totalEarnings, 2),
+                'total_deduction'  => round($totalDeduction, 2),
+                'net_salary'       => round($netSalary, 2),
+                'can_generate'     => true,
+                'is_selected'      => false,
+            ];
+        }
+        return response()->json([
+            'status' => true,
+            'payroll' => $payroll
+        ]);
     }
 }

@@ -20,17 +20,35 @@
                             <h4>Monthly Payroll</h4>
                         </div>
                         <div class="card">
-                            <div class="card-header d-flex justify-content-between">
-                                <h5>Monthly Salary Generation</h5>
-                                <div class="d-flex gap-2">
-                                    <input type="month" id="salary_month" class="form-control" max="{{ now()->subMonth()->format('Y-m') }}" value="{{ isset($salary) ? $salary->salary_year.'-'.date('m', strtotime($salary->salary_month)) : '' }}">
+                            <div class="d-flex justify-content-end mb-2">
+                                <input type="text"
+                                    id="employeeSearch"
+                                    class="form-control"
+                                    placeholder="Search Emp Name / Emp Code"
+                                    style="width:250px;">
+                            </div>
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Monthly Salary Generation</h5>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="fw-bold text-nowrap text-success">
+                                        Total Days: <span id="total_days">30</span>
+                                    </div>
+                                    <input type="month"
+                                        id="salary_month"
+                                        class="form-control"
+                                        max="{{ now()->subMonth()->format('Y-m') }}"
+                                        value="{{ isset($salary) ? $salary->salary_year.'-'.date('m', strtotime($salary->salary_month)) : '' }}">
                                     @if(!isset($salary))
                                         <button type="button"
                                                 id="generateSalary"
                                                 class="btn btn-primary">
-                                            Generate Payroll
+                                            Generate
                                         </button>
                                     @endif
+                                    <a href="{{ url()->previous() }}"
+                                    class="btn btn-secondary">
+                                        <i class="fa fa-arrow-left"></i> Back
+                                    </a>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -68,6 +86,7 @@
                                                 <th>ESI</th>
                                                 <th>Other Deduction</th>
                                                 <th>Salary Advance</th>
+                                                <th>Late Hrs</th>
                                                 <th>Late Fine</th>
                                                 <th>Gross Pay</th>
                                                 <th>Total Deduction</th>
@@ -79,6 +98,7 @@
                                                 <tr class="salary-row">
                                                     <input type="hidden" class="salary_id" value="{{ $salary->id }}">
                                                     <input type="hidden" class="employee_id" value="{{ $salary->employee_id }}">
+                                                    <input type="hidden" class="total_days" value="{{ $salary->total_days }}">
                                                     {{-- Checkbox --}}
                                                     <td>
                                                         <input type="checkbox" class="form-check-input employee-check">
@@ -87,7 +107,7 @@
                                                     <td>
                                                         {{ $salary->name }}
                                                         <br>
-                                                        <small>{{ $salary->emp_id }}</small>
+                                                        <span class="badge bg-primary mt-1">{{ $salary->emp_id }}</span>
                                                     </td>
                                                     {{-- Working Days --}}
                                                     <td>
@@ -174,10 +194,15 @@
                                                         <input type="number" class="form-control salary_advance"
                                                             value="{{ $salary->salary_advance ?? 0 }}">
                                                     </td>
+                                                    {{-- Late Hours --}}
+                                                    <td>
+                                                        <input type="text" readonly class="form-control late_hours"
+                                                            value="{{ $salary->late_hours ?? 0 }}">
+                                                    </td>
                                                     {{-- Late Fine --}}
                                                     <td>
                                                         <input type="number" class="form-control late_fine"
-                                                            value="{{ $salary->late_fine ?? 0 }}">
+                                                            value="{{ $salary->late_fine ?? 0 }}" readonly>
                                                     </td>
                                                     {{-- Gross Pay --}}
                                                     <td>
@@ -263,7 +288,7 @@
                 complete: function () {
                     // Restore button
                     btn.prop('disabled', false);
-                    btn.html('Generate Payroll');
+                    btn.html('Generate');
                 }
             });
         });
@@ -279,6 +304,9 @@
                     <input type="hidden"
                         class="employee_id"
                         value="${item.employee_id}">
+                    <input type="hidden"
+                        class="total_days"
+                        value="${item.total_days}">
                     <!-- Checkbox -->
                     <td class="text-center">
                         <input type="checkbox"
@@ -290,7 +318,7 @@
                     <td>
                         ${item.employee_name}
                         <br>
-                        <small>${item.emp_code}</small>
+                        <span class="badge bg-primary mt-1">${item.emp_code}</span>
                     </td>
 
                     <!-- Working Days -->
@@ -411,12 +439,18 @@
                             class="form-control salary_advance"
                             value="${item.salary_advance}">
                     </td>
+                    <!-- Late Hours -->
+                    <td>
+                        <input type="number"
+                            class="form-control late_hours"
+                            value="${item.late_hours ?? 0}">
+                    </td>
 
                     <!-- Late Fine -->
                     <td>
                         <input type="number"
                             class="form-control late_fine"
-                            value="${item.late_fine ?? 0}">
+                            value="${item.late_fine ?? 0}" readonly>
                     </td>
 
                     <!-- Gross Pay -->
@@ -507,8 +541,7 @@
             currentPage = $(this).data('page');
             renderPayrollPage();
         });
-        function saveCurrentPageData()
-        {
+        function saveCurrentPageData() {
             $('.salary-row').each(function () {
                 let row = $(this);
                 let index = row.data('index');
@@ -618,68 +651,56 @@
             });
         });
         function calculateSalary(row) {
-            let basic =
-                parseFloat(row.find('.basic_salary').val()) || 0;
-            let incentive =
-                parseFloat(row.find('.incentive').val()) || 0;
-            let misc =
-                parseFloat(row.find('.misc').val()) || 0;
-            let busFare =
-                parseFloat(row.find('.bus_fare').val()) || 0;
-            let otHours =
-                parseFloat(row.find('.ot_hours').val()) || 0;
-            let salaryAdvance =
-                parseFloat(row.find('.salary_advance').val()) || 0;
-            let workingDays =
-                parseFloat(row.find('.present_days').val()) || 1;
-            // Salary breakup
-            let hra = (basic * 40) / 100;
-            let da  = (basic * 40) / 100;
-            let oa  = (basic * 20) / 100;
+            let fixed_gross = parseFloat(row.find('.fixed_gross').val()) || 0;
+            let basic = parseFloat(row.find('.basic_salary').val()) || 0;
+            let incentive = parseFloat(row.find('.incentive').val()) || 0;
+            let misc = parseFloat(row.find('.misc').val()) || 0;
+            let busFare = parseFloat(row.find('.bus_fare').val()) || 0;
+            let otHours = parseFloat(row.find('.ot_hours').val()) || 0;
+            let salaryAdvance = parseFloat(row.find('.salary_advance').val()) || 0;
+            let totalDays = parseFloat(row.find('.total_days').val()) || 1;
+            let lateFine = parseFloat(row.find('.late_fine').val()) || 0;
+            let otherDeduction = parseFloat(row.find('.other_deduction').val()) || 0;
+            let hra = parseFloat(row.find('.hra').val()) || 0;;
+            let da  = parseFloat(row.find('.da').val()) || 0;
+            let oa  = parseFloat(row.find('.oa').val()) || 0;
             row.find('.hra').val(hra.toFixed(2));
             row.find('.da').val(da.toFixed(2));
             row.find('.oa').val(oa.toFixed(2));
-            // Gross
-            let gross =
-                basic +
-                hra +
-                da +
-                oa +
+            let perDaySalary = totalDays > 0 ? fixed_gross / totalDays : 0;
+            let perHourSalary = perDaySalary / 8;
+            let otAmount = perHourSalary * otHours;
+            row.find('.overtime_amount').val(otAmount.toFixed(2));
+            let absentDays = parseFloat(row.find('.absent_days').val()) || 0;
+            let lopAmount = perDaySalary * absentDays;
+            let grossSalary = fixed_gross - lopAmount;
+            let totalEarnings =
+                grossSalary +
                 incentive +
                 misc +
-                busFare;
-            row.find('.gross_salary')
-                .val(gross.toFixed(2));
-            // OT
-            let perDay =
-                workingDays > 0
-                    ? gross / workingDays
-                    : 0;
-            let perHour = perDay / 8;
-            let otAmount = perHour * otHours;
-            row.find('.overtime_amount')
-                .val(otAmount.toFixed(2));
-            // PF
+                busFare +
+                otAmount;
+            row.find('.gross_salary').val(totalEarnings.toFixed(2));
             let pfWage = basic + da;
             let pf = (pfWage * 12) / 100;
-            row.find('.pf')
-                .val(pf.toFixed(2));
-            // ESI
+            row.find('.pf').val(pf.toFixed(2));
             let esi = 0;
-            if(gross <= 21000) {
-                esi = (gross * 0.75) / 100;
+            if (pfWage <= 21000) {
+                esi = (pfWage * 0.75) / 100;
+            } else {
+                esi = (21000 * 0.75) / 100;
             }
-            row.find('.esi')
-                .val(esi.toFixed(2));
-            // NET ONLY REDUCES BY ADVANCE
-            let net =
-                gross -
-                pf -
+            row.find('.esi').val(esi.toFixed(2));
+            let totalDeduction =
+                pf +
                 esi +
-                otAmount -
-                salaryAdvance;
-            row.find('.net_salary')
-                .val(net.toFixed(2));
+                salaryAdvance +
+                lateFine +
+                otherDeduction;
+
+            row.find('.total_deduction').val(totalDeduction.toFixed(2));
+            let net = totalEarnings - totalDeduction;
+            row.find('.net_salary').val(net.toFixed(2));
         }
         $(document).on('keyup change','.basic_salary, .misc, .incentive, .bus_fare, .ot_hours',function () {
             let row = $(this).closest('tr');
@@ -697,13 +718,72 @@
                 parseFloat(row.find('.overtime_amount').val()) || 0;
             let advance =
                 parseFloat($(this).val()) || 0;
+            let lateFine = parseFloat(row.find('.late_fine').val()) || 0;
+            let otherDeduction = parseFloat(row.find('.other_deduction').val()) || 0;
             let net =
                 gross -
                 pf -
                 esi -
-                advance;
-            row.find('.net_salary')
-                .val(net.toFixed(2));
+                advance -
+                lateFine -
+                otherDeduction;
+            row.find('.net_salary').val(net.toFixed(2));
+        });
+        $(document).on('keyup change', '.late_hours', function () {
+            let row = $(this).closest('tr');
+            let lateHours = parseFloat($(this).val()) || 0;
+            let fixed_gross = parseFloat(row.find('.fixed_gross').val()) || 0;
+            let totalDays = parseFloat(row.find('.total_days').val()) || 1;
+            let perDaySalary = fixed_gross / totalDays;
+            let perHourSalary = perDaySalary / 8;
+            let lateFine = lateHours * perHourSalary;
+            let pf = parseFloat(row.find('.pf').val()) || 0;
+            let esi = parseFloat(row.find('.esi').val()) || 0;
+            let ot = parseFloat(row.find('.overtime_amount').val()) || 0;
+            let advance = parseFloat(row.find('.salary_advance').val()) || 0;
+            let otherDeduction = parseFloat(row.find('.other_deduction').val()) || 0;
+            let net = fixed_gross - pf - esi - advance - lateFine - otherDeduction;
+            row.find('.late_fine').val(lateFine.toFixed(2));
+            row.find('.net_salary').val(net.toFixed(2));
+        });
+        function updateTotalDays() {
+            let monthValue = document.getElementById('salary_month').value;
+
+            if (!monthValue) {
+                document.getElementById('total_days').innerText = '0';
+                return;
+            }
+
+            let [year, month] = monthValue.split('-');
+            let totalDays = new Date(year, month, 0).getDate();
+
+            document.getElementById('total_days').innerText = totalDays;
+        }
+        let searchTimer;
+        $('#employeeSearch').on('keyup', function () {
+            clearTimeout(searchTimer);
+            let search = $(this).val();
+            let month = $('#salary_month').val();
+            searchTimer = setTimeout(function () {
+                $.ajax({
+                    url: "{{ route('salary-generation.search') }}",
+                    type: "GET",
+                    data: {
+                        search: search,
+                        month: month
+                    },
+                    success: function (response) {
+                        allPayrollData = response.payroll;
+                        currentPage = 1;
+                        renderPayrollPage();
+                    }
+                });
+            }, 300);
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+            updateTotalDays();
+            document.getElementById('salary_month')
+                .addEventListener('change', updateTotalDays);
         });
     });
 </script>

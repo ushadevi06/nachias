@@ -297,9 +297,11 @@
     <div style="clear: both;"></div>
 
     <div class="footer-section">
+        @if($grn->remarks != '')
         <div style="font-size: 8pt; margin-bottom: 10px;">
             <strong>Remarks :</strong> {{ $grn->remarks ?? '' }}
         </div>
+        @endif
 
         <div class="signature-box">
             <div class="signature-header">Received & Checked By</div>

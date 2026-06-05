@@ -10,34 +10,43 @@ class SyncAttendance extends Command
 {
     protected $signature = 'attendance:sync';
 
-    protected $description = 'Auto sync attendance from eSSL device';
+    protected $description = 'Auto sync attendance from eSSL device for today';
 
     public function handle()
     {
+        $date = now()->format('Y-m-d');
+        $this->info("Syncing attendance for: {$date}");
+
         try {
             $controller = new AttendanceController();
-            $date = now()->format('Y-m-d');
-            $response = $controller->getLogs($date, 'BJ2C180660790');
-            $logs = $controller->parseLogs($response);
-            $grouped = $controller->processAttendance($logs);
-            $controller->formatAttendance($grouped, $date);
-            /*  Fetch devices from DB
+
             $devices = DB::table('devices')->pluck('serial_number');
-            foreach ($devices as $device) {
-                $this->info("Syncing Device: ".$device);
-                // Fetch logs
-                $response = $controller->getLogs($date, $device);
-                // Parse logs
-                $logs = $controller->parseLogs($response);
-                // Process attendance
-                $grouped = $controller->processAttendance($logs);
-                // Save attendance
-                $controller->formatAttendance($grouped, $date);
-            } */
-            $this->info('Attendance synced successfully.');
+
+            if ($devices->isEmpty()) {
+                $this->warn('No devices found in database.');
+                return;
+            }
+
+            foreach ($devices as $serial_no) {
+                $this->info("Syncing device: {$serial_no}");
+
+                try {
+                    $response = $controller->getLogs($date, $serial_no);
+                    $logs     = $controller->parseLogs($response);
+                    $grouped  = $controller->processAttendance($logs);
+                    $controller->formatAttendance($grouped, $date, $serial_no);
+
+                    $this->info("Device {$serial_no} synced successfully.");
+                } catch (\Exception $e) {
+                    \Log::error("Sync failed for device {$serial_no}: " . $e->getMessage());
+                    $this->error("Device {$serial_no} failed: " . $e->getMessage());
+                }
+            }
+
+            $this->info('All devices synced for today.');
         } catch (\Exception $e) {
-            \Log::error('Attendance Sync Failed: '.$e->getMessage());
-            $this->error($e->getMessage());
+            \Log::error('Attendance Sync Failed: ' . $e->getMessage());
+            $this->error('Sync failed: ' . $e->getMessage());
         }
     }
 }

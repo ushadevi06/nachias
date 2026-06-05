@@ -214,6 +214,27 @@
         </div>
 
     </div>
+    
+    <div class="row g-3 mb-4">
+        <div class="col-xl-4 col-lg-6 col-md-12">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-dark"><i class="ri-pie-chart-2-fill text-danger me-2"></i>My Attendance Summary</h6>
+                    <select id="attendanceDeviceFilter" class="form-select form-select-sm w-auto shadow-none">
+                        <option value="All">All</option>
+                        @foreach($dbDevices as $device)
+                            <option value="{{ $device->device_name ?: $device->serial_number }}">{{ $device->device_name ?: $device->serial_number }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="attendanceSummaryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     @endif
     <!-- SECTION 3: ACCOUNTS DASHBOARD -->
     @if(auth()->id() == 1 || auth()->user()->can('view-accounts-financial dashboard'))
@@ -935,6 +956,87 @@
                 }
             }
         });
+
+        // Attendance Summary Chart
+        const attendanceData = {!! json_encode($attendance_chart_data ?? []) !!};
+        const ctxAttendance = document.getElementById('attendanceSummaryChart');
+        let attendanceChart = null;
+
+        if (ctxAttendance) {
+            const initAttendanceChart = (deviceKey) => {
+                const data = attendanceData[deviceKey] || { Present: 0, Absent: 0, Late: 0 };
+                
+                if (attendanceChart) {
+                    attendanceChart.destroy();
+                }
+
+                attendanceChart = new Chart(ctxAttendance, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Present', 'Absent', 'Late'],
+                        datasets: [{
+                            data: [data.Present || 0, data.Absent || 0, data.Late || 0],
+                            backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 40,
+                                    usePointStyle: false,
+                                    padding: 20,
+                                    // Show percentage next to label
+                                    generateLabels: function(chart) {
+                                        const dataset = chart.data.datasets[0];
+                                        const total = dataset.data.reduce((a, b) => a + b, 0);
+                                        return chart.data.labels.map((label, i) => {
+                                            const value = dataset.data[i];
+                                            const percentage = total > 0
+                                                ? ((value / total) * 100).toFixed(1)
+                                                : 0;
+                                            return {
+                                                text: `${label}: ${percentage}% (${value})`,
+                                                fillStyle: dataset.backgroundColor[i],
+                                                strokeStyle: dataset.backgroundColor[i],
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const dataset = context.dataset;
+                                        const total = dataset.data.reduce((a, b) => a + b, 0);
+                                        const value = dataset.data[context.dataIndex];
+                                        const percentage = total > 0
+                                            ? ((value / total) * 100).toFixed(1)
+                                            : 0;
+                                        return ` ${context.label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            },
+                            // Show percentage directly on pie slices
+                            datalabels: {
+                                display: true
+                            }
+                        }
+                    }
+                });
+            };
+
+            initAttendanceChart('All');
+
+            document.getElementById('attendanceDeviceFilter').addEventListener('change', function() {
+                initAttendanceChart(this.value);
+            });
+        }
     });
 </script>
 @endsection

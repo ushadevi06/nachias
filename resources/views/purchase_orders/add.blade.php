@@ -154,7 +154,7 @@
                                         <th style="min-width: 180px;">Supplier Design Name</th>
                                         <th style="min-width: 150px;">Color</th>
                                         <th style="min-width: 150px;">Qty *</th>
-                                        <th style="min-width: 150px;">Rate *</th>
+                                        <th style="min-width: 150px;">Rate</th>
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 150px;">Remarks</th>
                                         <th style="min-width: 200px;">File</th>
@@ -872,7 +872,6 @@
 
                 $('#item-rows tbody').append(rowHtml);
                 initSelect2Fields();
-                toggleStyleFabricFields();
                 
                 let storeTypeId = $('#store_type_id').val();
                 if (storeTypeId) {
@@ -880,6 +879,7 @@
                 }
 
                 itemIndex++;
+                toggleRateRequired();
             });
 
             function initSelect2Fields(context = document) {
@@ -953,7 +953,6 @@
                         });
                     }
                 });
-                toggleStyleFabricFields();
             });
 
             $(document).on('change', '.material', function () {
@@ -1234,27 +1233,10 @@
                 } else {
                     $('.po_store_category').val('').trigger('change.select2').trigger('change');
                 }
-                toggleStyleFabricFields();
             });
-
-            function toggleStyleFabricFields() {
-                let storeTypeId = $('#store_type_id').val();
-                $('.item-row').each(function() {
-                    let row = $(this);
-                    let categoryId = row.find('.po_store_category').val();
-                    if (storeTypeId == 2) {
-                        row.find('.td-style select, .td-style .select2-container, .td-fabric-width select, .td-fabric-width .select2-container, .td-fabric-type select, .td-fabric-type .select2-container').hide();
-                        row.find('.td-style .hyphen, .td-fabric-width .hyphen, .td-fabric-type .hyphen').removeClass('d-none').show();
-                    } else {
-                        row.find('.td-style select, .td-style .select2-container, .td-fabric-width select, .td-fabric-width .select2-container, .td-fabric-type select, .td-fabric-type .select2-container').show();
-                        row.find('.td-style .hyphen, .td-fabric-width .hyphen, .td-fabric-type .hyphen').addClass('d-none').hide();
-                    }
-                });
-            }
 
             initSelect2Fields();
             calculateTotals();
-            toggleStyleFabricFields();
 
             setTimeout(function() {
                 const refPicker = document.querySelector("#reference_date")?._flatpickr;

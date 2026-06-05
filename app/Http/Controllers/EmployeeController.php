@@ -24,7 +24,7 @@ class EmployeeController extends Controller
             return unauthorizedRedirect();
         }
         if ($request->ajax()) {
-            $query = User::with(['department', 'role', 'serviceProvider', 'operationStage'])->where('id', '!=', 1);
+            $query = User::with(['department', 'role', 'serviceProvider'])->where('id', '!=', 1);
             if (!empty($request->department)) {
                 $query->where('department_id', $request->department);
             }
@@ -32,6 +32,7 @@ class EmployeeController extends Controller
                 $query->where('role_id', $request->role);
             }
             $employees = $query->orderBy('id', 'desc')->get();
+            $stages = OperationStage::pluck('operation_stage_name', 'id')->toArray();
             $data = [];
             $count = 1;
             foreach ($employees as $emp) {
@@ -49,6 +50,17 @@ class EmployeeController extends Controller
                 $checked = $emp->status === 'Active' ? 'checked' : '';
                 $statusSwitch = '<label class="switch switch-success switch-lg"><input type="checkbox" class="switch-input employee-status-toggle" data-id="' . $emp->id . '" ' . $checked . '><span class="switch-toggle-slider"><span class="switch-on"></span><span class="switch-off"></span></span></label><div class="status_msg_' . $emp->id . '"></div>';
                 $image = $emp->profile_image ? url('uploads/employee/' . $emp->id . '/' . $emp->profile_image) : url('assets/images/user.jpg');
+
+                $stageNames = [];
+                if (is_array($emp->operation_stage_id)) {
+                    foreach ($emp->operation_stage_id as $sid) {
+                        if (isset($stages[$sid])) {
+                            $stageNames[] = $stages[$sid];
+                        }
+                    }
+                }
+                $operationStageText = !empty($stageNames) ? implode(', ', $stageNames) : '-';
+
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'name'        => '<div>' . $emp->name . '</div><span class="badge bg-primary mt-1">' . $emp->emp_id . '</span>',
@@ -56,7 +68,7 @@ class EmployeeController extends Controller
                     'role'        => $emp->role->name ?? '-',
                     'department'  => $emp->department->department ?? '-',
                     'service_provider' => $emp->serviceProvider->name ?? '-',
-                    'operation_stage' => $emp->operationStage->operation_stage_name ?? '-',
+                    'operation_stage' => $operationStageText,
                     'contact_info' => ' 
                         <div class="contact-info">
                             <div>
@@ -78,7 +90,6 @@ class EmployeeController extends Controller
     }
     public function add(Request $request, $id = null)
     {
-        // dd($id);
         if ($id) {
             if (auth()->id() != 1 && !auth()->user()->can('edit employees')) {
                 return unauthorizedRedirect();
@@ -122,7 +133,8 @@ class EmployeeController extends Controller
                 ],
                 'department_id' => 'required|exists:departments,id',
                 'service_provider_id' => 'nullable|exists:service_providers,id',
-                'operation_stage_id' => 'nullable|exists:operation_stages,id',
+                'operation_stage_id' => 'nullable|array',
+                'operation_stage_id.*' => 'exists:operation_stages,id',
                 'role_id' => 'required|exists:roles,id',
                 'blood_group_id' => 'nullable|exists:blood_groups,id',
                 'state_id' => 'required|exists:states,id',
@@ -184,7 +196,7 @@ class EmployeeController extends Controller
                 'emp_id' => $request->emp_id,
                 'service_provider_id' => $request->service_provider_id,
                 'department_id' => $request->department_id,
-                'operation_stage_id' => $request->operation_stage_id,
+                'operation_stage_id' => $request->operation_stage_id ?? null,
                 'role_id' => $request->role_id,
                 'blood_group_id' => $request->blood_group_id,
                 'status' => $request->status,
@@ -312,7 +324,7 @@ class EmployeeController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view_details employees')) {
             return unauthorizedRedirect();
         }
-        $employee = User::with(['department', 'role', 'bloodGroup', 'state', 'city', 'serviceProvider', 'operationStage'])->findOrFail($id);
+        $employee = User::with(['department', 'role', 'bloodGroup', 'state', 'city', 'serviceProvider'])->findOrFail($id);
         return view('employees.view_details', compact('employee'));
     }
     public function destroy($id)

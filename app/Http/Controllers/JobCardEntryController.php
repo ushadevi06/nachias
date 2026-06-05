@@ -2293,9 +2293,6 @@ class JobCardEntryController extends Controller
         ])->findOrFail($id);
         $jobCard = $issueItem->jobCard;
         $colorName = $issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-';
-        $selectedSize = $request->size ?? 'Bulk';
-        $selectedSleeve = $request->sleeve;
-
         $orientation = $request->orientation ?? 'portrait';
         $width = $request->width ?? 60;
         $height = $request->height ?? 135;
@@ -2310,60 +2307,8 @@ class JobCardEntryController extends Controller
         $numericBase = $matches[2] ?? '';
         $suffix = $matches[3] ?? '1';
         $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
-        $formattedSize = is_numeric($selectedSize) ? str_pad($selectedSize, 2, '0', STR_PAD_LEFT) : '00';
-
-        $sleeveCode = '00';
-        $sleeveText = '-';
-
-        if ($selectedSleeve) {
-            $sleeveText = $selectedSleeve;
-            $sleeveCode = ($selectedSleeve == 'F/S') ? '01' : (($selectedSleeve == 'H/S') ? '02' : '00');
-        } else {
-            $sleeveTypes = [];
-            if ($jobCard->total_qty_fs > 0) {
-                $sleeveTypes[] = 'F/S';
-                $sleeveCode = '01';
-            }
-            if ($jobCard->total_qty_hs > 0) {
-                $sleeveTypes[] = 'H/S';
-                if ($sleeveCode == '01')
-                    $sleeveCode = '03';
-                else
-                    $sleeveCode = '02';
-            }
-            $sleeveText = implode(' & ', $sleeveTypes);
-        }
-
-        $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
-
-        $labelData = [
-            'company_name' => $settings->company_name ?? 'NACHIAS',
-            'company_email' => $settings->email ?? 'info@nachias.com',
-            'company_gstin' => $settings->gst_no ?? '',
-            'company_address' => $settings->address ?? '-',
-            'toll_free' => $settings->toll_free_no ?? '-',
-            'phone_number' => $settings->phone_number ?? '',
-            'working_days' => $settings->working_days ?? 'MONDAY - SATURDAY',
-            'opening_time' => $settings->opening_time ? date('h A', strtotime($settings->opening_time)) : '10 AM',
-            'closing_time' => $settings->closing_time ? date('h A', strtotime($settings->closing_time)) : '6 PM',
-            'product_name' => $jobCard->item->name ?? 'SHIRTS',
-            'brand_name' => $jobCard->brand->brand_name ?? '-',
-            'design' => $artNo,
-            'color' => $colorName,
-            'fabric' => $issueItem->rawMaterial->name ?? '-',
-            'size' => $selectedSize,
-            'sleeve' => $sleeveText,
-            'price' => number_format(($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price), 2),
-            'mfg_date' => date('F Y'),
-            'lot_no' => $jobCard->job_card_no,
-            'sku' => $barcodeNo,
-            'quantity' => $issueItem->qty_used . ' ' . ($issueItem->rawMaterial->uom->uom_code ?? '')
-        ];
-
-        $artNo = $issueItem->fabricDetail->art_no ?? ($issueItem->rawMaterial->code ?? '');
 
         $style = $issueItem->stockEntryItem->grnEntryItem->purchaseInvoiceItem->purchaseOrderItem->style ?? null;
-
         if (!$style) {
             $style = $jobCard->item->style ?? null;
         }
@@ -2373,37 +2318,112 @@ class JobCardEntryController extends Controller
         $brandCode = $jobCard->brand->code ?? '';
         $styleCode = $style->code ?? '';
 
-        $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');
+        $records = [];
+        if ($request->bulk_print == 1 && $issueItem->fabricDetail && $issueItem->fabricDetail->quantities->count() > 0) {
+            foreach ($issueItem->fabricDetail->quantities as $mq) {
+                if ($mq->qty_fs > 0) {
+                    $records[] = ['size' => $mq->size, 'sleeve' => 'F/S', 'qty' => $mq->qty_fs];
+                }
+                if ($mq->qty_hs > 0) {
+                    $records[] = ['size' => $mq->size, 'sleeve' => 'H/S', 'qty' => $mq->qty_hs];
+                }
+            }
+        } else {
+            $records[] = ['size' => $request->size ?? 'Bulk', 'sleeve' => $request->sleeve, 'qty' => $issueItem->qty_used];
+        }
 
-        $customItemName = trim("$brandName $styleName $sleeveShort");
-        $customItemCode = implode('-', array_filter([$brandCode, $styleCode, $sleeveShort]));
+        $labels = [];
 
-        BarcodeMaster::updateOrCreate(
-            ['barcode_no' => $barcodeNo],
-            [
-                'item_code' => $customItemCode,
-                'art_no' => $artNo,
-                'item_name' => $customItemName,
-                'sleeve_type' => $sleeveText,
+        foreach ($records as $record) {
+            $selectedSize = $record['size'];
+            $selectedSleeve = $record['sleeve'];
+            
+            $formattedSize = is_numeric($selectedSize) ? str_pad($selectedSize, 2, '0', STR_PAD_LEFT) : '00';
+            
+            $sleeveCode = '00';
+            $sleeveText = '-';
+
+            if ($selectedSleeve) {
+                $sleeveText = $selectedSleeve;
+                $sleeveCode = ($selectedSleeve == 'F/S') ? '01' : (($selectedSleeve == 'H/S') ? '02' : '00');
+            } else {
+                $sleeveTypes = [];
+                if ($jobCard->total_qty_fs > 0) {
+                    $sleeveTypes[] = 'F/S';
+                    $sleeveCode = '01';
+                }
+                if ($jobCard->total_qty_hs > 0) {
+                    $sleeveTypes[] = 'H/S';
+                    if ($sleeveCode == '01')
+                        $sleeveCode = '03';
+                    else
+                        $sleeveCode = '02';
+                }
+                $sleeveText = implode(' & ', $sleeveTypes);
+            }
+
+            $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+
+            $labelData = [
+                'company_name' => $settings->company_name ?? 'NACHIAS',
+                'company_email' => $settings->email ?? 'info@nachias.com',
+                'company_gstin' => $settings->gst_no ?? '',
+                'company_address' => $settings->address ?? '-',
+                'toll_free' => $settings->toll_free_no ?? '-',
+                'phone_number' => $settings->phone_number ?? '',
+                'working_days' => $settings->working_days ?? 'MONDAY - SATURDAY',
+                'opening_time' => $settings->opening_time ? date('h A', strtotime($settings->opening_time)) : '10 AM',
+                'closing_time' => $settings->closing_time ? date('h A', strtotime($settings->closing_time)) : '6 PM',
+                'product_name' => $jobCard->item->name ?? 'SHIRTS',
+                'brand_name' => $jobCard->brand->brand_name ?? '-',
+                'design' => $artNo,
+                'color' => $colorName,
+                'fabric' => $issueItem->rawMaterial->name ?? '-',
                 'size' => $selectedSize,
-                'quantity' => $issueItem->qty_used,
-                'brand_id' => $jobCard->brand_id,
-                'style_id' => $style->id ?? null,
+                'sleeve' => $sleeveText,
+                'price' => number_format(($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price), 2),
+                'mfg_date' => date('F Y'),
                 'lot_no' => $jobCard->job_card_no,
-                'color_id' => $issueItem->stockEntryItem->grnEntryItem->color_id ?? null,
-                'fabric_type_id' => $jobCard->fabric_type_id
-            ]
-        );
+                'sku' => $barcodeNo,
+                'quantity' => $record['qty'] . ' ' . ($issueItem->rawMaterial->uom->uom_code ?? '')
+            ];
 
-        return view('labels.print_barcode', compact('labelData', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order'));
+            $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');
+            $customItemName = trim("$brandName $styleName $sleeveShort");
+            $customItemCode = implode('-', array_filter([$brandCode, $styleCode, $sleeveShort]));
+
+            BarcodeMaster::updateOrCreate(
+                ['barcode_no' => $barcodeNo],
+                [
+                    'item_code' => $customItemCode,
+                    'art_no' => $artNo,
+                    'item_name' => $customItemName,
+                    'sleeve_type' => $sleeveText,
+                    'size' => $selectedSize,
+                    'quantity' => $record['qty'],
+                    'brand_id' => $jobCard->brand_id,
+                    'style_id' => $style->id ?? null,
+                    'lot_no' => $jobCard->job_card_no,
+                    'color_id' => $issueItem->stockEntryItem->grnEntryItem->color_id ?? null,
+                    'fabric_type_id' => $jobCard->fabric_type_id
+                ]
+            );
+
+            $labels[] = $labelData;
+        }
+
+        // Maintain backwards compatibility by setting single labelData if there's only one
+        $labelData = count($labels) > 0 ? $labels[0] : [];
+
+        return view('labels.print_barcode', compact('labelData', 'labels', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order'));
     }
 
     public function barcodePreview($id, Request $request)
     {
         $issueItem = JobCardIssueItem::with(['jobCard.brand', 'jobCard.item.style', 'jobCard.purchaseOrder.items.style', 'jobCard.purchaseOrder.items.rawMaterial', 'rawMaterial.uom', 'stockEntryItem.grnEntryItem.color'])->findOrFail($id);
         $jobCard = $issueItem->jobCard;
-        $selectedSize = $request->size ?? 'Bulk';
-        $selectedSleeve = $request->sleeve;
+        $selectedSize = $request->bulk_print ? 'All Sizes' : ($request->size ?? 'Bulk');
+        $selectedSleeve = $request->bulk_print ? 'All Sleeves' : $request->sleeve;
 
         $artNo = $issueItem->job_card_article_matrix_id ? JobCardFabricDetail::find($issueItem->job_card_article_matrix_id)->art_no : ($issueItem->rawMaterial->code ?? '');
 
@@ -2447,10 +2467,7 @@ class JobCardEntryController extends Controller
         $jobCard = $currentIssueItem->jobCard;
 
         $allIssueItems = JobCardIssueItem::with(['rawMaterial', 'stockEntryItem.grnEntryItem.color', 'fabricDetail.quantities'])
-            ->where('job_card_entry_id', $jobCard->id)
-            ->whereHas('rawMaterial', function ($query) {
-                $query->where('store_category_id', 1);
-            })
+            ->where('id', $id)
             ->get();
 
         $fabrics = [];

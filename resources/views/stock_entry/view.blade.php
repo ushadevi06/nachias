@@ -11,19 +11,21 @@
                     <button type="button" class="btn btn-secondary" id="import-stock-btn" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                     </button>
+                    @endif
+                    <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success" id="export-finished-goods-btn" style="display: none;">
+                        <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export 
+                    </a>
+                    <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary" id="export-barcode-btn" style="display: none;">
+                        <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export Barcode
+                    </a>
+                    <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success" id="export-raw-materials-btn">
+                        <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export 
+                    </a>
+                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
                     <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                     </a>
                     @endif
-                    <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success" id="export-finished-goods-btn" style="display: none;">
-                        <i class="icon-base ri ri-file-excel-line"></i> Export Finished Goods
-                    </a>
-                    <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary" id="export-barcode-btn" style="display: none;">
-                        <i class="icon-base ri ri-file-excel-line"></i> Export Barcode
-                    </a>
-                    <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success" id="export-raw-materials-btn">
-                        <i class="icon-base ri ri-file-excel-line"></i> Export Raw Materials
-                    </a>
                 </div>
             </div>
             <div class="col-lg-12">
@@ -102,6 +104,7 @@
             <form id="formAdjustment" autocomplete="off">
                 @csrf
                 <div class="modal-body">
+                    <div id="adjustment-alert-container"></div>
                     <div class="mb-3">
                         <div class="input-group input-group-merge">
                             <span class="input-group-text" id="basic-addon-search31"><i class="ri-search-line"></i></span>
@@ -329,6 +332,7 @@
         let entryId = btn.data('entry-id');
         let $body = $('#adjustment-items-body');
         $('#adjustment-search').val('');
+        $('#adjustment-alert-container').html('');
         $body.html('<tr><td colspan="8" class="text-center"><span class="spinner-border spinner-border-sm" role="status"></span> Loading items...</td></tr>');
         $('#check-all').prop('checked', false);
         $('#modalAdjustment').modal('show');
@@ -348,7 +352,7 @@
                                 <input type="hidden" name="adjustments[${index}][item_id]" value="${item.id}" disabled>
                                 <input type="number" step="0.01" class="form-control form-control-sm" name="adjustments[${index}][qty_to_add]" placeholder="0.00" disabled required>
                             </td>
-                            <td><input type="text" class="form-control form-control-sm" name="adjustments[${index}][approved_by]" placeholder="Approved By" disabled required></td>
+                            <td><input type="text" class="form-control form-control-sm" name="adjustments[${index}][approved_by]" value="{{ auth()->user()->name }}" readonly disabled required></td>
                             <td><input type="text" class="form-control form-control-sm" name="adjustments[${index}][reason]" placeholder="Reason" disabled required></td>
                         </tr>
                     `;
@@ -372,14 +376,16 @@
 
     $('#formAdjustment').on('submit', function(e) {
         e.preventDefault();
+        $('#adjustment-alert-container').html('');
 
         if ($('.item-check:checked').length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'No Items Selected',
-                text: 'Please select at least one item to adjust.',
-                confirmButtonText: 'OK'
-            });
+            $('#adjustment-alert-container').html(`
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="ri-error-warning-line me-2"></i> Please select at least one item to adjust.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
+            $('#modalAdjustment').animate({ scrollTop: 0 }, 'slow');
             return;
         }
 

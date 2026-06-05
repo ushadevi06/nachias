@@ -880,13 +880,63 @@
                 assignmentIndex++;
                 updateCardNumbers();
             }
+            $(document).on('input change', '#assignment-cards-container input[name*="[issue_qty]"]', function() {
+                validateTotalQty();
+            });
 
+            $(document).on('change', '#assignment-cards-container .services-select', function() {
+                validateTotalQty();
+            });
             function updateCardNumbers() {
                 $('#assignment-cards-container .assignment-card').each(function(index) {
                     $(this).find('.card-badge').text('#' + (index + 1));
                 });
             }
+            
+            function validateTotalQty() {
+                var $el = $('#stage_select');
+                var $selected = $el.is('select') ? $el.find(':selected') : $el;
+                var stageMaxQty = parseFloat($selected.data('qty')) || 0;
 
+                if (stageMaxQty <= 0) return true;
+
+                $('#qty-exceed-error').remove();
+
+                var isValid = true;
+                var errorMessages = [];
+
+                $('#assignment-cards-container .assignment-row').each(function() {
+                    var qty = parseFloat($(this).find('input[name*="[issue_qty]"]').val()) || 0;
+                    var serviceName = $(this).find('.services-select option:selected').text();
+                    var employeeName = $(this).find('.employee-select option:selected').text() || 'Employee';
+
+                    if (qty > stageMaxQty) {
+                        isValid = false;
+                        errorMessages.push(
+                            `<b>${serviceName}</b> → ${employeeName}: qty (<b>${qty}</b>) exceeds planned qty (<b>${stageMaxQty} PCS</b>).`
+                        );
+                    }
+                });
+
+                var $submitBtn = $('#content-issue button[type="submit"]');
+                if (!isValid) {
+                    $submitBtn.attr('disabled', true);
+                    var errorHtml = errorMessages.map(msg =>
+                        `<div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="ri ri-error-warning-line fs-5"></i>
+                            <div>${msg}</div>
+                        </div>`
+                    ).join('<hr class="my-1">');
+
+                    $submitBtn.closest('.col-12').before(
+                        `<div id="qty-exceed-error" class="alert alert-danger mt-2">${errorHtml}</div>`
+                    );
+                } else {
+                    $submitBtn.attr('disabled', false);
+                }
+
+                return isValid;
+            }
             function initRowControls($row, data = {}) {
                 var $el = $('#stage_select');
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
@@ -965,7 +1015,7 @@
                         url: function() {
                             var pId = getSelectedPlantId();
                             var osId = getSelectedOperationStageId();
-                            return "{{ url('get-employees-by-plant') }}/" + pId + "/" + osId;
+                            return "{{ url('get-employees-by-plant') }}/all/" + osId;
                         },
                         dataType: 'json',
                         delay: 250,
@@ -1019,23 +1069,25 @@
             function getSelectedPlantId() {
                 var $el = $('#stage_select');
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
-                return $selected.data('service-provider-id') || 'all';
+                return $selected.attr('data-service-provider-id') || $selected.data('service-provider-id') || 'all';
             }
 
             function getSelectedOperationStageId() {
                 var $el = $('#stage_select');
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
-                return $selected.data('operation-stage-id') || 'null';
+                return $selected.attr('data-operation-stage-id') || $selected.data('operation-stage-id') || 'null';
             }
 
             $('#add-assignment-row').on('click', function() {
                 addAssignmentRow();
+                validateTotalQty();
             });
 
             $(document).on('click', '.remove-assignment-row', function() {
                 if ($('#assignment-cards-container .assignment-card').length > 1) {
                     $(this).closest('.assignment-card').remove();
                     updateCardNumbers();
+                    validateTotalQty();
                 } else {
                     alert('At least one assignment is required.');
                 }

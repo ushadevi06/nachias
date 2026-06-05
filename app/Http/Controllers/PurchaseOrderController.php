@@ -108,7 +108,7 @@ class PurchaseOrderController extends Controller
 
                 $statusDropdown = '
                 <div class="form-floating form-floating-outline">
-                    <select class="form-select po-status-change" data-id="' . $po->id . '" ' . ($po->status === 'Received' ? 'disabled' : '') . '>
+                    <select class="form-select po-status-change" data-id="' . $po->id . '" data-previous-status="' . $po->status . '" ' . ($po->status === 'Received' ? 'disabled' : '') . '>
                         ' . $statusOptions . '
                     </select>
                 </div>
@@ -209,7 +209,11 @@ class PurchaseOrderController extends Controller
                 'items.*.uom_id' => 'required|exists:uoms,id',
                 'items.*.quantity' => 'required|numeric|min:0.01',
                 'items.*.supplier_design_name' => 'nullable|string|max:50',
-                'items.*.rate' => 'required|numeric|min:0',
+                'items.*.rate' => [
+                    $request->status === 'Draft' ? 'nullable' : 'required',
+                    'numeric',
+                    'min:0'
+                ],
                 'items.*.remarks' => 'nullable|string|max:255',
                 'items.*.attached_file' => 'nullable|mimes:jpg,jpeg,png,webp',
                 'items.*.color_id' => 'nullable|exists:colors,id',
@@ -539,6 +543,22 @@ class PurchaseOrderController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
+        if ($purchaseOrder->status === 'Draft') {
+            $missingRateItems = $purchaseOrder->items()
+                ->where(function ($q) {
+                    $q->whereNull('rate')
+                    ->orWhere('rate', '<=', 0);
+                })
+                ->get();
+
+            if ($missingRateItems->isNotEmpty()) {
+                return response()->json([
+                    'success'      => false,
+                    'rate_missing' => true,
+                    'message'      => 'Please update rate for all items before changing status.',
+                ]);
+            }
+        }
         $oldData = $purchaseOrder->toArray();
         $purchaseOrder->status = $request->status;
         $purchaseOrder->save();

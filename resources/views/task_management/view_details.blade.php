@@ -105,6 +105,8 @@
                                                         <th>Assigned</th>
                                                         <th>Completed</th>
                                                         <th>Wastage</th>
+                                                        <th>Rate (₹)</th>
+                                                        <th>Earnings (₹)</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -124,6 +126,8 @@
                                                         <td class="fw-bold">{{ (float)$asgn->issue_qty }}</td>
                                                         <td class="text-success fw-bold">{{ (float)$asgn->completed_qty }}</td>
                                                         <td class="text-danger small">{{ (float)$asgn->wastage_qty }}</td>
+                                                        <td class="text-muted">{{ number_format((float)$asgn->unit_rate, 2) }}</td>
+                                                        <td class="fw-bold text-success">{{ number_format((float)$asgn->total_cost, 2) }}</td>
                                                     </tr>
                                                     @endforeach
                                                 </tbody>

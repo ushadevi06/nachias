@@ -613,9 +613,7 @@ class PurchaseReportController extends Controller
         $items = $query->get();
         $grouped = [];
         
-        $casinoBrands = \App\Models\Brand::where('brand_name', 'like', 'CASINO%')
-            ->where('status', 'Active')
-            ->get();
+        $casinoBrands = \App\Models\Brand::where('brand_name', 'like', 'CASINO%')->get();
             
         foreach ($casinoBrands as $brand) {
             $brandItems = $items->where('brand_id', $brand->id);

@@ -563,6 +563,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], 'production_services/add/{id?}', [ProductionServiceController::class, 'add']);
     Route::get('production_services/delete/{id}', [ProductionServiceController::class, 'destroy']);
     Route::post('production_services/status/{id}', [ProductionServiceController::class, 'updateStatus']);
+    Route::get('production-services/get-next-sequence/{stageId}', [ProductionServiceController::class, 'getNextSequence']);
 
     /* Resources */
     Route::get('resources', [ResourceController::class, 'index']);
@@ -649,7 +650,10 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('/update-payroll-status', [SalaryController::class, 'updatePayrollStatus'])->name('update.payroll.status');
     Route::post('/generate-payslip-pdf', [SalaryController::class, 'generatePayslipPdf'])->name('generate.payslip.pdf');
     Route::get('/view-payslip/{id}', [SalaryController::class, 'viewPayslip'])->name('view.payslip');
-    Route::get('/print-payslip/{id}', [SalaryController::class, 'printPayslip'])->name('print.payslip');
+    Route::get('/print-payslip/{id}',[SalaryController::class, 'printPayslip'])->name('print.payslip');
+    Route::get('/download-payslip/{id}', [SalaryController::class, 'downloadPayslip'])
+    ->name('download.payslip');
+    Route::get('/salary-generation/search', [SalaryController::class, 'searchSalaryGeneration'])->name('salary-generation.search');
 
     /* Payroll Report */
     Route::get('payroll_reports', [PayrollReportController::class, 'index']);

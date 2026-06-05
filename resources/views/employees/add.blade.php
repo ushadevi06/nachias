@@ -48,10 +48,26 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <select id="operation_stage_id" name="operation_stage_id" class="form-select select2 @error('operation_stage_id') is-invalid @enderror" data-placeholder="Select Operation Stage">
+                                        <select id="operation_stage_id" name="operation_stage_id[]" class="form-select select2 @error('operation_stage_id') is-invalid @enderror" data-placeholder="Select Operation Stage" multiple>
                                             <option value="">Select Operation Stage</option>
+                                            @php
+                                            $selectedStages = old('operation_stage_id', $employee->operation_stage_id ?? []);
+
+                                            if (!is_array($selectedStages)) {
+                                                if (is_string($selectedStages)) {
+                                                    $decoded = json_decode($selectedStages, true);
+                                                    $selectedStages = is_array($decoded) ? $decoded : [$selectedStages];
+                                                } else {
+                                                    $selectedStages = $selectedStages ? [$selectedStages] : [];
+                                                }
+                                            }
+                                            @endphp
+
                                             @foreach($operationStages as $stage)
-                                            <option value="{{ $stage->id }}" {{ old('operation_stage_id', $employee->operation_stage_id ?? '') == $stage->id ? 'selected' : '' }}>{{ $stage->operation_stage_name }}</option>
+                                                <option value="{{ $stage->id }}"
+                                                    {{ in_array($stage->id, $selectedStages) ? 'selected' : '' }}>
+                                                    {{ $stage->operation_stage_name }}
+                                                </option>
                                             @endforeach
                                         </select>
                                         <label for="operation_stage_id">Operation Stage</label>

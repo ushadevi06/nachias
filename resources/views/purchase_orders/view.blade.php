@@ -150,6 +150,8 @@
             $(document).on('change', '.po-status-change', function () {
                 let id = $(this).data('id');
                 let status = $(this).val();
+                let $select = $(this);
+                let previousStatus = $select.data('previous-status');
 
                 $.ajax({
                     url: "{{ url('purchase_orders/status') }}/" + id,
@@ -159,12 +161,21 @@
                         status: status
                     },
                     success: function (response) {
-                        let msg = '<span class="text-success">Status Changed</span>';
-                        $('.status_msg_' + id).html(msg).fadeIn().delay(1000).fadeOut();
+                        if (response.rate_missing) {
+                            $select.val(previousStatus).trigger('change.select2');
+                            let msg = '<span class="text-danger" style="font-size:12px;"><i class="ri ri-alert-line"></i> Pls Update Price!</span>';
+                            $('.status_msg_' + id).html(msg).fadeIn();
+                            return;
+                        }
+                        $select.data('previous-status', status);
+                        let msg = '<span class="text-success" style="font-size:12px;"><i class="ri ri-check-line"></i> Status Changed</span>';
+                        $('.status_msg_' + id).html(msg).fadeIn().delay(2000).fadeOut();
                         table.ajax.reload(null, false);
                     },
                     error: function () {
-                        alert('Status update failed');
+                        $select.val(previousStatus).trigger('change.select2');
+                        let msg = '<span class="text-danger" style="font-size:12px;">Update failed</span>';
+                        $('.status_msg_' + id).html(msg).fadeIn().delay(2000).fadeOut();
                     }
                 });
             });

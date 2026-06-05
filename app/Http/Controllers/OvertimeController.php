@@ -153,10 +153,19 @@ class OvertimeController extends Controller
                     'action' => $action
                 ];
             }
+
+            $start = intval($request->input('start', 0));
+            $length = intval($request->input('length', 10));
+            $totalFiltered = count($finalData);
+
+            if ($length > 0) {
+                $finalData = array_slice($finalData, $start, $length);
+            }
+
             return response()->json([
                 'draw' => intval($request->input('draw')),
-                'recordsTotal' => count($finalData),
-                'recordsFiltered' => count($finalData),
+                'recordsTotal' => $totalFiltered,
+                'recordsFiltered' => $totalFiltered,
                 'data' => $finalData
             ]);
         }

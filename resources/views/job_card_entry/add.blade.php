@@ -983,7 +983,7 @@
 
                         <div class="modal-body p-0">
                             <div class="px-5 pt-4 pb-2">
-                                <div class="table-responsive rounded-4 overflow-hidden" style="border: 1px solid #f0f0f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                                <div class="table-responsive rounded-4" style="border: 1px solid #f0f0f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
                                     <table class="table table-hover align-middle mb-0" id="stockErrorTable">
                                         <thead style="background: #fafafa; border-bottom: 2px solid #f0f0f0;">
                                             <tr>
@@ -1394,7 +1394,7 @@
                     }
                 }
 
-                if (finalMatrixTotal > (data.total_available || finalIssued)) {
+                if ((finalMatrixTotal - (data.total_available || finalIssued)) >= 0.01) {
                     errors.push({
                         art: art, required: finalMatrixTotal, issued: finalIssued, 
                         total_available: data.total_available || finalIssued,

@@ -302,9 +302,16 @@ class TaskManagementController extends Controller
                     }
                     $assignData['service_id'] = $serviceId;
 
+                    $unitRate = 0;
                     if ($serviceId) {
                         $allServiceIds[] = $serviceId;
+                        $ps = \App\Models\ProductionService::find($serviceId);
+                        if ($ps) {
+                            $unitRate = $ps->cost ?? 0;
+                        }
                     }
+                    $assignData['unit_rate'] = $unitRate;
+                    $assignData['total_cost'] = (float)($assign['issue_qty'] ?? 0) * $unitRate;
 
                     TaskAssignEmployee::create($assignData);
                 }
@@ -532,6 +539,8 @@ class TaskManagementController extends Controller
                 $originalWastage = $assignment->wastage_qty;
                 $originalQcChecked = $assignment->qc_checked_qty;
 
+                $totalCost = $completed * (float)($assignment->unit_rate ?? 0);
+
                 $assignment->update([
                     'completed_qty' => $completed,
                     'inprogress_qty' => $inprogress,
@@ -540,7 +549,8 @@ class TaskManagementController extends Controller
                     'qc_passed_qty' => $qc_passed,
                     'qc_rejected_qty' => $qc_rejected,
                     'qc_status' => $qc_status,
-                    'status' => $status
+                    'status' => $status,
+                    'total_cost' => $totalCost
                 ]);
 
                 $totalCompleted += $completed;

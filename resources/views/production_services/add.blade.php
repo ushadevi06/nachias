@@ -122,3 +122,23 @@
     </div>
 </div>
 @endsection
+@section('scripts')
+<script>
+$(document).ready(function() {
+    $('#operation_stage_id').on('change', function() {
+        let stageId = $(this).val();
+        if (!stageId) {
+            $('#sequence').val('');
+            return;
+        }
+        $.ajax({
+            url: "{{ url('production-services/get-next-sequence') }}/" + stageId,
+            type: "GET",
+            success: function(response) {
+                $('#sequence').val(response.sequence);
+            }
+        });
+    });
+});
+</script>
+@endsection

@@ -101,7 +101,7 @@ class AttendanceController extends Controller
         }
         return $grouped;
     }
-    public function formatAttendance($grouped, $selectedDate)
+    public function formatAttendance($grouped, $selectedDate, $serial_no)
     {
         $final = [];
         foreach ($grouped as $emp => $dates) {
@@ -161,7 +161,8 @@ class AttendanceController extends Controller
                 DB::table('attendances')->updateOrInsert(
                     [
                         'emp_code' => $emp,
-                        'date' => $date
+                        'date' => $date,
+                        'device_serial_number' => $serial_no
                     ],
                     [
                         'in_time' => $in,
@@ -252,7 +253,8 @@ class AttendanceController extends Controller
                 DB::table('attendances')->updateOrInsert(
                     [
                         'emp_code' => $emp,
-                        'date' => $selectedDate
+                        'date' => $selectedDate,
+                        'device_serial_number' => $serial_no
                     ],
                     [
                         'in_time' => null,
@@ -349,7 +351,7 @@ class AttendanceController extends Controller
         $device = $request->device;
 
         $records = DB::table('attendances')
-            ->join('users', function ($join) {
+            ->leftJoin('users', function ($join) {
                 $join->on(
                     DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'),
                     '=',
@@ -364,20 +366,21 @@ class AttendanceController extends Controller
             )
             ->select(
                 'attendances.id',
-                'users.name',
+                DB::raw('COALESCE(users.name, "Unknown") as name'),
                 'attendances.emp_code as code',
                 'attendances.date',
                 'attendances.in_time',
                 'attendances.out_time',
                 'attendances.work_hours as hours',
                 'attendances.status',
-                'departments.department'
+                DB::raw('COALESCE(departments.department, "-") as department')
             )
             ->whereDate('attendances.date', $date)
             ->when($device, function ($query) use ($device) {
                 $query->where('attendances.device_serial_number', $device);
             })
-            ->orderBy('users.emp_id')
+            ->orderBy('departments.department')
+            ->orderBy('users.name')
             ->get();
 
         return response()->json([

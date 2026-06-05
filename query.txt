@@ -312,3 +312,10 @@ ALTER TABLE `sales_invoices`
     MODIFY COLUMN `so_id` BIGINT UNSIGNED NULL;
 
 ALTER TABLE `purchase_orders` ADD COLUMN `order_type` VARCHAR(15) NULL DEFAULT 'New Order' AFTER `po_date`;
+
+
+04-06-2026:
+ALTER TABLE `purchase_order_items` CHANGE `rate` `rate` DECIMAL(15,2) NULL DEFAULT NULL;
+ALTER TABLE `purchase_order_items` CHANGE `amount` `amount` DECIMAL(15,2) NULL;
+ALTER TABLE `purchase_order_items` CHANGE `rate` `rate` DECIMAL(15,2) NULL DEFAULT '0.00';
+ALTER TABLE `purchase_order_items` CHANGE `amount` `amount` DECIMAL(15,2) NULL DEFAULT '0.00';

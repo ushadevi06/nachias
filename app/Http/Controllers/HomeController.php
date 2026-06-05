@@ -48,6 +48,38 @@ class HomeController extends Controller
         $absent_emp_today = Attendance::whereDate('date', $today)->where('status', 'Absent')->count();
         $late_emp_today = Attendance::whereDate('date', $today)->where('status', 'Late')->count();
         $overtime_today = Attendance::whereDate('date', $today)->where('status', 'Overtime')->count();
+
+        $device_stats = Attendance::whereDate('date', $today)
+            ->select('device_serial_number', 'status', DB::raw('count(*) as count'))
+            ->groupBy('device_serial_number', 'status')
+            ->get();
+
+        $attendance_chart_data = [];
+        $attendance_chart_data['All'] = [
+            'Present' => $present_emp_today,
+            'Absent' => $absent_emp_today,
+            'Late' => $late_emp_today,
+            'Overtime' => $overtime_today
+        ];
+
+        $dbDevices = DB::table('devices')->select('device_name', 'serial_number')->get();
+        $deviceMap = [];
+        foreach ($dbDevices as $d) {
+            $dName = $d->device_name ?: $d->serial_number;
+            $deviceMap[$d->serial_number] = $dName;
+            $attendance_chart_data[$dName] = ['Present' => 0, 'Absent' => 0, 'Late' => 0, 'Overtime' => 0];
+        }
+
+        foreach ($device_stats as $stat) {
+            $sn = $stat->device_serial_number;
+            $status = $stat->status;
+            if (isset($deviceMap[$sn])) {
+                $dName = $deviceMap[$sn];
+                if (isset($attendance_chart_data[$dName][$status])) {
+                    $attendance_chart_data[$dName][$status] = $stat->count;
+                }
+            }
+        }
         /* Accounts & Financial Dashboard */
         $total_sales_value = SalesInvoice::whereNull('deleted_at')->sum('grand_total');
         $sales_return = CreditNote::whereNull('deleted_at')->sum('grand_total');
@@ -298,7 +330,7 @@ class HomeController extends Controller
             ->groupBy('operation_stages.id', 'operation_stages.operation_stage_name')
             ->get();
 
-        return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today'));
+        return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today', 'dbDevices', 'attendance_chart_data'));
     }
 
     public function getServiceWipDetails(Request $request)
