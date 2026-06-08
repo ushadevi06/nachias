@@ -80,7 +80,7 @@
                                                     {{ $item->rawMaterial->name ?? '-' }} <br>
                                                     <small class="text-muted">{{ $item->storeCategory->category_name ?? '-' }}</small>
                                                 </td>
-                                                <td>{{ $item->grnEntryItem->art_no ?? '-' }}</td>
+                                                <td>{{ $item->art_no ?: ($item->grnEntryItem->art_no ?? '-') }}</td>
                                                 <td>{{ $item->uom->uom_code ?? '-' }}</td>
                                                 <td class="text-success fw-bold">+{{ floatval($item->qty_in) }}</td>
                                                 <td>{{ $item->price > 0 ? '₹' . number_format($item->price, 2) : '-' }}</td>

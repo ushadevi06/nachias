@@ -381,6 +381,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], 'raw_materials/add/{id?}', [RawMaterialController::class, 'add']);
     Route::get('raw_materials/delete/{id}', [RawMaterialController::class, 'destroy']);
     Route::post('raw_materials/status/{id}', [RawMaterialController::class, 'updateStatus']);
+     Route::post('raw_materials/import', [RawMaterialController::class, 'import']);
+    Route::get('raw_materials/download-sample', [RawMaterialController::class, 'downloadSample']);
 
     /* Standard Consumption */
     Route::get('standard_consumptions', [StandardConsumptionController::class, 'index']);

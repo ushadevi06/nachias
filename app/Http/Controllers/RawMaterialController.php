@@ -13,6 +13,8 @@ use App\Models\PurchaseInvoiceItem;
 use App\Models\ProductionStageConsumable;
 use App\Models\DebitNoteItem;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\RawMaterialImport;
 
 class RawMaterialController extends Controller
 {
@@ -209,10 +211,7 @@ class RawMaterialController extends Controller
         $oldData = $material->toArray();
         $material->delete();
         addLog('delete', 'Raw Material', 'raw_materials', $id, $oldData, null);
-        return response()->json([
-            'status'  => true,
-            'message' => 'Raw Material deleted successfully'
-        ]);
+        return redirect('raw_materials')->with('success', 'Raw Material deleted successfully');
     }
 
     public function updateStatus(Request $request, $id)
@@ -226,6 +225,41 @@ class RawMaterialController extends Controller
         return response()->json([
             'status'  => true,
             'message' => 'Status updated successfully'
+        ]);
+    }
+
+    public function import(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('create raw-materials')) {
+            return unauthorizedRedirect();
+        }
+
+        $request->validate([
+            'import_file' => 'required|mimes:csv,txt,xlsx,xls'
+        ]);
+
+        try {
+            Excel::import(new RawMaterialImport, $request->file('import_file'));
+            return redirect('raw_materials')->with('success', 'Raw Materials imported successfully.');
+        } catch (\Exception $e) {
+            return redirect('raw_materials')->with('error', $e->getMessage());
+        }
+    }
+
+    public function downloadSample()
+    {
+        $headers = [
+            'Name', 'Code', 'Store Category', 'UOM', 'Material Type', 'Specification', 'Min Stock', 'Status'
+        ];
+
+        $callback = function() use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            fclose($file);
+        };
+
+        return response()->streamDownload($callback, 'Raw_Material_Sample_Format.csv', [
+            'Content-Type' => 'text/csv',
         ]);
     }
 }

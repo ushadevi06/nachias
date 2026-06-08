@@ -126,14 +126,20 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value));
         }
 
-        foreach (['d-m-Y', 'Y-m-d', 'd/m/Y'] as $format) {
+        // Try exact formats first to avoid Carbon::parse timezone/slashes mismatch
+        $formats = ['d-m-Y', 'd/m/Y', 'd-m-y', 'd/m/y', 'Y-m-d', 'Y/m/d'];
+        foreach ($formats as $format) {
             try {
                 return Carbon::createFromFormat($format, trim((string) $value));
             } catch (\Exception $e) {
             }
         }
 
-        return Carbon::parse($value);
+        try {
+            return Carbon::parse($value);
+        } catch (\Exception $e) {
+            throw new \Exception("Stock Date '{$value}' is invalid. Please use DD-MM-YYYY format.");
+        }
     }
 
     protected function parseNumber($value, string $message): float

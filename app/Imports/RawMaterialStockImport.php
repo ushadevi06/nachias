@@ -25,12 +25,26 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
     {
         $errors = [];
         $validData = [];
+        $seenArtNos = [];
 
         foreach ($rows as $index => $row) {
+			
             $rowNumber = $index + 2;
             $rowErrors = [];
 
-            if (!isset($row['stock_date']) && !isset($row['raw_material']) && !isset($row['qty_in']) && !isset($row['store_location'])) {
+            // Skip completely empty rows
+            $rowArray = $row->toArray();
+
+			$rowText = implode(' ', array_map('strval', $rowArray));
+
+			if (stripos($rowText, 'Grand Total') !== false) {
+				continue;
+			}
+
+			$nonEmpty = array_filter($rowArray, function ($value) {
+				return $value !== null && trim((string)$value) !== '';
+			});
+            if (empty($nonEmpty)) {
                 continue;
             }
 
@@ -45,7 +59,7 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                 }
             }
 
-            $categoryName = $row['store_category'] ?? null;
+            $categoryName = trim((string)($row['store_category'] ?? ''));
             $storeCategory = null;
             if (empty($categoryName)) {
                 $rowErrors[] = "Row {$rowNumber}: Store Category is required.";
@@ -56,7 +70,7 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                 }
             }
 
-            $materialName = $row['raw_material'] ?? null;
+            $materialName = trim((string)($row['raw_material'] ?? ''));
             $rawMaterial = null;
             if (empty($materialName)) {
                 $rowErrors[] = "Row {$rowNumber}: Raw Material is required.";
@@ -73,58 +87,81 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                 }
             }
 
+            $isAccessories = false;
+            if ($storeCategory) {
+                $isAccessories = strtolower(trim($storeCategory->category_name)) === 'accessories' || strtolower(trim($storeCategory->code)) === 'acc';
+            }
+
             $styleName = $row['style'] ?? null;
-            $style = null;
-
-            if (!empty($styleName)) {
-                $style = Style::where('style_name', $styleName)->orWhere('code', $styleName)->first();
-                if (!$style) {
-                    $rowErrors[] = "Row {$rowNumber}: Style '{$styleName}' not found.";
+                $style = null;
+                if (!empty($styleName)) {
+                    $style = Style::where('style_name', $styleName)
+                                ->orWhere('code', $styleName)->first();
+                    if (!$style) {
+                        $rowErrors[] = "Row {$rowNumber}: Style '{$styleName}' not found.";
+                    }
                 }
-            }
 
-            $fabricWidthName = $row['fabric_width'] ?? null;
-            $fabricWidth = null;
-
-            if (!empty($fabricWidthName)) {
-                $fabricWidth = FabricSize::where('width', $fabricWidthName)->first();
-                if (!$fabricWidth) {
-                    $rowErrors[] = "Row {$rowNumber}: Fabric Width '{$fabricWidthName}' not found.";
+                $fabricWidthName = $row['fabric_width'] ?? null;
+                $fabricWidth = null;
+                if (!empty($fabricWidthName)) {
+                    $fabricWidth = FabricSize::where('width', $fabricWidthName)->first();
+                    if (!$fabricWidth) {
+                        $rowErrors[] = "Row {$rowNumber}: Fabric Width '{$fabricWidthName}' not found.";
+                    }
                 }
-            }
 
-            $colorName = $row['color'] ?? null;
-            $color = null;
-    
-            if (!empty($colorName)) {
-                $color = Color::where('color_name', $colorName)->first();
-                if (!$color) {
-                    $rowErrors[] = "Row {$rowNumber}: Color '{$colorName}' not found.";
+                $colorName = $row['color'] ?? null;
+                $color = null;
+                if (!empty($colorName)) {
+                    $color = Color::where('color_name', $colorName)->first();
+                    if (!$color) {
+                        $rowErrors[] = "Row {$rowNumber}: Color '{$colorName}' not found.";
+                    }
                 }
-            }
 
-            $brandName = $row['brand'] ?? null;
+            $brandName = trim((string)($row['brand'] ?? ''));
             $brand = null;
-
-            if (!empty($brandName)) {
+            if (empty($brandName)) {
+                $rowErrors[] = "Row {$rowNumber}: Brand is required.";
+            } else {
                 $brand = Brand::where('brand_name', $brandName)->orWhere('code', $brandName)->first();
                 if (!$brand) {
                     $rowErrors[] = "Row {$rowNumber}: Brand '{$brandName}' not found.";
                 }
             }
 
-            $uomName = $row['uom'] ?? null;
+            $artNo = $row['art_no'] ?? null;
+            // Always cast to string and trim so numeric Excel values (e.g. 12345.0) are stored correctly
+            $artNoTrimmed = empty($artNo) ? null : trim((string)$artNo);
+            if (empty($artNoTrimmed)) {
+                $rowErrors[] = "Row {$rowNumber}: Art No is required.";
+            } else {
+                // Art No uniqueness validation commented out
+                /*
+                if (in_array($artNoTrimmed, $seenArtNos)) {
+                    $rowErrors[] = "Row {$rowNumber}: Duplicate Art No '{$artNoTrimmed}' found in the Excel file.";
+                } else {
+                    $seenArtNos[] = $artNoTrimmed;
+                    if (StockEntryItem::where('art_no', $artNoTrimmed)->exists()) {
+                        $rowErrors[] = "Row {$rowNumber}: Art No '{$artNoTrimmed}' already exists in the system.";
+                    }
+                }
+                */
+            }
+
+            $uomName = trim((string)($row['uom'] ?? ''));
             $uom = null;
-            if (!empty($uomName)) {
+            if (empty($uomName)) {
+                $rowErrors[] = "Row {$rowNumber}: UOM is required.";
+            } else {
                 $uom = Uom::where('uom_code', $uomName)->orWhere('uom_name', $uomName)->first();
                 if (!$uom) {
                     $rowErrors[] = "Row {$rowNumber}: UOM '{$uomName}' does not exist in master table.";
                 }
-            } elseif ($rawMaterial) {
-                $uom = Uom::find($rawMaterial->uom_id);
             }
 
-            $locationName = $row['store_location'] ?? null;
+            $locationName = trim((string)($row['store_location'] ?? ''));
             $storeLocation = null;
             if (empty($locationName)) {
                 $rowErrors[] = "Row {$rowNumber}: Store Location is required.";
@@ -140,9 +177,14 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                 $rowErrors[] = "Row {$rowNumber}: Qty In must be a number greater than 0.";
             }
 
-            $price = $row['price'] ?? 0;
-            if (!is_numeric($price) || $price < 0) {
+            $price = $row['price'] ?? null;
+            if ($price === null || !is_numeric($price) || $price < 0) {
                 $rowErrors[] = "Row {$rowNumber}: Price must be a positive number.";
+            }
+
+            $remarks = trim((string)($row['remarks'] ?? ''));
+            if (empty($remarks)) {
+                $rowErrors[] = "Row {$rowNumber}: Remarks is required.";
             }
 
             if (empty($rowErrors)) {
@@ -158,7 +200,7 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                     'brand_id' => $brand ? $brand->id : null,
                     'qty_in' => floatval($qtyIn),
                     'price' => floatval($price),
-                    'art_no' => $row['art_no'] ?? null,
+                    'art_no' => $artNoTrimmed,
                     'remarks' => $row['remarks'] ?? null,
                 ];
             } else {
@@ -166,7 +208,7 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
             }
         }
 
-        if (count($errors) > 0) {
+		if (count($errors) > 0) {
             throw ValidationException::withMessages(['import' => $errors]);
         }
 
@@ -235,18 +277,20 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
         if (is_numeric($dateValue)) {
             return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($dateValue));
         }
+
+        // Try exact formats first to avoid Carbon::parse timezone/slashes mismatch
+        $formats = ['d-m-Y', 'd/m/Y', 'd-m-y', 'd/m/y', 'Y-m-d', 'Y/m/d'];
+        foreach ($formats as $format) {
+            try {
+                return Carbon::createFromFormat($format, trim((string) $dateValue));
+            } catch (\Exception $e) {
+            }
+        }
+
         try {
             return Carbon::parse($dateValue);
         } catch (\Exception $e) {
-            try {
-                return Carbon::createFromFormat('d-m-Y', $dateValue);
-            } catch (\Exception $ex) {
-                try {
-                    return Carbon::createFromFormat('Y-m-d', $dateValue);
-                } catch (\Exception $ex2) {
-                    return null;
-                }
-            }
+            return null;
         }
     }
 }

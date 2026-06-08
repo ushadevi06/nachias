@@ -637,15 +637,18 @@ class StockEntryController extends Controller
             Excel::import(new RawMaterialStockImport, $request->file('import_file'));
             return redirect('stock_entries')->with('success', 'Raw Materials Stock imported successfully.');
         } catch (ValidationException $e) {
-            return redirect('stock_entries')->withErrors($e->errors());
+            $errorMessages = [];
+            foreach ($e->errors() as $messages) {
+                if (is_array($messages)) {
+                    $errorMessages = array_merge($errorMessages, $messages);
+                } else {
+                    $errorMessages[] = $messages;
+                }
+            }
+            return redirect('stock_entries')->with('error', implode('<br>', $errorMessages));
         } catch (\Exception $e) {
             LaravelLog::error('Raw material stock import failed', ['exception' => $e]);
-
-            $message = config('app.debug')
-                ? $e->getMessage()
-                : 'Import failed. Please check the file and try again.';
-
-            return redirect('stock_entries')->with('error', $message);
+            return redirect('stock_entries')->with('error', $e->getMessage());
         }
     }
     public function importFinishedGoods(Request $request)

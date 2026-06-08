@@ -8,6 +8,17 @@
 #paginationContainer .btn {
     min-width: 38px;
 }
+.table-responsive {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.table thead tr th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #fff;
+    border-bottom: 2px solid #dee2e6;
+}
 </style>
 @section('content')
 <div class="container-xxl section-padding">

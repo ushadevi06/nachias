@@ -277,7 +277,10 @@ class SalaryController extends Controller
             $hra    = ($fixedGross * 20) / 100;
             $da     = ($fixedGross * 20) / 100;
             $oa     = ($fixedGross * 10) / 100;
-            $incentive = 0;
+            $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)
+                ->whereMonth('issue_date', $monthNumber)
+                ->whereYear('issue_date', $year)
+                ->sum('total_cost') ?? 0;
             $misc = 0;
             $salaryAdvance = 0;
             $otherDeduction = 0;
@@ -735,7 +738,11 @@ class SalaryController extends Controller
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
             $grossSalary = $fixedGross - $lopAmount;
-            $incentive = 0;
+            $incentive = DB::table('task_assign_employees')
+                ->where('issued_to', $employee->id)
+                ->whereMonth('issue_date', $monthNumber)
+                ->whereYear('issue_date', $year)
+                ->sum('total_cost') ?? 0;
             $misc = 0;
             $otherDeduction = 0;
             $salaryAdvance = 0;
