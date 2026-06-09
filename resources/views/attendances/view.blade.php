@@ -950,6 +950,8 @@
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const currentDate = new Date(year, monthIndex, day);
+                const isSunday = currentDate.getDay() === 0;
                 const classes = ['calendar-cell'];
                 if (selectedHolidayDates.includes(dateValue)) {
                     classes.push('selected');
@@ -960,8 +962,20 @@
                 if (selectedHolidayNames[dateValue]) {
                     classes.push('has-name');
                 }
-
-                cells.push(`<button type="button" class="${classes.join(' ')}" data-date="${dateValue}" title="${selectedHolidayNames[dateValue] || ''}">${day}</button>`);
+                if (isSunday) {
+                    classes.push('sunday');
+                }
+                cells.push(`
+                    <button
+                        type="button"
+                        class="${classes.join(' ')}"
+                        data-date="${dateValue}"
+                        title="${selectedHolidayNames[dateValue] || ''}"
+                        ${isSunday ? 'disabled' : ''}
+                    >
+                        ${day}
+                    </button>
+                `);
             }
 
             holidayCalendarInline.innerHTML = cells.join('');
