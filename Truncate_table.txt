@@ -102,6 +102,8 @@ DELETE FROM stock_entry_items;
 ALTER TABLE stock_entry_items AUTO_INCREMENT = 1;
 DELETE FROM stock_entries;
 ALTER TABLE stock_entries AUTO_INCREMENT = 1;
+DELETE FROM item_prices;
+ALTER TABLE item_prices AUTO_INCREMENT = 1;
 -- =========================
 -- PURCHASE
 -- =========================
@@ -183,6 +185,11 @@ ALTER TABLE transport_modes AUTO_INCREMENT = 1;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+TRUNCATE `attendances`;
+TRUNCATE `barcode_masters`;
+TRUNCATE `declared_holidays`;
+TRUNCATE `devices`;
+TRUNCATE `leaves`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE `model_has_permissions`;
@@ -191,17 +198,3 @@ TRUNCATE `role_has_permissions`;
 TRUNCATE `roles`;
 SET FOREIGN_KEY_CHECKS = 1;
 
-
-BAckupController
-
-$dumpPath = env('MYSQLDUMP_PATH', 'mysqldump');
-
-if ($dumpPath !== 'mysqldump' && !file_exists($dumpPath)) {
-	$backup->update(['status' => 'Failed', 'error_message' => 'mysqldump binary not found at: ' . $dumpPath]);
-	return response()->json(['status' => 'error', 'message' => 'mysqldump binary not found. Please check MYSQLDUMP_PATH in .env']);
-}
-
-$passwordPart = $dbPass ? "--password=\"{$dbPass}\"" : "";
-$command = "\"{$dumpPath}\" --user={$dbUser} {$passwordPart} --host={$dbHost} {$dbName} > \"{$path}{$filename}\" 2>&1";
-
-exec($command, $output, $returnVar);

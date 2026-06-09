@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', 'Device - ' . env('WEBSITE_NAME'))
+@section('title', 'Devices - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">

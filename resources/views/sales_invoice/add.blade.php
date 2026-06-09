@@ -217,6 +217,14 @@
                                                     }
                                                 }
 
+                                                $stockQty = 0;
+                                                if ($item->stock_entry_item_id) {
+                                                    $stockQty = \Illuminate\Support\Facades\DB::table('stock_entry_items')
+                                                        ->where('id', $item->stock_entry_item_id)
+                                                        ->whereNull('deleted_at')
+                                                        ->value(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                                                }
+
                                                 return [
                                                     'brand_id' => $item->brand_id,
                                                     'brand_name' => $brandName ?: '',
@@ -233,6 +241,7 @@
                                                     'uom_code' => $item->uom_id ?: '',
                                                     'quantity' => $item->quantity,
                                                     'max_qty' => $maxQty,
+                                                    'stock_qty' => (float)$stockQty,
                                                     'rate' => $item->rate,
                                                     'mrp' => $item->mrp,
                                                     'amount' => $item->amount,
@@ -281,12 +290,15 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty">
+                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty">
                                                     <label>Qty *</label>
                                                 </div>
                                                 <div class="qty-error text-danger small" style="display:none;"></div>
-                                                @if(isset($row->max_qty))
-                                                    <small class="text-info ordered-qty-label">Ordered: {{ $row->max_qty }}</small>
+                                                @if(isset($row->max_qty) && $row->max_qty !== '')
+                                                    <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
+                                                @endif
+                                                @if(isset($row->stock_qty) && $row->stock_qty !== '')
+                                                    <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-warning' : 'text-success' }} d-block">In Stock: {{ $row->stock_qty }}</small>
                                                 @endif
                                             </td>
                                             <td>
@@ -349,7 +361,7 @@
 
                                     <div class="col-md-6">
                                         <div class="form-floating form-floating-outline">
-                                            <select name="payment_mode" id="payment_mode" class="form-select select2 @error('payment_mode') is-invalid @enderror">
+                                            <select name="payment_mode" id="payment_mode" class="form-select select2 @error('payment_mode') is-invalid @enderror" data-placeholder="Select Payment Mode">
                                                 <option value="">Select Payment Mode</option>
                                                 <option value="Cash" {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Cash' ? 'selected' : '' }}>Cash</option>
                                                 <option value="Bank (Cheque)" {{ old('payment_mode', isset($invoice) ? $invoice->payment_mode : '') == 'Bank (Cheque)' ? 'selected' : '' }}>Bank (Cheque)</option>
@@ -689,6 +701,7 @@
                 <div class="text-end mt-4">
                     <?php if(isset($invoice) && (!empty($invoice->ack_no) || !empty($invoice->eway_bill_no))) { ?>
                         <button type="submit" class="btn btn-primary" disabled>Submit</button>
+                        <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
                     <?php } else { ?>
                         <button type="submit" class="btn btn-primary">Submit</button>
                         <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
@@ -712,7 +725,7 @@
             $.ajax({
                 url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
                 type: "GET",
-                data: { customer_id: preselectedCustomer },
+                data: { customer_id: preselectedCustomer, invoice_id: "{{ isset($invoice) ? $invoice->id : '' }}" },
                 success: function(response) {
                     if (response.success) {
                         var soSelect = $('#so_ids');
@@ -763,7 +776,7 @@
                 $.ajax({
                     url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
                     type: "GET",
-                    data: { customer_id: customerId },
+                    data: { customer_id: customerId, invoice_id: "{{ isset($invoice) ? $invoice->id : '' }}" },
                     success: function(response) {
                         if (response.success) {
                             var soSelect = $('#so_ids');
@@ -836,9 +849,12 @@
         window.isEditMode = {{ isset($invoice) ? 'true' : 'false' }};
         window.availableSOItems = [];
 
-        function addInvoiceItem(matchedItem, qty = 1, maxQty = null) {
+        function addInvoiceItem(matchedItem, qty = null, maxQty = null) {
             if (maxQty === null && matchedItem.qty) {
                 maxQty = matchedItem.qty;
+            }
+            if (qty === null) {
+                qty = matchedItem.qty ? matchedItem.qty : 1;
             }
             var existingRow = null;
             $('#item-rows .item-row').each(function() {
@@ -904,11 +920,12 @@
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="number" step="any" class="form-control qty" name="items[${index}][quantity]" value="${qty}" data-max="${maxQty || ''}" max="${maxQty || ''}">
+                            <input type="number" step="any" class="form-control qty" name="items[${index}][quantity]" value="${qty}" data-max="${maxQty || ''}" data-stock="${matchedItem.stock_qty !== undefined ? matchedItem.stock_qty : ''}" max="${maxQty || ''}">
                             <label>Qty *</label>
                         </div>
                         <div class="qty-error text-danger small" style="display:none;"></div>
-                        ${maxQty ? `<small class="text-info ordered-qty-label">Ordered: ${maxQty}</small>` : ''}
+                        ${maxQty ? `<small class="text-info d-block">Ordered: ${maxQty}</small>` : ''}
+                        ${matchedItem.stock_qty !== undefined ? `<small class="${matchedItem.stock_qty < (maxQty || Infinity) ? 'text-warning' : 'text-success'} d-block">In Stock: ${matchedItem.stock_qty}</small>` : ''}
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
@@ -1247,10 +1264,15 @@
             var qty = parseFloat(qtyInput.val()) || 0;
             var maxAttr = qtyInput.attr('data-max');
             var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
+            var stockAttr = qtyInput.attr('data-stock');
+            var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
             var errorDiv = row.find('.qty-error');
 
             if (!isNaN(max) && qty > max) {
-                errorDiv.text('Cannot exceed ' + max).show();
+                errorDiv.text('Exceeds ordered qty (' + max + ')').show();
+                qtyInput.addClass('is-invalid');
+            } else if (!isNaN(stock) && qty > stock) {
+                errorDiv.text('Warning: only ' + stock + ' in stock').show();
                 qtyInput.addClass('is-invalid');
             } else {
                 errorDiv.hide();

@@ -126,6 +126,7 @@
         $(document).on('change', '.inv-status-change', function() {
             let id = $(this).data('id');
             let status = $(this).val();
+            let $select = $(this);
 
             $.ajax({
                 url: "{{ url('sales_invoices/status') }}/" + id,
@@ -136,11 +137,24 @@
                 },
                 success: function(response) {
                     let msg = '<span class="text-success">Status Changed</span>';
-                    $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(2000).fadeOut();
                     table.ajax.reload(null, false);
                 },
-                error: function() {
-                    alert('Failed to update status');
+                error: function(xhr) {
+                    let message = 'Failed to update status';
+
+                    if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.message) {
+                        let full = xhr.responseJSON.message;
+                        let balance = full.match(/Outstanding balance of ([\d,\.]+)/);
+                        message = balance 
+                            ? '⚠ Balance of ' + balance[1] + ' still remaining' 
+                            : full;
+                    }
+
+                    let msg = '<span class="text-danger">' + message + '</span>';
+                    $('.status_msg_' + id).html(msg).fadeIn().delay(2000).fadeOut();
+
+                    table.ajax.reload(null, false);
                 }
             });
         });

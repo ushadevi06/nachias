@@ -245,7 +245,7 @@ $showPrice     = in_array('price', $showFields);
                                 </td>
                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;">
                                     <div style="font-size: 11px; line-height: 1.3;">
-                                        {{ $setting->address }}
+                                        {{ $setting->address }} 
                                         <table style="width: 100%; border-collapse: collapse; margin-top: 2px;">
                                             <tr>
                                                 <td style="border: none; padding: 0; width: 45px;">Mobile</td>

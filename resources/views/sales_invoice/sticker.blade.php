@@ -44,7 +44,7 @@
         .row {
             display: flex;
             align-items: baseline;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .lbl {
             font-size: 16px;
@@ -82,7 +82,7 @@
             line-height: 1;
         }
         .val-pcs {
-            font-size: 64px;
+            font-size: 52px;
             font-weight: 900;
             font-family: 'Arial Black', Impact, sans-serif;
             text-align: center;
@@ -90,7 +90,7 @@
             line-height: 1;
         }
         .val-box {
-            font-size: 50px;
+            font-size: 42px;
             font-weight: 900;
             font-family: 'Arial Black', Impact, sans-serif;
             text-align: center;
@@ -106,9 +106,9 @@
             padding-top: 4px;
         }
         .footer {
+            flex-shrink: 0;
             border-top: 2px solid #000;
             padding: 8px 14px 10px;
-            border-radius: 0 0 11px 11px;
         }
         .footer .f1 {
             font-size: 13px;

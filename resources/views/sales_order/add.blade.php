@@ -1259,19 +1259,32 @@ $(document).ready(function () {
     });
 
     function handleGlobalItemSelection(res) {
-        let $targetRow = null;
-        $('.item-row').each(function() {
-            let itemKey = $(this).find('.stock-item-select').val();
-            if (!itemKey || itemKey === "") {
-                $targetRow = $(this);
-                return false;
+        let $existing = $('.item-row').filter(function() {
+            return $(this).find('.sku-input').val() === res.sku &&
+                $(this).find('.size-select').val() == res.size &&
+                $(this).find('select[name*="[color_id]"]').val() == res.color_id;
+        }).first();
+
+        if ($existing.length) {
+            let $qty = $existing.find('.qty-input');
+            let newQty = parseFloat($qty.val()) + 1;
+            let available = parseFloat($existing.find('.available-stock-display').text()) || 0;
+
+            if (newQty > available) {
+                Swal.fire({ icon: 'warning', title: 'Stock Limit', text: 'Only ' + available + ' in stock.', timer: 2000, showConfirmButton: false });
+            } else {
+                $qty.val(newQty).trigger('input');
             }
-        });
-        if (!$targetRow || !$targetRow.length) {
-            createRow();
-            $targetRow = $('.item-row').last();
+            $('#global_item_search').val('').focus();
+            return;
         }
-        populateRowData($targetRow, res);
+
+        let $target = $('.item-row').filter(function() {
+            return !$(this).find('.stock-item-select').val();
+        }).first();
+
+        if (!$target.length) { createRow(); $target = $('.item-row').last(); }
+        populateRowData($target, res);
         $('#global_item_search').focus();
     }
 
