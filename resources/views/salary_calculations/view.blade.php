@@ -74,7 +74,7 @@
         paging: true,
         autoWidth: false,
         searching: true,
-        ordering: true,
+        ordering: false,
         info: true,
         lengthChange: true,
         processing: true,
@@ -87,7 +87,6 @@
         columns: [
             {
                 data: 'checkbox',
-                orderable: false,
                 searchable: false
             },
             {

@@ -69,8 +69,9 @@ class SalaryController extends Controller
                 $query->skip($start)->take($length);
             }
             $salaries = $query->get();
+            // dd($salaries);
             $data = [];
-            $count = $start + 1;
+            $count = 1;
             foreach ($salaries as $salary) {
                 $checkbox = '';
                 if($salary->status == 'Draft') {
