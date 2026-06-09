@@ -1013,7 +1013,6 @@ class JobCardEntryController extends Controller
                                     ->orWhereHas('grnEntryItem.purchaseInvoiceItem.purchaseOrderItem', function ($q2) use ($artNo) {
                                         $q2->where('art_no', $artNo); });
                             });
-
                             $stockCandidates = $query->get();
                             $remainingToDeduct = $totalToDeduct;
                             $weightedCost = 0;
@@ -1043,11 +1042,10 @@ class JobCardEntryController extends Controller
                             $actualDeducted = round($totalToDeduct - $remainingToDeduct, 4);
                             $unitPrice = ($actualDeducted > 0) ? ($weightedCost / $actualDeducted) : 0;
                         }
-
-                        if (isset($itemData['is_manual_price']) && $itemData['is_manual_price'] == 1 && isset($itemData['unit_price'])) {
-                            $unitPrice = floatval($itemData['unit_price']);
-                        }
-
+						$unitPrice = ($actualDeducted > 0) ? ($weightedCost / $actualDeducted) : 0;
+                        if ($unitPrice <= 0 && !empty($itemData['unit_price'])) {
+							$unitPrice = floatval($itemData['unit_price']);
+						}
                         $producedQty = floatval($itemData['produced_qty'] ?? 0);
                         $totalCost = $totalToDeduct * $unitPrice;
                         $costPerPc = ($producedQty > 0) ? ($totalCost / $producedQty) : 0;
@@ -2426,7 +2424,6 @@ class JobCardEntryController extends Controller
         $selectedSleeve = $request->bulk_print ? 'All Sleeves' : $request->sleeve;
 
         $artNo = $issueItem->job_card_article_matrix_id ? JobCardFabricDetail::find($issueItem->job_card_article_matrix_id)->art_no : ($issueItem->rawMaterial->code ?? '');
-
         $labelData = [
             'id' => $id,
             'product_name' => $jobCard->item->name ?? 'SHIRTS',

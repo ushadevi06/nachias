@@ -105,20 +105,48 @@ class HomeController extends Controller
         /* Debtors Outstanding & Aging Report */
         $debtors_aging = DB::table('sales_invoices')
             ->join('customers', 'sales_invoices.customer_id', '=', 'customers.id')
-            ->join('zones', 'customers.zone_id', '=', 'zones.id')
+            ->leftJoin('zones', 'customers.zone_id', '=', 'zones.id')
+            ->leftJoinSub(
+                DB::table('payments')
+                    ->whereNull('deleted_at')
+                    ->where('reference_type', 'Customer Collection')
+                    ->select('reference_id', DB::raw('SUM(amount) as paid_amount'))
+                    ->groupBy('reference_id'),
+                'p',
+                'p.reference_id', '=', 'sales_invoices.id'
+            )
+            ->leftJoin('sales_orders as so_direct', 'so_direct.id', '=', 'sales_invoices.so_id')
+            ->leftJoin('sales_orders as so_json', function($join) {
+                $join->whereRaw('JSON_LENGTH(sales_invoices.so_ids) > 0')
+                    ->whereRaw('so_json.id = JSON_UNQUOTE(JSON_EXTRACT(sales_invoices.so_ids, "$[0]"))');
+            })
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('customers.deleted_at')
-            ->whereNull('zones.deleted_at')
-            ->where('sales_invoices.due_amount', '>', 0)
+            ->whereIn('sales_invoices.invoice_status', ['Unpaid/Credit', 'Partially Paid'])
+            ->whereRaw('(sales_invoices.grand_total - COALESCE(p.paid_amount, 0)) > 0')
+            ->where(function($query) {
+                $query->whereNotNull('sales_invoices.so_id')
+                    ->orWhereRaw('JSON_LENGTH(sales_invoices.so_ids) > 0');
+            })
             ->select(
-                'zones.zone_name',
-                DB::raw('SUM(sales_invoices.due_amount) as total_due'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) <= 30 THEN sales_invoices.due_amount ELSE 0 END) as bucket_30'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) BETWEEN 31 AND 60 THEN sales_invoices.due_amount ELSE 0 END) as bucket_60'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) BETWEEN 61 AND 90 THEN sales_invoices.due_amount ELSE 0 END) as bucket_90'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) > 90 THEN sales_invoices.due_amount ELSE 0 END) as bucket_above_90')
-            )->groupBy('zones.id', 'zones.zone_name')->get();
-        
+                DB::raw('COALESCE(zones.zone_name, "No Zone") as zone_name'),
+                DB::raw('SUM(sales_invoices.grand_total - COALESCE(p.paid_amount, 0)) as total_due'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) <= 30 
+                            THEN (sales_invoices.grand_total - COALESCE(p.paid_amount, 0)) 
+                            ELSE 0 END) as bucket_30'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) BETWEEN 31 AND 60 
+                            THEN (sales_invoices.grand_total - COALESCE(p.paid_amount, 0)) 
+                            ELSE 0 END) as bucket_60'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) BETWEEN 61 AND 90 
+                            THEN (sales_invoices.grand_total - COALESCE(p.paid_amount, 0)) 
+                            ELSE 0 END) as bucket_90'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), sales_invoices.inv_date) > 90 
+                            THEN (sales_invoices.grand_total - COALESCE(p.paid_amount, 0)) 
+                            ELSE 0 END) as bucket_above_90')
+            )
+            ->groupBy('zones.id', 'zones.zone_name')
+            ->get();
+
         /* Creditors Outstanding & Aging Report */
         $creditors_aging = DB::table('purchase_invoices')
             ->join('suppliers', 'purchase_invoices.supplier_id', '=', 'suppliers.id')

@@ -37,6 +37,7 @@ class SalesInvoice extends Model
         'veh_type',
         'lr_no',
         'no_of_box',
+        'hsn_sac',
         'commission_percent',
         'commission_amount',
         'total',

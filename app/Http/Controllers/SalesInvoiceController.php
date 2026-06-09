@@ -168,6 +168,7 @@ class SalesInvoiceController extends Controller
                 'items.*.rate' => 'nullable|numeric|min:0',
                 'items.*.mrp' => 'required|numeric|min:0',
                 'no_of_box' => 'nullable|integer|min:1',
+                'hsn_sac' => 'required|string|max:50',
                 'signature_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'attachment_file' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
             ], [
@@ -183,7 +184,30 @@ class SalesInvoiceController extends Controller
                 'items.*.rate.nullable' => 'This field is optional.',
                 'extra_input' => 'nullable|min:3|max:100',
             ]);
+            if ($request->invoice_status === 'Paid') {
+                $referenceId = $id ?? null;
 
+                if ($referenceId) {
+                    $totalPaid = DB::table('payments')->where('reference_id', $referenceId)->where('reference_type', 'Customer Collection')->whereNull('deleted_at')->sum('amount');
+                } else {
+                    $totalPaid = 0;
+                }
+
+                $grandTotal = (float) $request->grand_total;
+                $balance = $grandTotal - (float) $totalPaid;
+
+                if ($totalPaid <= 0) {
+                    return back()->withInput()->withErrors([
+                        'invoice_status' => 'Cannot set status to Paid. No payments found for this invoice.',
+                    ]);
+                }
+
+                if ($balance > 0) {
+                    return back()->withInput()->withErrors([
+                        'invoice_status' => 'Cannot set status to Paid. Outstanding balance of ' . number_format($balance, 2) . ' still remaining. Total Invoice: ' . number_format($grandTotal, 2) . ', Total Paid: ' . number_format($totalPaid, 2),
+                    ]);
+                }
+            }
             DB::beginTransaction();
             try {
                 $invoiceData = $request->only([
@@ -244,11 +268,12 @@ class SalesInvoiceController extends Controller
                     $invoiceData['received_amount'] = (float)$request->received_amount;
                     $invoice = SalesInvoice::create($invoiceData);
                 }
+                $invoiceId = $invoice->id;
                 foreach ($request->items as $item) {
-                    $invoice = SalesInvoiceItem::updateOrCreate(
+                    SalesInvoiceItem::updateOrCreate(
                         ['id' => $item['id'] ?? null],
                         [
-                            'sales_invoice_id' => $invoice->id,
+                            'sales_invoice_id' => $invoiceId,
                             'sku' => $item['sku'] ?? null,
                             'uom_id' => $item['uom_id'] ?? null,
                             'quantity' => $item['quantity'] ?? 0,
@@ -318,31 +343,43 @@ class SalesInvoiceController extends Controller
     public function getCustomerSalesOrders(Request $request)
     {
         $customerId = $request->customer_id;
+        $currentInvoiceId = $request->invoice_id ?? null;
         if (!$customerId) {
             return response()->json(['success' => false, 'message' => 'Customer ID required']);
         }
 
         $saleOrders = SalesOrder::with(['items'])->where('customer_id', $customerId)->where('status', 'Approved')->orderBy('id', 'desc')->get();
 
-        $data = $saleOrders->map(function($so) {
-            $totalQty = $so->items->sum('qty');
+        $data = $saleOrders->map(function($so) use ($currentInvoiceId) {
+            $totalQty = 0;
+            $invoicedQty = 0;
 
-           $alreadyInvoiced = DB::table('sales_invoices')
-                ->where(function($q) use ($so) {
-                    $q->where('so_id', $so->id)
-                    ->orWhereRaw('JSON_CONTAINS(so_ids, ?)', ['"' . $so->id . '"']);
-                })
-                ->where(function($q) {
-                    $q->whereNull('einvoice_status')
-                    ->orWhere('einvoice_status', '!=', 'cancelled');
-                })
-                ->exists();
-    
-            if ($alreadyInvoiced) {
-                return null;
+            foreach ($so->items as $item) {
+                $totalQty += $item->qty;
+
+                $itemInvoiced = DB::table('sales_invoice_items')
+                    ->join('sales_invoices', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
+                    ->where(function($q) use ($so) {
+                        $q->where('sales_invoices.so_id', $so->id)
+                          ->orWhereRaw('JSON_CONTAINS(sales_invoices.so_ids, ?)', ['"' . $so->id . '"']);
+                    })
+                    ->where('sales_invoice_items.stock_entry_item_id', $item->stock_entry_item_id)
+                    ->where(function($q) {
+                        $q->whereNull('sales_invoices.einvoice_status')
+                          ->orWhere('sales_invoices.einvoice_status', '!=', 'cancelled');
+                    })
+                    ->when($currentInvoiceId, function($q) use ($currentInvoiceId) {
+                        $q->where('sales_invoices.id', '!=', $currentInvoiceId);
+                    })
+                    ->sum('sales_invoice_items.quantity');
+
+                $invoicedQty += $itemInvoiced;
             }
 
-            $pendingQty = $totalQty;
+            $pendingQty = max(0, $totalQty - $invoicedQty);
+            if ($pendingQty <= 0) {
+                return null;
+            }
 
             return [
                 'id'          => $so->id,
@@ -435,6 +472,14 @@ class SalesInvoiceController extends Controller
                         $brandName = $item->brandCategory->name;
                     }
 
+                    $stockQty = 0;
+                    if ($item->stock_entry_item_id) {
+                        $stockQty = DB::table('stock_entry_items')
+                            ->where('id', $item->stock_entry_item_id)
+                            ->whereNull('deleted_at')
+                            ->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                    }
+
                     $itemData = [
                         'brand_id' => $item->brand_cat_id,
                         'brand_name' => $brandName ?: '',
@@ -444,6 +489,7 @@ class SalesInvoiceController extends Controller
                         'uom_id' => $item->uom_id,
                         'uom_code' => $item->uom_id ?: '',
                         'qty' => $pendingQty, 
+                        'stock_qty' => (float)$stockQty,
                         'rate' => $item->rate,
                         'mrp' => $item->mrp ?? 0,
                         'amount' => $item->amount,
@@ -564,6 +610,14 @@ class SalesInvoiceController extends Controller
                 $brandName = $item->brandCategory->name;
             }
 
+            $stockQty = 0;
+            if ($item->stock_entry_item_id) {
+                $stockQty = DB::table('stock_entry_items')
+                    ->where('id', $item->stock_entry_item_id)
+                    ->whereNull('deleted_at')
+                    ->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+            }
+
             return [
                 'brand_id' => $item->brand_cat_id,
                 'brand_name' => $brandName ?: '',
@@ -573,6 +627,7 @@ class SalesInvoiceController extends Controller
                 'uom_id' => $item->uom_id,
                 'uom_code' => $item->uom_id ?: '',
                 'qty' => $item->qty,
+                'stock_qty' => (float)$stockQty,
                 'rate' => $item->rate,
                 'mrp' => $item->mrp ?? 0,
                 'amount' => $item->amount,
@@ -621,6 +676,30 @@ class SalesInvoiceController extends Controller
         $newStatus = $request->status;
         $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
 
+        if ($newStatus === 'Paid') {
+            $totalPaid = DB::table('payments')->where('reference_id', $id)->where('reference_type', 'Customer Collection')->whereNull('deleted_at')->sum('amount');
+
+            $balance = $invoice->grand_total - $totalPaid;
+
+            if ($balance > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot mark as Paid. Outstanding balance of ' . number_format($balance, 2) . ' still remaining. Total Invoice: ' . number_format($invoice->grand_total, 2) . ', Total Paid: ' . number_format($totalPaid, 2),
+                ], 422);
+            }
+        }
+        if (in_array($newStatus, ['Paid', 'Partially Paid', 'Unpaid/Credit'])) {
+            $totalPaid = DB::table('payments')->where('reference_id', $id)->where('reference_type', 'Customer Collection')->whereNull('deleted_at')->sum('amount');
+            $balance = $invoice->grand_total - $totalPaid;
+
+            if ($totalPaid <= 0) {
+                $newStatus = 'Unpaid/Credit';
+            } elseif ($balance <= 0) {
+                $newStatus = 'Paid';
+            } else {
+                $newStatus = 'Partially Paid';
+            }
+        }
         $oldData = $invoice->toArray();
         $invoice->invoice_status = $newStatus;
         $invoice->save();
