@@ -12,3 +12,7 @@ ALTER TABLE `purchase_order_items` CHANGE `rate` `rate` DECIMAL(15,2) NULL DEFAU
 ALTER TABLE `purchase_order_items` CHANGE `amount` `amount` DECIMAL(15,2) NULL;
 ALTER TABLE `purchase_order_items` CHANGE `rate` `rate` DECIMAL(15,2) NULL DEFAULT '0.00';
 ALTER TABLE `purchase_order_items` CHANGE `amount` `amount` DECIMAL(15,2) NULL DEFAULT '0.00';
+
+
+ALTER TABLE `nachias`.`salary_generations` ADD COLUMN `lop_amount` DECIMAL(10,2) NOT NULL AFTER `late_hours`;
+

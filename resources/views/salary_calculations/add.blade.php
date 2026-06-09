@@ -95,6 +95,7 @@
                                                 <th>Bus Fare</th>
                                                 <th>PF</th>
                                                 <th>ESI</th>
+                                                <th>LOP</th>
                                                 <th>Other Deduction</th>
                                                 <th>Salary Advance</th>
                                                 <th>Late Hrs</th>
@@ -194,6 +195,11 @@
                                                     <td>
                                                         <input type="text" readonly class="form-control esi"
                                                             value="{{ $salary->esi ?? 0 }}">
+                                                    </td>
+                                                    {{-- LOP Amount --}}
+                                                    <td>
+                                                        <input type="text" readonly class="form-control lop_amount"
+                                                            value="{{ $salary->lop_amount ?? 0 }}">
                                                     </td>
                                                     {{-- Other Deduction --}}
                                                     <td>
@@ -436,6 +442,13 @@
                         <input type="text"
                             class="form-control esi"
                             value="${item.esi}" readonly>
+                    </td>
+
+                    <!-- ESI -->
+                    <td>
+                        <input type="text"
+                            class="form-control lop_amount"
+                            value="${item.lop_amount}" readonly>
                     </td>
 
                     <!-- Other Deduction -->

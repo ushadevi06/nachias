@@ -9,6 +9,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\MonthlyPayrollExport;
 
 class SalaryController extends Controller
 {
@@ -234,6 +236,7 @@ class SalaryController extends Controller
                     'oa'               => 0,
                     'ot_hours'         => 0,
                     'overtime_amount'  => 0,
+                    'lop_amount'       => 0,
                     'incentive'        => 0,
                     'misc'             => 0,
                     'bus_fare'         => 0,
@@ -252,6 +255,7 @@ class SalaryController extends Controller
                 continue;
             }
             $otHours = 0;
+            $otDays = 0;
             foreach ($attendance as $att) {
                 if ($att->in_time && $att->out_time) {
                     $inTime = Carbon::parse($att->in_time);
@@ -272,20 +276,25 @@ class SalaryController extends Controller
                     }
                 }
             }
+            $otDays = $otHours / 8;
             $fixedGross = $employee->fixed_gross ?? 0;
             $basic = ($fixedGross * 50) / 100;
             $hra    = ($fixedGross * 20) / 100;
             $da     = ($fixedGross * 20) / 100;
             $oa     = ($fixedGross * 10) / 100;
-            $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)
+            /* $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)
                 ->whereMonth('issue_date', $monthNumber)
                 ->whereYear('issue_date', $year)
-                ->sum('total_cost') ?? 0;
-            $misc = 0;
+                ->sum('total_cost') ?? 0; */
+            $incentive = 0;
+            $misc = $employee->bus_fare
+            ? $otDays * $employee->bus_fare
+            : 0;
             $salaryAdvance = 0;
             $otherDeduction = 0;
+            $workingDays = $presentDays - $otDays;
             $busFare = $employee->bus_fare
-                ? $presentDays * $employee->bus_fare
+                ? $workingDays * $employee->bus_fare
                 : 0;
             $perDaySalary = $fixedGross / $totalDays;
             $perHourSalary = $perDaySalary / 8;
@@ -338,6 +347,7 @@ class SalaryController extends Controller
                 'oa'               => round($oa, 2),
                 'ot_hours'         => round($otHours, 2),
                 'overtime_amount'  => round($otAmount, 2),
+                'lop_amount'       => round($lopAmount, 2),
                 'incentive'        => round($incentive, 2),
                 'misc'             => round($misc, 2),
                 'bus_fare'         => round($busFare, 2),
@@ -418,6 +428,7 @@ class SalaryController extends Controller
                         'pf'              => $row['pf'],
                         'esi'             => $row['esi'],
                         'salary_advance'  => $row['salary_advance'],
+                        'lop_amount'      => $row['lop_amount'],
                         'gross_salary'    => $row['gross_salary'],
                         'net_salary'      => $row['net_salary'],
                         'updated_at'      => now()
@@ -457,6 +468,7 @@ class SalaryController extends Controller
                     'late_fine'        => $row['late_fine'],
                     'gross_salary'     => $row['gross_salary'],
                     'total_deduction'  => $row['total_deduction'],
+                    'lop_amount'      => $row['lop_amount'],
                     'net_salary'       => $row['net_salary'],
                     'status'           => 'Draft',
                     'created_at'       => now(),
@@ -653,10 +665,18 @@ class SalaryController extends Controller
         $startDate = $date->copy()->startOfMonth()->toDateString();
         $endDate = $date->copy()->endOfMonth()->toDateString();
         $totalDays = $date->daysInMonth;
-        $totHolidays = DB::table('declared_holidays')
+        $sundays = 0;
+        for ($day = 1; $day <= $totalDays; $day++) {
+            $currentDate = Carbon::create($year, $monthNumber, $day);
+            if ($currentDate->isSunday()) {
+                $sundays++;
+            }
+        }
+        $holidays = DB::table('declared_holidays')
             ->whereMonth('date', $monthNumber)
             ->whereYear('date', $year)
             ->count();
+        $totHolidays = $sundays + $holidays;
         $employees = DB::table('users')
             ->where('id', '!=', 1)
             ->where(function ($q) use ($search) {
@@ -710,6 +730,7 @@ class SalaryController extends Controller
                 continue;
             }
             $otHours = 0;
+            $otDays = 0;
             foreach ($attendance as $att) {
                 if ($att->in_time && $att->out_time) {
                     $inTime = Carbon::parse($att->in_time);
@@ -728,6 +749,7 @@ class SalaryController extends Controller
                     }
                 }
             }
+            $otDays = $otHours / 8; 
             $fixedGross = $employee->fixed_gross ?? 0;
             $basic = ($fixedGross * 50) / 100;
             $hra   = ($fixedGross * 20) / 100;
@@ -738,16 +760,20 @@ class SalaryController extends Controller
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
             $grossSalary = $fixedGross - $lopAmount;
-            $incentive = DB::table('task_assign_employees')
+            /* $incentive = DB::table('task_assign_employees')
                 ->where('issued_to', $employee->id)
                 ->whereMonth('issue_date', $monthNumber)
                 ->whereYear('issue_date', $year)
-                ->sum('total_cost') ?? 0;
-            $misc = 0;
+                ->sum('total_cost') ?? 0; */
+            $incentive = 0;
+            $misc = $employee->bus_fare
+            ? $otDays * $employee->bus_fare
+            : 0;
             $otherDeduction = 0;
             $salaryAdvance = 0;
+            $workingDays = $presentDays - $otDays;
             $busFare = $employee->bus_fare
-                ? $presentDays * $employee->bus_fare
+                ? $workingDays * $employee->bus_fare
                 : 0;
             $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
             $wage = $basic + $da;
@@ -762,13 +788,15 @@ class SalaryController extends Controller
                 }
             }
             $freePermissionHours = 2;
-            $lateHours = 0;
             $lateFine = 0;
             if ($totalPermissionHours > $freePermissionHours) {
                 $lateHours = $totalPermissionHours - $freePermissionHours;
-                $lateFine = $lateHours * $perHourSalary;
+            } else {
+                $lateHours = $totalPermissionHours;
             }
+            $lateFine = $lateHours * $perHourSalary;
             $totalDeduction = $pf + $esi + $otherDeduction + $salaryAdvance + $lateFine;
+            $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
             $netSalary = $totalEarnings - $totalDeduction;
             $payroll[] = [
                 'employee_id'      => $employee->emp_id,
@@ -786,8 +814,8 @@ class SalaryController extends Controller
                 'ot_hours'         => round($otHours, 2),
                 'overtime_amount'  => round($otAmount, 2),
                 'incentive'        => 0,
-                'misc'             => 0,
-                'bus_fare'         => 0,
+                'misc'             => round($misc, 2),
+                'bus_fare'         => round($busFare, 2),
                 'pf'               => round($pf, 2),
                 'esi'              => round($esi, 2),
                 'other_deduction'  => 0,
@@ -805,5 +833,22 @@ class SalaryController extends Controller
             'status' => true,
             'payroll' => $payroll
         ]);
+    }
+    public function exportExcel(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view monthly-payroll')) {
+            return unauthorizedRedirect();
+        }
+
+        $month = $request->month;
+
+        if (!$month) {
+            return back()->with('error', 'Please select a month.');
+        }
+
+        return Excel::download(
+            new MonthlyPayrollExport($month),
+            'monthly_payroll_' . $month . '.xlsx'
+        );
     }
 }

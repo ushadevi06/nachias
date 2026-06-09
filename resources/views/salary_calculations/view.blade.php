@@ -6,9 +6,21 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Monthly Payroll</h4>
-                <a class="btn btn-primary" href="{{ url('add_monthly_payroll') }}">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
+                <div class="d-flex gap-2">
+                    <input type="month"
+                        id="filter_month"
+                        class="form-control">
+
+                    <button type="button"
+                            id="exportPayroll"
+                            class="btn btn-outline-success">
+                        <i class="ri ri-file-excel-2-line"></i> Export
+                    </button>
+                    <a class="btn btn-primary"
+                    href="{{ url('add_monthly_payroll') }}">
+                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                    </a>
+                </div>
             </div>
             @if(request()->success)
                 <div class="alert alert-success alert-dismissible fade show"
@@ -155,6 +167,14 @@
             'checked',
             $(this).prop('checked')
         );
+    });
+    $('#exportPayroll').click(function () {
+        let month = $('#filter_month').val();
+        if (!month) {
+            alert('Please select Month/Year');
+            return;
+        }
+        window.location.href = "{{ route('monthly-payroll.export') }}?month=" + month;
     });
     $('#generatePdfBtn').click(function () {
         let button = $(this);

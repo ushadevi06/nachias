@@ -658,6 +658,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/download-payslip/{id}', [SalaryController::class, 'downloadPayslip'])
     ->name('download.payslip');
     Route::get('/salary-generation/search', [SalaryController::class, 'searchSalaryGeneration'])->name('salary-generation.search');
+    Route::get('/monthly-payroll-export', [SalaryController::class, 'exportExcel'])
+    ->name('monthly-payroll.export');
 
     /* Payroll Report */
     Route::get('payroll_reports', [PayrollReportController::class, 'index']);
