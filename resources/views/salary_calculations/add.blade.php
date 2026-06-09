@@ -42,7 +42,7 @@
                                 <h5 class="mb-0">Monthly Salary Generation</h5>
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="fw-bold text-nowrap text-success">
-                                        Total Days: <span id="total_days">30</span>
+                                        Total Days: <span id="total_days">0</span>
                                     </div>
                                     <input type="month"
                                         id="salary_month"
@@ -255,6 +255,7 @@
 @section('scripts')
 <script>
     $(document).ready(function () {
+        updateTotalDays();
         let allPayrollData = [];
         let currentPage = 1;
         const perPage = 10;
@@ -757,18 +758,20 @@
             row.find('.late_fine').val(lateFine.toFixed(2));
             row.find('.net_salary').val(net.toFixed(2));
         });
+        $(document).on('change', '#salary_month', function () {
+            updateTotalDays();
+        });
         function updateTotalDays() {
-            let monthValue = document.getElementById('salary_month').value;
-
+            let monthValue = $('#salary_month').val();
             if (!monthValue) {
-                document.getElementById('total_days').innerText = '0';
+                $('#total_days').text('0');
                 return;
             }
-
-            let [year, month] = monthValue.split('-');
+            let parts = monthValue.split('-');
+            let year = parseInt(parts[0]);
+            let month = parseInt(parts[1]);
             let totalDays = new Date(year, month, 0).getDate();
-
-            document.getElementById('total_days').innerText = totalDays;
+            $('#total_days').text(totalDays);
         }
         let searchTimer;
         $('#employeeSearch').on('keyup', function () {
@@ -790,11 +793,6 @@
                     }
                 });
             }, 300);
-        });
-        document.addEventListener('DOMContentLoaded', function () {
-            updateTotalDays();
-            document.getElementById('salary_month')
-                .addEventListener('change', updateTotalDays);
         });
     });
 </script>
