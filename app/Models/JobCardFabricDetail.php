@@ -12,14 +12,19 @@ class JobCardFabricDetail extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'job_card_entry_id', 'art_no', 
-        'width', 'mtr', 'in_out', 'n_patti', 'row_total',
+        'job_card_entry_id', 'art_no', 'stock_entry_id',
+        'width', 'mtr', 'stock_total_qty', 'in_out', 'n_patti', 'row_total',
         'fs_qty', 'hs_qty', 'total_qty', 'used_qty', 'remaining_qty', 'grn_image'
     ];
 
     public function jobCardEntry()
     {
         return $this->belongsTo(JobCardEntry::class);
+    }
+
+    public function stockEntry()
+    {
+        return $this->belongsTo(StockEntry::class, 'stock_entry_id');
     }
 
     public function quantities()

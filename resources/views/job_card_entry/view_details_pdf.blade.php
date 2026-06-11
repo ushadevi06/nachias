@@ -513,7 +513,7 @@
         <tr>
             <td class="bg-light fw-bold">Issue Meter</td>
             @foreach($fabricDetails as $detail)
-                <td class="text-center">{{ (int) $detail->mtr ?: '-' }}</td>
+                <td class="text-center">{{ $detail->mtr ?: '-' }}</td>
             @endforeach
         </tr>
         <tr>

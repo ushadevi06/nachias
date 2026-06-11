@@ -134,7 +134,7 @@
                                 <table class="table table-hover table-bordered table-sm align-middle text-nowrap" id="main-items-table">
                                     <thead class="bg-primary">
                                         <tr>
-                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Item</th><th>Description</th><th>Art</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Remaining Qty</th><th>Unit Price</th><th>Status</th>
+                                            <th>Action</th><th>Line#</th><th>Store</th><th>Location</th><th>Art</th><th>Qty/UOM</th><th>UOM</th><th>Qty To Issue</th><th>Qty Wastage</th><th>Qty Used</th><th>Qty Adjusted</th><th>Produced Qty</th><th>Remaining Qty</th><th>Unit Price</th><th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -148,14 +148,62 @@
                                                 $total_qty = $item->quantities->sum('total_qty'); 
                                                 $produced_qty = $total_qty; 
                                                 $savedItem = $issueItemMap[$item->id] ?? null;
-                                                $itemDisplayName = $jobCard->brand->brand_name ?? '-';
-                                                $itemDescription = $jobCard->brand->code ?? '-';
+                                                
+                                                $allPOItems = $jobCard->purchaseOrder?->items;
+                                                if (!$allPOItems && $item->art_no) {
+                                                    $grnItem = \App\Models\GrnEntryItem::where('art_no', $item->art_no)->whereHas('purchaseInvoiceItem.purchaseOrderItem')->first();
+                                                    $allPOItems = $grnItem?->purchaseInvoiceItem?->purchaseOrderItem?->purchaseOrder?->items;
+                                                }
+                                                $matchingPOItem = $allPOItems ? (
+                                                    $allPOItems->where('store_category_id', 1)->whereNotNull('style_id')->first() 
+                                                    ?: $allPOItems->whereNotNull('style_id')->first() 
+                                                    ?: $allPOItems->first()
+                                                ) : null;
+
+                                                $style = '';
+                                                if ($item->art_no) {
+                                                    $stockEntryItem = \App\Models\StockEntryItem::with('style')->where('art_no', $item->art_no)->whereNotNull('style_id')->first();
+                                                    $style = $stockEntryItem?->style?->code ?? ''; 
+                                                }
+                                                if (!$style) {
+                                                    $style = $matchingPOItem?->style?->code ?? $allPOItems?->whereNotNull('style_id')->first()?->style?->code ?? '';
+                                                }
+
+                                                $brandCode = $jobCard->brand->code ?? '';
+                                                $brandName = $jobCard->brand->brand_name ?? '';
+                                                $artNo = $item->art_no;
+                                                $displayStyle = $style ?: $artNo;
+
+                                                $hasFs = $item->quantities->where('qty_fs', '>', 0)->count() > 0;
+                                                $hasHs = $item->quantities->where('qty_hs', '>', 0)->count() > 0;
+
+                                                $displayItems = [];
+                                                $displayDescriptions = [];
+
+                                                if ($hasFs) {
+                                                    $displayItems[] = trim($brandCode . '-' . $displayStyle . '-F/S', '-');
+                                                    $displayDescriptions[] = trim($brandName . ' ' . $style . ' F/S');
+                                                }
+                                                if ($hasHs) {
+                                                    $displayItems[] = trim($brandCode . '-' . $displayStyle . '-H/S', '-');
+                                                    $displayDescriptions[] = trim($brandName . ' ' . $style . ' H/S');
+                                                }
+
+                                                if (empty($displayItems)) {
+                                                    $itemDisplayName = $brandCode ?: '-';
+                                                    $itemDescription = $brandName ?: '-';
+                                                    $itemDisplayNamePlain = $brandCode ?: '-';
+                                                } else {
+                                                    $itemDisplayName = implode('<br>', $displayItems);
+                                                    $itemDescription = implode('<br>', $displayDescriptions);
+                                                    $itemDisplayNamePlain = implode(' / ', $displayItems);
+                                                }
                                             @endphp
                                             <tr data-line="{{ $lineNum }}">
                                                 <td>
                                                     <button type="button" class="btn btn-sm btn-icon edit-item-btn text-primary" data-bs-toggle="modal" data-bs-target="#editItemModal"
                                                         data-store="{{ $jobCard->issueStore->store_type_name ?? '-' }}" 
-                                                        data-item="{{ $itemDisplayName }}" 
+                                                        data-item="{{ $itemDisplayNamePlain }}" 
                                                         data-art="{{ $item->art_no }}" 
                                                         data-uom="{{ $uomName }}" 
                                                         data-qty-issue="{{ $savedItem->qty_issue ?? $item->mtr }}" 
@@ -173,21 +221,24 @@
                                                         <i class="ri ri-edit-line"></i>
                                                     </button>
                                                     @if($savedItem)
-                                                        <a href="{{ route('job_card_entries.barcode_matrix', $savedItem->id) }}" class="btn btn-sm btn-icon text-success" title="Print Barcode">
+                                                        <a href="{{ route('job_card_entries.barcode_matrix', $savedItem->id) }}" class="btn btn-sm btn-icon text-success" title="Print Barcode" target="_blank">
                                                             <i class="ri ri-barcode-line"></i>
                                                         </a>
                                                     @else
-                                                        <button type="button" class="btn btn-sm btn-icon print-barcode-btn text-success d-none" data-id="" title="Print Barcode">
+                                                        <a href="#" class="btn btn-sm btn-icon print-barcode-btn text-success d-none" title="Print Barcode" target="_blank">
                                                             <i class="ri ri-barcode-line"></i>
-                                                        </button>
+                                                        </a>
                                                     @endif
                                                 </td>
                                                 <td>{{ $lineNum++ }}</td>
                                                 <td>{{ $jobCard->issueStore->store_type_name ?? '-' }}</td>
                                                 <td>{{ $locationName }}</td>
-                                                <td>{{ $itemDisplayName }}</td>
-                                                <td>{{ $itemDescription }}</td>
-                                                <td class="fw-bold">{{ $item->art_no }}</td>
+                                                <td class="fw-bold">
+                                                    {{ $item->art_no }}
+                                                    @if($item->stockEntry)
+                                                        <br><small class="text-info">{{ $item->stockEntry->stock_entry_no }}</small>
+                                                    @endif
+                                                </td>
                                                 <td>1</td><td>{{ $uomName }}</td>
                                                 <td><p class="mb-0 col-qty-issue text-end">{{ $savedItem->qty_issue ?? $item->mtr }}</p></td>
                                                 <td><p class="mb-0 col-qty-wastage text-end">{{ $savedItem->qty_wastage ?? '0.00' }}</p></td>
@@ -289,7 +340,12 @@
                                                         </div>
                                                     @endif
                                                 </td>
-                                                <td class="fw-bold">{{ $item->art_no }}</td>
+                                                <td class="fw-bold">
+                                                    {{ $item->art_no }}
+                                                    @if($item->stockEntry)
+                                                        <br><small class="text-info">{{ $item->stockEntry->stock_entry_no }}</small>
+                                                    @endif
+                                                </td>
                                                 <td class="text-center text-primary fw-bold">{{ $item->mtr > 0 ? number_format($item->mtr, 2) : ($calcQty > 0 ? number_format($calcQty, 2) : '-') }}</td>
                                                 <td>{{ $uomName }}</td>
                                                 <td class="text-end col-qty-issue">{{ number_format($defaultQty, 2) }}</td>
@@ -685,9 +741,9 @@ $(document).ready(function() {
                             currentRow.find('.status-badge').removeClass('bg-label-info').addClass('bg-label-success').text('COMPLETED');
                             
                             if (itemData.id) {
-                                const printUrl = "{{ url('job_card_entries/print-label') }}/" + itemData.id;
-                                currentRow.find('.print-barcode-btn').attr('href', printUrl).removeClass('d-none');
-                            }
+                                 const printUrl = "{{ url('job_card_entries/barcode-matrix') }}/" + itemData.id;
+                                 currentRow.find('.print-barcode-btn').attr('href', printUrl).removeClass('d-none');
+                             }
 
                             if (response.total_price !== undefined) {
                                 $('#summary-price-fs').text(parseFloat(response.total_price).toLocaleString(undefined, {minimumFractionDigits: 2}));

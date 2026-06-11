@@ -90,16 +90,16 @@
 
     <table class="metadata-table">
         <tr>
-            <td class="label">Printed On:</td>
+            <td class="label" style="width: 120px;">Printed On:</td>
             <td>{{ now()->format('d/m/Y H:i') }}</td>
-            <td style="text-align: right;" class="label">Page:</td>
-            <td style="text-align: left; width: 50px;">1/1</td>
+            <td class="label" style="text-align: right; width: 80px;">Page:</td>
+            <td style="text-align: right; width: 120px;">1/1</td>
         </tr>
         <tr>
             <td class="label">Work Order No:</td>
             <td class="value">{{ $jobCard->job_card_no }}</td>
             <td class="label" style="text-align: right;">Item:</td>
-            <td class="value" style="text-align: left;">{{ $jobCard->brand->brand_name ?? 'N/A' }}</td>
+            <td class="value" style="text-align: right;">{{ $jobCard->brand->brand_name ?? 'N/A' }}</td>
         </tr>
         <tr>
             <td class="label">Date:</td>

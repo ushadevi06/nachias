@@ -52,7 +52,7 @@
                                 <i class="ri ri-printer-line me-1"></i> Bulk Print All Sizes
                             </a>
                             <span class="badge bg-label-info px-3 py-2 me-2">ART: {{ $issueItem->fabricDetail->art_no ?? $issueItem->rawMaterial->code ?? '-' }}</span>
-                            <span class="badge bg-label-secondary px-3 py-2">COLOR: {{ $issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-' }}</span>
+                            <span class="badge bg-label-secondary px-3 py-2">COLOR: {{ $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-') }}</span>
                         </div>
                     </div>
                 </div>

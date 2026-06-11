@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', ($id ? 'Edit' : 'Add') . ' State - ' . env('WEBSITE_NAME', 'States Management'))
+@section('title', ($id ? 'Edit' : 'Add') . ' State - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row justify-content-center">
@@ -18,7 +18,7 @@
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('state_name') is-invalid @enderror" id="state-name" name="state_name" placeholder="Enter State Name" value="{{ old('state_name', $state->state_name ?? '') }}">
-                                    <label for="state-name">State Name *</label>
+                                    <label for="state-name">State Name <span class="text-danger">*</span></label>
                                     @error('state_name')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -27,7 +27,7 @@
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('state_code') is-invalid @enderror" id="state-code" name="state_code" placeholder="Enter State Code" value="{{ old('state_code', $state->state_code ?? '') }}">
-                                    <label for="state-code">State Code *</label>
+                                    <label for="state-code">State Code <span class="text-danger">*</span></label>
                                     @error('state_code')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -40,7 +40,7 @@
                                         <option value="Active" {{ old('status', $state->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
                                         <option value="Inactive" {{ old('status', $state->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
-                                    <label for="status">Status *</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                     @error('status')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

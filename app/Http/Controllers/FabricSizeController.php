@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\FabricSize;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class FabricSizeController extends Controller
 {

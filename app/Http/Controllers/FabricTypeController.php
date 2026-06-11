@@ -5,7 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\FabricType;
 use App\Models\Item;
 use App\Models\RawMaterial;
+use App\Models\PurchaseOrderItem;
+use App\Models\GrnEntryItem;
+use App\Models\JobCardEntry;
+use App\Models\StockEntryItem;
+use App\Models\BarcodeMaster;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class FabricTypeController extends Controller

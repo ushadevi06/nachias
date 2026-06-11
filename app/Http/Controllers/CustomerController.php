@@ -302,9 +302,7 @@ class CustomerController extends Controller
 
     public function downloadSample()
     {
-        $headers = [
-            'Name with Code', 'Email', 'Phone', 'Address', 'State', 'City'
-        ];
+        $headers = ['Category','Code', 'Name', 'Mobile Number','Email','Website URL','State','City','Place','Address','Zip Code','Transport Name','Booking Office','Zone','Contact Person Name','Contact Mobile No','Contact Email','Status','GST No','Payment Terms'];
 
         $callback = function() use ($headers) {
             $file = fopen('php://output', 'w');

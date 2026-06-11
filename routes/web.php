@@ -528,6 +528,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/get-sizes/{id}', [JobCardEntryController::class, 'getSizes'])->name('job_card_entries.get_sizes');
     Route::get('job_card_entries/barcode-matrix/{id}', [JobCardEntryController::class, 'barcodeMatrix'])->name('job_card_entries.barcode_matrix');
     Route::get('job_card_entries/barcode-preview/{id}', [JobCardEntryController::class, 'barcodePreview'])->name('job_card_entries.barcode_preview');
+    Route::get('job_card_entries/fix-legacy', [JobCardEntryController::class, 'fixLegacyJobCards'])->name('job_card_entries.fix_legacy');
 
     /* Task Management */
     Route::get('task_management', [TaskManagementController::class, 'index']);

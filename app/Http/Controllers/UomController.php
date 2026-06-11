@@ -84,7 +84,7 @@ class UomController extends Controller
                 return unauthorizedRedirect();
             }
         }
-        $uom = $id ? Uom::findOrFail($id) : null;
+        $uom = $id ? Uom::findOrFail($id) : new Uom();
         $oldData = $id ? $uom->toArray() : null;
 
         if (request()->isMethod('post')) {

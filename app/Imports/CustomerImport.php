@@ -26,7 +26,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
-            if (!isset($row['name']) && !isset($row['code']) && !isset($row['mobile_number']) && !isset($row['name_with_code'])) {
+            if (empty($row['name']) && empty($row['code']) && empty($row['mobile_number'])) {
                 continue;
             }
             $stateId = null;
@@ -122,8 +122,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 
                 if (!$zoneId || $zoneId == -1) {
                     $firstZone = Zone::active()->whereRaw("FIND_IN_SET(?, city_ids)", [$cityId])->first();
-                    $zoneId = $firstZone ? $firstZone->id : -1;
-                    if ($zoneId == -1) $errors[] = "Row {$rowNumber}: No zone found for City '{$row['city']}'.";
+                    $zoneId = $firstZone ? $firstZone->id : null;
                 }
             }
 
@@ -175,12 +174,12 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 'code' => 'required|string|min:2|max:50|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'mobile_no' => 'required|numeric|digits_between:10,15|unique:customers,mobile_no,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:customers,email,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
-                'zone_id' => 'required',
+                'zone_id' => 'nullable',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required',
                 'city_id' => 'required',
                 'place_id' => 'required',
-                'address_line_1' => 'required|string|min:3|max:150',
+                'address_line_1' => 'nullable|string|min:3|max:150',
             ]);
 
             if (!empty($data['code'])) {

@@ -3,1017 +3,1017 @@
 @use('App\Models\StockEntry')
 @section('content')
 
-            @php
-    $matrixRows = old('article_matrix', $jobCard ? $jobCard->fabricDetails->toArray() : []);
-    $matrixItems = old('matrix_items', $jobCard ? $jobCard->cuttingSizeRatios->toArray() : []);
+    @php
+        $matrixRows = old('article_matrix', $jobCard ? $jobCard->fabricDetails->toArray() : []);
+        $matrixItems = old('matrix_items', $jobCard ? $jobCard->cuttingSizeRatios->toArray() : []);
 
-    $dynamicSizes = [];
-    foreach ($matrixItems as $item) {
-        if (!empty($item['size'])) {
-            $dynamicSizes[] = $item['size'];
-        }
-    }
-
-    $sizes = !empty($dynamicSizes) ? array_values(array_unique($dynamicSizes)) : ['36', '38', '40', '42', '44'];
-    sort($sizes, SORT_NUMERIC);
-    $ratios = [];
-    foreach ($sizes as $s) {
-        $found = false;
+        $dynamicSizes = [];
         foreach ($matrixItems as $item) {
-            if (($item['size'] ?? '') == $s) {
-                $ratios[] = $item['ratio'] ?? '';
-                $found = true;
-                break;
+            if (!empty($item['size'])) {
+                $dynamicSizes[] = $item['size'];
             }
         }
-        if (!$found)
-            $ratios[] = '';
-    }
 
-    $fabrics = old('fabrics', $jobCard ? $jobCard->fabricDetails->toArray() : []);
-
-    $activeFs = [];
-    $activeHs = [];
-    foreach ($matrixItems as $item) {
-        $s = $item['size'] ?? '';
-        if ($s) {
-            if ((float) ($item['qty_fs'] ?? 0) > 0)
-                $activeFs[] = $s;
-            if ((float) ($item['qty_hs'] ?? 0) > 0)
-                $activeHs[] = $s;
+        $sizes = !empty($dynamicSizes) ? array_values(array_unique($dynamicSizes)) : ['36', '38', '40', '42', '44'];
+        sort($sizes, SORT_NUMERIC);
+        $ratios = [];
+        foreach ($sizes as $s) {
+            $found = false;
+            foreach ($matrixItems as $item) {
+                if (($item['size'] ?? '') == $s) {
+                    $ratios[] = $item['ratio'] ?? '';
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found)
+                $ratios[] = '';
         }
-    }
 
-    $activeFs = array_values(array_unique($activeFs));
-    sort($activeFs, SORT_NUMERIC);
-    $activeHs = array_values(array_unique($activeHs));
-    sort($activeHs, SORT_NUMERIC);
+        $fabrics = old('fabrics', $jobCard ? $jobCard->fabricDetails->toArray() : []);
 
-    $processGroupName = strtoupper(old('process_group_display', $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : ''));
-    $hasFS = empty($processGroupName) || str_contains($processGroupName, 'F/S') || str_contains($processGroupName, 'FULL');
-    $hasHS = empty($processGroupName) || str_contains($processGroupName, 'H/S') || str_contains($processGroupName, 'HALF');
+        $activeFs = [];
+        $activeHs = [];
+        foreach ($matrixItems as $item) {
+            $s = $item['size'] ?? '';
+            if ($s) {
+                if ((float) ($item['qty_fs'] ?? 0) > 0)
+                    $activeFs[] = $s;
+                if ((float) ($item['qty_hs'] ?? 0) > 0)
+                    $activeHs[] = $s;
+            }
+        }
 
-    $showMatrix = $jobCard || !empty(old('article_matrix')) || !empty($activeFs) || !empty($activeHs);
-    $hasPo = $jobCard || !empty(old('purchase_order_id'));
+        $activeFs = array_values(array_unique($activeFs));
+        sort($activeFs, SORT_NUMERIC);
+        $activeHs = array_values(array_unique($activeHs));
+        sort($activeHs, SORT_NUMERIC);
 
-    $existingImages = $jobCard ? $jobCard->images : collect();
-    $grnImageMap = $grnImageMap ?? [];
-            @endphp
-            <div class="container-xxl section-padding">
-                <div class="row">
+        $processGroupName = strtoupper(old('process_group_display', $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : ''));
+        $hasFS = empty($processGroupName) || str_contains($processGroupName, 'F/S') || str_contains($processGroupName, 'FULL');
+        $hasHS = empty($processGroupName) || str_contains($processGroupName, 'H/S') || str_contains($processGroupName, 'HALF');
+
+        $showMatrix = $jobCard || !empty(old('article_matrix')) || !empty($activeFs) || !empty($activeHs);
+        $hasPo = $jobCard || !empty(old('purchase_order_id'));
+
+        $existingImages = $jobCard ? $jobCard->images : collect();
+        $grnImageMap = $grnImageMap ?? [];
+    @endphp
+    <div class="container-xxl section-padding">
+        <div class="row">
+            <div class="col-lg-12">
+                <form action="{{ url('job_card_entries/add/' . ($jobCard ? $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
+                    @csrf
                     <div class="col-lg-12">
-                        <form action="{{ url('job_card_entries/add/' . ($jobCard ? $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
-                            @csrf
-                            <div class="col-lg-12">
-                                @include('flash_messages')
+                        @include('flash_messages')
+                    </div>
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="card-header-box">
+                                <h4>{{ $jobCard ? 'Edit' : 'Add' }} Job Card Entry</h4>
                             </div>
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <div class="card-header-box">
-                                        <h4>{{ $jobCard ? 'Edit' : 'Add' }} Job Card Entry</h4>
+                            <div class="row g-4">   
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="brand" name="brand_id" class="form-select select2" data-placeholder="Select Brand">
+                                            <option value="">Select Brand</option>
+                                            @foreach($brands as $brand)
+                                                <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="brand">Brand * </label>
                                     </div>
-                                    <div class="row g-4">   
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="brand" name="brand_id" class="form-select select2" data-placeholder="Select Brand">
-                                                    <option value="">Select Brand</option>
-                                                    @foreach($brands as $brand)
-                                                        <option value="{{ $brand->id }}" {{ (old('brand_id', $jobCard ? $jobCard->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="brand">Brand * </label>
-                                            </div>
-                                            @error('brand_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                    @error('brand_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control" id="job_card_no" placeholder="Enter Job Card Number" name="job_card_no" value="{{ old('job_card_no', $jobCard ? $jobCard->job_card_no : '') }}">
+                                        <label for="job_card_no">Job Card Number * </label>
+                                    </div>
+                                    @error('job_card_no') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="input-group">
+                                        <div class="form-floating form-floating-outline" style="position: relative;">
+                                            <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off" {{ $hasTasks ? 'readonly' : '' }}>
+                                            <label for="stock_entry_search">Type Stock Entry No or Material Name</label>
                                         </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" id="job_card_no" placeholder="Enter Job Card Number" name="job_card_no" value="{{ old('job_card_no', $jobCard ? $jobCard->job_card_no : '') }}">
-                                                <label for="job_card_no">Job Card Number * </label>
-                                            </div>
-                                            @error('job_card_no') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="input-group">
-                                                <div class="form-floating form-floating-outline" style="position: relative;">
-                                                    <input type="text" id="stock_entry_search" class="form-control" placeholder="Type Stock Entry No or Material Name" autocomplete="off" {{ $hasTasks ? 'readonly' : '' }}>
-                                                    <label for="stock_entry_search">Type Stock Entry No or Material Name</label>
-                                                </div>
-                                            </div>
-                                            <div id="stock-entry-tags" class="mt-2 d-flex flex-wrap gap-1"></div>
-                                            <div id="fabric-validation-error" class="text-danger small fw-bold mt-2" style="display: none;"></div>
-                                            <div id="stock-entry-hidden-inputs">
-                                                @php
-                                                    $rawOldStockEntryIds = old('stock_entry_ids', $jobCard ? $jobCard->stock_entry_ids : []);
-
-                                                    if (is_string($rawOldStockEntryIds)) {
-                                                        $decoded = json_decode($rawOldStockEntryIds, true);
-                                                        $oldStockEntryIds = is_array($decoded) ? $decoded : [];
-                                                    } else {
-                                                        $oldStockEntryIds = is_array($rawOldStockEntryIds) ? $rawOldStockEntryIds : [];
-                                                    }
-                                                @endphp
-                                                @if(!empty($oldStockEntryIds))
-                                                    @foreach($oldStockEntryIds as $seId)
-                                                        <input type="hidden" name="stock_entry_ids[]" value="{{ $seId }}">
-                                                    @endforeach
-                                                @endif
-                                            </div>
-                                            @error('stock_entry_ids') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
+                                    </div>
+                                    <div id="stock-entry-tags" class="mt-2 d-flex flex-wrap gap-1"></div>
+                                    <div id="fabric-validation-error" class="text-danger small fw-bold mt-2" style="display: none;"></div>
+                                    <div id="stock-entry-hidden-inputs">
                                         @php
-                                            $initialEntries = [];
-                                            if (!empty($oldStockEntryIds)) {
-                                                $rawIds = $oldStockEntryIds;
-                                                $seIds = [];
-                                                $filters = [];
-                                                foreach ($rawIds as $combinedId) {
-                                                    if (is_string($combinedId) && strpos($combinedId, '::') !== false) {
-                                                        list($seId, $target) = explode('::', $combinedId, 2);
-                                                        $seIds[] = $seId;
-                                                        if (strpos($target, '|') !== false) {
-                                                            list($type, $val) = explode('|', $target, 2);
-                                                            $filters[$seId][] = ['type' => $type, 'val' => $val, 'combined' => $combinedId];
-                                                        }
-                                                    } else {
-                                                        $seIds[] = $combinedId;
-                                                    }
+                                            $rawOldStockEntryIds = old('stock_entry_ids', $jobCard ? $jobCard->stock_entry_ids : []);
+
+                                            if (is_string($rawOldStockEntryIds)) {
+                                                $decoded = json_decode($rawOldStockEntryIds, true);
+                                                $oldStockEntryIds = is_array($decoded) ? $decoded : [];
+                                            } else {
+                                                $oldStockEntryIds = is_array($rawOldStockEntryIds) ? $rawOldStockEntryIds : [];
+                                            }
+                                        @endphp
+                                        @if(!empty($oldStockEntryIds))
+                                            @foreach($oldStockEntryIds as $seId)
+                                                <input type="hidden" name="stock_entry_ids[]" value="{{ $seId }}">
+                                            @endforeach
+                                        @endif
+                                    </div>
+                                    @error('stock_entry_ids') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                @php
+                                    $initialEntries = [];
+                                    if (!empty($oldStockEntryIds)) {
+                                        $rawIds = $oldStockEntryIds;
+                                        $seIds = [];
+                                        $filters = [];
+                                        foreach ($rawIds as $combinedId) {
+                                            if (is_string($combinedId) && strpos($combinedId, '::') !== false) {
+                                                list($seId, $target) = explode('::', $combinedId, 2);
+                                                $seIds[] = $seId;
+                                                if (strpos($target, '|') !== false) {
+                                                    list($type, $val) = explode('|', $target, 2);
+                                                    $filters[$seId][] = ['type' => $type, 'val' => $val, 'combined' => $combinedId];
                                                 }
+                                            } else {
+                                                $seIds[] = $combinedId;
+                                            }
+                                        }
 
-                                                if (!empty($seIds)) {
-                                                    $issuedQtys = [];
-                                                    if ($jobCard) {
-                                                        $issuedQtys = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->with('fabricDetail')->get()
-                                                            ->groupBy(function ($item) {
-                                                                return $item->fabricDetail->art_no ?? '';
-                                                            })->map(function ($items) {
-                                                                return $items->sum('qty_issue');
-                                                            })->toArray();
+                                        if (!empty($seIds)) {
+                                            $issuedQtys = [];
+                                            if ($jobCard) {
+                                                $issuedQtys = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->with('fabricDetail')->get()
+                                                    ->groupBy(function ($item) {
+                                                        return $item->fabricDetail->art_no ?? '';
+                                                    })->map(function ($items) {
+                                                        return $items->sum('qty_issue');
+                                                    })->toArray();
+                                            }
+
+                                            $stockEntries = StockEntry::with('stockEntryItems.rawMaterial', 'stockEntryItems.uom')->whereIn('id', array_unique($seIds))->get();
+
+                                            foreach ($stockEntries as $se) {
+                                                if (!isset($filters[$se->id])) {
+                                                    $names = [];
+                                                    $qtys = [];
+                                                    $artNos = [];
+                                                    foreach ($se->stockEntryItems as $item) {
+                                                        if ($item->art_no && !in_array($item->art_no, $artNos)) {
+                                                            $artNos[] = $item->art_no;
+                                                        }
+                                                        $name = 'Unknown';
+                                                        if ($item->raw_material_id && $item->rawMaterial) {
+                                                            $name = $item->rawMaterial->name;
+                                                        } elseif ($item->item_id && $item->item) {
+                                                            $name = $item->item->name;
+                                                        } elseif ($item->art_no) {
+                                                            $name = $item->art_no;
+                                                        }
+
+                                                        if (!in_array($name, $names)) {
+                                                            $names[] = $name;
+                                                        }
+                                                        $uom = $item->uom->uom_code ?? '';
+                                                        $alreadyIssued = (float) ($issuedQtys[$item->art_no ?? ''] ?? 0);
+                                                        $netQty = ($item->qty_in - ($item->qty_out ?? 0) + $alreadyIssued);
+
+                                                        if (!isset($qtys[$uom])) {
+                                                            $qtys[$uom] = 0;
+                                                        }
+                                                        $qtys[$uom] += $netQty;
                                                     }
+                                                    $nameStr = implode(', ', $names);
+                                                    $artNoStr = implode(', ', $artNos);
+                                                    $qtyStrs = [];
+                                                    foreach ($qtys as $uom => $qty) {
+                                                        $qtyStrs[] = round($qty, 3) . ' ' . $uom;
+                                                    }
+                                                    $initialEntries[] = [
+                                                        'id' => $se->id,
+                                                        'text' => $se->stock_entry_no . ($artNoStr ? ' | ' . $artNoStr : '') . ' | ' . $nameStr . ' | Qty: ' . implode(', ', $qtyStrs),
+                                                    ];
+                                                } else {
+                                                    $addedCombos = [];
+                                                    foreach ($filters[$se->id] as $f) {
+                                                        if (in_array($f['combined'], $addedCombos))
+                                                            continue;
 
-                                                    $stockEntries = StockEntry::with('stockEntryItems.rawMaterial', 'stockEntryItems.uom')->whereIn('id', array_unique($seIds))->get();
+                                                        $name = 'Unknown';
+                                                        $artNo = '';
+                                                        $uom = '';
+                                                        $netQty = 0;
+                                                        foreach ($se->stockEntryItems as $item) {
+                                                            $match = false;
+                                                            if ($f['type'] === 'rm' && $item->raw_material_id == $f['val']) {
+                                                                $name = $item->rawMaterial->name ?? 'Unknown';
+                                                                $artNo = $item->art_no;
+                                                                $match = true;
+                                                            }
+                                                            if ($f['type'] === 'item' && $item->item_id == $f['val']) {
+                                                                $name = $item->item->name ?? 'Unknown';
+                                                                $artNo = $item->art_no;
+                                                                $match = true;
+                                                            }
+                                                            if ($f['type'] === 'art' && $item->art_no == $f['val']) {
+                                                                $name = $item->rawMaterial->name ?? ($item->item->name ?? $item->art_no);
+                                                                $artNo = $item->art_no;
+                                                                $match = true;
+                                                            }
 
-                                                    foreach ($stockEntries as $se) {
-                                                        if (!isset($filters[$se->id])) {
-                                                            $names = [];
-                                                            $qtys = [];
-                                                            $artNos = [];
-                                                            foreach ($se->stockEntryItems as $item) {
-                                                                if ($item->art_no && !in_array($item->art_no, $artNos)) {
-                                                                    $artNos[] = $item->art_no;
-                                                                }
-                                                                $name = 'Unknown';
-                                                                if ($item->raw_material_id && $item->rawMaterial) {
-                                                                    $name = $item->rawMaterial->name;
-                                                                } elseif ($item->item_id && $item->item) {
-                                                                    $name = $item->item->name;
-                                                                } elseif ($item->art_no) {
-                                                                    $name = $item->art_no;
-                                                                }
-
-                                                                if (!in_array($name, $names)) {
-                                                                    $names[] = $name;
-                                                                }
+                                                            if ($match) {
                                                                 $uom = $item->uom->uom_code ?? '';
                                                                 $alreadyIssued = (float) ($issuedQtys[$item->art_no ?? ''] ?? 0);
-                                                                $netQty = ($item->qty_in - ($item->qty_out ?? 0)) + $alreadyIssued;
-
-                                                                if (!isset($qtys[$uom])) {
-                                                                    $qtys[$uom] = 0;
-                                                                }
-                                                                $qtys[$uom] += $netQty;
-                                                            }
-                                                            $nameStr = implode(', ', $names);
-                                                            $artNoStr = implode(', ', $artNos);
-                                                            $qtyStrs = [];
-                                                            foreach ($qtys as $uom => $qty) {
-                                                                $qtyStrs[] = round($qty, 3) . ' ' . $uom;
-                                                            }
-                                                            $initialEntries[] = [
-                                                                'id' => $se->id,
-                                                                'text' => $se->stock_entry_no . ($artNoStr ? ' | ' . $artNoStr : '') . ' | ' . $nameStr . ' | Qty: ' . implode(', ', $qtyStrs),
-                                                            ];
-                                                        } else {
-                                                            $addedCombos = [];
-                                                            foreach ($filters[$se->id] as $f) {
-                                                                if (in_array($f['combined'], $addedCombos))
-                                                                    continue;
-
-                                                                $name = 'Unknown';
-                                                                $artNo = '';
-                                                                $uom = '';
-                                                                $netQty = 0;
-                                                                foreach ($se->stockEntryItems as $item) {
-                                                                    $match = false;
-                                                                    if ($f['type'] === 'rm' && $item->raw_material_id == $f['val']) {
-                                                                        $name = $item->rawMaterial->name ?? 'Unknown';
-                                                                        $artNo = $item->art_no;
-                                                                        $match = true;
-                                                                    }
-                                                                    if ($f['type'] === 'item' && $item->item_id == $f['val']) {
-                                                                        $name = $item->item->name ?? 'Unknown';
-                                                                        $artNo = $item->art_no;
-                                                                        $match = true;
-                                                                    }
-                                                                    if ($f['type'] === 'art' && $item->art_no == $f['val']) {
-                                                                        $name = $item->rawMaterial->name ?? ($item->item->name ?? $item->art_no);
-                                                                        $artNo = $item->art_no;
-                                                                        $match = true;
-                                                                    }
-
-                                                                    if ($match) {
-                                                                        $uom = $item->uom->uom_code ?? '';
-                                                                        $alreadyIssued = (float) ($issuedQtys[$item->art_no ?? ''] ?? 0);
-                                                                        $netQty += ($item->qty_in - ($item->qty_out ?? 0)) + $alreadyIssued;
-                                                                    }
-                                                                }
-                                                                $initialEntries[] = [
-                                                                    'id' => $f['combined'],
-                                                                    'text' => $se->stock_entry_no . ($artNo ? ' | ' . $artNo : '') . ' | ' . $name . ' | Qty: ' . round($netQty, 3) . ' ' . $uom
-                                                                ];
-                                                                $addedCombos[] = $f['combined'];
+                                                                $netQty += ($item->qty_in - ($item->qty_out ?? 0) + $alreadyIssued);
                                                             }
                                                         }
+                                                        $initialEntries[] = [
+                                                            'id' => $f['combined'],
+                                                            'text' => $se->stock_entry_no . ($artNo ? ' | ' . $artNo : '') . ' | ' . $name . ' | Qty: ' . round($netQty, 3) . ' ' . $uom
+                                                        ];
+                                                        $addedCombos[] = $f['combined'];
                                                     }
                                                 }
                                             }
-                                        @endphp
-                                        <script>
-                                            window._initialStockEntries = @json($initialEntries);
-                                        </script>
-                                        <input type="hidden" name="purchase_order_id" value="{{ old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') }}">
-                                        <input type="hidden" name="fabric_type_id" id="fabric_type_id" value="{{ old('fabric_type_id', $jobCard ? $jobCard->fabric_type_id : '') }}">
-                                        <input type="hidden" name="sleeve_instances" id="sleeve_instances_json" value="{{ old('sleeve_instances', ($jobCard && $jobCard->sleeve_instances) ? json_encode($jobCard->sleeve_instances) : '[]') }}">
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="plant" name="service_provider_id" class="form-select select2" data-placeholder="Select Plant">
-                                                    <option value="">Select Plant</option>
-                                                    @foreach($plants as $plant)
-                                                        <option value="{{ $plant->id }}" {{ (old('service_provider_id', $jobCard ? $jobCard->service_provider_id : '') == $plant->id) ? 'selected' : '' }}>
-                                                            {{ $plant->name }} ({{ $plant->code }})
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="plant">Plant *</label>
-                                            </div>
-                                            @error('service_provider_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                        }
+                                    }
+                                @endphp
+                                <script>
+                                    window._initialStockEntries = @json($initialEntries);
+                                </script>
+                                <input type="hidden" name="purchase_order_id" value="{{ old('purchase_order_id', $jobCard ? $jobCard->purchase_order_id : '') }}">
+                                <input type="hidden" name="fabric_type_id" id="fabric_type_id" value="{{ old('fabric_type_id', $jobCard ? $jobCard->fabric_type_id : '') }}">
+                                <input type="hidden" name="sleeve_instances" id="sleeve_instances_json" value="{{ old('sleeve_instances', ($jobCard && $jobCard->sleeve_instances) ? json_encode($jobCard->sleeve_instances) : '[]') }}">
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="plant" name="service_provider_id" class="form-select select2" data-placeholder="Select Plant">
+                                            <option value="">Select Plant</option>
+                                            @foreach($plants as $plant)
+                                                <option value="{{ $plant->id }}" {{ (old('service_provider_id', $jobCard ? $jobCard->service_provider_id : '') == $plant->id) ? 'selected' : '' }}>
+                                                    {{ $plant->name }} ({{ $plant->code }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <label for="plant">Plant *</label>
+                                    </div>
+                                    @error('service_provider_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="issue_store" name="issue_store_id" class="form-select select2" data-placeholder="Select Issue Store">
+                                            <option value="">Select Issue Store</option>
+                                            @foreach($storeTypes as $st)
+                                                <option value="{{ $st->id }}" {{ (old('issue_store_id', $jobCard ? $jobCard->issue_store_id : '') == $st->id) ? 'selected' : '' }}>
+                                                    {{ $st->store_type_name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <label for="issue_store">Issue Store *</label>
+                                    </div>
+                                    @error('issue_store_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <label class="mb-2">Washing</label>
+                                    <div class="d-flex gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="washing" id="washing_yes" value="Yes" {{ (old('washing', $jobCard ? $jobCard->washing : '') == 'Yes') ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="washing_yes">Yes</label>
                                         </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="issue_store" name="issue_store_id" class="form-select select2" data-placeholder="Select Issue Store">
-                                                    <option value="">Select Issue Store</option>
-                                                    @foreach($storeTypes as $st)
-                                                        <option value="{{ $st->id }}" {{ (old('issue_store_id', $jobCard ? $jobCard->issue_store_id : '') == $st->id) ? 'selected' : '' }}>
-                                                            {{ $st->store_type_name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="issue_store">Issue Store *</label>
-                                            </div>
-                                            @error('issue_store_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="washing" id="washing_no" value="No" {{ (old('washing', $jobCard ? $jobCard->washing : 'No') == 'No') ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="washing_no">No</label>
                                         </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <label class="mb-2">Washing</label>
-                                            <div class="d-flex gap-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="washing" id="washing_yes" value="Yes" {{ (old('washing', $jobCard ? $jobCard->washing : '') == 'Yes') ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="washing_yes">Yes</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="washing" id="washing_no" value="No" {{ (old('washing', $jobCard ? $jobCard->washing : 'No') == 'No') ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="washing_no">No</label>
-                                                </div>
-                                            </div>
-                                            @error('washing') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control form-control issue_date" placeholder="Enter Issue Date" name="issue_date" value="{{ old('issue_date', $jobCard ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '') }}" />
-                                                <label for="issue_date">Issue Date * </label>
-                                            </div>
-                                            @error('issue_date') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control form-control delivery_date" placeholder="Enter Delivery Date" name="delivery_date" value="{{ old('delivery_date', $jobCard ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '') }}" />
-                                                <label for="delivery_date">Delivery Date * </label>
-                                            </div>
-                                            @error('delivery_date') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" id="no_of_days_display" placeholder="No of Days" readonly value="{{ old('no_of_days', $jobCard ? $jobCard->no_of_days : '') }}">
-                                                <input type="hidden" name="no_of_days" id="no_of_days" value="{{ old('no_of_days', $jobCard ? $jobCard->no_of_days : '') }}">
-                                                <label for="no_of_days_display">No of Days (Auto)</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" id="width" placeholder="Enter Width" name="width" value="{{ old('width', $jobCard ? $jobCard->width : '') }}">
-                                                <label for="width">Width</label>
-                                            </div>
-                                            @error('width') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <input type="hidden" id="total_qty_fs" name="total_qty_fs" value="{{ old('total_qty_fs', $jobCard ? $jobCard->total_qty_fs : '') }}">
-                                        <input type="hidden" id="total_qty_hs" name="total_qty_hs" value="{{ old('total_qty_hs', $jobCard ? $jobCard->total_qty_hs : '') }}">
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="season" name="season_id" class="form-select select2" data-placeholder="Select Season Code">
-                                                    <option value="">Select Season Code</option>
-                                                    @foreach($seasons as $season)
-                                                        <option value="{{ $season->id }}" {{ (old('season_id', $jobCard ? $jobCard->season_id : '') == $season->id) ? 'selected' : '' }}>{{ $season->name }}({{ $season->season_code }})
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="season">Season Code</label>
-                                            </div>
-                                            @error('season_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="receipt_store_id" name="receipt_store_id" class="form-select select2" data-placeholder="Select Receipt Store">
-                                                    <option value="">Select Receipt Store</option>
-                                                    @foreach($storeTypes as $st)
-                                                        <option value="{{ $st->id }}" {{ (old('receipt_store_id', $jobCard ? $jobCard->receipt_store_id : '') == $st->id) ? 'selected' : '' }}>{{ $st->store_type_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="receipt_store_id">Receipt Store *</label>
-                                            </div>
-                                            @error('receipt_store_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="input-group">
-                                                <div class="form-floating form-floating-outline" data-bs-toggle="modal" data-bs-target="#processGroupModal" style="cursor: pointer;">
-                                                    <input type="text" id="process_group_display" name="process_group_display" class="form-control" placeholder="Select Process Group" readonly value="{{ old('process_group_display', $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : '') }}" style="cursor: pointer;">
-                                                    <input type="hidden" id="process_group_id" name="process_group_id" value="{{ old('process_group_id', $jobCard ? $jobCard->process_group_id : '') }}">
-                                                    <label for="process_group_display">Process Group *</label>
-                                                </div>
-                                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#processGroupModal" id="processGroupBtn">
-                                                    <i class="ri ri-search-line"></i>
-                                                </button>
-                                            </div>
-                                            @if($jobCard)
-                                            <small class="text-muted"><i class="ri ri-information-line"></i> Process Group is read-only when editing</small>
-                                            @endif
-                                            @error('process_group_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" class="form-control" id="reference_no" placeholder="Enter Reference No" name="reference_no" value="{{ old('reference_no', $jobCard ? $jobCard->reference_no : '') }}">
-                                                <label for="reference_no">Reference No * </label>
-                                            </div>
-                                            @error('reference_no') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="job_card_type" name="job_card_type" class="form-select select2"
-                                                    data-placeholder="Select Job Card Type">
-                                                    <option value="">Select Job Card Type</option>
-                                                    @foreach(['Regular', 'Urgent', 'Sample', 'Special Order'] as $type)
-                                                        <option value="{{ $type }}" {{ (old('job_card_type', $jobCard ? $jobCard->job_card_type : 'Regular') == $type) ? 'selected' : '' }}>{{ $type }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="job_card_type">Job Card Type *</label>
-                                            </div>
-                                            @error('job_card_type') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="status" name="status" class="form-select select2" data-placeholder="Select Status">
-                                                    <option value="">Select Status</option>
-                                                    <option value="Production Hold" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Hold') ? 'selected' : '' }}>Production Hold</option>
-                                                    <option value="Production In Progress" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production In Progress') ? 'selected' : '' }}>Production In Progress</option>
-                                                    <option value="Production Completed" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Completed') ? 'selected' : '' }}>Production Completed</option>
-                                                </select>
-                                                <label for="status">Status *</label>
-                                            </div>
-                                            <script>
-                                                document.addEventListener('DOMContentLoaded', function() {
-                                                    setTimeout(() => {
-                                                        if ($('#status').hasClass('select2-hidden-accessible')) {
-                                                            $('#status').val('{{ old('status', $jobCard ? $jobCard->status : '') }}').trigger('change');
-                                                        }
-                                                    }, 500);
-                                                });
-                                            </script>
-                                            @error('status') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <textarea id="remarks" name="remarks" class="form-control" placeholder="Enter Remarks">{{ old('remarks', $jobCard ? $jobCard->remarks : '') }}</textarea>
-                                                <label for="remarks">Remarks</label>
-                                            </div>
-                                            @error('remarks') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline text-black">
-                                                <input type="file" class="form-control" id="attachment" name="attachment" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv">
-                                                @if($jobCard && $jobCard->attachment)
-                                                    <div class="mt-2 d-flex align-items-center gap-2">
-                                                        <a href="{{ url($jobCard->attachment) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                            <i class="ri ri-attachment-line me-1"></i> View Attachment
-                                                        </a>
-                                                    </div>
-                                                @endif
-                                                <label for="formFile" class="form-label">Reference Document</label>
-                                                <small class="text-muted d-block mt-1">Max file size: 5MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX, XLS, XLSX, CSV</small>
-                                                @error('attachment') <span class="text-danger">{{ $message }}</span> @enderror
-                                            </div>
-                                        </div>
+                                    </div>
+                                    @error('washing') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control form-control issue_date" placeholder="Enter Issue Date" name="issue_date" value="{{ old('issue_date', $jobCard ? date('d-m-Y', strtotime($jobCard->job_card_date)) : '') }}" />
+                                        <label for="issue_date">Issue Date * </label>
+                                    </div>
+                                    @error('issue_date') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control form-control delivery_date" placeholder="Enter Delivery Date" name="delivery_date" value="{{ old('delivery_date', $jobCard ? date('d-m-Y', strtotime($jobCard->delivery_date)) : '') }}" />
+                                        <label for="delivery_date">Delivery Date * </label>
+                                    </div>
+                                    @error('delivery_date') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control" id="no_of_days_display" placeholder="No of Days" readonly value="{{ old('no_of_days', $jobCard ? $jobCard->no_of_days : '') }}">
+                                        <input type="hidden" name="no_of_days" id="no_of_days" value="{{ old('no_of_days', $jobCard ? $jobCard->no_of_days : '') }}">
+                                        <label for="no_of_days_display">No of Days (Auto)</label>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="card mb-4" id="item-details-card">
-                                <div class="card-body">
-                                    <div class="card-header-box mb-3 d-flex justify-content-between align-items-center">
-                                        <h4 class="mb-0">Item Details</h4>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control" id="width" placeholder="Enter Width" name="width" value="{{ old('width', $jobCard ? $jobCard->width : '') }}">
+                                        <label for="width">Width</label>
                                     </div>
-                                    <div id="item-details-table-wrapper" class="table-responsive d-none">
-                                        <h6 class="text-primary mt-2">Fabric</h6>
-                                        <table class="table table-bordered table-sm align-middle mb-4" id="item-details-fabric-table">
-                                            <thead class="bg-primary">
-                                                <tr>
-                                                    <th class="text-center" style="width: 50px;">S.No</th>
-                                                    <th>Raw Material Name</th>
-                                                    <th class="text-center" style="width: 150px;">Total Quantity</th>
-                                                    <th class="text-center" style="width: 180px;">Quantity Issued</th>
-                                                    <th class="text-center" style="width: 150px;">Quantity Remaining</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="item-details-fabric-tbody">
-                                            </tbody>
-                                        </table>
-
-                                        <h6 class="text-primary mt-2">Accessories</h6>
-                                        <table class="table table-bordered table-sm align-middle" id="item-details-accessories-table">
-                                            <thead class="bg-primary">
-                                                <tr>
-                                                    <th class="text-center" style="width: 50px;">S.No</th>
-                                                    <th>Raw Material Name</th>
-                                                    <th class="text-center" style="width: 150px;">Total Quantity</th>
-                                                    <th class="text-center" style="width: 180px;">Quantity Issued</th>
-                                                    <th class="text-center" style="width: 150px;">Quantity Remaining</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="item-details-accessories-tbody">
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div id="no-materials-msg" class="text-center py-4 bg-light rounded text-muted">
-                                        <i class="ri-information-line fs-3 d-block mb-2 text-primary"></i>
-                                        <span id="no-material-text">Please select a Stock Entry Number to fetch material details.</span>
-                                    </div>
+                                    @error('width') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
-                            </div>
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <div class="card-header-box">
-                                        <h4>Tailoring Specification</h4>
+                                <input type="hidden" id="total_qty_fs" name="total_qty_fs" value="{{ old('total_qty_fs', $jobCard ? $jobCard->total_qty_fs : '') }}">
+                                <input type="hidden" id="total_qty_hs" name="total_qty_hs" value="{{ old('total_qty_hs', $jobCard ? $jobCard->total_qty_hs : '') }}">
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="season" name="season_id" class="form-select select2" data-placeholder="Select Season Code">
+                                            <option value="">Select Season Code</option>
+                                            @foreach($seasons as $season)
+                                                <option value="{{ $season->id }}" {{ (old('season_id', $jobCard ? $jobCard->season_id : '') == $season->id) ? 'selected' : '' }}>{{ $season->name }}({{ $season->season_code }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <label for="season">Season Code</label>
                                     </div>
-                                    <div class="row g-4">
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="fit" name="fit_id" class="form-select select2" data-placeholder="Select Fit">
-                                                    <option value="">Select Fit</option>
-                                                    @foreach($fits as $fit)
-                                                        <option value="{{ $fit->id }}" {{ (old('fit_id', $jobCard ? $jobCard->fit_id : '') == $fit->id) ? 'selected' : '' }}>{{ $fit->fit_name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="fit">Fit</label>
-                                            </div>
-                                            @error('fit_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="patti_type" name="patti_type_id" class="form-select select2" data-placeholder="Select Patti Type">
-                                                    <option value="">Select Patti Type</option>
-                                                    @foreach($pattiTypes as $type)
-                                                        <option value="{{ $type->id }}" {{ (old('patti_type_id', $jobCard ? $jobCard->patti_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->patti_type_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="patti_type">Patti Type</label>
-                                            </div>
-                                            @error('patti_type_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="collar_type" name="collar_type_id" class="form-select select2" data-placeholder="Select Collar Type">
-                                                    <option value="">Select Collar Type</option>
-                                                    @foreach($collarTypes as $type)
-                                                        <option value="{{ $type->id }}" {{ (old('collar_type_id', $jobCard ? $jobCard->collar_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->collar_type_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="collar_type">Collar Type</label>
-                                            </div>
-                                            @error('collar_type_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="cuff_type" name="cuff_type_id" class="form-select select2" data-placeholder="Select Cuff Type">
-                                                    <option value="">Select Cuff Type</option>
-                                                    @foreach($cuffTypes as $type)
-                                                        <option value="{{ $type->id }}" {{ (old('cuff_type_id', $jobCard ? $jobCard->cuff_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->cuff_type_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="cuff_type">Cuff Type</label>
-                                            </div>
-                                            @error('cuff_type_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="pocket_type" name="pocket_type_id" class="form-select select2" data-placeholder="Select Pocket Type">
-                                                    <option value="">Select Pocket Type</option>
-                                                    @foreach($pocketTypes as $type)
-                                                        <option value="{{ $type->id }}" {{ (old('pocket_type_id', $jobCard ? $jobCard->pocket_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->pocket_type_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="pocket_type">Pocket Type</label>
-                                            </div>
-                                            @error('pocket_type_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-4">
-                                            <div class="form-floating form-floating-outline">
-                                                <select id="bottom_cut" name="bottom_cut_id" class="form-select select2" data-placeholder="Select Bottom Cut">
-                                                    <option value="">Select Bottom Cut</option>
-                                                    @foreach($bottomCuts as $type)
-                                                        <option value="{{ $type->id }}" {{ (old('bottom_cut_id', $jobCard ? $jobCard->bottom_cut_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->bottom_cut_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <label for="bottom_cut">Bottom Cut</label>
-                                            </div>
-                                            @error('bottom_cut_id') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                    </div>
+                                    @error('season_id') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
-                            </div>
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <div class="card-header-box d-flex justify-content-between align-items-center">
-                                        <h4>Production Stages</h4>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-stage-row">
-                                            <i class="ri ri-add-line"></i> Add Stage
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="receipt_store_id" name="receipt_store_id" class="form-select select2" data-placeholder="Select Receipt Store">
+                                            <option value="">Select Receipt Store</option>
+                                            @foreach($storeTypes as $st)
+                                                <option value="{{ $st->id }}" {{ (old('receipt_store_id', $jobCard ? $jobCard->receipt_store_id : '') == $st->id) ? 'selected' : '' }}>{{ $st->store_type_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="receipt_store_id">Receipt Store *</label>
+                                    </div>
+                                    @error('receipt_store_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="input-group">
+                                        <div class="form-floating form-floating-outline" data-bs-toggle="modal" data-bs-target="#processGroupModal" style="cursor: pointer;">
+                                            <input type="text" id="process_group_display" name="process_group_display" class="form-control" placeholder="Select Process Group" readonly value="{{ old('process_group_display', $jobCard && $jobCard->processGroup ? $jobCard->processGroup->name : '') }}" style="cursor: pointer;">
+                                            <input type="hidden" id="process_group_id" name="process_group_id" value="{{ old('process_group_id', $jobCard ? $jobCard->process_group_id : '') }}">
+                                            <label for="process_group_display">Process Group *</label>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#processGroupModal" id="processGroupBtn">
+                                            <i class="ri ri-search-line"></i>
                                         </button>
                                     </div>
-
-                                    <div class="table-responsive">
-                                        <table class="table" id="production-stages-table">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Stage *</th>
-                                                    <th>Issue Unit (Plant) *</th>
-                                                    <th>Rate *</th>
-                                                    <th>Issue Date *</th>
-                                                    <th>Deadline Date *</th>
-                                                    <th>Remarks</th>
-                                                    <th>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @php
-                                                    $existingStages = old('production_stages', $jobCard ? $jobCard->operations->toArray() : []);
-                                                @endphp
-                                                @if(!empty($existingStages))
-                                                    @foreach($existingStages as $index => $stage)
-                                                        <tr class="stage-row">
-                                                            <td>
-                                                                <select name="production_stages[{{ $index }}][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
-                                                                    <option value="">Select Stage</option>
-                                                                    @foreach($operationStages as $os)
-                                                                        <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ ($stage['stage_id'] ?? $stage['operation_stage_id'] ?? '') == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                                @error('production_stages.' . $index . '.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
-                                                                    <option value="">Select Unit</option>
-                                                                    @foreach($plants as $p)
-                                                                        <option value="{{ $p->id }}" {{ ($stage['service_provider_id'] ?? '') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                                @error('production_stages.' . $index . '.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="number" name="production_stages[{{ $index }}][rate]" class="form-control stage-rate" value="{{ $stage['rate'] ?? '' }}" step="0.01" placeholder="0.00">
-                                                                @error('production_stages.' . $index . '.rate') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="text" name="production_stages[{{ $index }}][issue_date]" class="form-control issue-date" value="{{ !empty($stage['issue_date']) ? $stage['issue_date'] : (!empty($stage['assigned_date']) ? date('d-m-Y', strtotime($stage['assigned_date'])) : '') }}" placeholder="Enter Issue Date">
-                                                                @error('production_stages.' . $index . '.issue_date') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <input type="text" name="production_stages[{{ $index }}][deadline_date]" class="form-control deadline-date" value="{{ !empty($stage['deadline_date']) ? date('d-m-Y', strtotime($stage['deadline_date'])) : '' }}" placeholder="Enter Deadline Date">
-                                                                @error('production_stages.' . $index . '.deadline_date') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                            </td>
-                                                            <td>
-                                                                <textarea name="production_stages[{{ $index }}][remarks]" class="form-control" placeholder="Enter Remarks">{{ $stage['remarks'] ?? '' }}</textarea>
-                                                            </td>
-                                                            <td>
-                                                                <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
-                                                               @if($jobCard && (auth()->id() == 1 || auth()->user()->can('assign-task job-card')))
-                                                                @php
-                                                                    $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
-                                                                    $taskData = $stageTaskStatus[$currentStageId] ?? null;
-                                                                    $hasTask = !empty($taskData);
-
-                                                                    $taskStatus = $taskData['status'] ?? null;
-                                                                    $taskNo = $taskData['task_no'] ?? null;
-                                                                    $previousStage = $existingStages[$index - 1] ?? null;
-                                                                    $previousStageId = $previousStage['stage_id'] ?? $previousStage['operation_stage_id'] ?? null;
-                                                                    if ($index > 0) {
-                                                                        $previousTaskAssigned = !empty($stageTaskStatus[$previousStageId]);
-                                                                    } else {
-                                                                        $previousTaskAssigned = true;
-                                                                    }
-                                                                    $canAssignCurrentStage = $previousTaskAssigned && !$hasTask;
-                                                                    $buttonText = $hasTask ? 'Assigned Task (Task: ' . $taskNo . ')' : 'Assign Task';
-
-                                                                    if (!$previousTaskAssigned) {
-                                                                        $buttonTitle = 'Previous stage task not assigned';
-                                                                    } elseif ($hasTask) {
-                                                                        $buttonTitle = "Task already assigned (Status: $taskStatus)";
-                                                                    } else {
-                                                                        $buttonTitle = 'Assign Task';
-                                                                    }
-                                                                @endphp
-                                                                <button type="button" class="btn btn-sm btn-outline-primary assign-task-btn ms-1" title="{{ $buttonTitle }}" {{ !$canAssignCurrentStage ? 'disabled' : '' }}><i class="ri ri-task-line"></i> {{ $buttonText }}</button>
-                                                                @endif
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                @else
-                                                    <tr class="stage-row">
-                                                        <td>
-                                                            <select name="production_stages[0][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
-                                                                <option value="">Select Stage</option>
-                                                                @foreach($operationStages as $os)
-                                                                    <option value="{{ $os->id }}" data-cost="{{ $os->cost }}">{{ $os->operation_stage_name }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                            @error('production_stages.0.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                        </td>
-                                                        <td>
-                                                            <select name="production_stages[0][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
-                                                                <option value="">Select Unit</option>
-                                                                @foreach($plants as $p)
-                                                                    <option value="{{ $p->id }}">{{ $p->name }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                            @error('production_stages.0.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                        </td>
-                                                        <td>
-                                                            <input type="number" name="production_stages[0][rate]" class="form-control stage-rate" value="" step="0.01" placeholder="0.00">
-                                                            @error('production_stages.0.rate') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                        </td>
-                                                        <td>
-                                                            <input type="text" name="production_stages[0][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
-                                                            @error('production_stages.0.issue_date') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                        </td>
-                                                        <td>
-                                                            <input type="text" name="production_stages[0][deadline_date]" class="form-control deadline-date" value="" placeholder="Enter Deadline Date">
-                                                            @error('production_stages.0.deadline_date') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                        </td>
-                                                        <td>
-                                                            <textarea name="production_stages[0][remarks]" class="form-control" placeholder="Enter Remarks"></textarea>
-                                                            @error('production_stages.0.remarks') <span class="text-danger small">{{ $message }}</span> @enderror
-                                                        </td>
-                                                        <td>
-                                                            <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
-                                                        </td>
-                                                    </tr>
-                                                @endif
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    @if($jobCard)
+                                    <small class="text-muted"><i class="ri ri-information-line"></i> Process Group is read-only when editing</small>
+                                    @endif
+                                    @error('process_group_id') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
-                            </div>
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <div class="card-header-box">
-                                        <h4>Cutting Size Ratio</h4>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <input type="text" class="form-control" id="reference_no" placeholder="Enter Reference No" name="reference_no" value="{{ old('reference_no', $jobCard ? $jobCard->reference_no : '') }}">
+                                        <label for="reference_no">Reference No * </label>
                                     </div>
-                                    <div class="row g-4 mb-3">
-                                        <div class="col-md-6 col-xl-4">
-                                            <div id="sleeve-instance-manager" class="p-3 border rounded shadow-sm">
-                                                <label class="d-block mb-2 fw-bold text-primary">Sleeve Configuration</label>
-                                                <div class="d-flex gap-2 mb-3">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary shadow-sm hover-lift" id="add-fs-instance">
-                                                        <i class="ri ri-add-line me-1"></i>  ADD F/S
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-info shadow-sm hover-lift" id="add-hs-instance">
-                                                        <i class="ri ri-add-line me-1"></i>  ADD H/S
-                                                    </button>
-                                                </div>
-
-                                                <div id="sleeve-instance-list" class="d-flex flex-wrap gap-2"></div>
-
-                                                <div id="no-sleeve-msg" class="text-muted small mt-2">
-                                                    <i class="ri ri-information-line me-1"></i> No sleeves added yet.
-                                                </div>
+                                    @error('reference_no') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="job_card_type" name="job_card_type" class="form-select select2"
+                                            data-placeholder="Select Job Card Type">
+                                            <option value="">Select Job Card Type</option>
+                                            @foreach(['Regular', 'Urgent', 'Sample', 'Special Order'] as $type)
+                                                <option value="{{ $type }}" {{ (old('job_card_type', $jobCard ? $jobCard->job_card_type : 'Regular') == $type) ? 'selected' : '' }}>{{ $type }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="job_card_type">Job Card Type *</label>
+                                    </div>
+                                    @error('job_card_type') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="status" name="status" class="form-select select2" data-placeholder="Select Status">
+                                            <option value="">Select Status</option>
+                                            <option value="Production Hold" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Hold') ? 'selected' : '' }}>Production Hold</option>
+                                            <option value="Production In Progress" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production In Progress') ? 'selected' : '' }}>Production In Progress</option>
+                                            <option value="Production Completed" {{ (old('status', $jobCard ? $jobCard->status : '') == 'Production Completed') ? 'selected' : '' }}>Production Completed</option>
+                                        </select>
+                                        <label for="status">Status *</label>
+                                    </div>
+                                    <script>
+                                        document.addEventListener('DOMContentLoaded', function() {
+                                            setTimeout(() => {
+                                                if ($('#status').hasClass('select2-hidden-accessible')) {
+                                                    $('#status').val('{{ old('status', $jobCard ? $jobCard->status : '') }}').trigger('change');
+                                                }
+                                            }, 500);
+                                        });
+                                    </script>
+                                    @error('status') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <textarea id="remarks" name="remarks" class="form-control" placeholder="Enter Remarks">{{ old('remarks', $jobCard ? $jobCard->remarks : '') }}</textarea>
+                                        <label for="remarks">Remarks</label>
+                                    </div>
+                                    @error('remarks') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline text-black">
+                                        <input type="file" class="form-control" id="attachment" name="attachment" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv">
+                                        @if($jobCard && $jobCard->attachment)
+                                            <div class="mt-2 d-flex align-items-center gap-2">
+                                                <a href="{{ url($jobCard->attachment) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <i class="ri ri-attachment-line me-1"></i> View Attachment
+                                                </a>
                                             </div>
-                                            @error('sleeve_types') <span class="text-danger">{{ $message }}</span> @enderror
-                                        </div>
-                                        <div class="col-md-6 col-xl-8">
-                                            <div id="size-selector-container" class="p-3 border rounded shadow-sm">
-                                                <label class="d-block mb-2 fw-bold text-primary">Select Sizes</label>
-                                                <div class="d-flex flex-wrap gap-2" id="size-selector">
-                                                    @foreach(['36','38','40','42','44','46','48','50'] as $sz)
-                                                        <label class="btn btn-sm btn-outline-primary size-toggle-btn {{ in_array($sz, $sizes) ? 'active' : '' }}" style="cursor: pointer;">
-                                                            <input type="checkbox" class="size-checkbox d-none" value="{{ $sz }}" 
-                                                                   {{ in_array($sz, $sizes) ? 'checked' : '' }}> {{ $sz }}
-                                                        </label>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="table-responsive" id="cutting-size-table-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
-                                        <table class="table table-bordered text-center align-middle" id="cutting-size-table">
-                                            <thead>
-                                                <tr>
-                                                    <th rowspan="2" class="align-middle">SIZE</th>
-                                                    <th colspan="{{ count($sizes) }}" class="ratio-header">CUTTING SIZE RATIO</th>
-                                                </tr>
-                                                <tr class="size-header-row">
-                                                    @foreach($sizes as $s)
-                                                        <th class="dynamic-size-head">{{ $s }}</th>
-                                                    @endforeach
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @php
-                                                    $fsInfoLabel = str_contains($processGroupName, 'OTHERS') ? 'QTY - F/S' : 'SIZE';
-                                                    $sizeRatioDisplay = old('matrix_items_info.fs', $jobCard ? $jobCard->size_ratio_display : '');
-                                                    $sizeStr = $sizeRatioDisplay ? explode(' - ', $sizeRatioDisplay)[0] : '';
-                                                @endphp
-
-                                                {{-- QTY - F/S ROW --}}
-                                                <tr class="qty-fs-row">
-                                                    <td><strong>QTY - F/S</strong></td>
-                                                    @foreach($sizes as $idx => $s)
-                                                        @php
-                                                            $val = '';
-                                                            foreach ($matrixItems as $item) {
-                                                                if (($item['size'] ?? '') == $s) {
-                                                                    $val = $item['qty_fs'] ?? '';
-                                                                    break;
-                                                                }
-                                                            }
-                                                        @endphp
-                                                        <td>
-                                                            <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
-                                                            <input type="hidden" name="matrix_items[{{ $idx }}][size]" value="{{ $s }}">
-                                                            <input type="hidden" name="matrix_items[{{ $idx }}][article_no]" value="{{ old("matrix_items.$idx.article_no", $jobCard ? $jobCard->article_no : '') }}">
-                                                        </td>
-                                                    @endforeach
-                                                    <td class=""></td><td class=""></td>
-                                                    <td><input type="text" name="mark_lay[fs][size]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.fs.size', $jobCard ? $jobCard->mark_lay_fs_size : '') }}"></td>
-                                                    <td><input type="text" name="mark_lay[fs][mark]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.fs.mark', $jobCard ? $jobCard->mark_lay_fs_mark : '') }}"></td>
-                                                </tr>
-
-                                                {{-- INFO ROW (F/S) --}}
-                                                <tr class="qty-fs-info-row">
-                                                    <td><strong>{{ $fsInfoLabel }}</strong></td>
-                                                    <td colspan="{{ count($sizes) }}">
-                                                        <input type="text" id="size_ratio_display" name="matrix_items_info[fs]" class="form-control form-control-sm text-center text-muted" value="{{ $sizeStr }}">
-                                                    </td>
-                                                    <td class=""></td><td class=""></td><td></td><td></td>
-                                                </tr>
-
-                                                {{-- QTY - H/S ROW --}}
-                                                <tr class="qty-hs-row">
-                                                    <td><strong>QTY - H/S</strong></td>
-                                                    @foreach($sizes as $idx => $s)
-                                                        @php
-                                                        $val = '';
-                                                        foreach ($matrixItems as $item) {
-                                                            if (($item['size'] ?? '') == $s) {
-                                                                $val = $item['qty_hs'] ?? '';
-                                                                break;
-                                                            }
-                                                        }
-                                                        @endphp
-                                                        <td>
-                                                            <input type="number" name="matrix_items[{{ $idx }}][qty_hs]" class="form-control form-control-sm text-center fw-bold qty-direct-input hs-summary-{{ $s }}" data-type="hs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
-                                                        </td>
-                                                    @endforeach
-                                                    <td class=""></td><td class=""></td>
-                                                    <td><input type="text" name="mark_lay[hs][size]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.hs.size', $jobCard ? $jobCard->mark_lay_hs_size : '') }}"></td>
-                                                    <td><input type="text" name="mark_lay[hs][mark]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.hs.mark', $jobCard ? $jobCard->mark_lay_hs_mark : '') }}"></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    {{-- <div class="text-end mt-3" id="trigger-sync-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
-                                        <button type="button" class="btn btn-primary" id="trigger-sync">
-                                            <i class="ri ri-play-circle-line me-1"></i> GO
-                                        </button>
-                                    </div> --}} 
-                                </div>
-                            </div>
-
-                            <div class="card mb-4 {{ $hasPo ? '' : 'd-none' }}" id="fabric-details-card">
-                                <div class="card-body">
-                                    <div class="card-header-box">
-                                        <h4>Fabric Details</h4>
-                                        <div id="fabric-details-error" class="text-danger small fw-bold mb-2" style="display: none;"></div>
-                                        @error('fabric_details') <div class="text-danger small fw-bold mb-2 backend-error">{{ $message }}</div> @enderror
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered text-center align-middle" id="fabric-details-table">
-                                            <thead id="fabric-details-head">
-                                                @if(session('error'))
-                                                    <div class="alert alert-warning alert-dismissible fade show">
-                                                        {{ session('error') }}
-                                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                                    </div>
-                                                @endif
-                                                @if(!empty($fabrics))
-                                                    <tr>
-                                                        @foreach($fabrics as $index => $fabric)
-                                                            <th colspan="2" class="bg-light">
-                                                                <div class="p-2">
-                                                                    <label class="small text-primary fw-bold">Image</label>
-                                                                    <div class="d-flex flex-wrap gap-2 mb-2">
-                                                                        @foreach($existingImages as $img)
-                                                                            @if($img->art_no == ($fabric['art_no'] ?? ''))
-                                                                                <div class="position-relative" style="width: 80px; height: 80px;">
-                                                                                    <img src="{{ url('/') }}/{{ $img->image }}" class="img-thumbnail" style="width: 100%; height: 100%; object-fit: cover;">
-                                                                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" style="padding: 2px 6px; font-size: 10px;" onclick="deleteImage({{ $img->id }})">
-                                                                                        <i class="ri ri-close-line"></i>
-                                                                                    </button>
-                                                                                </div>
-                                                                            @endif
-                                                                        @endforeach
-                                                                        @php
-                                                                            $trimmedArtNo = trim((string) ($fabric['art_no'] ?? ''));
-                                                                            $grnImage = $grnImageMap[$trimmedArtNo] ?? null;
-                                                                        @endphp
-                                                                        @if($grnImage)
-                                                                            <div class="d-flex flex-column align-items-center justify-content-center mx-auto" style="width: 80px;">
-                                                                                <img src="{{ $grnImage['url'] }}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover;">
-                                                                            </div>
-                                                                        @endif
-                                                                    </div>
-                                                                    <input type="file" class="form-control form-control-sm" name="fabric_images[{{ $index }}][]" multiple accept="image/*">
-                                                                    <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
-                                                                </div>
-                                                            </th>
-                                                        @endforeach
-                                                    </tr>
-                                                @endif
-                                            </thead>
-                                            <tbody id="fabric-details-body">
-                                                @if(!empty($fabrics))
-                                                    <tr>
-                                                        @foreach($fabrics as $index => $fabric)
-                                                            <td class="fw-bold">ART NO</td>
-                                                            <td><input type="text" name="fabrics[{{ $index }}][art_no]" class="form-control form-control-sm text-center" value="{{ $fabric['art_no'] ?? '' }}" readonly></td>
-                                                        @endforeach
-                                                    </tr>
-                                                    <tr>
-                                                        @foreach($fabrics as $index => $fabric)
-                                                            <td class="fw-bold">WIDTH</td>
-                                                            <td><input type="text" name="fabrics[{{ $index }}][width]" class="form-control form-control-sm text-center" value="{{ $fabric['width'] ?? '' }}"></td>
-                                                        @endforeach
-                                                    </tr>
-                                                    <tr>
-                                                        @foreach($fabrics as $index => $fabric)
-                                                            <td class="fw-bold">ISSUED METERS</td>
-                                                            <td><input type="text" name="fabrics[{{ $index }}][mtr]" class="form-control form-control-sm text-center" value="{{ $fabric['mtr'] ?? '' }}"></td>
-                                                        @endforeach
-                                                    </tr>
-                                                    <tr>
-                                                        @foreach($fabrics as $index => $fabric)
-                                                            <td class="fw-bold">IN/OUT</td>
-                                                            <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center" value="{{ $fabric['in_out'] ?? 'NO' }}"></td>
-                                                        @endforeach
-                                                    </tr>
-
-                                                    <tr>
-                                                        @foreach($fabrics as $index => $fabric)
-                                                            <td class="fw-bold">N.PATTI</td>
-                                                            <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}"></td>
-                                                        @endforeach
-                                                    </tr>
-                                                @endif
-                                            </tbody>
-                                        </table>
+                                        @endif
+                                        <label for="formFile" class="form-label">Reference Document</label>
+                                        <small class="text-muted d-block mt-1">Max file size: 5MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX, XLS, XLSX, CSV</small>
+                                        @error('attachment') <span class="text-danger">{{ $message }}</span> @enderror
                                     </div>
                                 </div>
                             </div>
-
-                            <div class="card mb-4 d-none" id="article-matrix-card">
-                                <div class="card-body">
-                                    <div class="card-header-box mb-3 border-bottom pb-2 align-items-center">
-                                        <h4 class="mb-0">Article Quantity Matrix</h4>
-                                        <div id="article-matrix-error" class="text-danger small fw-bold mb-2" style="display: none;"></div>
-                                        @error('article_matrix') <div class="text-danger small fw-bold mb-2 backend-error">{{ $message }}</div> @enderror
-                                    </div>
-                                    <div class="table-responsive mt-3">
-                                        <table class="table table-bordered text-center align-middle mb-0 shadow-sm" id="article-qty-matrix">
-                                            <thead class="table-light text-uppercase small fw-bold"></thead>
-                                            <tbody id="article-qty-matrix-body"></tbody>
-                                            <tfoot class="table-light"></tfoot>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-12 text-end mt-5">
-                                <button type="submit" class="btn btn-primary">Submit</button>
-                                <a href="{{ url('job_card_entries') }}" class="btn btn-secondary">Cancel</a>
-                            </div>
-                        </form>
+                        </div>
                     </div>
+                    <div class="card mb-4" id="item-details-card">
+                        <div class="card-body">
+                            <div class="card-header-box mb-3 d-flex justify-content-between align-items-center">
+                                <h4 class="mb-0">Item Details</h4>
+                            </div>
+                            <div id="item-details-table-wrapper" class="table-responsive d-none">
+                                <h6 class="text-primary mt-2">Fabric</h6>
+                                <table class="table table-bordered table-sm align-middle mb-4" id="item-details-fabric-table">
+                                    <thead class="bg-primary">
+                                        <tr>
+                                            <th class="text-center" style="width: 50px;">S.No</th>
+                                            <th>Raw Material Name</th>
+                                            <th class="text-center" style="width: 150px;">Total Quantity</th>
+                                            <th class="text-center" style="width: 180px;">Quantity Issued</th>
+                                            <th class="text-center" style="width: 150px;">Quantity Remaining</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="item-details-fabric-tbody">
+                                    </tbody>
+                                </table>
+
+                                <h6 class="text-primary mt-2">Accessories</h6>
+                                <table class="table table-bordered table-sm align-middle" id="item-details-accessories-table">
+                                    <thead class="bg-primary">
+                                        <tr>
+                                            <th class="text-center" style="width: 50px;">S.No</th>
+                                            <th>Raw Material Name</th>
+                                            <th class="text-center" style="width: 150px;">Total Quantity</th>
+                                            <th class="text-center" style="width: 180px;">Quantity Issued</th>
+                                            <th class="text-center" style="width: 150px;">Quantity Remaining</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="item-details-accessories-tbody">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="no-materials-msg" class="text-center py-4 bg-light rounded text-muted">
+                                <i class="ri-information-line fs-3 d-block mb-2 text-primary"></i>
+                                <span id="no-material-text">Please select a Stock Entry Number to fetch material details.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="card-header-box">
+                                <h4>Tailoring Specification</h4>
+                            </div>
+                            <div class="row g-4">
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="fit" name="fit_id" class="form-select select2" data-placeholder="Select Fit">
+                                            <option value="">Select Fit</option>
+                                            @foreach($fits as $fit)
+                                                <option value="{{ $fit->id }}" {{ (old('fit_id', $jobCard ? $jobCard->fit_id : '') == $fit->id) ? 'selected' : '' }}>{{ $fit->fit_name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <label for="fit">Fit</label>
+                                    </div>
+                                    @error('fit_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="patti_type" name="patti_type_id" class="form-select select2" data-placeholder="Select Patti Type">
+                                            <option value="">Select Patti Type</option>
+                                            @foreach($pattiTypes as $type)
+                                                <option value="{{ $type->id }}" {{ (old('patti_type_id', $jobCard ? $jobCard->patti_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->patti_type_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="patti_type">Patti Type</label>
+                                    </div>
+                                    @error('patti_type_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="collar_type" name="collar_type_id" class="form-select select2" data-placeholder="Select Collar Type">
+                                            <option value="">Select Collar Type</option>
+                                            @foreach($collarTypes as $type)
+                                                <option value="{{ $type->id }}" {{ (old('collar_type_id', $jobCard ? $jobCard->collar_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->collar_type_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="collar_type">Collar Type</label>
+                                    </div>
+                                    @error('collar_type_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="cuff_type" name="cuff_type_id" class="form-select select2" data-placeholder="Select Cuff Type">
+                                            <option value="">Select Cuff Type</option>
+                                            @foreach($cuffTypes as $type)
+                                                <option value="{{ $type->id }}" {{ (old('cuff_type_id', $jobCard ? $jobCard->cuff_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->cuff_type_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="cuff_type">Cuff Type</label>
+                                    </div>
+                                    @error('cuff_type_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="pocket_type" name="pocket_type_id" class="form-select select2" data-placeholder="Select Pocket Type">
+                                            <option value="">Select Pocket Type</option>
+                                            @foreach($pocketTypes as $type)
+                                                <option value="{{ $type->id }}" {{ (old('pocket_type_id', $jobCard ? $jobCard->pocket_type_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->pocket_type_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="pocket_type">Pocket Type</label>
+                                    </div>
+                                    @error('pocket_type_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select id="bottom_cut" name="bottom_cut_id" class="form-select select2" data-placeholder="Select Bottom Cut">
+                                            <option value="">Select Bottom Cut</option>
+                                            @foreach($bottomCuts as $type)
+                                                <option value="{{ $type->id }}" {{ (old('bottom_cut_id', $jobCard ? $jobCard->bottom_cut_id : '') == $type->id) ? 'selected' : '' }}>{{ $type->bottom_cut_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="bottom_cut">Bottom Cut</label>
+                                    </div>
+                                    @error('bottom_cut_id') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="card-header-box d-flex justify-content-between align-items-center">
+                                <h4>Production Stages</h4>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="add-stage-row">
+                                    <i class="ri ri-add-line"></i> Add Stage
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table" id="production-stages-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Stage *</th>
+                                            <th>Issue Unit (Plant) *</th>
+                                            <th>Rate *</th>
+                                            <th>Issue Date *</th>
+                                            <th>Deadline Date *</th>
+                                            <th>Remarks</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php
+                                            $existingStages = old('production_stages', $jobCard ? $jobCard->operations->toArray() : []);
+                                        @endphp
+                                        @if(!empty($existingStages))
+                                            @foreach($existingStages as $index => $stage)
+                                                <tr class="stage-row">
+                                                    <td>
+                                                        <select name="production_stages[{{ $index }}][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
+                                                            <option value="">Select Stage</option>
+                                                            @foreach($operationStages as $os)
+                                                                <option value="{{ $os->id }}" data-cost="{{ $os->cost }}" {{ ($stage['stage_id'] ?? $stage['operation_stage_id'] ?? '') == $os->id ? 'selected' : '' }}>{{ $os->operation_stage_name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        @error('production_stages.' . $index . '.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                    </td>
+                                                    <td>
+                                                        <select name="production_stages[{{ $index }}][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
+                                                            <option value="">Select Unit</option>
+                                                            @foreach($plants as $p)
+                                                                <option value="{{ $p->id }}" {{ ($stage['service_provider_id'] ?? '') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        @error('production_stages.' . $index . '.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" name="production_stages[{{ $index }}][rate]" class="form-control stage-rate" value="{{ $stage['rate'] ?? '' }}" step="0.01" placeholder="0.00">
+                                                        @error('production_stages.' . $index . '.rate') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" name="production_stages[{{ $index }}][issue_date]" class="form-control issue-date" value="{{ !empty($stage['issue_date']) ? $stage['issue_date'] : (!empty($stage['assigned_date']) ? date('d-m-Y', strtotime($stage['assigned_date'])) : '') }}" placeholder="Enter Issue Date">
+                                                        @error('production_stages.' . $index . '.issue_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" name="production_stages[{{ $index }}][deadline_date]" class="form-control deadline-date" value="{{ !empty($stage['deadline_date']) ? date('d-m-Y', strtotime($stage['deadline_date'])) : '' }}" placeholder="Enter Deadline Date">
+                                                        @error('production_stages.' . $index . '.deadline_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                    </td>
+                                                    <td>
+                                                        <textarea name="production_stages[{{ $index }}][remarks]" class="form-control" placeholder="Enter Remarks">{{ $stage['remarks'] ?? '' }}</textarea>
+                                                    </td>
+                                                    <td>
+                                                        <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
+                                                        @if($jobCard && (auth()->id() == 1 || auth()->user()->can('assign-task job-card')))
+                                                        @php
+                                                            $currentStageId = $stage['stage_id'] ?? $stage['operation_stage_id'] ?? null;
+                                                            $taskData = $stageTaskStatus[$currentStageId] ?? null;
+                                                            $hasTask = !empty($taskData);
+
+                                                            $taskStatus = $taskData['status'] ?? null;
+                                                            $taskNo = $taskData['task_no'] ?? null;
+                                                            $previousStage = $existingStages[$index - 1] ?? null;
+                                                            $previousStageId = $previousStage['stage_id'] ?? $previousStage['operation_stage_id'] ?? null;
+                                                            if ($index > 0) {
+                                                                $previousTaskAssigned = !empty($stageTaskStatus[$previousStageId]);
+                                                            } else {
+                                                                $previousTaskAssigned = true;
+                                                            }
+                                                            $canAssignCurrentStage = $previousTaskAssigned && !$hasTask;
+                                                            $buttonText = $hasTask ? 'Assigned Task (Task: ' . $taskNo . ')' : 'Assign Task';
+
+                                                            if (!$previousTaskAssigned) {
+                                                                $buttonTitle = 'Previous stage task not assigned';
+                                                            } elseif ($hasTask) {
+                                                                $buttonTitle = "Task already assigned (Status: $taskStatus)";
+                                                            } else {
+                                                                $buttonTitle = 'Assign Task';
+                                                            }
+                                                        @endphp
+                                                        <button type="button" class="btn btn-sm btn-outline-primary assign-task-btn ms-1" title="{{ $buttonTitle }}" {{ !$canAssignCurrentStage ? 'disabled' : '' }}><i class="ri ri-task-line"></i> {{ $buttonText }}</button>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        @else
+                                            <tr class="stage-row">
+                                                <td>
+                                                    <select name="production_stages[0][stage_id]" class="form-select select2 stage-select" data-placeholder="Select Stage">
+                                                        <option value="">Select Stage</option>
+                                                        @foreach($operationStages as $os)
+                                                            <option value="{{ $os->id }}" data-cost="{{ $os->cost }}">{{ $os->operation_stage_name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('production_stages.0.stage_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <select name="production_stages[0][service_provider_id]" class="form-select select2 provider-select" data-placeholder="Select Unit">
+                                                        <option value="">Select Unit</option>
+                                                        @foreach($plants as $p)
+                                                            <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('production_stages.0.service_provider_id') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="number" name="production_stages[0][rate]" class="form-control stage-rate" value="" step="0.01" placeholder="0.00">
+                                                    @error('production_stages.0.rate') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="production_stages[0][issue_date]" class="form-control issue-date" value="" placeholder="Enter Issue Date">
+                                                    @error('production_stages.0.issue_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <input type="text" name="production_stages[0][deadline_date]" class="form-control deadline-date" value="" placeholder="Enter Deadline Date">
+                                                    @error('production_stages.0.deadline_date') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <textarea name="production_stages[0][remarks]" class="form-control" placeholder="Enter Remarks"></textarea>
+                                                    @error('production_stages.0.remarks') <span class="text-danger small">{{ $message }}</span> @enderror
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-danger remove-stage-row"><i class="ri ri-delete-bin-line"></i></button>
+                                                </td>
+                                            </tr>
+                                        @endif
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="card-header-box">
+                                <h4>Cutting Size Ratio</h4>
+                            </div>
+                            <div class="row g-4 mb-3">
+                                <div class="col-md-6 col-xl-4">
+                                    <div id="sleeve-instance-manager" class="p-3 border rounded shadow-sm">
+                                        <label class="d-block mb-2 fw-bold text-primary">Sleeve Configuration</label>
+                                        <div class="d-flex gap-2 mb-3">
+                                            <button type="button" class="btn btn-sm btn-outline-primary shadow-sm hover-lift" id="add-fs-instance">
+                                                <i class="ri ri-add-line me-1"></i>  ADD F/S
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info shadow-sm hover-lift" id="add-hs-instance">
+                                                <i class="ri ri-add-line me-1"></i>  ADD H/S
+                                            </button>
+                                        </div>
+
+                                        <div id="sleeve-instance-list" class="d-flex flex-wrap gap-2"></div>
+
+                                        <div id="no-sleeve-msg" class="text-muted small mt-2">
+                                            <i class="ri ri-information-line me-1"></i> No sleeves added yet.
+                                        </div>
+                                    </div>
+                                    @error('sleeve_types') <span class="text-danger">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-8">
+                                    <div id="size-selector-container" class="p-3 border rounded shadow-sm">
+                                        <label class="d-block mb-2 fw-bold text-primary">Select Sizes</label>
+                                        <div class="d-flex flex-wrap gap-2" id="size-selector">
+                                            @foreach(['36','38','40','42','44','46','48','50'] as $sz)
+                                                <label class="btn btn-sm btn-outline-primary size-toggle-btn {{ in_array($sz, $sizes) ? 'active' : '' }}" style="cursor: pointer;">
+                                                    <input type="checkbox" class="size-checkbox d-none" value="{{ $sz }}" 
+                                                            {{ in_array($sz, $sizes) ? 'checked' : '' }}> {{ $sz }}
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive" id="cutting-size-table-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
+                                <table class="table table-bordered text-center align-middle" id="cutting-size-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" class="align-middle">SIZE</th>
+                                            <th colspan="{{ count($sizes) }}" class="ratio-header">CUTTING SIZE RATIO</th>
+                                        </tr>
+                                        <tr class="size-header-row">
+                                            @foreach($sizes as $s)
+                                                <th class="dynamic-size-head">{{ $s }}</th>
+                                            @endforeach
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php
+                                            $fsInfoLabel = str_contains($processGroupName, 'OTHERS') ? 'QTY - F/S' : 'SIZE';
+                                            $sizeRatioDisplay = old('matrix_items_info.fs', $jobCard ? $jobCard->size_ratio_display : '');
+                                            $sizeStr = $sizeRatioDisplay ? explode(' - ', $sizeRatioDisplay)[0] : '';
+                                        @endphp
+
+                                        {{-- QTY - F/S ROW --}}
+                                        <tr class="qty-fs-row">
+                                            <td><strong>QTY - F/S</strong></td>
+                                            @foreach($sizes as $idx => $s)
+                                                @php
+                                                    $val = '';
+                                                    foreach ($matrixItems as $item) {
+                                                        if (($item['size'] ?? '') == $s) {
+                                                            $val = $item['qty_fs'] ?? '';
+                                                            break;
+                                                        }
+                                                    }
+                                                @endphp
+                                                <td>
+                                                    <input type="number" name="matrix_items[{{ $idx }}][qty_fs]" class="form-control form-control-sm text-center fw-bold qty-direct-input fs-summary-{{ $s }}" data-type="fs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
+                                                    <input type="hidden" name="matrix_items[{{ $idx }}][size]" value="{{ $s }}">
+                                                    <input type="hidden" name="matrix_items[{{ $idx }}][article_no]" value="{{ old("matrix_items.$idx.article_no", $jobCard ? $jobCard->article_no : '') }}">
+                                                </td>
+                                            @endforeach
+                                            <td class=""></td><td class=""></td>
+                                            <td><input type="text" name="mark_lay[fs][size]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.fs.size', $jobCard ? $jobCard->mark_lay_fs_size : '') }}"></td>
+                                            <td><input type="text" name="mark_lay[fs][mark]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.fs.mark', $jobCard ? $jobCard->mark_lay_fs_mark : '') }}"></td>
+                                        </tr>
+
+                                        {{-- INFO ROW (F/S) --}}
+                                        <tr class="qty-fs-info-row">
+                                            <td><strong>{{ $fsInfoLabel }}</strong></td>
+                                            <td colspan="{{ count($sizes) }}">
+                                                <input type="text" id="size_ratio_display" name="matrix_items_info[fs]" class="form-control form-control-sm text-center text-muted" value="{{ $sizeStr }}">
+                                            </td>
+                                            <td class=""></td><td class=""></td><td></td><td></td>
+                                        </tr>
+
+                                        {{-- QTY - H/S ROW --}}
+                                        <tr class="qty-hs-row">
+                                            <td><strong>QTY - H/S</strong></td>
+                                            @foreach($sizes as $idx => $s)
+                                                @php
+                                                $val = '';
+                                                foreach ($matrixItems as $item) {
+                                                    if (($item['size'] ?? '') == $s) {
+                                                        $val = $item['qty_hs'] ?? '';
+                                                        break;
+                                                    }
+                                                }
+                                                @endphp
+                                                <td>
+                                                    <input type="number" name="matrix_items[{{ $idx }}][qty_hs]" class="form-control form-control-sm text-center fw-bold qty-direct-input hs-summary-{{ $s }}" data-type="hs" data-size="{{ $s }}" value="{{ $val ? (int) $val : '' }}" {{ $hasTasks ? 'readonly' : '' }}>
+                                                </td>
+                                            @endforeach
+                                            <td class=""></td><td class=""></td>
+                                            <td><input type="text" name="mark_lay[hs][size]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.hs.size', $jobCard ? $jobCard->mark_lay_hs_size : '') }}"></td>
+                                            <td><input type="text" name="mark_lay[hs][mark]" class="form-control form-control-sm text-center" value="{{ old('mark_lay.hs.mark', $jobCard ? $jobCard->mark_lay_hs_mark : '') }}"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            {{-- <div class="text-end mt-3" id="trigger-sync-wrapper" style="{{ ($jobCard && $jobCard->size_ratio_id) ? '' : 'display:none;' }}">
+                                <button type="button" class="btn btn-primary" id="trigger-sync">
+                                    <i class="ri ri-play-circle-line me-1"></i> GO
+                                </button>
+                            </div> --}} 
+                        </div>
+                    </div>
+
+                    <div class="card mb-4 {{ $hasPo ? '' : 'd-none' }}" id="fabric-details-card">
+                        <div class="card-body">
+                            <div class="card-header-box">
+                                <h4>Fabric Details</h4>
+                                <div id="fabric-details-error" class="text-danger small fw-bold mb-2" style="display: none;"></div>
+                                @error('fabric_details') <div class="text-danger small fw-bold mb-2 backend-error">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered text-center align-middle" id="fabric-details-table">
+                                    <thead id="fabric-details-head">
+                                        @if(session('error'))
+                                            <div class="alert alert-warning alert-dismissible fade show">
+                                                {{ session('error') }}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                            </div>
+                                        @endif
+                                        @if(!empty($fabrics))
+                                            <tr>
+                                                @foreach($fabrics as $index => $fabric)
+                                                    <th colspan="2" class="bg-light">
+                                                        <div class="p-2">
+                                                            <label class="small text-primary fw-bold">Image</label>
+                                                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                                                @foreach($existingImages as $img)
+                                                                    @if($img->art_no == ($fabric['art_no'] ?? ''))
+                                                                        <div class="position-relative" style="width: 80px; height: 80px;">
+                                                                            <img src="{{ url('/') }}/{{ $img->image }}" class="img-thumbnail" style="width: 100%; height: 100%; object-fit: cover;">
+                                                                            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0" style="padding: 2px 6px; font-size: 10px;" onclick="deleteImage({{ $img->id }})">
+                                                                                <i class="ri ri-close-line"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    @endif
+                                                                @endforeach
+                                                                @php
+                                                                    $trimmedArtNo = trim((string) ($fabric['art_no'] ?? ''));
+                                                                    $grnImage = $grnImageMap[$trimmedArtNo] ?? null;
+                                                                @endphp
+                                                                @if($grnImage)
+                                                                    <div class="d-flex flex-column align-items-center justify-content-center mx-auto" style="width: 80px;">
+                                                                        <img src="{{ $grnImage['url'] }}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover;">
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                            <input type="file" class="form-control form-control-sm" name="fabric_images[{{ $index }}][]" multiple accept="image/*">
+                                                            <small class="text-muted d-block mt-1">Max file size: 2MB. Supported formats: JPG, PNG, JPEG, WEBP, PDF, DOC, DOCX</small>
+                                                        </div>
+                                                    </th>
+                                                @endforeach
+                                            </tr>
+                                        @endif
+                                    </thead>
+                                    <tbody id="fabric-details-body">
+                                        @if(!empty($fabrics))
+                                            <tr>
+                                                @foreach($fabrics as $index => $fabric)
+                                                    <td class="fw-bold">ART NO</td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][art_no]" class="form-control form-control-sm text-center" value="{{ $fabric['art_no'] ?? '' }}" readonly></td>
+                                                @endforeach
+                                            </tr>
+                                            <tr>
+                                                @foreach($fabrics as $index => $fabric)
+                                                    <td class="fw-bold">WIDTH</td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][width]" class="form-control form-control-sm text-center" value="{{ $fabric['width'] ?? '' }}"></td>
+                                                @endforeach
+                                            </tr>
+                                            <tr>
+                                                @foreach($fabrics as $index => $fabric)
+                                                    <td class="fw-bold">ISSUED METERS</td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="{{ $fabric['art_no'] ?? '' }}" value="{{ $fabric['mtr'] ?? '' }}" readonly></td>
+                                                @endforeach
+                                            </tr>
+                                            <tr>
+                                                @foreach($fabrics as $index => $fabric)
+                                                    <td class="fw-bold">IN/OUT</td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center" value="{{ $fabric['in_out'] ?? 'NO' }}"></td>
+                                                @endforeach
+                                            </tr>
+
+                                            <tr>
+                                                @foreach($fabrics as $index => $fabric)
+                                                    <td class="fw-bold">N.PATTI</td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}"></td>
+                                                @endforeach
+                                            </tr>
+                                        @endif
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4 d-none" id="article-matrix-card">
+                        <div class="card-body">
+                            <div class="card-header-box mb-3 border-bottom pb-2 align-items-center">
+                                <h4 class="mb-0">Article Quantity Matrix</h4>
+                                <div id="article-matrix-error" class="text-danger small fw-bold mb-2" style="display: none;"></div>
+                                @error('article_matrix') <div class="text-danger small fw-bold mb-2 backend-error">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="table-responsive mt-3">
+                                <table class="table table-bordered text-center align-middle mb-0 shadow-sm" id="article-qty-matrix">
+                                    <thead class="table-light text-uppercase small fw-bold"></thead>
+                                    <tbody id="article-qty-matrix-body"></tbody>
+                                    <tfoot class="table-light"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-12 text-end mt-5">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                        <a href="{{ url('job_card_entries') }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="processGroupModal" tabindex="-1" aria-labelledby="processGroupModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white" id="processGroupModalLabel">{{ $jobCard ? 'view process-groups (Read-Only)' : 'Select Process Group' }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered align-middle text-center" id="processGroupTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Select</th>
+                                <th>Code</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($processGroups as $pg)
+                            <tr>
+                                <td><input type="radio" name="process_option" value="{{ $pg->id }}" data-name="{{ $pg->name }}" {{ $jobCard ? 'disabled' : '' }} {{ ($jobCard && $jobCard->process_group_id == $pg->id) ? 'checked' : '' }}></td>
+                                <td>{{ explode(' - ', $pg->name)[0] }}</td>
+                                <td>{{ count(explode(' - ', $pg->name)) > 1 ? explode(' - ', $pg->name)[1] : $pg->name }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ $jobCard ? 'Close' : 'Cancel' }}</button>
+                    @if(!$jobCard)
+                        <button type="button" class="btn btn-primary" id="confirmProcessGroup">Select</button>
+                    @endif
                 </div>
             </div>
-            <div class="modal fade" id="processGroupModal" tabindex="-1" aria-labelledby="processGroupModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary">
-                            <h5 class="modal-title text-white" id="processGroupModalLabel">{{ $jobCard ? 'view process-groups (Read-Only)' : 'Select Process Group' }}</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+    </div>
+    <div class="modal fade" id="stockValidationErrorModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="stockValidationErrorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-2xl" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+                <div class="modal-header border-0 py-4 px-5" style="background: linear-gradient(135deg, #1a1a1a 0%, #3e1a1a 100%); position: relative;">
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 20% 50%, rgba(255, 82, 82, 0.15), transparent); pointer-events: none;"></div>
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background: rgba(255, 82, 82, 0.2); border: 1px solid rgba(255, 82, 82, 0.4); box-shadow: 0 0 15px rgba(255, 82, 82, 0.3);">
+                            <i class="ri ri-error-warning-fill text-danger fs-3"></i>
                         </div>
-                        <div class="modal-body">
-                            <table class="table table-bordered align-middle text-center" id="processGroupTable">
-                                <thead class="table-light">
+                        <div>
+                            <h4 class="modal-title text-white fw-bolder mb-0" id="stockValidationErrorModalLabel" style="letter-spacing: -0.5px;">Stock Discrepancy Detected</h4>
+                            <p class="text-white-50 mb-0 small fw-medium">Some materials in your matrix exceed current warehouse stock.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <div class="px-5 pt-4 pb-2">
+                        <div class="table-responsive rounded-4" style="border: 1px solid #f0f0f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                            <table class="table table-hover align-middle mb-0" id="stockErrorTable">
+                                <thead style="background: #fafafa; border-bottom: 2px solid #f0f0f0;">
                                     <tr>
-                                        <th>Select</th>
-                                        <th>Code</th>
-                                        <th>Description</th>
+                                        <th class="py-3 px-4 text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Article & Description</th>
+                                        <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Required</th>
+                                        <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Available</th>
+                                        <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Shortage</th>
+                                        <th class="py-3 px-4 text-start text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Stock Analysis</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @foreach($processGroups as $pg)
-                                    <tr>
-                                        <td><input type="radio" name="process_option" value="{{ $pg->id }}" data-name="{{ $pg->name }}" {{ $jobCard ? 'disabled' : '' }} {{ ($jobCard && $jobCard->process_group_id == $pg->id) ? 'checked' : '' }}></td>
-                                        <td>{{ explode(' - ', $pg->name)[0] }}</td>
-                                        <td>{{ count(explode(' - ', $pg->name)) > 1 ? explode(' - ', $pg->name)[1] : $pg->name }}</td>
-                                    </tr>
-                                    @endforeach
+                                <tbody class="fw-semibold">
                                 </tbody>
                             </table>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ $jobCard ? 'Close' : 'Cancel' }}</button>
-                            @if(!$jobCard)
-                                <button type="button" class="btn btn-primary" id="confirmProcessGroup">Select</button>
-                            @endif
-                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal fade" id="stockValidationErrorModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="stockValidationErrorModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content border-0 shadow-2xl" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
-                        <div class="modal-header border-0 py-4 px-5" style="background: linear-gradient(135deg, #1a1a1a 0%, #3e1a1a 100%); position: relative;">
-                            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 20% 50%, rgba(255, 82, 82, 0.15), transparent); pointer-events: none;"></div>
-                            <div class="d-flex align-items-center">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px; background: rgba(255, 82, 82, 0.2); border: 1px solid rgba(255, 82, 82, 0.4); box-shadow: 0 0 15px rgba(255, 82, 82, 0.3);">
-                                    <i class="ri ri-error-warning-fill text-danger fs-3"></i>
-                                </div>
-                                <div>
-                                    <h4 class="modal-title text-white fw-bolder mb-0" id="stockValidationErrorModalLabel" style="letter-spacing: -0.5px;">Stock Discrepancy Detected</h4>
-                                    <p class="text-white-50 mb-0 small fw-medium">Some materials in your matrix exceed current warehouse stock.</p>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
 
-                        <div class="modal-body p-0">
-                            <div class="px-5 pt-4 pb-2">
-                                <div class="table-responsive rounded-4" style="border: 1px solid #f0f0f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-                                    <table class="table table-hover align-middle mb-0" id="stockErrorTable">
-                                        <thead style="background: #fafafa; border-bottom: 2px solid #f0f0f0;">
-                                            <tr>
-                                                <th class="py-3 px-4 text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Article & Description</th>
-                                                <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Required</th>
-                                                <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Available</th>
-                                                <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Shortage</th>
-                                                <th class="py-3 px-4 text-start text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Stock Analysis</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="fw-semibold">
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                <div class="modal-footer border-0 px-5 pb-5 pt-0 d-flex justify-content-end gap-3">
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold px-4 hover-lift" data-bs-dismiss="modal" style="font-size: 0.9rem;">
+                        CANCEL
+                    </button>
 
-                        <div class="modal-footer border-0 px-5 pb-5 pt-0 d-flex justify-content-end gap-3">
-                            <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold px-4 hover-lift" data-bs-dismiss="modal" style="font-size: 0.9rem;">
-                                CANCEL
-                            </button>
-
-                            <button type="button" class="btn px-4 py-2 fw-bolder d-flex align-items-center justify-content-center gap-2" id="btn-recheck-stock" style="background: #fff; color: #6200ee; border: 1px solid #6200ee; border-radius: 12px; transition: all 0.2s; min-width: 150px;">
-                                <i class="ri ri-refresh-line fs-5"></i>
-                                RE-CHECK STOCK
-                            </button>
-                        </div>
-                    </div>
+                    <button type="button" class="btn px-4 py-2 fw-bolder d-flex align-items-center justify-content-center gap-2" id="btn-recheck-stock" style="background: #fff; color: #6200ee; border: 1px solid #6200ee; border-radius: 12px; transition: all 0.2s; min-width: 150px;">
+                        <i class="ri ri-refresh-line fs-5"></i>
+                        RE-CHECK STOCK
+                    </button>
                 </div>
             </div>
+        </div>
+    </div>
 
 <style>
     .size-toggle-btn {
@@ -1111,8 +1111,10 @@
         const articleUoms = @json(collect($fabrics)->pluck('uom_code', 'art_no')) || {};
         let currentArtData = (@json(array_values($fabrics)) || []).map(f => ({
             art_no: f.art_no,
-            mtr: f.total_qty || f.mtr,
-            already_issued: f.used_qty || f.mtr,
+            mtr: parseFloat(f.stock_total_qty) || parseFloat(f.mtr) || 0,
+            already_issued: parseFloat(f.mtr) || 0,
+            saved_stock_total_qty: f.stock_total_qty || null,
+            saved_mtr: f.mtr || null,
             art_name: f.art_no,
             grn_image: f.grn_image || (grnImageMap[String(f.art_no || '').trim()] ? grnImageMap[String(f.art_no || '').trim()].image : null),
             grn_image_url: f.grn_image ? `{{ url('uploads/grn_items') }}/${f.grn_image}` : (grnImageMap[String(f.art_no || '').trim()] ? grnImageMap[String(f.art_no || '').trim()].url : null)
@@ -1814,6 +1816,7 @@
                     if (isRestoredFromOld) {
                         renderFabricDetails();
                         renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
+                        calculateMatrixFromLayMarks();
                         updateQuantityRowVisibility();
                         calculateMatrixTotals(true);
                         if (typeof renderItemDetailsTable === "function") {
@@ -1823,6 +1826,7 @@
                     } else if (window._initialStockEntries && window._initialStockEntries.length > 0) {
                         renderFabricDetails();
                         renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
+                        calculateMatrixFromLayMarks();
                         updateQuantityRowVisibility();
                         calculateMatrixTotals(true);
                         renderCuttingSizeTable(currentSizes, currentRatios);
@@ -1837,6 +1841,7 @@
                             renderCuttingSizeTable(currentSizes, currentRatios); 
                             syncMatrixWithMasterTable(false);
                             renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
+                            calculateMatrixFromLayMarks();
                             updateQuantityRowVisibility();
                         }
                     }
@@ -1866,12 +1871,15 @@
                     renderCuttingSizeTable(currentSizes, currentRatios); 
                     syncMatrixWithMasterTable(true);
                     renderArticleQtyMatrix(currentArtNumbers, globalActiveSizes.fs, globalActiveSizes.hs);
+                    calculateMatrixFromLayMarks();
                     updateQuantityRowVisibility();
                 }
             });
         }
 
         function renderArticleQtyMatrix(artNumbers, activeFsSizes = [], activeHsSizes = []) {
+            activeFsSizes = [...new Set(activeFsSizes)];
+            activeHsSizes = [...new Set(activeHsSizes)];
             const $table = $('#article-qty-matrix');
             const $thead = $table.find('thead');
             const $tbody = $('#article-qty-matrix-body');
@@ -1912,16 +1920,17 @@
 
             artNumbers.forEach((art, index) => {
                 art = String(art).trim();
-                const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).trim() == art) : null;
+                const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).split('|')[0].trim() == String(art).split('|')[0].trim()) : null;
 
                 let oldRow = null;
                 if (oldMatrix && oldMatrix.length > 0) {
-                    oldRow = Object.values(oldMatrix).find(r => String(r.art_no).trim() == art);
+                    oldRow = Object.values(oldMatrix).find(r => String(r.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
                 }
 
                 let uom = (articleUoms[art] || 'PCS').toUpperCase();
                 let artName = '';
                 let catId = 1;
+                let actualArt = art;
 
                 if (currentArtData && currentArtData.length > 0) {
                     const d = currentArtData.find(d => String(d.art_no).trim() == String(art).trim());
@@ -1929,13 +1938,14 @@
                         artName = d.art_name || '';
                         uom = (d.uom_code || uom).toUpperCase();
                         catId = d.store_category_id || 1;
+                        if (d.actual_art_no) actualArt = d.actual_art_no;
                     }
                 }
 
                 let artWidth = '';
                 const $liveWidthInput = $(`input[name="fabrics[${index}][width]"]`);
                 const oldF = (oldFabrics && Object.keys(oldFabrics).length > 0) 
-                    ? Object.values(oldFabrics).find(f => String(f.art_no).trim() == art) 
+                    ? Object.values(oldFabrics).find(f => String(f.art_no).split('|')[0].trim() == String(art).split('|')[0].trim()) 
                     : null;
 
                 if ($liveWidthInput.length && $liveWidthInput.val()) {
@@ -1965,7 +1975,7 @@
 
                 let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" data-index="${index}" ${styleAttr}>
                                 <td>
-                                    <div class="border rounded p-1 mb-1 text-center fw-bold small" style="background: #f8f9fa;">${art}</div>
+                                    <div class="border rounded p-1 mb-1 text-center fw-bold small" style="background: #f8f9fa;">${actualArt}</div>
                                     <input type="hidden" name="article_matrix[${index}][art_no]" value="${art}">
                                     <div class="small text-muted text-center" style="font-size: 10px; line-height: 1.1;">${artName}</div>
                                 </td>`;
@@ -2159,15 +2169,6 @@
                     let requirementText = '-';
                     if (catId == 1) { 
                         requirementText = lmRequired > 0 ? lmRequired.toFixed(2) : '-';
-
-                        if (lmRequired > 0) {
-                            const $mtrInput = $(`.mtr-input[data-art="${art}"]`);
-                            const currentVal = parseFloat($mtrInput.val()) || 0;
-                            if (currentVal === 0 || $mtrInput.data('auto-synced') === 'true') {
-                                $mtrInput.val(lmRequired.toFixed(2)).trigger('input');
-                                $mtrInput.data('auto-synced', 'true');
-                            }
-                        }
                     } else {
                         const fsCons = parseFloat($(`.pcs-cons-input[data-art="${art}"][name*="[fs_cons]"]`).val()) || 0;
                         const hsCons = parseFloat($(`.pcs-cons-input[data-art="${art}"][name*="[hs_cons]"]`).val()) || 0;
@@ -2464,6 +2465,7 @@
                 let uom = '';
                 let catId = 0;
                 let artName = '';
+                let actualArt = art;
 
                 let sizes = [];
                 if (typeof globalActiveSizes !== 'undefined') {
@@ -2477,6 +2479,7 @@
                         uom = d.uom_code || '';
                         catId = d.store_category_id || 0;
                         artName = d.art_name || '';
+                        if (d.actual_art_no) actualArt = d.actual_art_no;
                     }
                 }
 
@@ -2488,6 +2491,7 @@
                     let extraHtml = `
                         <input type="hidden" name="fabrics[${index}][store_category_id]" value="${catId}">
                         <input type="hidden" name="fabrics[${index}][art_no]" value="${art}">
+                        <input type="hidden" name="fabrics[${index}][stock_entry_id]" value="${currentArtInfo?.stock_entry_id || ''}">
                         <input type="hidden" name="fabrics[${index}][mtr]" class="mtr-input" data-art="${art}" value="${captured.mtr[art] || ''}">
                         <input type="hidden" name="fabrics[${index}][total_qty]" class="total-qty-hidden" data-art="${art}" value="">
                         <input type="hidden" name="fabrics[${index}][grn_image]" value="${grnImageName || ''}">
@@ -2527,11 +2531,15 @@
                                     <input type="hidden" name="fabrics[${index}][grn_image]" value="${grnImageName || ''}">
                                 </div>
                             </th>`;
-                            artRow += `<td class="fw-bold">ART NO</td><td><input type="text" name="fabrics[${index}][art_no]" class="form-control form-control-sm text-center art-no-input" value="${art}" readonly></td>`;
+                            artRow += `<td class="fw-bold">ART NO</td><td>
+                                <input type="hidden" name="fabrics[${index}][art_no]" value="${art}">
+                                <input type="hidden" name="fabrics[${index}][stock_entry_id]" value="${currentArtInfo?.stock_entry_id || ''}">
+                                <input type="text" class="form-control form-control-sm text-center art-no-input" value="${actualArt}" readonly>
+                            </td>`;
 
                 let oldF = null;
                 if (oldFabrics && Object.keys(oldFabrics).length > 0) {
-                    oldF = Object.values(oldFabrics).find(f => String(f.art_no).trim() == art);
+                    oldF = Object.values(oldFabrics).find(f => String(f.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
                 }
 
                 let vWidth = captured.width[art] || (oldF ? oldF.width : '') || '';
@@ -2545,7 +2553,7 @@
                 }
 
                 if (!vWidth && existingMatrix.length > 0) {
-                    const m = existingMatrix.find(m => m.art_no == art);
+                    const m = existingMatrix.find(m => String(m.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
                     if (m) {
                         vWidth = m.width || '';
                         vMtr = m.used_qty !== undefined && m.used_qty !== null ? m.used_qty : (m.mtr || '');
@@ -2557,11 +2565,26 @@
                 if (!vInOut) vInOut = 'NO';
                 if (!vNPatti) vNPatti = 'WHITE';
 
-                if (vMtr !== '' && vMtr !== undefined) {
+                if (vMtr !== '' && vMtr !== undefined && vMtr !== null) {
                 } else if (currentArtData && currentArtData.length > 0) {
                     const d = currentArtData.find(d => d.art_no == art);
                     if (d) {
-                        vMtr = d.already_issued !== undefined && d.already_issued !== null ? d.already_issued : (d.mtr || '');
+                        let totalQty;
+                        if (isEditMode && d.saved_stock_total_qty) {
+                            totalQty = parseFloat(d.saved_stock_total_qty);
+                        } else {
+                            totalQty = parseFloat(d.total_available) || 0;
+                        }
+                        let fallbackMtr = '';
+                        if (isEditMode && d.saved_mtr !== null && d.saved_mtr !== undefined) {
+                            fallbackMtr = parseFloat(d.saved_mtr).toFixed(2);
+                        }
+                        if (!fallbackMtr) {
+                            fallbackMtr = totalQty.toFixed(2);
+                        }
+                        vMtr = (d.already_issued !== undefined && d.already_issued !== null && parseFloat(d.already_issued) > 0) 
+                            ? d.already_issued 
+                            : fallbackMtr;
                     }
                 }
 
@@ -2575,7 +2598,7 @@
                 mtrRow += `<td class="fw-bold">ISSUED METERS</td>
                     <td>
                         <div class="input-group input-group-sm">
-                            <input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" ${isTaskReadOnly}>
+                            <input type="text" name="fabrics[${index}][mtr]" class="form-control form-control-sm text-center mtr-input" data-art="${art}" value="${vMtr}" readonly>
                             <button type="button" class="btn btn-outline-primary sync-mtr-btn" data-art="${art}" title="Sync from Matrix"><i class="ri ri-refresh-line"></i></button>
                         </div>
                         <div class="mt-1 small text-muted requirement-display" data-art="${art}" style="font-size: 10px;">
@@ -2615,7 +2638,7 @@
                                 no_of_lay: e.no_of_lay || null
                             }));
                         } else if (isEditMode && existingMatrix.length > 0) {
-                            const m = existingMatrix.find(m => String(m.art_no).trim() == String(art).trim());
+                            const m = existingMatrix.find(m => String(m.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
                             if (m && m.lay_marks && m.lay_marks.length > 0) {
                                 savedLayMarks = m.lay_marks;
                             } else if (m && m.consumptions && m.consumptions.length > 0) {
@@ -2703,7 +2726,7 @@
                             }
 
                             if (!vSzFs && isEditMode && existingMatrix && existingMatrix.length > 0) {
-                                const m = existingMatrix.find(m => m.art_no == art);
+                                const m = existingMatrix.find(m => String(m.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
                                 if (m && m.consumptions) {
                                     const c = m.consumptions.find(c => String(c.size) === String(sz));
                                     if (c) {
@@ -3163,9 +3186,11 @@
                 });
 
                 if (hasValidMarks) {
-                    const fabricArt = String($(this).data('art') || "").trim();
+                    const fabricArt = String($(this).data('art') || "").split('|')[0].trim();
                     if (fabricArt) {
-                        $(`tr.cat1-row[data-art="${fabricArt}"] .qty-input`).val('');
+                        $(`tr.cat1-row`).filter(function() {
+                            return String($(this).data('art') || "").split('|')[0].trim() === fabricArt;
+                        }).find('.qty-input').val('');
                     }
 
                     if (!matrixData[fabricIndex]) matrixData[fabricIndex] = { fs: {}, hs: {} };
@@ -3188,7 +3213,7 @@
                 const $btn = $(`.add-lay-mark-btn[data-index="${fIndex}"]`);
                 if (!$btn.length) continue;
 
-                const fabricArt = String($btn.closest('.lay-mark-table').data('art') || "").trim();
+                const fabricArt = String($btn.closest('.lay-mark-table').data('art') || "").split('|')[0].trim();
                 if (!fabricArt) continue;
 
                 for (const type in matrixData[fIndex]) {
@@ -3196,7 +3221,7 @@
                         const val = matrixData[fIndex][type][size];
                         const col = `${type}-${size}`;
                         const $input = $(`.qty-input`).filter(function() {
-                            return String($(this).data('art') || "").trim() === fabricArt && $(this).data('col') === col;
+                            return String($(this).data('art') || "").split('|')[0].trim() === fabricArt && $(this).data('col') === col;
                         });
 
                         if ($input.length) {
@@ -3509,27 +3534,49 @@
             let accIndex = 0;
 
             artData.forEach((item, index) => {
-                const total = parseFloat(item.mtr) || 0;
+                let totalQty;
+                if (isEditMode && item.saved_stock_total_qty) {
+                    totalQty = parseFloat(item.saved_stock_total_qty);
+                } else {
+                    totalQty = parseFloat(item.total_available) || 0;
+                }
                 const artNo = item.art_no;
                 const categoryId = item.store_category_id || 2; 
 
                 let oldVal = '';
                 if (oldFabrics && oldFabrics.length > 0) {
-                    const oldF = Object.values(oldFabrics).find(f => String(f.art_no).trim() == String(artNo).trim());
+                    const oldF = Object.values(oldFabrics).find(f => String(f.art_no).split('|')[0].trim() == String(artNo).split('|')[0].trim());
                     if (oldF && oldF.mtr !== undefined && oldF.mtr !== '') {
                         oldVal = oldF.mtr;
                     }
                 }
 
-                let usedStr = (currentManualUsed[artNo] !== undefined && currentManualUsed[artNo] !== null && currentManualUsed[artNo] !== '') 
-                    ? currentManualUsed[artNo] 
-                    : (oldVal !== '' ? oldVal : (isEditMode && parseFloat(item.already_issued) > 0 ? parseFloat(item.already_issued).toFixed(2) : (parseFloat(item.mtr) || 0).toFixed(2)));
+                let usedStr = '';
+
+                if (currentManualUsed[artNo] !== undefined &&
+                    currentManualUsed[artNo] !== null &&
+                    currentManualUsed[artNo] !== '') {
+                    usedStr = currentManualUsed[artNo];
+                }
+
+                if (!usedStr && oldVal !== '') {
+                    usedStr = String(oldVal);
+                }
+
+                if (!usedStr && isEditMode &&
+                    item.saved_mtr !== null && item.saved_mtr !== undefined) {
+                    usedStr = parseFloat(item.saved_mtr).toFixed(2);
+                }
+
+                if (!usedStr) {
+                    usedStr = totalQty.toFixed(2);
+                }
 
                 const used = parseFloat(usedStr) || 0;
-                let remaining = total - used;
+                let remaining = totalQty - used;
                 if (Math.abs(remaining) < 0.001) remaining = 0;
 
-                $(`.total-qty-hidden[data-art="${artNo}"]`).val(total.toFixed(2));
+                $(`.total-qty-hidden[data-art="${artNo}"]`).val(totalQty.toFixed(2));
                 $(`.used-qty-hidden[data-art="${artNo}"]`).val(used.toFixed(2));
                 $(`.remaining-qty-hidden[data-art="${artNo}"]`).val(remaining.toFixed(2));
 
@@ -3544,9 +3591,12 @@
                     const calculated = (tFS * fsCons) + (tHS * hsCons);
 
                     if (currentManualUsed[artNo] === undefined && oldVal === '') {
+                        if (isEditMode && item.saved_mtr !== null && item.saved_mtr !== undefined) {
+                        } else {
                             if (calculated > 0) {
                                 usedStr = calculated.toFixed(2);
                             }
+                        }
                     }
                 }
                 const sNo = (isFabric) ? ++fabricIndex : ++accIndex;
@@ -3554,11 +3604,17 @@
                 const row = `
                     <tr data-art="${artNo}">
                         <td class="text-center">${sNo}</td>
-                        <td class="fw-bold">${item.art_name || ''} <br> <small class="text-muted">${artNo}</small></td>
-                        <td class="text-center item-total-qty">${total.toFixed(2)}</td>
+                        <td class="fw-bold">
+                            ${item.art_name || ''} <br> 
+                            <small class="text-muted">${item.actual_art_no || artNo}</small>
+                            ${item.stock_entry_nos ? `<br><small class="text-info">${item.stock_entry_nos}</small>` : ''}
+                        </td>
+                        <td class="text-center item-total-qty">${totalQty.toFixed(2)}</td>
                         <td>
                             <input type="hidden" name="fabrics[${index}][art_no]" value="${artNo}">
+                            <input type="hidden" name="fabrics[${index}][stock_entry_id]" value="${item.stock_entry_id || ''}">
                             <input type="hidden" name="fabrics[${index}][store_category_id]" value="${categoryId}">
+                            <input type="hidden" name="fabrics[${index}][stock_total_qty]" class="stock-total-qty-hidden" data-art="${artNo}" value="${totalQty.toFixed(2)}">
                             <div class="input-group input-group-sm">
                                 <input type="number" step="0.01" class="form-control text-center fw-bold item-used-input" name="fabrics[${index}][mtr]" data-art="${artNo}" value="${usedStr}">
                                 <span class="input-group-text">${item.uom_code || 'MTR'}</span>
