@@ -17,7 +17,7 @@
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="item_search" class="form-control @error('finished_item_code') is-invalid @enderror" id="item_search" placeholder="Search Item Code or Name" value="{{ old('item_search', ($price && $price->finished_item_code) ? $price->finished_item_code . ' - ' . ($price->item->name ?? '') : '') }}">
+                                    <input type="text" name="item_search" class="form-control @error('finished_item_code') is-invalid @enderror" id="item_search" placeholder="Search Item Code or Name" value="{{ old('item_search', ($price && $price->finished_item_code) ? ($price->finished_item_code . (!empty($price->item->name) ? ' - ' . $price->item->name : '')) : '') }}">
                                     <input type="hidden" name="finished_item_code" id="finished_item_code" value="{{ old('finished_item_code', $price->finished_item_code ?? '') }}">
                                     <label for="item_search">Item Name <span class="text-danger">*</span></label>
                                 </div>
@@ -218,25 +218,27 @@
                         artNoSelect.empty();
                         artNoSelect.append('<option value="">Select Art No</option>');
 
+                        if (currentArtNo) {
+                            artNoSelect.append('<option value="' + currentArtNo + '" selected>' + currentArtNo + '</option>');
+                        }
+
                         if (response.art_nos && response.art_nos.length > 0) {
                             response.art_nos.forEach(function(artNo) {
-                                let selected = (artNo == currentArtNo) ? 'selected' : '';
-                                artNoSelect.append('<option value="' + artNo + '" ' + selected + '>' + artNo + '</option>');
+                                if (artNo != currentArtNo) {
+                                    artNoSelect.append('<option value="' + artNo + '">' + artNo + '</option>');
+                                }
                             });
-                            // If only one Art No and nothing selected, select it automatically
                             if (response.art_nos.length === 1 && !artNoSelect.val()) {
-                                artNoSelect.val(response.art_nos[0]).trigger('change');
+                                artNoSelect.val(response.art_nos[0]);
                             }
                         }
-                        artNoSelect.prop('disabled', false);
+                        artNoSelect.prop('disabled', false).trigger('change');
                     }
                 });
             } else {
-                artNoSelect.empty().append('<option value="">Select Art No</option>').prop('disabled', true);
+                artNoSelect.empty().append('<option value="">Select Art No</option>').prop('disabled', true).trigger('change');
             }
         }
-
-        // Trigger on load if editing
         if ($('#finished_item_code').val()) {
             loadArtNos($('#finished_item_code').val());
         }

@@ -533,7 +533,8 @@ class ProductionReceiptController extends Controller
 
         $allMaterials = $jobCard->fabricDetails->values();
         $fabricDetails = $allMaterials->filter(function ($fd) use ($getStoreCategoryIdForArtNo) {
-            return $getStoreCategoryIdForArtNo($fd->art_no) === 1;
+            $cat = $getStoreCategoryIdForArtNo($fd->art_no);
+            return $cat === null || (int)$cat === 1;
         })->values();
         
         $articlePrices = [];
@@ -541,13 +542,21 @@ class ProductionReceiptController extends Controller
             $artNo = trim($fabricDetail->art_no);
             $avgPrice = 0;
 
-            $stockItems = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('grn_entry_items.art_no', $artNo)->whereNull('stock_entry_items.deleted_at')->whereRaw('(stock_entry_items.qty_in - stock_entry_items.qty_out) > 0')->select('stock_entry_items.price', \DB::raw('(stock_entry_items.qty_in - stock_entry_items.qty_out) as available_qty'))->get();
+            $stockItems = \DB::table('stock_entry_items')->where('art_no', $artNo)->whereNull('deleted_at')->whereRaw('(qty_in - qty_out) > 0')->select('price', \DB::raw('(qty_in - qty_out) as available_qty'))->get();
+
+            if ($stockItems->count() == 0) {
+                $stockItems = \DB::table('stock_entry_items')->where('art_no', $artNo)->whereNull('deleted_at')->where('qty_in', '>', 0)->select('price', \DB::raw('qty_in as available_qty'))->get();
+            }
 
             if ($stockItems->count() == 0) {
                 $rawMaterial = \App\Models\RawMaterial::where('name', $artNo)->orWhere('code', $artNo)->first();
                 if ($rawMaterial) {
                     $stockItems = \DB::table('stock_entry_items')->where('raw_material_id', $rawMaterial->id)->whereNull('deleted_at')->whereRaw('(qty_in - qty_out) > 0')->select('price', \DB::raw('(qty_in - qty_out) as available_qty'))->get();
                 }
+            }
+
+            if ($stockItems->count() == 0 && isset($rawMaterial)) {
+                $stockItems = \DB::table('stock_entry_items')->where('raw_material_id', $rawMaterial->id)->whereNull('deleted_at')->where('qty_in', '>', 0)->select('price', \DB::raw('qty_in as available_qty'))->get();
             }
 
             if ($stockItems->count() > 0) {
@@ -655,7 +664,7 @@ class ProductionReceiptController extends Controller
 
             foreach ($allMaterials as $fd) {
                 $fdCategoryId = $getStoreCategoryIdForArtNo($fd->art_no);
-                if ($fdCategoryId === 1 && $normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
+                if (($fdCategoryId === null || (int)$fdCategoryId === 1) && $normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
                     continue;
                 }
                 $rate = 0;
@@ -701,7 +710,7 @@ class ProductionReceiptController extends Controller
                 }
 
                 $rawMaterial = null;
-                $stockItem = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('grn_entry_items.art_no', $fd->art_no)->select('stock_entry_items.raw_material_id')->first();
+                $stockItem = \DB::table('stock_entry_items')->where('art_no', $fd->art_no)->select('raw_material_id')->first();
 
                 if ($stockItem) {
                     $rawMaterial = \App\Models\RawMaterial::with(['storeCategory', 'uom'])->find($stockItem->raw_material_id);
@@ -738,7 +747,6 @@ class ProductionReceiptController extends Controller
             'consumption_details' => $consumptionDetails
             ];
         };
-
         $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap) {
             if ($qty > 0) {
                 $sizeVariant = $size . ' - ' . $sleeve;
@@ -749,36 +757,34 @@ class ProductionReceiptController extends Controller
                 $key = $itemKey . '|' . $normalizedArtNo . '|' . $sizeVariant . '|' . ($resolvedColorId ?? $resolvedColor ?? '');
 
                 if (!isset($tempGrouped[$key])) {
-                    $pricing = $calculateItemUnitPrice($normalizedArtNo, $size, $sleeve);
+                    $pricing = $calculateItemUnitPrice($normalizedArtNo, $size, $sleeve);   
                     $brandCode = $jobCard->brand ? $jobCard->brand->code : '';
                     $brandName = $jobCard->brand ? $jobCard->brand->brand_name : '';
-
                     $stockStyle = \DB::table('stock_entry_items')
-                        ->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')
                         ->join('styles', 'stock_entry_items.style_id', '=', 'styles.id')
-                        ->where('grn_entry_items.art_no', $normalizedArtNo)
+                        ->where('stock_entry_items.art_no', $normalizedArtNo)
                         ->select(
                             'styles.code as style_code',
                             'styles.style_name'
                         )
                         ->first();
-                    $styleCode = $stockStyle->style_code ?? $fallbackStyleCode;
-                    $styleName = $stockStyle->style_name ?? $fallbackStyleName;
+                    $barcodeMaster = \App\Models\BarcodeMaster::where('job_card_entry_id', $jobCard->id)->first();
+                    $styleCode = $barcodeMaster->style_code ?? $fallbackStyleCode;
+                    $styleName = $barcodeMaster->style_name ?? $fallbackStyleName;
                     $itemCode = trim($brandCode.'-'.$styleCode.'-'.$sleeve,'-');
                     $itemName = $brandName . ' ' . $styleName . ' ' . $sleeve;
                     $itemPrice = \App\Models\ItemPrice::where('finished_item_code', $itemCode)->first();
                     $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
                     $mrp = $itemPrice ? $itemPrice->selling_price : $pricing['total_cost'];
-
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
-                        'item_code' => $itemCode,
+                        'item_code' => $barcodeMaster->item_code,
                         'service_name' => $serviceName,
                         'sleeve' => $sleeve,
                         'size' => $size,
                         'item_name' => $itemName,
                         'art_no' => $normalizedArtNo ?: null,
-                        'description' => trim($brandName . ' ' . $styleName . ' ' . $sleeve),
+                        'description' => trim($barcodeMaster->item_name ?? ''),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
                         'mrp' => floatval($mrp),

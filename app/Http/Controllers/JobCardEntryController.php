@@ -1113,8 +1113,8 @@ class JobCardEntryController extends Controller
                         }
 
                         if ($numericBase === '' || $isReused) {
-                            preg_match('/(\d+)/', $jobCard->job_card_no ?? '', $lotMatches);
-                            $numericBase = $lotMatches[1] ?? '0000';
+                            $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
+                            $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
                         }
                         $formattedSize = "00"; 
                         $sleeveCode = "00";
@@ -1201,6 +1201,7 @@ class JobCardEntryController extends Controller
                                 BarcodeMaster::updateOrCreate(
                                     ['barcode_no' => $barcodeFS],
                                     [
+                                        'job_card_entry_id' => $jobCard->id,
                                         'item_code' => implode('-', array_filter([$brand->code ?? '', $style->code ?? '', 'F/S'])),
                                         'art_no' => $artNo,
                                         'item_name' => trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' F/S'),
@@ -1222,6 +1223,7 @@ class JobCardEntryController extends Controller
                                 BarcodeMaster::updateOrCreate(
                                     ['barcode_no' => $barcodeHS],
                                     [
+                                        'job_card_entry_id' => $jobCard->id,
                                         'item_code' => implode('-', array_filter([$brand->code ?? '', $style->code ?? '', 'H/S'])),
                                         'art_no' => $artNo,
                                         'item_name' => trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' H/S'),
@@ -2230,7 +2232,7 @@ class JobCardEntryController extends Controller
                 $totalActual = $totalFsCons + $totalHsCons;
 
                 if ($totalActual > 0) {
-                    $stockItem = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('grn_entry_items.art_no', $artNo)->select('stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')->first();
+                    $stockItem = \DB::table('stock_entry_items')->where('art_no', $artNo)->select('raw_material_id', 'uom_id')->first();
 
                     $rawMaterialId = $stockItem->raw_material_id ?? null;
                     $uomId = $stockItem->uom_id ?? null;
@@ -2281,7 +2283,7 @@ class JobCardEntryController extends Controller
                 if ($totalConsumption > 0) {
                     $stockInfo = null;
                     if ($issueItem->stock_entry_item_id) {
-                        $stockInfo = \DB::table('stock_entry_items')->join('grn_entry_items', 'stock_entry_items.grn_entry_item_id', '=', 'grn_entry_items.id')->where('stock_entry_items.id', $issueItem->stock_entry_item_id)->select('grn_entry_items.art_no', 'stock_entry_items.raw_material_id', 'stock_entry_items.uom_id')->first();
+                        $stockInfo = \DB::table('stock_entry_items')->where('id', $issueItem->stock_entry_item_id)->select('art_no', 'raw_material_id', 'uom_id')->first();
                     }
 
                     $issueArtNo = $stockInfo->art_no ?? null;
@@ -2427,8 +2429,8 @@ class JobCardEntryController extends Controller
         }
 
         if ($numericBase === '' || $isReused) {
-            preg_match('/(\d+)/', $jobCard->job_card_no ?? '', $lotMatches);
-            $numericBase = $lotMatches[1] ?? '0000';
+            $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
+            $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
         }
 
         $style = $issueItem->stockEntryItem->style ?? ($issueItem->stockEntryItem->grnEntryItem->purchaseInvoiceItem->purchaseOrderItem->style ?? null);
@@ -2535,6 +2537,7 @@ class JobCardEntryController extends Controller
             BarcodeMaster::updateOrCreate(
                 ['barcode_no' => $barcodeNo],
                 [
+                    'job_card_entry_id' => $jobCard->id,
                     'item_code' => $customItemCode,
                     'art_no' => $artNo,
                     'item_name' => $customItemName,
@@ -2552,7 +2555,6 @@ class JobCardEntryController extends Controller
             $labels[] = $labelData;
         }
 
-        // Maintain backwards compatibility by setting single labelData if there's only one
         $labelData = count($labels) > 0 ? $labels[0] : [];
 
         return view('labels.print_barcode', compact('labelData', 'labels', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order'));

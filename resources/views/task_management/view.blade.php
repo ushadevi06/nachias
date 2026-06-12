@@ -9,22 +9,25 @@
     <!-- Add new board -->
     <div class="row mt-5">
       <div class="col-lg-12"> 
-        <div class="table-header-box">
+        <div class="table-header-box d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
             <h4 class="mb-0 text-primary fw-bold">Task Management</h4>
-              @if(auth()->id() == 1 || auth()->user()->can('create task-management'))
-              <form class="kanban-add-new-board m-0 p-0" style="float: right !important;">
-              <label class="kanban-add-board-btn mb-0" style="cursor: pointer;" for="kanban-add-board-input">
-                {{-- <a class="btn btn-primary" href="{{ url('task_management/add') }}">
-                    <i class="icon-base ri ri-add-line me-1"></i> <span class="align-middle">Add new</span>
-                </a> --}}
-              </label>
-              <input type="text" class="form-control w-px-250 kanban-add-board-input d-none" placeholder="Add Board Title" id="kanban-add-board-input" required />
-              <div class="kanban-add-board-input d-none">
-                <button class="btn btn-primary btn-sm me-3">Add</button>
-                <button type="button" class="btn btn-outline-secondary btn-sm kanban-add-board-cancel-btn">Cancel</button>
-              </div>
-            </form>
-            @endif
+            <div class="d-flex align-items-center gap-2">
+                <div class="input-group" style="width: 300px;">
+                    <span class="input-group-text"><i class="ri ri-search-line"></i></span>
+                    <input type="text" id="kanban-search" class="form-control" placeholder="Search task, job card, stage...">
+                </div>
+                @if(auth()->id() == 1 || auth()->user()->can('create task-management'))
+                <form class="kanban-add-new-board m-0 p-0" style="float: right !important;">
+                  <label class="kanban-add-board-btn mb-0" style="cursor: pointer;" for="kanban-add-board-input">
+                  </label>
+                  <input type="text" class="form-control w-px-250 kanban-add-board-input d-none" placeholder="Add Board Title" id="kanban-add-board-input" required />
+                  <div class="kanban-add-board-input d-none">
+                    <button class="btn btn-primary btn-sm me-3">Add</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm kanban-add-board-cancel-btn">Cancel</button>
+                  </div>
+                </form>
+                @endif
+            </div>
         </div>
       </div>
     </div>
@@ -128,6 +131,18 @@ $(document).ready(function() {
       $form.addClass('d-none');
       $trigger.removeClass('d-none');
       $('#new-list-label').val(''); 
+    });
+
+    $('#kanban-search').on('keyup', function() {
+        var query = $(this).val().toLowerCase().trim();
+        $('.kanban-item').each(function() {
+            var text = $(this).text().toLowerCase();
+            if (text.indexOf(query) !== -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
     });
 });
 </script>

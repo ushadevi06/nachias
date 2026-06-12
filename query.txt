@@ -13,6 +13,7 @@ ALTER TABLE `purchase_order_items` CHANGE `amount` `amount` DECIMAL(15,2) NULL;
 ALTER TABLE `purchase_order_items` CHANGE `rate` `rate` DECIMAL(15,2) NULL DEFAULT '0.00';
 ALTER TABLE `purchase_order_items` CHANGE `amount` `amount` DECIMAL(15,2) NULL DEFAULT '0.00';
 
-
+12-06-2026:
 ALTER TABLE `nachias`.`salary_generations` ADD COLUMN `lop_amount` DECIMAL(10,2) NOT NULL AFTER `late_hours`;
+ALTER TABLE `task_assign_employees` ADD COLUMN `unit_rate` DECIMAL(10,2) NULL AFTER `completed_qty`, ADD COLUMN `total_cost` DECIMAL(15,2) NULL AFTER `unit_rate`;
 

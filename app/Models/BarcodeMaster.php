@@ -10,6 +10,7 @@ class BarcodeMaster extends Model
     use HasFactory;
 
     protected $fillable = [
+        'job_card_entry_id',
         'barcode_no',
         'item_code',
         'art_no',

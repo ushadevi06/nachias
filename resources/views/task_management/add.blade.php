@@ -317,7 +317,7 @@
                                                     <option value="">Select Store</option>
                                                     @if(isset($stores))
                                                         @foreach($stores as $store)
-                                                            <option value="{{ $store->id }}" {{ ($task->issue_store ?? '') == $store->id ? 'selected' : '' }}>{{ $store->store_type_name }}</option>
+                                                            <option value="{{ $store->id }}" {{ old('issue_store', $task->issue_store ?? '') == $store->id ? 'selected' : '' }}>{{ $store->store_type_name }}</option>
                                                         @endforeach
                                                     @endif
                                                 </select>
@@ -329,7 +329,7 @@
                                             <div class="form-floating form-floating-outline">
                                                 <select class="select2 form-select status-select @error('status') is-invalid @enderror" name="status" id="status" data-placeholder="Select or enter status">
                                                     @foreach($allStatuses as $statusOption)
-                                                        <option value="{{ $statusOption }}" {{ ($task->status ?? 'Planned') == $statusOption ? 'selected' : '' }}>{{ $statusOption }}</option>
+                                                        <option value="{{ $statusOption }}" {{ old('status', $task->status ?? 'Planned') == $statusOption ? 'selected' : '' }}>{{ $statusOption }}</option>
                                                     @endforeach
                                                 </select>
                                                 <label>Status *</label>
@@ -338,7 +338,7 @@
                                         </div>
                                         <div class="col-md-12">
                                             <div class="form-floating form-floating-outline">
-                                                <textarea class="form-control" name="remarks" style="height: 80px;">{{ $task->remarks ?? '' }}</textarea>
+                                                <textarea class="form-control" name="remarks" style="height: 80px;">{{ old('remarks', $task->remarks ?? '') }}</textarea>
                                                 <label>Remarks</label>
                                             </div>
                                         </div>
@@ -904,9 +904,12 @@
 
                 var isValid = true;
                 var errorMessages = [];
+                var serviceTotals = {};
+                var serviceNames = {};
 
                 $('#assignment-cards-container .assignment-row').each(function() {
                     var qty = parseFloat($(this).find('input[name*="[issue_qty]"]').val()) || 0;
+                    var serviceId = $(this).find('.services-select').val();
                     var serviceName = $(this).find('.services-select option:selected').text();
                     var employeeName = $(this).find('.employee-select option:selected').text() || 'Employee';
 
@@ -916,7 +919,24 @@
                             `<b>${serviceName}</b> → ${employeeName}: qty (<b>${qty}</b>) exceeds planned qty (<b>${stageMaxQty} PCS</b>).`
                         );
                     }
+
+                    if (serviceId) {
+                        if (!serviceTotals[serviceId]) {
+                            serviceTotals[serviceId] = 0;
+                            serviceNames[serviceId] = serviceName;
+                        }
+                        serviceTotals[serviceId] += qty;
+                    }
                 });
+
+                for (var sId in serviceTotals) {
+                    if (serviceTotals[sId] > stageMaxQty) {
+                        isValid = false;
+                        errorMessages.push(
+                            `Total quantity for service <b>${serviceNames[sId]}</b> (<b>${serviceTotals[sId]}</b>) exceeds planned qty (<b>${stageMaxQty} PCS</b>).`
+                        );
+                    }
+                }
 
                 var $submitBtn = $('#content-issue button[type="submit"]');
                 if (!isValid) {
@@ -928,8 +948,8 @@
                         </div>`
                     ).join('<hr class="my-1">');
 
-                    $submitBtn.closest('.col-12').before(
-                        `<div id="qty-exceed-error" class="alert alert-danger mt-2">${errorHtml}</div>`
+                    $('#content-issue .card-body').first().prepend(
+                        `<div id="qty-exceed-error" class="alert alert-danger mb-4">${errorHtml}</div>`
                     );
                 } else {
                     $submitBtn.attr('disabled', false);
@@ -1426,6 +1446,7 @@
         }
         .assignment-card-body .form-group {
             margin-bottom: 0.75rem;
+            position: relative;
         }
         .assignment-card-body label {
             font-weight: 600;

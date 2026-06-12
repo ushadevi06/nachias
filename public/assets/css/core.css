@@ -35862,3 +35862,6 @@ margin-bottom: 0 !important;
 .purchase-items-table .invoice-qty-column .item-quantity {
     max-width: 160px;
 }
+.art-no-cell {
+    min-width: 150px !important;
+}

@@ -78,7 +78,6 @@ class PurchaseInvoiceController extends Controller
                 $currentStatus = $invoice->invoice_status;
 
                 foreach ($allStatuses as $status) {
-
                     $selected = ($currentStatus === $status) ? 'selected' : '';
                     $disabled = '';
                     if ($currentStatus === 'Draft') {
@@ -105,7 +104,7 @@ class PurchaseInvoiceController extends Controller
                 if (auth()->id() == 1 || auth()->user()->can('view_details purchase-invoice')) {
                     $action .= '<a href="' . url('purchase_invoices/view/' . $invoice->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
-                if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid' && $invoice->grn_entries_count == 0) {
+                if ((auth()->id() == 1 || auth()->user()->can('edit purchase-invoice')) && $invoice->invoice_status !== 'Paid') {
                     $action .= '<a href="' . url('purchase_invoices/add/' . $invoice->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
                 $action .= '</div>';
@@ -415,15 +414,33 @@ class PurchaseInvoiceController extends Controller
                             if ($id) {
                                 $existingItem = PurchaseInvoiceItem::where('purchase_invoice_id', $id)->where('purchase_order_item_id', $item['purchase_order_item_id'] ?? null)->first();
                                 if ($existingItem) {
+                                    $oldRate = floatval($existingItem->rate);
+                                    $newRate = floatval($item['rate']);
+
                                     $existingItem->update([
                                         'brand_id' => $item['brand_id'] ?? $existingItem->brand_id,
                                         'fabric_width_id' => $item['fabric_width_id'] ?? $existingItem->fabric_width_id,
                                         'hsn_code' => $item['hsn_code'] ?? $existingItem->hsn_code,
+                                        'rate' => $newRate,
                                         'quantity' => $item['quantity'],
-                                        'amount' => $item['quantity'] * $item['rate'],
+                                        'amount' => $item['quantity'] * $newRate,
                                         'qty_received' => $item['quantity'],
                                         'qty_invoiced' => $item['quantity'],
                                     ]);
+
+                                    if ($oldRate !== $newRate) {
+                                        $grnItems = \DB::table('grn_entry_items')->where('purchase_invoice_item_id', $existingItem->id)->get();
+                                        foreach ($grnItems as $grnItem) {
+                                            \DB::table('grn_entry_items')->where('id', $grnItem->id)->update([
+                                                'rate' => $newRate,
+                                                'amount' => $grnItem->qty_received * $newRate
+                                            ]);
+                                            
+                                            \DB::table('stock_entry_items')->where('grn_entry_item_id', $grnItem->id)->update([
+                                                'price' => $newRate
+                                            ]);
+                                        }
+                                    }
                                 }
                             } else {
                                 PurchaseInvoiceItem::create([

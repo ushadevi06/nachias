@@ -190,7 +190,6 @@
                                                     <input type="hidden" name="items[{{ $index }}][raw_material_name]" value="{{ $item['raw_material_name'] ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ $item['uom_code'] ?? '' }}">
-                                                    <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="item-rate">
                                                     <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $item['qty_ordered'] ?? 0 }}" class="qty-ordered-val">
                                                     <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $item['qty_invoiced'] ?? 0 }}" class="qty-invoiced-val">
                                                     <input type="hidden" name="items[{{ $index }}][fabric_type_name]" value="{{ $item['fabric_type_name'] ?? '-' }}">
@@ -247,7 +246,9 @@
                                                     @enderror
                                                 </td>
                                                 <td>{{ $item['uom_code'] ?? '-' }}</td>
-                                                <td class="rate-display">{{ number_format($item['rate'] ?? 0, 2) }}</td>
+                                                <td class="rate-display">
+                                                    <input type="number" step="0.01" min="0" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                                </td>
                                                 <td class="item-amount">
                                                     {{ number_format(($item['quantity'] ?? 0) * ($item['rate'] ?? 0), 2) }}
                                                 </td>
@@ -266,7 +267,6 @@
                                                     <input type="hidden" name="items[{{ $index }}][raw_material_name]" value="{{ $invItem->rawMaterial->name ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $invItem->uom_id }}">
                                                     <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ $invItem->uom->uom_code ?? '' }}">
-                                                    <input type="hidden" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="item-rate">
                                                     <input type="hidden" name="items[{{ $index }}][qty_ordered]" value="{{ $invItem->qty_ordered }}" class="qty-ordered-val">
                                                     <input type="hidden" name="items[{{ $index }}][qty_invoiced]" value="{{ $invItem->qty_invoiced }}" class="qty-invoiced-val">
                                                     <input type="hidden" name="items[{{ $index }}][store_category_name]" value="{{ $invItem->purchaseOrderItem->storeCategory->category_name ?? '-' }}">
@@ -331,7 +331,9 @@
                                                 </td>
 
                                                 <td>{{ $invItem->uom->uom_code ?? '-' }}</td>
-                                                <td class="rate-display">{{ number_format($invItem->rate, 2) }}</td>
+                                                <td class="rate-display">
+                                                    <input type="number" step="0.01" min="0" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;">
+                                                </td>
                                                 <td class="item-amount">
                                                     {{ number_format($invItem->quantity * $invItem->rate, 2) }}
                                                 </td>
@@ -967,7 +969,6 @@
                                             <input type="hidden" name="items[${index}][raw_material_name]" value="${item.raw_material_name}">
                                             <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
                                             <input type="hidden" name="items[${index}][uom_code]" value="${item.uom_code}">
-                                            <input type="hidden" name="items[${index}][rate]" value="${item.rate}" class="item-rate">
                                             <input type="hidden" name="items[${index}][qty_ordered]" value="${item.qty_ordered}" class="qty-ordered-val">
                                             <input type="hidden" name="items[${index}][qty_invoiced]" value="${item.qty_invoiced}" class="qty-invoiced-val">
                                             <input type="hidden" name="items[${index}][store_category_name]" value="${item.store_category_name}">
@@ -1001,7 +1002,9 @@
                                         </td>
 
                                         <td>${item.uom_code}</td>
-                                        <td class="rate-display">${parseFloat(item.rate).toFixed(2)}</td>
+                                        <td class="rate-display">
+                                            <input type="number" step="0.01" min="0" name="items[${index}][rate]" value="${parseFloat(item.rate).toFixed(2)}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" readonly>
+                                        </td>
                                         <td class="item-amount">0.00</td>
 
                                     </tr>`;
@@ -1074,9 +1077,9 @@
             }
         });
 
-        $(document).on('input', '.received-qty-input', function () {
+        $(document).on('input', '.received-qty-input, .item-rate', function () {
             const $row = $(this).closest('tr');
-            const receivedQty = parseFloat($(this).val()) || 0;
+            const receivedQty = parseFloat($row.find('.received-qty-input').val()) || 0;
             const orderedQty = parseFloat($row.find('.qty-ordered-val').val()) || 0;
             const invoicedQty = parseFloat($row.find('.qty-invoiced-val').val()) || 0;
             const rate = parseFloat($row.find('.item-rate').val()) || 0;
@@ -1088,13 +1091,13 @@
             const maxQty = maxTotalQty - invoicedQty;
 
             if (receivedQty > maxQty) {
-                $(this).addClass('is-invalid');
-                if (!$(this).next('.invalid-feedback').length) {
-                    $(this).after('<div class="invalid-feedback d-block">Received quantity cannot exceed ' + maxQty.toFixed(2) + ' (Order + 50% Tolerance)</div>');
+                $row.find('.received-qty-input').addClass('is-invalid');
+                if (!$row.find('.received-qty-input').next('.invalid-feedback').length) {
+                    $row.find('.received-qty-input').after('<div class="invalid-feedback d-block">Received quantity cannot exceed ' + maxQty.toFixed(2) + ' (Order + 50% Tolerance)</div>');
                 }
             } else {
-                $(this).removeClass('is-invalid');
-                $(this).next('.invalid-feedback').remove();
+                $row.find('.received-qty-input').removeClass('is-invalid');
+                $row.find('.received-qty-input').next('.invalid-feedback').remove();
             }
 
             const amount = receivedQty * rate;
@@ -1117,36 +1120,40 @@
             let $row = $checkbox.closest('tr');
             let $hsnInput = $row.find('.item-hsn');
             let $qtyInput = $row.find('.item-quantity');
+            let $rateInput = $row.find('.item-rate');
             let isEditMode = $('#isEditMode').val() == '1';
 
             if ($checkbox.is(':checked')) {
                 $hsnInput.prop('readonly', false);
                 $qtyInput.prop('readonly', false);
+                $rateInput.prop('readonly', false);
             } else {
                 $hsnInput.prop('readonly', true);
                 $qtyInput.prop('readonly', true);
+                $rateInput.prop('readonly', true);
                 $hsnInput.removeClass('is-invalid');
                 $qtyInput.removeClass('is-invalid');
+                $rateInput.removeClass('is-invalid');
                 $hsnInput.next('.invalid-feedback').remove();
                 $qtyInput.next('.invalid-feedback').remove();
             }
         }
 
 
-        $(document).on('input', '.item-quantity', function () {
-            let $input = $(this);
-            let row = $input.closest('tr');
-            let qty = parseFloat($input.val()) || 0;
-            let orderedQty = parseFloat(row.find('.qty-ordered-val').val()) || 0;
-            let invoicedQty = parseFloat(row.find('.qty-invoiced-val').val()) || 0;
-            let rate = parseFloat(row.find('.item-rate').val()) || 0;
-            let checkbox = row.find('.item-checkbox');
+        $(document).on('input', '.item-quantity, .item-rate', function () {
+            let $row = $(this).closest('tr');
+            let qtyInput = $row.find('.item-quantity');
+            let qty = parseFloat(qtyInput.val()) || 0;
+            let orderedQty = parseFloat($row.find('.qty-ordered-val').val()) || 0;
+            let invoicedQty = parseFloat($row.find('.qty-invoiced-val').val()) || 0;
+            let rate = parseFloat($row.find('.item-rate').val()) || 0;
+            let checkbox = $row.find('.item-checkbox');
 
-            $input.removeClass('is-invalid');
-            $input.next('.invalid-feedback').remove();
+            qtyInput.removeClass('is-invalid');
+            qtyInput.next('.invalid-feedback').remove();
 
             if (!checkbox.is(':checked')) {
-                row.find('.item-amount').text('0.00');
+                $row.find('.item-amount').text('0.00');
                 calculateTotals();
                 return;
             }
@@ -1162,21 +1169,21 @@
             }
             console.log(maxTotalQty,invoicedQty,maxAllowed);
             if (qty > maxAllowed && !isEditMode) {
-                $input.addClass('is-invalid');
-                $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${maxAllowed.toFixed(2)} (Order + 50% Tolerance minus already invoiced)</div>`);
-                row.find('.item-amount').text('0.00');
+                qtyInput.addClass('is-invalid');
+                qtyInput.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${maxAllowed.toFixed(2)} (Order + 50% Tolerance minus already invoiced)</div>`);
+                $row.find('.item-amount').text('0.00');
                 calculateTotals();
                 return;
             } else if (qty > maxTotalQty) {
-                $input.addClass('is-invalid');
-                $input.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${(maxTotalQty).toFixed(2)} (Total Order + 50% Tolerance)</div>`);
-                row.find('.item-amount').text('0.00');
+                qtyInput.addClass('is-invalid');
+                qtyInput.after(`<div class="invalid-feedback d-block">Received quantity cannot exceed ${(maxTotalQty).toFixed(2)} (Total Order + 50% Tolerance)</div>`);
+                $row.find('.item-amount').text('0.00');
                 calculateTotals();
                 return;
             }
 
             let amount = qty * rate;
-            row.find('.item-amount').text(amount.toFixed(2));
+            $row.find('.item-amount').text(amount.toFixed(2));
 
             calculateTotals();
         });

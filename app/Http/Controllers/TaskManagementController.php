@@ -216,6 +216,39 @@ class TaskManagementController extends Controller
                 ];
             }
 
+            // Validate service quantity sums against stage planned quantity
+            $stageId = $request->input('stage_id');
+            $stage = ProcessSchedule::find($stageId);
+            $stageMaxQty = $stage ? (float)$stage->planned_qty : 0;
+
+            if ($stageMaxQty > 0) {
+                $serviceQtySums = [];
+                foreach ($assignments as $assign) {
+                    if (empty($assign['issued_to'])) {
+                        continue;
+                    }
+                    $serviceId = $assign['service_id'] ?? $assign['services'] ?? null;
+                    if (is_array($serviceId)) {
+                        $serviceId = $serviceId[0] ?? null;
+                    }
+                    if ($serviceId) {
+                        $qty = (float)($assign['issue_qty'] ?? 0);
+                        if (!isset($serviceQtySums[$serviceId])) {
+                            $serviceQtySums[$serviceId] = 0;
+                        }
+                        $serviceQtySums[$serviceId] += $qty;
+                    }
+                }
+
+                foreach ($serviceQtySums as $serviceId => $totalQty) {
+                    if ($totalQty > $stageMaxQty) {
+                        $service = ProductionService::find($serviceId);
+                        $serviceName = $service ? $service->service_name : 'Selected Service';
+                        throw new \Exception("Total quantity for service '$serviceName' ($totalQty) exceeds the stage planned quantity ($stageMaxQty PCS).");
+                    }
+                }
+            }
+
             $commonData = $request->only(['job_card_entry_id', 'job_card_no', 'stage_id', 'issue_store', 'remarks', 'status']);
 
             DB::beginTransaction();

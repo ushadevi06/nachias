@@ -225,44 +225,7 @@ class GrnEntryController extends Controller
                     //         if (isset($counts[$value]) && $counts[$value] > 1) {
                     //             $fail('This article number is duplicated within this entry.');
                     //         }
-                    //     }
-                    // ];
-
-                    $rules["items.$index.art_no"] = [
-                        'required',
-                        function ($attribute, $value, $fail) use ($request, $item, $id) {
-                            $normalizedValue = trim((string) $value);
-                            if ($normalizedValue === '') {
-                                return;
-                            }
-
-                            $allArtNos = collect($request->items)
-                                ->filter(fn($item) => ($item['row_selected'] ?? 0) == 1 && !empty($item['art_no']))
-                                ->pluck('art_no')
-                                ->map(fn($art) => trim((string) $art))
-                                ->toArray();
-
-                            $counts = array_count_values($allArtNos);
-                            if (isset($counts[$normalizedValue]) && $counts[$normalizedValue] > 1) {
-                                $fail('This article number is duplicated within this entry.');
-                                return;
-                            }
-
-                            $existingArtNoQuery = GrnEntryItem::whereRaw('TRIM(art_no) = ?', [$normalizedValue])
-                                ->whereNull('deleted_at');
-
-                            $currentRowId = $item['id'] ?? null;
-                            if ($currentRowId) {
-                                $existingArtNoQuery->where('id', '!=', $currentRowId);
-                            } elseif ($id) {
-                                $existingArtNoQuery->where('grn_entry_id', '!=', $id);
-                            }
-
-                            if ($existingArtNoQuery->exists()) {
-                                $fail('Art No already used.');
-                            }
-                        }
-                    ];
+                    $rules["items.$index.art_no"] = 'required';
                     $rules["items.$index.qty_received"] = 'required|numeric|gt:0';
                     $rules["items.$index.qty_accepted"] = 'required|numeric|min:0';
                     $rules["items.$index.quality_check_status"] = 'required|in:Pass,Fail,Hold';
