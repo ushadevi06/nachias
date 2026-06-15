@@ -31,7 +31,8 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
             'stockEntry.productionReceipt.jobCard.purchaseOrder',
             'stockEntry.productionReceipt.jobCard.fit',
             'fabricType',
-            'color'
+            'color',
+            'brand'
         ])->whereHas('stockEntry', function($q) {
             $q->where('entry_type', 'Finished Goods');
         })->orderBy('id', 'desc')->get();
@@ -108,6 +109,7 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
                 '',
                 '',
                 '',
+                '',
                 'Product Dimensions (Variation-wise)',
                 '',
                 '',
@@ -136,6 +138,7 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
                 'Private (Yes/No)',
                 'Tags',
                 'Category Tree',
+                'Brand',
                 'Label (Helps to Categorise) - Max. 4 Labels',
                 'Short Description',
 
@@ -182,7 +185,9 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
         $styleName = '';
         $styleCode = $parts[1] ?? '';
 
-        if ($brandCode) {
+        if ($item->brand_id && $item->brand) {
+            $brandName = $item->brand->brand_name;
+        } elseif ($brandCode) {
             $brand = \App\Models\Brand::where('code', $brandCode)->first();
             $brandName = $brand ? $brand->brand_name : $brandCode;
         }
@@ -214,6 +219,7 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
             'No',
             '', 
             $categoryTree,
+            $brandName,
             $label,
             $shortDescription,
             '', 
@@ -253,8 +259,8 @@ class FinishedGoodsStockExport implements FromCollection, WithHeadings, WithMapp
         return [
             AfterSheet::class => function(AfterSheet $event) {
                 $event->sheet->getDelegate()->mergeCells('A1:H1');
-                $event->sheet->getDelegate()->mergeCells('I1:Z1');
-                $event->sheet->getDelegate()->getStyle('A1:Z1')->getAlignment()->setHorizontal('center');
+                $event->sheet->getDelegate()->mergeCells('I1:AA1');
+                $event->sheet->getDelegate()->getStyle('A1:AA1')->getAlignment()->setHorizontal('center');
             },
         ];
     }

@@ -437,6 +437,17 @@ $showPrice     = in_array('price', $showFields);
                                 $brandName = $item->brandCategory ? $item->brandCategory->name : '';
                                 $itemName = $item->item ? $item->item->name : '';
                             }
+
+                            if (empty($brandName) || $brandName === '-') {
+                                if ($item->brandCategory) {
+                                    $brandName = $item->brandCategory->name;
+                                }
+                            }
+                            if (empty($itemName) || $itemName === '-') {
+                                if (!empty($item->art_no)) {
+                                    $itemName = $item->art_no;
+                                }
+                            }
                             @endphp
                             <div class="bold">{{ $brandName }}</div>
                             <div>{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</div>

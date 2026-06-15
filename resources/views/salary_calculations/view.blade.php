@@ -82,6 +82,7 @@
             url: "{{ url('monthly_payroll') }}",
             data: function (d) {
                 d.status = $('#status').val();
+                d.month = $('#filter_month').val();
             }
         },
         columns: [
@@ -115,6 +116,9 @@
                 searchable: false
             }
         ]
+    });
+    $('#status, #filter_month').on('change', function () {
+        table.ajax.reload();
     });
     $(document).on('change', '.salaryStatus', function () {
         let status = $(this).val();

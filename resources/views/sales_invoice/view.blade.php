@@ -220,8 +220,19 @@
                                 btn.prop('disabled', false).html(originalHtml);
                             }
                         },
-                        error: function() {
-                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                        error: function(xhr) {
+                            if (xhr.status === 419) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Session Expired',
+                                    text: 'Your session has expired or the page was idle. Please reload the page to refresh your CSRF token.',
+                                    confirmButtonText: 'Reload Page'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            }
                             btn.prop('disabled', false).html(originalHtml);
                         }
                     });
@@ -310,8 +321,19 @@
                                 btn.prop('disabled', false).html(originalHtml);
                             }
                         },
-                        error: function() {
-                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                        error: function(xhr) {
+                            if (xhr.status === 419) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Session Expired',
+                                    text: 'Your session has expired or the page was idle. Please reload the page to refresh your CSRF token.',
+                                    confirmButtonText: 'Reload Page'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            }
                             btn.prop('disabled', false).html(originalHtml);
                         }
                     });

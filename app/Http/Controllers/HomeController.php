@@ -86,8 +86,9 @@ class HomeController extends Controller
         $bill_discount = SalesInvoice::whereNull('deleted_at')->sum('discount');
         $total_sub_total = SalesInvoice::whereNull('deleted_at')->sum('sub_total');
         $bill_discount_percent = $total_sub_total > 0 ? round(($bill_discount / $total_sub_total) * 100, 2) : 0;
-        $cash_discount = 0;
-        $cash_discount_percent = 0;
+        $cash_discount = SalesInvoice::whereNull('deleted_at')->where('payment_mode', 'Cash')->sum('discount');
+        $cash_sub_total = SalesInvoice::whereNull('deleted_at')->where('payment_mode', 'Cash')->sum('sub_total');
+        $cash_discount_percent = $cash_sub_total > 0 ? round(($cash_discount / $cash_sub_total) * 100, 2) : 0;
 
         $total_customer_collections = Payment::where('payment_type', 'Customer Collection')
             ->whereNull('deleted_at')
@@ -109,7 +110,7 @@ class HomeController extends Controller
             ->leftJoinSub(
                 DB::table('payments')
                     ->whereNull('deleted_at')
-                    ->where('reference_type', 'Customer Collection')
+                    ->where('payment_type', 'Customer Collection')
                     ->select('reference_id', DB::raw('SUM(amount) as paid_amount'))
                     ->groupBy('reference_id'),
                 'p',
@@ -150,16 +151,25 @@ class HomeController extends Controller
         /* Creditors Outstanding & Aging Report */
         $creditors_aging = DB::table('purchase_invoices')
             ->join('suppliers', 'purchase_invoices.supplier_id', '=', 'suppliers.id')
+            ->leftJoinSub(
+                DB::table('payments')
+                    ->whereNull('deleted_at')
+                    ->where('payment_type', 'Supplier Payment')
+                    ->select('reference_id', DB::raw('SUM(amount) as paid_amount'))
+                    ->groupBy('reference_id'),
+                'p',
+                'p.reference_id', '=', 'purchase_invoices.id'
+            )
             ->whereNull('purchase_invoices.deleted_at')
             ->whereNull('suppliers.deleted_at')
-            ->where('purchase_invoices.due_amount', '>', 0)
+            ->whereRaw('(purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) > 0')
             ->select(
                 'suppliers.name as supplier_name',
-                DB::raw('SUM(purchase_invoices.due_amount) as total_due'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) <= 30 THEN purchase_invoices.due_amount ELSE 0 END) as bucket_30'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 31 AND 60 THEN purchase_invoices.due_amount ELSE 0 END) as bucket_60'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 61 AND 90 THEN purchase_invoices.due_amount ELSE 0 END) as bucket_90'),
-                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) > 90 THEN purchase_invoices.due_amount ELSE 0 END) as bucket_above_90')
+                DB::raw('SUM(purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) as total_due'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) <= 30 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_30'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 31 AND 60 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_60'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) BETWEEN 61 AND 90 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_90'),
+                DB::raw('SUM(CASE WHEN DATEDIFF(CURDATE(), purchase_invoices.invoice_date) > 90 THEN (purchase_invoices.grand_total - COALESCE(p.paid_amount, 0)) ELSE 0 END) as bucket_above_90')
             )->groupBy('suppliers.id', 'suppliers.name')->get();
 
         $collection_performance = $total_sales_value > 0 ? round((($total_sales_value - $total_debtors) / $total_sales_value) * 100) : 0;
@@ -170,11 +180,8 @@ class HomeController extends Controller
         $accessories_value = StockEntryItem::where('store_category_id', 2)->whereNull('deleted_at')->sum(DB::raw('(qty_in - COALESCE(qty_out, 0)) * price'));
 
         $activeJobCardIds = JobCardEntry::whereNotIn('status', ['Production Completed', 'Closed'])->pluck('id');
-
         $wip_material_cost = JobCardIssueItem::whereIn('job_card_entry_id', $activeJobCardIds)->join('stock_entry_items', 'job_card_issue_items.stock_entry_item_id', '=', 'stock_entry_items.id')->whereNull('job_card_issue_items.deleted_at')->sum(DB::raw('job_card_issue_items.qty_issue * stock_entry_items.price'));
-
         $wip_process_cost = JobCardOperation::whereIn('job_card_entry_id', $activeJobCardIds)->sum('total_cost');
-
         $wip_value = $wip_material_cost + $wip_process_cost;
 
         $wip_cost_breakdown = JobCardIssueItem::whereIn('job_card_entry_id', $activeJobCardIds)

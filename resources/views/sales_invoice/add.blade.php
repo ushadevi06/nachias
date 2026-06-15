@@ -217,6 +217,14 @@
                                                         $sleeveType = $item->stockEntryItem->sleeve_type;
                                                     }
                                                 }
+
+                                                if (empty($brandName) && $item->brandCategory) {
+                                                    $brandName = $item->brandCategory->name;
+                                                }
+                                                if (empty($itemName) && !empty($item->art_no)) {
+                                                    $itemName = $item->art_no;
+                                                }
+
                                                 $maxQty = null;
                                                 $soIds = [];
                                                 if (!empty($invoice->so_ids)) {
@@ -227,7 +235,17 @@
                                                 }
                                                 if (!empty($soIds)) {
                                                     $maxQty = \App\Models\SalesOrderItem::whereIn('sale_order_id', $soIds)
-                                                        ->where('stock_entry_item_id', $item->stock_entry_item_id)
+                                                        ->where(function ($q) use ($item) {
+                                                            if ($item->stock_entry_item_id) {
+                                                                $q->where('stock_entry_item_id', $item->stock_entry_item_id);
+                                                            }
+                                                            if ($item->sku) {
+                                                                $q->orWhere('sku', $item->sku);
+                                                            }
+                                                            if (empty($item->stock_entry_item_id) && empty($item->sku)) {
+                                                                $q->where('art_no', $item->art_no);
+                                                            }
+                                                        })
                                                         ->sum('qty');
                                                 }
 

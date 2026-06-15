@@ -277,10 +277,12 @@ class ProductionReportController extends Controller
         });
 
         // Brand Wise Unit Production Report Logic
-        $receiptItemsQuery = ProductionReceiptItem::with(['productionReceipt.jobCard.brand', 'productionReceipt.jobCard.item', 'productionReceipt.jobCard.serviceProvider'])
+        $receiptItemsQuery = ProductionReceiptItem::with(['productionReceipt.jobCard.brand', 'productionReceipt.jobCard.item', 'productionReceipt.jobCard.serviceProvider', 'productionReceipt.jobCard.fabricDetails'])
             ->whereHas('productionReceipt', function($q) use ($unitId, $fromDate, $toDate) {
                 if ($unitId) {
-                    $q->where('service_provider_id', $unitId);
+                    $q->whereHas('jobCard', function($jcQuery) use ($unitId) {
+                        $jcQuery->where('service_provider_id', $unitId);
+                    });
                 }
                 if ($fromDate) {
                     $q->where('receipt_date', '>=', $fromDate);
@@ -298,13 +300,31 @@ class ProductionReportController extends Controller
             $first = $group->first();
             $jc = $first->productionReceipt->jobCard;
             
+            $styleName = 'N/A';
+            if ($jc->item && $jc->item->style) {
+                $styleName = $jc->item->style->style_name ?? $jc->item->name;
+            } else {
+                $firstFabric = $jc->fabricDetails->first();
+                if ($firstFabric && $firstFabric->art_no) {
+                    $stockItem = \App\Models\StockEntryItem::with('style')
+                        ->where('art_no', $firstFabric->art_no)
+                        ->whereNotNull('style_id')
+                        ->first();
+                    if ($stockItem && $stockItem->style) {
+                        $styleName = $stockItem->style->style_name;
+                    } else {
+                        $styleName = $firstFabric->art_no;
+                    }
+                }
+            }
+
             $rows = [];
             
             // If Job Card has Full Sleeve quantity
             if ($jc->total_qty_fs > 0) {
                 $rows[] = [
                     'brand' => $jc->brand->brand_name ?? 'N/A',
-                    'style' => $jc->item->name ?? 'N/A',
+                    'style' => $styleName,
                     'sleeve' => 'Full Sleeve',
                     'qty' => $group->where('productionReceipt.jobCard.total_qty_fs', '>', 0)->sum('qty_to_receive'),
                     'unit' => $jc->serviceProvider->name ?? 'N/A'
@@ -315,7 +335,7 @@ class ProductionReportController extends Controller
             if ($jc->total_qty_hs > 0) {
                 $rows[] = [
                     'brand' => $jc->brand->brand_name ?? 'N/A',
-                    'style' => $jc->item->name ?? 'N/A',
+                    'style' => $styleName,
                     'sleeve' => 'Half Sleeve',
                     'qty' => $group->where('productionReceipt.jobCard.total_qty_hs', '>', 0)->sum('qty_to_receive'),
                     'unit' => $jc->serviceProvider->name ?? 'N/A'

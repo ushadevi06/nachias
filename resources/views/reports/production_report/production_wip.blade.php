@@ -22,6 +22,10 @@
                         <td class="text-center fw-bold">{{ number_format($row['current_wip']) }}</td>
                     </tr>
                 @endforeach
+            @else
+                <tr>
+                    <td colspan="6" class="text-center">No data is available</td>
+                </tr>
             @endif
         </tbody>
     </table>

@@ -34,6 +34,10 @@
                     </td>
                 </tr>
                 @endforeach
+            @else
+                <tr>
+                    <td colspan="8" class="text-center">No data is available</td>
+                </tr>
             @endif
         </tbody>
     </table>

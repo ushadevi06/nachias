@@ -176,6 +176,17 @@
                                                                 $brandName = $item->brandCategory ? $item->brandCategory->name : '-';
                                                                 $itemName = $item->item ? $item->item->name : '-';
                                                             }
+
+                                                            if (empty($brandName) || $brandName === '-') {
+                                                                if ($item->brandCategory) {
+                                                                    $brandName = $item->brandCategory->name;
+                                                                }
+                                                            }
+                                                            if (empty($itemName) || $itemName === '-') {
+                                                                if (!empty($item->art_no)) {
+                                                                    $itemName = $item->art_no;
+                                                                }
+                                                            }
                                                         @endphp
                                                         <div class="fw-bold">{{ $brandName }}</div>
                                                         <small class="text-muted">{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</small>
@@ -468,8 +479,19 @@
                                 btn.prop('disabled', false).html('<i class="ri ri ri-receipt-line"></i> Generate E-Invoice');
                             }
                         },
-                        error: function() {
-                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                        error: function(xhr) {
+                            if (xhr.status === 419) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Session Expired',
+                                    text: 'Your session has expired or the page was idle. Please reload the page to refresh your CSRF token.',
+                                    confirmButtonText: 'Reload Page'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            }
                             btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
                         }
                     });
@@ -557,8 +579,19 @@
                                 btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i> Cancel E-Invoice');
                             }
                         },
-                        error: function() {
-                            Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                        error: function(xhr) {
+                            if (xhr.status === 419) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Session Expired',
+                                    text: 'Your session has expired or the page was idle. Please reload the page to refresh your CSRF token.',
+                                    confirmButtonText: 'Reload Page'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                            }
                             btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i> Cancel E-Invoice');
                         }
                     });

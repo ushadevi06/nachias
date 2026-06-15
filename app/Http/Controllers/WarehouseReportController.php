@@ -30,13 +30,20 @@ class WarehouseReportController extends Controller
         // Current Period Sales
         $currentSalesQuery = SalesInvoiceItem::query()
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
             ->leftJoin('brands', function($join) {
-                $join->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                     ->whereRaw("NOT EXISTS (
-                         SELECT 1 FROM brands b2 
-                         WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
-                         AND LENGTH(b2.code) > LENGTH(brands.code)
-                     )");
+                $join->on(function($query) {
+                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                          ->orOn(function($sub) {
+                              $sub->whereNull('stock_entry_items.brand_id')
+                                  ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                  ->whereRaw("NOT EXISTS (
+                                      SELECT 1 FROM brands b2 
+                                      WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                      AND LENGTH(b2.code) > LENGTH(brands.code)
+                                  )");
+                          });
+                });
             })
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('sales_invoice_items.deleted_at')
@@ -67,13 +74,20 @@ class WarehouseReportController extends Controller
 
         $prevSales = SalesInvoiceItem::query()
             ->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')
+            ->leftJoin('stock_entry_items', 'sales_invoice_items.stock_entry_item_id', '=', 'stock_entry_items.id')
             ->leftJoin('brands', function($join) {
-                $join->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                     ->whereRaw("NOT EXISTS (
-                         SELECT 1 FROM brands b2 
-                         WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
-                         AND LENGTH(b2.code) > LENGTH(brands.code)
-                     )");
+                $join->on(function($query) {
+                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                          ->orOn(function($sub) {
+                              $sub->whereNull('stock_entry_items.brand_id')
+                                  ->on('sales_invoice_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                  ->whereRaw("NOT EXISTS (
+                                      SELECT 1 FROM brands b2 
+                                      WHERE sales_invoice_items.art_no LIKE CONCAT(b2.code, '%') 
+                                      AND LENGTH(b2.code) > LENGTH(brands.code)
+                                  )");
+                          });
+                });
             })
             ->whereNull('sales_invoices.deleted_at')
             ->whereNull('sales_invoice_items.deleted_at')
@@ -104,12 +118,18 @@ class WarehouseReportController extends Controller
         // --- 2. Brandwise Stock ---
         $stockQuery = StockEntryItem::query()
             ->leftJoin('brands', function($join) {
-                $join->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
-                     ->whereRaw("NOT EXISTS (
-                         SELECT 1 FROM brands b2 
-                         WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
-                         AND LENGTH(b2.code) > LENGTH(brands.code)
-                     )");
+                $join->on(function($query) {
+                    $query->on('stock_entry_items.brand_id', '=', 'brands.id')
+                          ->orOn(function($sub) {
+                              $sub->whereNull('stock_entry_items.brand_id')
+                                  ->on('stock_entry_items.art_no', 'LIKE', DB::raw("CONCAT(brands.code, '%')"))
+                                  ->whereRaw("NOT EXISTS (
+                                      SELECT 1 FROM brands b2 
+                                      WHERE stock_entry_items.art_no LIKE CONCAT(b2.code, '%') 
+                                      AND LENGTH(b2.code) > LENGTH(brands.code)
+                                  )");
+                          });
+                });
             })
             ->leftJoin('store_categories', 'stock_entry_items.store_category_id', '=', 'store_categories.id')
             ->leftJoin('size_ratios', function($join) {

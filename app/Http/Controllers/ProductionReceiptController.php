@@ -386,9 +386,16 @@ class ProductionReceiptController extends Controller
         }
 
         $fitId = null;
+        $brandId = null;
         if ($receipt->job_card_id) {
             $jobCard = JobCardEntry::find($receipt->job_card_id);
-            $fitId = $jobCard ? $jobCard->fit_id : null;
+            if ($jobCard) {
+                $fitId = $jobCard->fit_id;
+                $brandId = $jobCard->brand_id;
+            }
+            if (!$brandId) {
+                throw new \Exception('Brand is required in the Job Card to post the Production Receipt.');
+            }
         }
 
 
@@ -478,6 +485,7 @@ class ProductionReceiptController extends Controller
                     'qrcode' => json_encode($qrData),
                     'sleeve_type' => $sleeve,
                     'fit_id' => $fitId,
+                    'brand_id' => $brandId,
                     'barcode_master_id' => $barcodeMasterId ?? null,
                 ]);
             }
