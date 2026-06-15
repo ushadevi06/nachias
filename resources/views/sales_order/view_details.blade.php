@@ -164,18 +164,13 @@
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $idx + 1) }}</td>
                                         <td>
                                             @php
-                                                $brand = $item->item->brand->name ?? $item->brandCategory->name ?? '-';
-                                                $style = $item->item->style->name ?? $item->item->name ?? '';
+                                                $code = $item->finished_item_code; 
+                                                $itemName = $item->item_name;
+
                                                 $sleeve = is_array($item->sleeve) ? implode(', ', $item->sleeve) : $item->sleeve;
-                                                
-                                                if ($brand == '-' && $item->stockEntryItem) {
-                                                    $brand = $item->stockEntryItem->finished_item_code;
-                                                }
-                                                
-                                                $displayName = array_filter([$brand, $style]);
-                                                $displayName = implode(' - ', $displayName);
+                                                $displayDescription = (!empty($itemName) && $itemName !== $code && $itemName !== '-') ? $itemName : $code; 
                                             @endphp
-                                            <div class="fw-medium text-dark">{{ $displayName }}</div>
+                                            <div class="fw-medium text-dark">{{ $displayDescription }}</div>
                                             @if($sleeve)
                                                 <small class="text-primary fw-medium">{{ $sleeve }} Sleeve</small>
                                             @endif

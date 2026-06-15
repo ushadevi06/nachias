@@ -18,6 +18,7 @@ class SalesOrderItem extends Model
         'item_id',
         'color_id',
         'art_no',
+        'item_name',
         'uom_id',
         'size_id',
         'qty',
@@ -75,20 +76,45 @@ class SalesOrderItem extends Model
 
     public function getItemNameAttribute()
     {
-        // 1. Try to fetch from BarcodeMaster using SKU (barcode_no)
-        if (!empty($this->sku)) {
-            $barcode = BarcodeMaster::where('barcode_no', $this->sku)->first();
-            if ($barcode && !empty($barcode->item_name)) {
-                return $barcode->item_name;
+        $stockItem = null;
+        if ($this->stock_entry_item_id) {
+            $stockItem = StockEntryItem::find($this->stock_entry_item_id);
+        }
+        if (!$stockItem && !empty($this->sku)) {
+            $stockItem = StockEntryItem::where(function ($q) {
+                    $q->where('sku', $this->sku)
+                      ->orWhere('barcode', $this->sku)
+                      ->orWhere('finished_item_code', $this->sku);
+                })
+                ->first();
+        }
+
+        if ($stockItem && !empty($stockItem->art_no)) {
+            return $stockItem->art_no;
+        }
+
+        return $this->art_no ?? $this->sku ?? '-';
+    }
+
+    public function getFinishedItemCodeAttribute()
+    {
+        if ($this->stock_entry_item_id) {
+            $stockItem = StockEntryItem::find($this->stock_entry_item_id);
+            if ($stockItem) {
+                return $stockItem->finished_item_code;
             }
         }
-
-        // 2. Try to fetch from StockEntryItem -> finished_item_code
-        if ($this->stockEntryItem && !empty($this->stockEntryItem->finished_item_code)) {
-            return $this->stockEntryItem->finished_item_code;
+        if (!empty($this->sku)) {
+            $stockItem = StockEntryItem::where(function ($q) {
+                    $q->where('sku', $this->sku)
+                      ->orWhere('barcode', $this->sku);
+                })
+                ->where('stock_type', 'finished_goods')
+                ->first();
+            if ($stockItem) {
+                return $stockItem->finished_item_code;
+            }
         }
-
-        // 3. Fallback to art_no, sku, or '-' (do NOT use items table)
-        return $this->art_no ?? $this->sku ?? '-';
+        return $this->sku ?? '-';
     }
 }

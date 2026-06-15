@@ -77,6 +77,7 @@
                                     <th>Stock Date</th>
                                     <th>GRN No.</th>
                                     <th>Item Name</th>
+                                    <th>Art No.</th>
                                     <th>Fabric Type</th>
                                     <th>Sleeve Type</th>
                                     <th>Size</th>
@@ -239,6 +240,11 @@
                     visible: false
                 },
                 {
+                    data: 'art_no',
+                    name: 'art_no',
+                    visible: false
+                },
+                {
                     data: 'fabric_type',
                     name: 'fabric_type',
                     visible: false
@@ -289,6 +295,7 @@
                 table.column(6).visible(true);
                 table.column(7).visible(true);
                 table.column(8).visible(true);
+                table.column(9).visible(true);
             } else {
                 $('.filter-box').show();
                 $('#add-stock-entry-btn').show();
@@ -303,6 +310,7 @@
                 table.column(6).visible(false);
                 table.column(7).visible(false);
                 table.column(8).visible(false);
+                table.column(9).visible(false);
             }
 
             table.ajax.reload();

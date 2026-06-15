@@ -19,6 +19,11 @@
     background-color: #fff;
     border-bottom: 2px solid #dee2e6;
 }
+.table td input.form-control {
+    min-width: 80px;
+    padding: 6px 8px;
+    text-align: center;
+}
 </style>
 @section('content')
 <div class="container-xxl section-padding">

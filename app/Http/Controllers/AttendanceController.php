@@ -6,18 +6,18 @@ use Illuminate\Support\Facades\Http;
 use App\Jobs\SyncAttendanceJob;
 class AttendanceController extends Controller
 {
-    public function getLogs($date, $device)
+    public function getLogs($date, $device, $toDate = null)
     {
         $from = date('Y-m-d 00:00:00', strtotime($date));
-        $to   = date('Y-m-d 23:59:59', strtotime($date));
+        $to   = date('Y-m-d 23:59:59', strtotime($toDate ?: $date));
         $xml = '<?xml version="1.0" encoding="utf-8"?>
         <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
             xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
             <soap:Body>
                 <GetTransactionsLog xmlns="http://tempuri.org/">
-                    <FromDateTime>2026-05-01 00:00:00</FromDateTime>
-                    <ToDateTime>2026-05-31 23:59:59</ToDateTime>
+                    <FromDateTime>'.$from.'</FromDateTime>
+                    <ToDateTime>'.$to.'</ToDateTime>
                     <SerialNumber>'.$device.'</SerialNumber>
                     <UserName>test</UserName>
                     <UserPassword>Test@123</UserPassword>
@@ -105,37 +105,22 @@ class AttendanceController extends Controller
     {
         $final = [];
         foreach ($grouped as $emp => $dates) {
+            $empStr = (string)$emp;
             foreach ($dates as $date => $times) {
                 sort($times);
                 $in  = $times[0] ?? null;
                 $out = count($times) > 1 ? end($times) : null;
-                $hours = ($in && $out)
-                    ? (strtotime($out) - strtotime($in)) / 3600
-                    : 0;
-                $status = $this->getStatus($date, $in, $out, $hours);
-                $permissionMinutes = 0;
-                if ($in) {
-                    $allowedTime = strtotime($date . ' 09:05:00');
-                    // FIXED
-                    $inTimestamp = strtotime($in);
-                    if ($inTimestamp > $allowedTime) {
-                        $lateMinutes = ceil(
-                            ($inTimestamp - $allowedTime) / 60
-                        );
-                        $permissionMinutes = ceil($lateMinutes / 15) * 15;
-                    }
-                }
                 $existingAttendance = DB::table('attendances')
-                    ->where('emp_code', $emp)
+                    ->where('emp_code', $empStr)
                     ->where('date', $date)
                     ->first();
                 if ($existingAttendance && $existingAttendance->is_manual) {
                     $attendanceId = $existingAttendance->id;
                     $name = DB::table('users')
-                        ->where('emp_id', $emp)
+                        ->where('emp_id', $empStr)
                         ->value('name');
                     $department_id = DB::table('users')
-                    ->where('emp_id', $emp)
+                    ->where('emp_id', $empStr)
                     ->value('department_id');
                     $department = DB::table('departments')
                         ->where('id', $department_id)
@@ -143,7 +128,7 @@ class AttendanceController extends Controller
                     $final[] = [
                         'id' => $attendanceId,
                         'name' => $name ?? 'Unknown',
-                        'code' => $emp,
+                        'code' => $empStr,
                         'date' => date('d-m-Y', strtotime($date)),
                         'inTime' => $existingAttendance->in_time
                             ? date('h:i A', strtotime($existingAttendance->in_time))
@@ -158,13 +143,43 @@ class AttendanceController extends Controller
                     ];
                     continue;
                 }
+                $dbIn = $existingAttendance ? $existingAttendance->in_time : null;
+                $dbOut = $existingAttendance ? $existingAttendance->out_time : null;
+                $allTimes = array_filter([$in, $out, $dbIn, $dbOut]);
+                if (!empty($allTimes)) {
+                    sort($allTimes);
+                    $in = $allTimes[0];
+                    $out = count($allTimes) > 1 ? end($allTimes) : null;
+                }
+                $hours = ($in && $out)
+                    ? (strtotime($out) - strtotime($in)) / 3600
+                    : 0;
+                $status = $this->getStatus($date, $in, $out, $hours);
+                $permissionMinutes = 0;
+                if ($in) {
+                    $allowedTime = strtotime($date . ' 09:05:00');
+                    $inTimestamp = strtotime($in);
+                    if ($inTimestamp > $allowedTime) {
+                        $lateMinutes = ceil(
+                            ($inTimestamp - $allowedTime) / 60
+                        );
+                        $permissionMinutes = ceil($lateMinutes / 15) * 15;
+                    }
+                }
+                $deviceSerial = $serial_no;
+                if (!$deviceSerial && $existingAttendance) {
+                    $deviceSerial = $existingAttendance->device_serial_number;
+                }
+                if (!$deviceSerial) {
+                    $deviceSerial = DB::table('users')->where('emp_id', $empStr)->value('device');
+                }
                 DB::table('attendances')->updateOrInsert(
                     [
-                        'emp_code' => $emp,
+                        'emp_code' => $empStr,
                         'date' => $date,
-                        'device_serial_number' => $serial_no
                     ],
                     [
+                        'device_serial_number' => $deviceSerial,
                         'in_time' => $in,
                         'out_time' => $out,
                         'work_hours' => round($hours, 2),
@@ -174,22 +189,22 @@ class AttendanceController extends Controller
                     ]
                 );
                 $name = DB::table('users')
-                    ->where('emp_id', $emp)
+                    ->where('emp_id', $empStr)
                     ->value('name');
                 $department_id = DB::table('users')
-                    ->where('emp_id', $emp)
+                    ->where('emp_id', $empStr)
                     ->value('department_id');
                 $department = DB::table('departments')
                     ->where('id', $department_id)
                     ->value('department');
                 $attendanceId = DB::table('attendances')
-                    ->where('emp_code', $emp)
+                    ->where('emp_code', $empStr)
                     ->where('date', $date)
                     ->value('id');
                 $final[] = [
                     'id' => $attendanceId,
                     'name' => $name ?? 'Unknown',
-                    'code' => $emp,
+                    'code' => $empStr,
                     'date' => date('d-m-Y', strtotime($date)),
                     'inTime' => $in
                         ? date('h:i A', strtotime($in))
@@ -210,85 +225,98 @@ class AttendanceController extends Controller
             ->where('id', '!=', 1)
             ->pluck('emp_id')
             ->toArray();
-        foreach ($allEmployees as $emp) {
-            if (!isset($grouped[$emp][$selectedDate])) {
-                $existingAttendance = DB::table('attendances')
-                    ->where('emp_code', $emp)
-                    ->where('date', $selectedDate)
-                    ->first();
-                if ($existingAttendance && $existingAttendance->is_manual) {
+        $datesToMark = is_array($selectedDate) ? $selectedDate : [$selectedDate];
+        foreach ($datesToMark as $dateKey) {
+            foreach ($allEmployees as $emp) {
+                $empStr = (string)$emp;
+                if (!isset($grouped[$empStr][$dateKey])) {
+                    $existingAttendance = DB::table('attendances')
+                        ->where('emp_code', $empStr)
+                        ->where('date', $dateKey)
+                        ->first();
+                    if ($existingAttendance) {
+                        if ($existingAttendance->is_manual || $existingAttendance->in_time || $existingAttendance->out_time) {
+                            $name = DB::table('users')
+                                ->where('emp_id', $empStr)
+                                ->value('name');
+                            $department_id = DB::table('users')
+                                ->where('emp_id', $empStr)
+                                ->value('department_id');
+                            $department = DB::table('departments')
+                                ->where('id', $department_id)
+                                ->value('department');
+                            $final[] = [
+                                'id' => $existingAttendance->id,
+                                'name' => $name ?? 'Unknown',
+                                'code' => $empStr,
+                                'date' => date('d-m-Y', strtotime($dateKey)),
+                                'inTime' => $existingAttendance->in_time
+                                    ? date('h:i A', strtotime($existingAttendance->in_time))
+                                    : '-',
+                                'outTime' => $existingAttendance->out_time
+                                    ? date('h:i A', strtotime($existingAttendance->out_time))
+                                    : '-',
+                                'hours' => $existingAttendance->work_hours ?: '-',
+                                'permission_hours' => $existingAttendance->permission_hours ?: '-',
+                                'status' => $existingAttendance->status,
+                                'department' => $department ?? '-'
+                            ];
+                            continue;
+                        }
+                    }
+                    $status = $this->getStatus(
+                        $dateKey,
+                        null,
+                        null,
+                        0
+                    );
+                    $deviceSerial = $serial_no;
+                    if (!$deviceSerial && $existingAttendance) {
+                        $deviceSerial = $existingAttendance->device_serial_number;
+                    }
+                    if (!$deviceSerial) {
+                        $deviceSerial = DB::table('users')->where('emp_id', $empStr)->value('device');
+                    }
+                    DB::table('attendances')->updateOrInsert(
+                        [
+                            'emp_code' => $empStr,
+                            'date' => $dateKey,
+                        ],
+                        [
+                            'device_serial_number' => $deviceSerial,
+                            'in_time' => null,
+                            'out_time' => null,
+                            'work_hours' => 0,
+                            'permission_hours' => 0,
+                            'status' => $status,
+                            'is_manual' => 0
+                        ]
+                    );
                     $name = DB::table('users')
-                        ->where('emp_id', $emp)
+                        ->where('emp_id', $empStr)
                         ->value('name');
                     $department_id = DB::table('users')
-                        ->where('emp_id', $emp)
+                        ->where('emp_id', $empStr)
                         ->value('department_id');
                     $department = DB::table('departments')
                         ->where('id', $department_id)
                         ->value('department');
+                    $attendanceId = DB::table('attendances')
+                        ->where('emp_code', $empStr)
+                        ->where('date', $dateKey)
+                        ->value('id');
                     $final[] = [
-                        'id' => $existingAttendance->id,
+                        'id' => $attendanceId,
                         'name' => $name ?? 'Unknown',
-                        'code' => $emp,
-                        'date' => date('d-m-Y', strtotime($selectedDate)),
-                        'inTime' => $existingAttendance->in_time
-                            ? date('h:i A', strtotime($existingAttendance->in_time))
-                            : '-',
-                        'outTime' => $existingAttendance->out_time
-                            ? date('h:i A', strtotime($existingAttendance->out_time))
-                            : '-',
-                        'hours' => $existingAttendance->work_hours ?: '-',
-                        'permission_hours' => $existingAttendance->permission_hours ?: '-',
-                        'status' => $existingAttendance->status,
+                        'code' => $empStr,
+                        'date' => date('d-m-Y', strtotime($dateKey)),
+                        'inTime' => '-',
+                        'outTime' => '-',
+                        'hours' => '-',
+                        'status' => $status,
                         'department' => $department ?? '-'
                     ];
-                    continue;
                 }
-                $status = $this->getStatus(
-                    $selectedDate,
-                    null,
-                    null,
-                    0
-                );
-                DB::table('attendances')->updateOrInsert(
-                    [
-                        'emp_code' => $emp,
-                        'date' => $selectedDate,
-                        'device_serial_number' => $serial_no
-                    ],
-                    [
-                        'in_time' => null,
-                        'out_time' => null,
-                        'work_hours' => 0,
-                        'permission_hours' => 0,
-                        'status' => $status,
-                        'is_manual' => 0
-                    ]
-                );
-                $name = DB::table('users')
-                    ->where('emp_id', $emp)
-                    ->value('name');
-                $department_id = DB::table('users')
-                    ->where('emp_id', $emp)
-                    ->value('department_id');
-                $department = DB::table('departments')
-                    ->where('id', $department_id)
-                    ->value('department');
-                $attendanceId = DB::table('attendances')
-                    ->where('emp_code', $emp)
-                    ->where('date', $selectedDate)
-                    ->value('id');
-                $final[] = [
-                    'id' => $attendanceId,
-                    'name' => $name ?? 'Unknown',
-                    'code' => $emp,
-                    'date' => date('d-m-Y', strtotime($selectedDate)),
-                    'inTime' => '-',
-                    'outTime' => '-',
-                    'hours' => '-',
-                    'status' => $status,
-                    'department' => $department ?? '-'
-                ];
             }
         }
         return $final;

@@ -153,10 +153,10 @@
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Product SKU</label>
                                                                     <span class="text-dark fw-medium fs-6">{{ $firstItem->sku ?? '-' }}</span>
                                                                 </div>
-                                                                {{-- <div class="col-sm-6">
+                                                                <div class="col-sm-6">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Art No</label>
                                                                     <span class="text-dark fw-medium fs-6">{{ $firstItem->art_no ?? '-' }}</span>
-                                                                </div> --}}
+                                                                </div>
                                                                 <div class="col-sm-6">
                                                                     <label class="detail-title d-block mb-1 text-uppercase ls-1 small fw-bold">Fabric / Sleeve</label>
                                                                     <span class="text-dark fw-medium fs-6">

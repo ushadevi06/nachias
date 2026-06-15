@@ -17,3 +17,7 @@ ALTER TABLE `purchase_order_items` CHANGE `amount` `amount` DECIMAL(15,2) NULL D
 ALTER TABLE `nachias`.`salary_generations` ADD COLUMN `lop_amount` DECIMAL(10,2) NOT NULL AFTER `late_hours`;
 ALTER TABLE `task_assign_employees` ADD COLUMN `unit_rate` DECIMAL(10,2) NULL AFTER `completed_qty`, ADD COLUMN `total_cost` DECIMAL(15,2) NULL AFTER `unit_rate`;
 
+ALTER TABLE sales_order_items
+ADD COLUMN item_name VARCHAR(255) NULL AFTER art_no;
+ALTER TABLE `sales_invoices` MODIFY `commission_percent` DECIMAL(15, 2) NULL;
+ALTER TABLE `sales_invoices` MODIFY `commission_amount` DECIMAL(15, 2) NULL;

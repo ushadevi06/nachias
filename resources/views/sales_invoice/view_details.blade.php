@@ -179,6 +179,9 @@
                                                         @endphp
                                                         <div class="fw-bold">{{ $brandName }}</div>
                                                         <small class="text-muted">{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</small>
+                                                        @if(!empty($item->sku))
+                                                            <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
+                                                        @endif
                                                     </td>
                                                     <td>{{ $item->color ? $item->color->color_name : '-' }}</td>
                                                     <td>{{ $item->art_no ?? '-' }}</td>

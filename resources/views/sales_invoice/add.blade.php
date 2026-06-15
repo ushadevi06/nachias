@@ -35,12 +35,15 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer/Buyer">
+                                    <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer/Buyer" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'disabled' : '' }}>
                                         <option value="">Select Customer/Buyer</option>
                                         @foreach($customers as $customer)
                                             <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-pincode="{{ $customer->zip_code }}" {{ (old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
+                                    @if(isset($invoice) && $invoice->einvoice_status === 'generated')
+                                        <input type="hidden" name="customer_id" value="{{ $invoice->customer_id }}">
+                                    @endif
                                     <label for="customer_id">Customer <span class="text-danger">*</span></label>
                                     @error('customer_id')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -49,11 +52,16 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="so_ids" name="so_ids[]" class="select2 form-select @error('so_ids') is-invalid @enderror" multiple data-placeholder="Select Sales Orders">
+                                    <select id="so_ids" name="so_ids[]" class="select2 form-select @error('so_ids') is-invalid @enderror" multiple data-placeholder="Select Sales Orders" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'disabled' : '' }}>
                                         @foreach($saleOrders as $so)
                                             <option value="{{ $so->id }}" {{ (is_array(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : [])) && in_array($so->id, old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []))) ? 'selected' : '' }}>{{ $so->so_no }}</option>
                                         @endforeach
                                     </select>
+                                    @if(isset($invoice) && $invoice->einvoice_status === 'generated')
+                                        @foreach(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []) as $soId)
+                                            <input type="hidden" name="so_ids[]" value="{{ $soId }}">
+                                        @endforeach
+                                    @endif
                                     <label for="so_ids">Sales Order <span class="text-danger">*</span></label>
                                     @error('so_ids')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -136,6 +144,7 @@
                                 <div class="text-danger small mb-2">{{ $message }}</div>
                             @enderror
                         </div>
+                        @if(!(isset($invoice) && $invoice->einvoice_status === 'generated'))
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <div class="form-floating form-floating-outline">
@@ -147,6 +156,7 @@
                                 <small class="text-muted"><i class="ri-information-line me-1"></i> Tip: Scan a barcode or type item code to quickly add it to the order.</small>
                             </div>
                         </div>
+                        @endif
                         <div class="table-responsive">
                             <table class="table">
                                 <thead>
@@ -208,13 +218,17 @@
                                                     }
                                                 }
                                                 $maxQty = null;
-                                                if (isset($invoice->so_id)) {
-                                                    $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                                                $soIds = [];
+                                                if (!empty($invoice->so_ids)) {
+                                                    $soIds = is_array($invoice->so_ids) ? $invoice->so_ids : json_decode($invoice->so_ids, true);
+                                                }
+                                                if (empty($soIds) && isset($invoice->so_id)) {
+                                                    $soIds = [$invoice->so_id];
+                                                }
+                                                if (!empty($soIds)) {
+                                                    $maxQty = \App\Models\SalesOrderItem::whereIn('sale_order_id', $soIds)
                                                         ->where('stock_entry_item_id', $item->stock_entry_item_id)
-                                                        ->first();
-                                                    if ($soItem) {
-                                                        $maxQty = $soItem->qty;
-                                                    }
+                                                        ->sum('qty');
                                                 }
 
                                                 $stockQty = 0;
@@ -260,6 +274,9 @@
                                             <td>
                                                 <div class="fw-bold text-dark">{{ $row->brand_name ?? '' }}</div>
                                                 <div class="small text-muted">{{ $row->item_name ?? '' }} ({{ $row->sleeve_type ?? '' }})</div>
+                                                @if(!empty($row->sku))
+                                                    <div class="small text-primary">Barcode: {{ $row->sku }}</div>
+                                                @endif
                                                 <input type="hidden" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
@@ -290,16 +307,16 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty">
+                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <label>Qty *</label>
                                                 </div>
                                                 <div class="qty-error text-danger small" style="display:none;"></div>
                                                 @if(isset($row->max_qty) && $row->max_qty !== '')
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif
-                                                @if(isset($row->stock_qty) && $row->stock_qty !== '')
-                                                    <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-warning' : 'text-success' }} d-block">In Stock: {{ $row->stock_qty }}</small>
-                                                @endif
+                                                {{-- @if(isset($row->stock_qty) && $row->stock_qty !== '')
+                                                     <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-warning' : 'text-success' }} d-block">In Stock: {{ $row->stock_qty }}</small>
+                                                @endif --}}
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
@@ -320,7 +337,11 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
+                                                @if(isset($invoice) && $invoice->einvoice_status === 'generated')
+                                                    <span class="text-muted">-</span>
+                                                @else
+                                                    <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
+                                                @endif
                                             </td>
                                         </tr>
                                         @endforeach
@@ -535,7 +556,7 @@
                                         </div>
                                         <div class="col-8 d-flex align-items-center">
                                             <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                <input type="number" step="any" name="discount_percent" id="discount_percent" class="form-control text-end" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
+                                                <input type="number" step="any" name="discount_percent" id="discount_percent" class="form-control text-end" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                 <span class="input-group-text bg-white">%</span>
                                             </div>
                                             <span class="fw-bold ms-3" style="text-align: right;" id="discount_val">{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}</span>
@@ -570,7 +591,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">IGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '18.00') }}">
+                                                    <input type="number" step="any" name="igst_percent" id="igst_percent" class="form-control text-end" value="{{ old('igst_percent', isset($invoice) ? number_format($invoice->igst_percent, 2, '.', '') : '18.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="igst_val">{{ old('igst', isset($invoice) ? number_format($invoice->igst, 2, '.', '') : '0.00') }}</span>
@@ -583,7 +604,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">CGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '9.00') }}">
+                                                    <input type="number" step="any" name="cgst_percent" id="cgst_percent" class="form-control text-end" value="{{ old('cgst_percent', isset($invoice) ? number_format($invoice->cgst_percent, 2, '.', '') : '9.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="cgst_val">{{ old('cgst', isset($invoice) ? number_format($invoice->cgst, 2, '.', '') : '0.00') }}</span>
@@ -594,7 +615,7 @@
                                             <div class="col-4"><span class="text-secondary fw-medium">SGST</span></div>
                                             <div class="col-8 d-flex align-items-center">
                                                 <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                    <input type="number" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '9.00') }}">
+                                                    <input type="number" step="any" name="sgst_percent" id="sgst_percent" class="form-control text-end" value="{{ old('sgst_percent', isset($invoice) ? number_format($invoice->sgst_percent, 2, '.', '') : '9.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
                                                     <span class="input-group-text bg-white">%</span>
                                                 </div>
                                                 <span class="fw-bold ms-3" style="text-align: right;" id="sgst_val">{{ old('sgst', isset($invoice) ? number_format($invoice->sgst, 2, '.', '') : '0.00') }}</span>
@@ -847,9 +868,13 @@
         });
 
         window.isEditMode = {{ isset($invoice) ? 'true' : 'false' }};
+        window.einvoiceStatus = "{{ isset($invoice) ? $invoice->einvoice_status : '' }}";
         window.availableSOItems = [];
 
         function addInvoiceItem(matchedItem, qty = null, maxQty = null) {
+            if (window.einvoiceStatus === 'generated') {
+                return;
+            }
             if (maxQty === null && matchedItem.qty) {
                 maxQty = matchedItem.qty;
             }
@@ -891,6 +916,7 @@
                     <td>
                         <div class="fw-bold text-dark">${matchedItem.brand_name || ''}</div>
                         <div class="small text-muted">${matchedItem.item_name || ''} (${matchedItem.sleeve || ''})</div>
+                        ${matchedItem.sku ? `<div class="small text-primary">Barcode: ${matchedItem.sku}</div>` : ''}
                         <input type="hidden" name="items[${index}][brand_id]" class="brand-id" value="${matchedItem.brand_id}">
                         <input type="hidden" name="items[${index}][brand_name]" class="brand-name" value="${matchedItem.brand_name || ''}">
                         <input type="hidden" name="items[${index}][item_id]" class="item-id" value="${matchedItem.item_id || ''}">
@@ -925,7 +951,7 @@
                         </div>
                         <div class="qty-error text-danger small" style="display:none;"></div>
                         ${maxQty ? `<small class="text-info d-block">Ordered: ${maxQty}</small>` : ''}
-                        ${matchedItem.stock_qty !== undefined ? `<small class="${matchedItem.stock_qty < (maxQty || Infinity) ? 'text-warning' : 'text-success'} d-block">In Stock: ${matchedItem.stock_qty}</small>` : ''}
+                        ${matchedItem.stock_qty !== undefined ? `<!-- <small class="${matchedItem.stock_qty < (maxQty || Infinity) ? 'text-warning' : 'text-success'} d-block">In Stock: ${matchedItem.stock_qty}</small> -->` : ''}
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
@@ -971,7 +997,12 @@
                 });
 
                 var formatted = matches.map(function (item) {
-                    var label = (item.brand_name || '') + ' - ' + (item.item_name || '');
+                    var label = '';
+                    if (item.brand_name && item.item_name && item.brand_name !== item.item_name) {
+                        label = item.brand_name + ' - ' + item.item_name;
+                    } else {
+                        label = item.brand_name || item.item_name || '';
+                    }
                     if (item.sleeve) label += ' (' + item.sleeve + ')';
                     if (item.sku) label += ' | SKU: ' + item.sku;
                     if (item.size_name || item.size_id) label += ' | Size: ' + (item.size_name || item.size_id);
@@ -1076,6 +1107,9 @@
         }
 
         $('#item-rows').on('click', '.remove-item', function() {
+            if (window.einvoiceStatus === 'generated') {
+                return;
+            }
             if ($('#item-rows .item-row').length > 0) {
                 $(this).closest('tr').remove();
                 updateSerialNumbers();
@@ -1107,6 +1141,14 @@
                 }
                 let customerPincode = $(this).find(':selected').data('pincode');
                 let companyPincode = "{{ $web_settings->zip_code ?? '' }}";
+                
+                if (!customerPincode) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Danger',
+                        text: 'Customer zipcode is empty.'
+                    });
+                }
                 
                 if (customerPincode && companyPincode) {
                     $.ajax({
@@ -1270,9 +1312,6 @@
 
             if (!isNaN(max) && qty > max) {
                 errorDiv.text('Exceeds ordered qty (' + max + ')').show();
-                qtyInput.addClass('is-invalid');
-            } else if (!isNaN(stock) && qty > stock) {
-                errorDiv.text('Warning: only ' + stock + ' in stock').show();
                 qtyInput.addClass('is-invalid');
             } else {
                 errorDiv.hide();

@@ -595,13 +595,132 @@ class SalesOrderController extends Controller
     {
         $items = SalesOrderItem::where('sale_order_id', $salesOrderId)->get();
         foreach ($items as $item) {
-            if ($item->stock_entry_item_id) {
+            $stockEntryItemId = $item->stock_entry_item_id;
+
+            if (!$stockEntryItemId && !$revert) {
+                $matchedStockItem = null;
+                if (!empty($item->sku)) {
+                    $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
+                        ->whereNull('deleted_at')
+                        ->where(function ($q) use ($item) {
+                            $q->where('sku', $item->sku)
+                              ->orWhere('barcode', $item->sku);
+                        });
+
+                    if (!empty($item->size_id)) {
+                        $stockQuery->where('size', $item->size_id);
+                    }
+
+                    if (!empty($item->sleeve)) {
+                        $sleeves = is_array($item->sleeve) ? $item->sleeve : [$item->sleeve];
+                        $sleeveDbValues = [];
+                        foreach ($sleeves as $sleeve) {
+                            $sleeveUpper = strtoupper(trim($sleeve));
+                            if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
+                                $sleeveDbValues = array_merge($sleeveDbValues, ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve']);
+                            } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
+                                $sleeveDbValues = array_merge($sleeveDbValues, ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve']);
+                            } else {
+                                $sleeveDbValues[] = $sleeve;
+                            }
+                        }
+                        $stockQuery->whereIn('sleeve_type', array_unique($sleeveDbValues));
+                    }
+
+                    $matchedStockItem = $stockQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')
+                        ->orderBy('id', 'desc')
+                        ->first();
+                }
+
+                if (!$matchedStockItem && !empty($item->sku)) {
+                    $barcodeMaster = \App\Models\BarcodeMaster::where('barcode_no', $item->sku)
+                        ->orderBy('id', 'desc')
+                        ->first();
+                    if ($barcodeMaster) {
+                        $finishedItemCode = $barcodeMaster->item_code;
+                        $colorId = $barcodeMaster->color_id ?? $item->color_id;
+                        $size = $barcodeMaster->size ?? $item->size_id;
+                        $sleeve = $barcodeMaster->sleeve_type;
+
+                        $stockQuery2 = StockEntryItem::where('stock_type', 'finished_goods')
+                            ->whereNull('deleted_at')
+                            ->where('finished_item_code', $finishedItemCode);
+
+                        if ($colorId) {
+                            $stockQuery2->where('color_id', $colorId);
+                        }
+                        if ($size) {
+                            $stockQuery2->where('size', $size);
+                        }
+                        if ($sleeve) {
+                            $sleeveUpper = strtoupper(trim($sleeve));
+                            if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
+                                $sleeveDbValues = ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve'];
+                            } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
+                                $sleeveDbValues = ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve'];
+                            } else {
+                                $sleeveDbValues = [$sleeve];
+                            }
+                            $stockQuery2->whereIn('sleeve_type', $sleeveDbValues);
+                        }
+
+                        $matchedStockItem = $stockQuery2->orderByRaw('(qty_in - qty_out) > 0 DESC')
+                            ->orderBy('id', 'desc')
+                            ->first();
+                    }
+                }
+
+                if (!$matchedStockItem) {
+                    $finishedItemCode = $item->item_name ?? $item->art_no;
+                    if ($finishedItemCode) {
+                        $stockQuery3 = StockEntryItem::where('stock_type', 'finished_goods')
+                            ->whereNull('deleted_at')
+                            ->where(function ($q) use ($finishedItemCode) {
+                                $q->where('finished_item_code', $finishedItemCode)
+                                  ->orWhere('art_no', $finishedItemCode);
+                            });
+
+                        if (!empty($item->color_id)) {
+                            $stockQuery3->where('color_id', $item->color_id);
+                        }
+                        if (!empty($item->size_id)) {
+                            $stockQuery3->where('size', $item->size_id);
+                        }
+                        if (!empty($item->sleeve)) {
+                            $sleeves = is_array($item->sleeve) ? $item->sleeve : [$item->sleeve];
+                            $sleeveDbValues = [];
+                            foreach ($sleeves as $sl) {
+                                $sleeveUpper = strtoupper(trim($sl));
+                                if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
+                                    $sleeveDbValues = array_merge($sleeveDbValues, ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve']);
+                                } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
+                                    $sleeveDbValues = array_merge($sleeveDbValues, ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve']);
+                                } else {
+                                    $sleeveDbValues[] = $sl;
+                                }
+                            }
+                            $stockQuery3->whereIn('sleeve_type', array_unique($sleeveDbValues));
+                        }
+
+                        $matchedStockItem = $stockQuery3->orderByRaw('(qty_in - qty_out) > 0 DESC')
+                            ->orderBy('id', 'desc')
+                            ->first();
+                    }
+                }
+
+                if ($matchedStockItem) {
+                    $stockEntryItemId = $matchedStockItem->id;
+                    $item->update(['stock_entry_item_id' => $stockEntryItemId]);
+                }
+            }
+
+            if ($stockEntryItemId) {
                 if ($revert) {
-                    StockEntryItem::where('id', $item->stock_entry_item_id)
+                    StockEntryItem::where('id', $stockEntryItemId)
                         ->where('qty_out', '>=', $item->qty)
                         ->decrement('qty_out', $item->qty);
                 } else {
-                    StockEntryItem::where('id', $item->stock_entry_item_id)
+                    StockEntryItem::where('id', $stockEntryItemId)
                         ->increment('qty_out', $item->qty);
                 }
             }
@@ -896,7 +1015,7 @@ class SalesOrderController extends Controller
 
         try {
             $service = new \App\Services\OrderaxeService();
-            $limit = $request->query('limit', 1);
+            $limit = $request->query('limit', 100);
             $syncCount = $service->syncOrders((int)$limit);
             if ($syncCount > 0) {
                 return redirect('sales_orders')->with('success', $syncCount . ' orders synced successfully from Orderaxe');

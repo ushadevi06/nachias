@@ -52,7 +52,6 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- =========================
 DELETE FROM task_adjustments;
 ALTER TABLE task_adjustments AUTO_INCREMENT = 1;
-
 DELETE FROM tasks;
 ALTER TABLE tasks AUTO_INCREMENT = 1;
 

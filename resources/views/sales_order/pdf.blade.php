@@ -266,9 +266,11 @@
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
                             @php
-                                $item_code = $item->stockEntryItem?->finished_item_code ?? '';
+                                $code = $item->finished_item_code;
+                                $itemName = $item->item_name;
+                                $displayDescription = (!empty($itemName) && $itemName !== $code && $itemName !== '-') ? $itemName : $code;
                             @endphp
-                            {{ $item_code }}
+                            {{ $displayDescription }}
                         </td>
                         <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
                         <td class="text-center">{{ $item->size->size ?? $item->size_id ?? '-' }}</td>

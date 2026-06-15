@@ -40,7 +40,7 @@ class OrderaxeService
         return null;
     }
 
-    public function fetchOrders($timestamp = 0)
+    public function fetchOrders($timestamp = 0, $limit = 100)
     {
         $token = $this->getToken();
         if (!$token) return null;
@@ -53,7 +53,8 @@ class OrderaxeService
                 'Accept' => 'application/json'
             ])
             ->get($this->baseUrl . '/tpc/v1/orders', [
-                'timestamp' => $timestamp
+                'timestamp' => $timestamp,
+                'limit' => $limit
             ]);
 
         if ($response->successful()) {
@@ -64,9 +65,9 @@ class OrderaxeService
         return null;
     }
 
-    public function syncOrders()
+    public function syncOrders($limit = 100)
     {
-        $orders = $this->fetchOrders(0);
+        $orders = $this->fetchOrders(0, $limit);
 
         if (!$orders)
             return 0;
@@ -99,7 +100,7 @@ class OrderaxeService
             $customerData = $orderData['retailer'] ?? [];
             $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? 'Unknown Orderaxe Customer');
             $cleanedCustomerName = trim(preg_replace('/\s*\(.*\)/', '', $customerName));
-            $customer = Customer::where('name', 'Like', '%' . $cleanedCustomerName . '%')->first();
+            $customer = Customer::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cleanedCustomerName) . '%'])->first();
             if (!$customer) {
                 Log::warning('Orderaxe Sync: Customer not found. Skipping order.', [
                     'customer_name' => $customerName,
@@ -117,6 +118,28 @@ class OrderaxeService
                 }
             }
 
+            $zoneId = null;
+            if (!empty($orderData['distributor']['reference_id'])) {
+                $refZone = trim($orderData['distributor']['reference_id']);
+                if (preg_match('/Zone-(\d+)/i', $refZone, $matches)) {
+                    $num = $matches[1];
+                    if ($num == 1) {
+                        $zoneModel = \App\Models\Zone::where('zone_name', 'like', '%Zone%I%')
+                            ->orWhere('zone_name', 'like', '%Zone%1%')
+                            ->first();
+                    } else {
+                        $zoneModel = \App\Models\Zone::where('zone_name', 'like', '%Zone%' . $num . '%')->first();
+                    }
+                    if ($zoneModel) {
+                        $zoneId = $zoneModel->id;
+                    }
+                }
+            }
+
+            if (!$zoneId && $customer) {
+                $zoneId = $customer->zone_id;
+            }
+
             $salesOrder = SalesOrder::create([
                 'so_no'        => SalesOrder::generateSoNo(),
                 'order_no'     => $orderNo,
@@ -131,7 +154,7 @@ class OrderaxeService
                 'order_type'   => 'Customer Order',
                 'store_id'     => null,
                 'season_id'    => null,
-                'zone_id'      => null,
+                'zone_id'      => $zoneId,
                 'created_by'   => 1,
                 'billing_address' => $this->formatAddress($customerData['alias']['address'] ?? []),
                 'shipping_address' => $this->formatAddress($customerData['alias']['address'] ?? []),
@@ -145,31 +168,141 @@ class OrderaxeService
                 foreach ($combinations as $itemData) {
                     $barcode = $itemData['barcode'] ?? null;    
                     $qty = $itemData['quantity'] ?? 0;         
-                    $rate = $itemData['mrp'] ?? 0;             
+                    $rate = $itemData['price'] ?? $itemData['rate'] ?? $itemData['mrp'] ?? 0;             
                     $artNo = null;
                     $stockEntryItem = null;
 
                     $attributes = $itemData['attributes'] ?? []; 
-                    $apiSize = $attributes[0]['val'] ?? null;
-                    $apiColor = $attributes[1]['val'] ?? null;
-                    $apiFit = $attributes[2]['val'] ?? null;
+                    $apiSize = null;
+                    $apiColor = null;
+                    $apiFit = null;
+
+                    foreach ($attributes as $attr) {
+                        $attrId = $attr['attr_id'] ?? null;
+                        $attrName = strtolower($attr['name'] ?? $attr['key'] ?? '');
+                        $attrVal = $attr['value'] ?? $attr['val'] ?? null;
+
+                        if ($attrId === '672d9a34a4af6e35050547fd' || $attrName === 'size') {
+                            $apiSize = $attrVal;
+                        } elseif ($attrId === '672d9a34a4af6e35050547fe' || $attrName === 'color') {
+                            $apiColor = $attrVal;
+                        } elseif ($attrId === '672d9a34a4af6e35050547ff' || $attrName === 'fit' || $attrName === 'sleeve') {
+                            $apiFit = $attrVal;
+                        }
+                    }
+
+                    $finishedItemCode = null;
+                    $colorId = null;
+                    $uomId = 'PCS';
+                    $sizeId = null;
+                    $sleeveType = null;
+                    $barcodeMaster = null;
+
+                    $orderaxeItemName = $product['name'] ?? $product['title'] ?? $product['product_name'] ?? $itemData['name'] ?? $itemData['title'] ?? $itemData['variationDescription'] ?? null;
 
                     if ($barcode) {
                         $barcode = trim($barcode);
-                        $stockEntryItem = StockEntryItem::with('item')->where('sku', $barcode)->where('stock_type', 'finished_goods')->first();
+
+                        $sleeveDbValues = [];
+                        if ($apiFit) {
+                            $apiFitUpper = strtoupper(trim($apiFit));
+                            if ($apiFitUpper === 'FS' || $apiFitUpper === 'F/S' || $apiFitUpper === 'FULL') {
+                                $sleeveDbValues = ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve'];
+                            } elseif ($apiFitUpper === 'HS' || $apiFitUpper === 'H/S' || $apiFitUpper === 'HALF') {
+                                $sleeveDbValues = ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve'];
+                            } else {
+                                $sleeveDbValues = [$apiFit];
+                            }
+                        }
+
+                        // Query StockEntryItem matching barcode, size, and sleeve
+                        $stockEntryItemQuery = StockEntryItem::where(function ($q) use ($barcode) {
+                                $q->where('sku', $barcode)
+                                  ->orWhere('barcode', $barcode);
+                            })
+                            ->where('stock_type', 'finished_goods');
+
+                        if (!empty($apiSize)) {
+                            $stockEntryItemQuery->where('size', $apiSize);
+                        }
+
+                        if (!empty($sleeveDbValues)) {
+                            $stockEntryItemQuery->whereIn('sleeve_type', $sleeveDbValues);
+                        }
+
+                        $stockEntryItem = $stockEntryItemQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')
+                            ->orderBy('id', 'desc')
+                            ->first();
+                        
                         if ($stockEntryItem) {
                             $artNo = $stockEntryItem->art_no;
-                            $itemPrice = ItemPrice::where('finished_item_code', $stockEntryItem->finished_item_code)->where('status', 'Active')->where('effective_from', '<=', date('Y-m-d'))->orderBy('effective_from', 'desc')->first();
+                            $finishedItemCode = $stockEntryItem->finished_item_code;
+                            $colorId = $stockEntryItem->color_id;
+                            $uomId = $stockEntryItem->uom_id ?? 'PCS';
+                            $sizeId = $stockEntryItem->size ?? $apiSize;
+                            $sleeveType = $stockEntryItem->sleeve_type;
+                        } else {
+                            // Log the unmatched barcode, size, and sleeve for debugging
+                            Log::warning('Orderaxe Sync: Exact StockEntryItem match failed (barcode + size + sleeve).', [
+                                'barcode' => $barcode,
+                                'size' => $apiSize,
+                                'sleeve' => $apiFit,
+                                'order_no' => $orderNo
+                            ]);
+
+                            // Query BarcodeMaster as fallback for metadata (keeping stock_entry_item_id null)
+                            $barcodeMaster = \App\Models\BarcodeMaster::where('barcode_no', $barcode)
+                                ->orderBy('id', 'desc')
+                                ->first();
+                            if ($barcodeMaster) {
+                                $artNo = $barcodeMaster->art_no;
+                                $finishedItemCode = $barcodeMaster->item_code;
+                                $colorId = $barcodeMaster->color_id;
+                                $sizeId = $barcodeMaster->size ?? $apiSize;
+                                $sleeveType = $barcodeMaster->sleeve_type;
+
+                                if ($sleeveType === 'F/S') {
+                                    $sleeveType = 'Full';
+                                } elseif ($sleeveType === 'H/S') {
+                                    $sleeveType = 'Half';
+                                }
+                            }
+
+                            // Fallback to resolve art_no by product name matching finished_item_code/item_code
+                            if (!$artNo && !empty($orderaxeItemName)) {
+                                $fallbackStock = StockEntryItem::where('finished_item_code', $orderaxeItemName)
+                                    ->whereNotNull('art_no')
+                                    ->first();
+                                if ($fallbackStock) {
+                                    $artNo = $fallbackStock->art_no;
+                                    $finishedItemCode = $fallbackStock->finished_item_code;
+                                } else {
+                                    $fallbackBarcode = \App\Models\BarcodeMaster::where('item_code', $orderaxeItemName)
+                                        ->whereNotNull('art_no')
+                                        ->first();
+                                    if ($fallbackBarcode) {
+                                        $artNo = $fallbackBarcode->art_no;
+                                        $finishedItemCode = $fallbackBarcode->item_code;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Fallback: use parsed apiSize if size_id is still empty
+                        if (!$sizeId) {
+                            $sizeId = $apiSize;
+                        }
+
+                        if ($finishedItemCode && empty($itemData['price']) && empty($itemData['rate'])) {
+                            $itemPrice = ItemPrice::where('finished_item_code', $finishedItemCode)
+                                ->where('status', 'Active')
+                                ->where('effective_from', '<=', date('Y-m-d'))
+                                ->orderBy('effective_from', 'desc')
+                                ->first();
 
                             if ($itemPrice) {
                                 $rate = $itemPrice->selling_price;
                             }
-                        } else {
-                            Log::warning('Orderaxe Sync: Barcode match failed for item.', [
-                                'barcode' => $barcode,
-                                'order_no' => $orderNo,
-                                'variation' => $itemData['variationDescription'] ?? 'N/A'
-                            ]);
                         }
                     }
 
@@ -179,26 +312,62 @@ class OrderaxeService
 
                     SalesOrderItem::create([
                         'sale_order_id' => $salesOrder->id,
-                        'item_id' => $stockEntryItem->item_id ?? null,
-                        'brand_cat_id' => $stockEntryItem->item->brand_category_id ?? null,
+                        'item_id' => null,
+                        'brand_cat_id' => null,                     
                         'qty' => $qty,
                         'rate' => $rate,
                         'mrp' => $itemData['mrp'] ?? 0,
                         'amount' => $amount,
                         'art_no' => $artNo,
+                        'item_name' => $orderaxeItemName,
                         'stock_entry_item_id' => $stockEntryItem->id ?? null,
                         'sku' => $barcode,
-                        'color_id' => $stockEntryItem->color_id ?? null,
-                        'uom_id' => $stockEntryItem->uom_id ?? 'PCS',
-                        'size_id' => $stockEntryItem->size_id ?? $apiSize ?? null,
-                        'sleeve' => $apiFit ? [$apiFit] : ($stockEntryItem->sleeve_type ? [$stockEntryItem->sleeve_type] : null),
+                        'color_id' => $colorId,
+                        'uom_id' => 'PCS',
+                        'size_id' => $sizeId,
+                        'sleeve' => $apiFit ? [$apiFit] : ($sleeveType ? [$sleeveType] : null),
                     ]);
                 }
             }
 
+            $setting = \App\Models\Setting::first();
+            $businessStateId = $setting ? $setting->state_id : null;
+            $customerStateId = $customer->state_id;
+
+            $otherState = 0;
+            $cgstPercent = 0.00;
+            $sgstPercent = 0.00;
+            $igstPercent = 0.00;
+
+            if ($businessStateId && $customerStateId) {
+                if ($businessStateId != $customerStateId) {
+                    $otherState = 1;
+                    $igstPercent = floatval($setting->igst ?? 18.00);
+                } else {
+                    $otherState = 0;
+                    $cgstPercent = floatval($setting->cgst ?? 9.00);
+                    $sgstPercent = floatval($setting->sgst ?? 9.00);
+                }
+            } else {
+                $otherState = 0;
+                $cgstPercent = floatval($setting->cgst ?? 9.00);
+                $sgstPercent = floatval($setting->sgst ?? 9.00);
+            }
+
+            $totalTaxPercent = $otherState ? $igstPercent : ($cgstPercent + $sgstPercent);
+            $taxAmount = round($totalAmount * ($totalTaxPercent / 100), 2);
+            $grandTotal = $totalAmount + $taxAmount;
+
             $salesOrder->update([
                 'total_qty' => $totalQty,
-                'total_amount' => $totalAmount,
+                'sub_total_qty' => $totalAmount,
+                'taxable_amount' => $totalAmount,
+                'other_state' => $otherState,
+                'cgst_percent' => $cgstPercent,
+                'sgst_percent' => $sgstPercent,
+                'igst_percent' => $igstPercent,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $grandTotal,
             ]);
 
             return true;

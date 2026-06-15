@@ -31,6 +31,63 @@ class EInvoiceService
             $rndOff = -$rndOff;
         }
 
+        $itemList = [];
+        $totalAssVal = 0.00;
+        $totalCgstVal = 0.00;
+        $totalSgstVal = 0.00;
+        $totalIgstVal = 0.00;
+
+        $slNo = 1;
+
+        foreach ($invoice->items as $item) {
+            $taxRate = $isInterState ? (float) $invoice->igst_percent : (float) ($invoice->cgst_percent + $invoice->sgst_percent);
+
+            $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
+            $itemDiscount = (float) number_format(($totAmt * (float) ($invoice->discount_percent ?? 0)) / 100, 2, '.', '');
+            $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
+            
+            $cgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->cgst_percent) / 100, 2, '.', '');
+            $sgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->sgst_percent) / 100, 2, '.', '');
+            $igstAmt = $isInterState ? (float) number_format(($assAmt * (float) $invoice->igst_percent) / 100, 2, '.', '') : 0.00;
+            $totItemVal = (float) number_format($assAmt + $cgstAmt + $sgstAmt + $igstAmt, 2, '.', '');
+
+            $totalAssVal += $assAmt;
+            $totalCgstVal += $cgstAmt;
+            $totalSgstVal += $sgstAmt;
+            $totalIgstVal += $igstAmt;
+
+            $prdDesc = substr(
+                $item->stockEntryItem->finished_item_code ??
+                $item->item->code ??
+                $item->item->name ??
+                'Product',
+                0,
+                30
+            );
+
+            $itemList[] = [
+                "SlNo" => (string) $slNo++,
+                "PrdDesc" => $prdDesc,
+                "IsServc" => "N",
+                "HsnCd" => (string) ($item->hsn_sac ?? "61099090"),
+                "Qty" => (float) number_format((float) $item->quantity, 2, '.', ''),
+                "Unit" => "PCS",
+                "UnitPrice" => (float) number_format((float) $item->rate, 2, '.', ''),
+                "TotAmt" => $totAmt,
+                "Discount" => $itemDiscount,
+                "AssAmt" => $assAmt,
+                "GstRt" => (float) number_format($taxRate, 2, '.', ''),
+                "IgstAmt" => $igstAmt,
+                "CgstAmt" => $cgstAmt,
+                "SgstAmt" => $sgstAmt,
+                "TotItemVal" => $totItemVal,
+            ];
+        }
+
+        $othChrg = (float) number_format((float) ($invoice->other_charges ?? 0.00), 2, '.', '');
+        $rndOffAmt = (float) number_format((float) $rndOff, 2, '.', '');
+        $totInvVal = $totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg + $rndOffAmt;
+
         $payload = [
             "Version" => "1.1",
             "TranDtls" => [
@@ -61,59 +118,17 @@ class EInvoiceService
                 "Pin" => (int) ($invoice->customer->zip_code ?? 600001),
                 "Stcd" => $invoice->customer->state->state_code ?? "33"
             ],
-            "ItemList" => [],
+            "ItemList" => $itemList,
             "ValDtls" => [
-                "AssVal" => (float) number_format((float) ($invoice->taxable_amount ?? $invoice->total), 2, '.', ''),
-                "CgstVal" => $isInterState ? 0.00 : (float) number_format((float) $invoice->cgst, 2, '.', ''),
-                "SgstVal" => $isInterState ? 0.00 : (float) number_format((float) $invoice->sgst, 2, '.', ''),
-                "IgstVal" => $isInterState ? (float) number_format((float) $invoice->igst, 2, '.', '') : 0.00,
-                "OthChrg" => (float) number_format((float) ($invoice->other_charges ?? 0.00), 2, '.', ''),
-                "RndOffAmt" => (float) number_format((float) $rndOff, 2, '.', ''),
-                "TotInvVal" => (float) number_format((float) $invoice->grand_total, 2, '.', ''),
+                "AssVal" => (float) number_format($totalAssVal, 2, '.', ''),
+                "CgstVal" => (float) number_format($totalCgstVal, 2, '.', ''),
+                "SgstVal" => (float) number_format($totalSgstVal, 2, '.', ''),
+                "IgstVal" => (float) number_format($totalIgstVal, 2, '.', ''),
+                "OthChrg" => $othChrg,
+                "RndOffAmt" => $rndOffAmt,
+                "TotInvVal" => (float) number_format($totInvVal, 2, '.', ''),
             ]
         ];
-
-        $slNo = 1;
-
-        foreach ($invoice->items as $item) {
-            $taxRate = $isInterState ? (float) $invoice->igst_percent : (float) ($invoice->cgst_percent + $invoice->sgst_percent);
-
-            $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
-            $itemDiscount = (float) number_format(($totAmt * (float) ($invoice->discount_percent ?? 0)) / 100, 2, '.', '');
-            $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
-            
-            $cgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->cgst_percent) / 100, 2, '.', '');
-            $sgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $invoice->sgst_percent) / 100, 2, '.', '');
-            $igstAmt = $isInterState ? (float) number_format(($assAmt * (float) $invoice->igst_percent) / 100, 2, '.', '') : 0.00;
-            $totItemVal = (float) number_format($assAmt + $cgstAmt + $sgstAmt + $igstAmt, 2, '.', '');
-
-            $prdDesc = substr(
-                $item->stockEntryItem->finished_item_code ??
-                $item->item->code ??
-                $item->item->name ??
-                'Product',
-                0,
-                30
-            );
-
-            $payload['ItemList'][] = [
-                "SlNo" => (string) $slNo++,
-                "PrdDesc" => $prdDesc,
-                "IsServc" => "N",
-                "HsnCd" => (string) ($item->hsn_sac ?? "61099090"),
-                "Qty" => (float) number_format((float) $item->quantity, 2, '.', ''),
-                "Unit" => "PCS",
-                "UnitPrice" => (float) number_format((float) $item->rate, 2, '.', ''),
-                "TotAmt" => $totAmt,
-                "Discount" => $itemDiscount,
-                "AssAmt" => $assAmt,
-                "GstRt" => (float) number_format($taxRate, 2, '.', ''),
-                "IgstAmt" => $igstAmt,
-                "CgstAmt" => $cgstAmt,
-                "SgstAmt" => $sgstAmt,
-                "TotItemVal" => $totItemVal,
-            ];
-        }
 
         $authData = $this->authenticate($setting);
         if (!$authData['success']) {
@@ -174,26 +189,41 @@ class EInvoiceService
     }
     public function authenticate($setting)
     {
-        $response = Http::withHeaders([
-            'aspid' => env('EINV_ASP_ID'),
-            'password' => env('EINV_ASP_PASSWORD'),
-            'Gstin' => env('EINV_GSTIN'),
-            'User_Name' => env('EINV_USERNAME'),
-            'eInvPwd' => env('EINV_PASSWORD'),
-            'Content-Type' => 'application/json',
-        ])->get(env('EINV_AUTH_URL'));
-        $data = $response->json();
-        if ($response->successful() && isset($data['Status']) && $data['Status'] == 1) {
-            $authToken = $data['Data']['AuthToken'] ?? $data['AuthToken'] ?? null;
-            $sek = $data['Data']['Sek'] ?? $data['Sek'] ?? null;
+        try {
+            $response = Http::withHeaders([
+                'aspid' => env('EINV_ASP_ID'),
+                'password' => env('EINV_ASP_PASSWORD'),
+                'Gstin' => env('EINV_GSTIN'),
+                'User_Name' => env('EINV_USERNAME'),
+                'eInvPwd' => env('EINV_PASSWORD'),
+                'Content-Type' => 'application/json',
+            ])->get(env('EINV_AUTH_URL'));
             
-            if ($authToken) {
-                return ['success' => true, 'token' => $authToken, 'sek' => $sek];
+            $data = $response->json();
+            
+            if ($response->successful() && isset($data['Status']) && $data['Status'] == 1) {
+                $authToken = $data['Data']['AuthToken'] ?? $data['AuthToken'] ?? null;
+                $sek = $data['Data']['Sek'] ?? $data['Sek'] ?? null;
+                
+                if ($authToken) {
+                    return ['success' => true, 'token' => $authToken, 'sek' => $sek];
+                }
             }
-        }
 
-        $errorMessage = $data['ErrorDetails'][0]['ErrorMessage'] ?? $data['message'] ?? 'Unknown Error';
-        return ['success' => false, 'message' => 'E-Invoice Authentication failed: ' . $errorMessage];
+            \Log::error('E-Invoice Authentication Failed', [
+                'status_code' => $response->status(),
+                'response' => $data ?? $response->body()
+            ]);
+
+            $errorMessage = $data['ErrorDetails'][0]['ErrorMessage'] ?? $data['message'] ?? null;
+            if (!$errorMessage) {
+                $errorMessage = 'Unknown Error (HTTP Status: ' . $response->status() . ')';
+            }
+            return ['success' => false, 'message' => 'E-Invoice Authentication failed: ' . $errorMessage];
+        } catch (\Exception $e) {
+            \Log::error('E-Invoice Authentication Exception', ['message' => $e->getMessage()]);
+            return ['success' => false, 'message' => 'E-Invoice Authentication failed: ' . $e->getMessage()];
+        }
     }
     public function authenticateEWayBill($setting)
     {

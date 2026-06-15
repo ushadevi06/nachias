@@ -80,7 +80,6 @@ class Customer extends Model
         return $this->belongsTo(Tax::class, 'tax_type_id');
     }
 
-    // Accessor for formatted contact info
     public function getContactInfoAttribute()
     {
         return [
@@ -88,6 +87,11 @@ class Customer extends Model
             'mobile' => $this->mobile_no
         ];
     }
+    public function salesOrders()
+    {
+        return $this->hasMany(SalesOrder::class, 'customer_id');
+    }
+
     public function scopeActive($query){
         return $query->where('status', 'Active');
     }
