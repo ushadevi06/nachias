@@ -74,8 +74,12 @@ class SalesOrderItem extends Model
         return $this->belongsTo(StockEntryItem::class);
     }
 
-    public function getItemNameAttribute()
+    public function getItemNameAttribute($value)
     {
+        if (!empty($value) && $value !== '-') {
+            return $value;
+        }
+
         $stockItem = null;
         if ($this->stock_entry_item_id) {
             $stockItem = StockEntryItem::find($this->stock_entry_item_id);
@@ -87,6 +91,10 @@ class SalesOrderItem extends Model
                       ->orWhere('finished_item_code', $this->sku);
                 })
                 ->first();
+        }
+
+        if ($stockItem && !empty($stockItem->finished_item_code)) {
+            return $stockItem->finished_item_code;
         }
 
         if ($stockItem && !empty($stockItem->art_no)) {

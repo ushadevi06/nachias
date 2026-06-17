@@ -474,6 +474,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], 'sales_invoices/get-multiple-sale-orders-details', [SalesInvoiceController::class, 'getMultipleSaleOrdersDetails']);
     Route::get('sales_invoices/calculate-distance', [SalesInvoiceController::class, 'calculateDistance']);
     Route::get('sales_invoices/print-sticker/{id}', [SalesInvoiceController::class, 'printSticker']);
+    Route::get('sales_invoices/delivery-order/{id}', [SalesInvoiceController::class, 'downloadDeliveryOrder']);
+    Route::get('sales_invoices/open-delivery-order/{id}', [SalesInvoiceController::class, 'downloadOpenDeliveryOrder']);
     Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
     Route::post('sales_invoices/generate-ewaybill/{id}', [SalesInvoiceController::class, 'generateEWayBill']);
     Route::post('sales_invoices/cancel-einvoice/{id}', [SalesInvoiceController::class, 'cancelEInvoice']);

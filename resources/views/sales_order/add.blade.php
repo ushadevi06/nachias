@@ -1312,6 +1312,10 @@ $(document).ready(function () {
         let mrp = parseFloat(res.mrp || 0);
         let price = parseFloat(res.price || 0);
         
+        $row.data('size-prices', res.size_prices);
+        $row.data('default-mrp', mrp);
+        $row.data('default-price', price);
+        
         if (!$row.find('.mrp-input').val() || parseFloat($row.find('.mrp-input').val()) == 0) {
             $row.find('.mrp-input').val(mrp.toFixed(2));
         }
@@ -1457,6 +1461,18 @@ $(document).ready(function () {
         let balance = sizeStock[size] || 0;
         
         $row.find('.available-stock-display').text(parseFloat(balance).toFixed(2));
+
+        let sizePrices = $row.data('size-prices') || {};
+        if (sizePrices && sizePrices[size] !== undefined) {
+            $row.find('.mrp-input').val(parseFloat(sizePrices[size].mrp).toFixed(2));
+            $row.find('.rate-input').val(parseFloat(sizePrices[size].price).toFixed(2));
+        } else {
+            let defaultMrp = parseFloat($row.data('default-mrp') || 0);
+            let defaultPrice = parseFloat($row.data('default-price') || 0);
+            if (defaultMrp > 0) $row.find('.mrp-input').val(defaultMrp.toFixed(2));
+            if (defaultPrice > 0) $row.find('.rate-input').val(defaultPrice.toFixed(2));
+        }
+        
         $row.find('.qty-input').trigger('input');
     }
 

@@ -1100,26 +1100,41 @@ class JobCardEntryController extends Controller
                         $totalCost = $totalToDeduct * $unitPrice;
                         $costPerPc = ($producedQty > 0) ? ($totalCost / $producedQty) : 0;
 
-                        preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $artNo, $matches);
-                        $numericBase = $matches[2] ?? '';
-                        $suffix = $matches[3] ?? '1';
-                        $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
-
-                        $isReused = false;
+                        $isStringArtNo = false;
+                        $cleanedArtNo = '';
                         if ($artNo) {
-                            $isReused = BarcodeMaster::where('art_no', $artNo)
-                                ->where('lot_no', '!=', $jobCard->job_card_no)
-                                ->exists();
+                            $hasAlpha = preg_match('/[a-zA-Z]/', $artNo);
+                            $matchesExistingPattern = preg_match('/^([a-zA-Z]*)(\d+)(?:-(\d+))?$/', $artNo);
+                            if ($hasAlpha && !$matchesExistingPattern) {
+                                $isStringArtNo = true;
+                                $cleanedArtNo = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $artNo));
+                            }
                         }
 
-                        if ($numericBase === '' || $isReused) {
-                            $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
-                            $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
-                        }
-                        $formattedSize = "00"; 
-                        $sleeveCode = "00";
+                        if ($isStringArtNo) {
+                            $barcodeNo = 'BC' . $cleanedArtNo . '0000';
+                        } else {
+                            preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $artNo, $matches);
+                            $numericBase = $matches[2] ?? '';
+                            $suffix = $matches[3] ?? '1';
+                            $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
 
-                        $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+                            $isReused = false;
+                            if ($artNo) {
+                                $isReused = BarcodeMaster::where('art_no', $artNo)
+                                    ->where('lot_no', '!=', $jobCard->job_card_no)
+                                    ->exists();
+                            }
+
+                            if ($numericBase === '' || $isReused) {
+                                $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
+                                $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
+                            }
+                            $formattedSize = "00"; 
+                            $sleeveCode = "00";
+
+                            $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+                        }
 
                         $qrData = [
                             'sku' => $barcodeNo,
@@ -1195,9 +1210,17 @@ class JobCardEntryController extends Controller
                         foreach ($matrixQuantities as $mq) {
                             $sizeCode = is_numeric($mq->size) ? str_pad($mq->size, 2, '0', STR_PAD_LEFT) : '00';
 
+                            if ($isStringArtNo) {
+                                $cleanSize = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $mq->size));
+                                $barcodeFS = 'BC' . $cleanedArtNo . $cleanSize . '01';
+                                $barcodeHS = 'BC' . $cleanedArtNo . $cleanSize . '02';
+                            } else {
+                                $barcodeFS = 'BC' . $numericBase . $formattedSuffix . $sizeCode . '01';
+                                $barcodeHS = 'BC' . $numericBase . $formattedSuffix . $sizeCode . '02';
+                            }
+
                             // Create/Update for Full Sleeve (F/S)
                             if ($mq->qty_fs > 0) {
-                                $barcodeFS = 'BC' . $numericBase . $formattedSuffix . $sizeCode . '01';
                                 BarcodeMaster::updateOrCreate(
                                     ['barcode_no' => $barcodeFS],
                                     [
@@ -1219,7 +1242,6 @@ class JobCardEntryController extends Controller
 
                             // Create/Update for Half Sleeve (H/S)
                             if ($mq->qty_hs > 0) {
-                                $barcodeHS = 'BC' . $numericBase . $formattedSuffix . $sizeCode . '02';
                                 BarcodeMaster::updateOrCreate(
                                     ['barcode_no' => $barcodeHS],
                                     [
@@ -2416,21 +2438,34 @@ class JobCardEntryController extends Controller
 
         $settings = Setting::first();
         $artNo = $issueItem->job_card_article_matrix_id ? JobCardFabricDetail::find($issueItem->job_card_article_matrix_id)->art_no : ($issueItem->rawMaterial->code ?? '');
-        preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $artNo, $matches);
-        $numericBase = $matches[2] ?? '';
-        $suffix = $matches[3] ?? '1';
-        $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
-
-        $isReused = false;
+        $isStringArtNo = false;
+        $cleanedArtNo = '';
         if ($artNo) {
-            $isReused = BarcodeMaster::where('art_no', $artNo)
-                ->where('lot_no', '!=', $jobCard->job_card_no)
-                ->exists();
+            $hasAlpha = preg_match('/[a-zA-Z]/', $artNo);
+            $matchesExistingPattern = preg_match('/^([a-zA-Z]*)(\d+)(?:-(\d+))?$/', $artNo);
+            if ($hasAlpha && !$matchesExistingPattern) {
+                $isStringArtNo = true;
+                $cleanedArtNo = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $artNo));
+            }
         }
 
-        if ($numericBase === '' || $isReused) {
-            $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
-            $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
+        if (!$isStringArtNo) {
+            preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $artNo, $matches);
+            $numericBase = $matches[2] ?? '';
+            $suffix = $matches[3] ?? '1';
+            $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
+
+            $isReused = false;
+            if ($artNo) {
+                $isReused = BarcodeMaster::where('art_no', $artNo)
+                    ->where('lot_no', '!=', $jobCard->job_card_no)
+                    ->exists();
+            }
+
+            if ($numericBase === '' || $isReused) {
+                $noPrefix = preg_replace('/^[a-zA-Z]+/', '', $jobCard->job_card_no ?? '0000');
+                $numericBase = preg_replace('/[^A-Za-z0-9]/', '', $noPrefix);
+            }
         }
 
         $style = $issueItem->stockEntryItem->style ?? ($issueItem->stockEntryItem->grnEntryItem->purchaseInvoiceItem->purchaseOrderItem->style ?? null);
@@ -2504,7 +2539,33 @@ class JobCardEntryController extends Controller
                 $sleeveText = implode(' & ', $sleeveTypes);
             }
 
-            $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+            if ($isStringArtNo) {
+                $cleanSize = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $selectedSize));
+                $barcodeNo = 'BC' . $cleanedArtNo . $cleanSize . $sleeveCode;
+            } else {
+                $barcodeNo = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+            }
+
+            $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+                ->where('art_no', $artNo)
+                ->where('size', $selectedSize)
+                ->where(function($q) use ($jobCard) {
+                    if ($jobCard->item) {
+                        $q->where('finished_item_code', $jobCard->item->code)
+                          ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
+                              $subQuery->select('finished_item_code')
+                                       ->from('stock_entry_items')
+                                       ->where('item_id', $jobCard->item->id)
+                                       ->whereNull('deleted_at');
+                          });
+                    }
+                })
+                ->whereDate('effective_from', '<=', now())
+                ->orderBy('effective_from', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $mrpPrice = $priceRecord ? $priceRecord->selling_price : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
 
             $labelData = [
                 'company_name' => $settings->company_name ?? 'NACHIAS',
@@ -2523,7 +2584,7 @@ class JobCardEntryController extends Controller
                 'fabric' => $issueItem->rawMaterial->name ?? '-',
                 'size' => $selectedSize,
                 'sleeve' => $sleeveText,
-                'price' => number_format(($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price), 2),
+                'price' => number_format($mrpPrice, 2),
                 'mfg_date' => date('F Y'),
                 'lot_no' => $jobCard->job_card_no,
                 'sku' => $barcodeNo,
@@ -2568,6 +2629,31 @@ class JobCardEntryController extends Controller
         $selectedSleeve = $request->bulk_print ? 'All Sleeves' : $request->sleeve;
 
         $artNo = $issueItem->job_card_article_matrix_id ? JobCardFabricDetail::find($issueItem->job_card_article_matrix_id)->art_no : ($issueItem->rawMaterial->code ?? '');
+
+        // Fetch size price if size is specific, otherwise check if there's any active price record
+        $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+            ->where('art_no', $artNo)
+            ->when(is_numeric($selectedSize), function($q) use ($selectedSize) {
+                $q->where('size', $selectedSize);
+            })
+            ->where(function($q) use ($jobCard) {
+                if ($jobCard->item) {
+                    $q->where('finished_item_code', $jobCard->item->code)
+                      ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
+                          $subQuery->select('finished_item_code')
+                                   ->from('stock_entry_items')
+                                   ->where('item_id', $jobCard->item->id)
+                                   ->whereNull('deleted_at');
+                      });
+                }
+            })
+            ->whereDate('effective_from', '<=', now())
+            ->orderBy('effective_from', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $mrpPrice = $priceRecord ? $priceRecord->selling_price : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
+
         $labelData = [
             'id' => $id,
             'product_name' => $jobCard->item->name ?? 'SHIRTS',
@@ -2577,7 +2663,7 @@ class JobCardEntryController extends Controller
             'fabric' => $issueItem->rawMaterial->name ?? '-',
             'size' => $selectedSize,
             'sleeve' => $selectedSleeve ?? '-',
-            'price' => number_format(($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price), 2),
+            'price' => number_format($mrpPrice, 2),
             'mfg_date' => date('F Y'),
             'lot_no' => $jobCard->job_card_no,
             'sku' => ($issueItem->rawMaterial->code ?? '') . '-' . $selectedSize . '-' . ($selectedSleeve ?? ''),

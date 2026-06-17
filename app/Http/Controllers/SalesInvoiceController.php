@@ -832,6 +832,48 @@ class SalesInvoiceController extends Controller
         return view('sales_invoice.sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
     }
 
+    public function downloadDeliveryOrder($id)
+    {
+        $invoice = SalesInvoice::with([
+            'customer.state', 
+            'customer.city', 
+            'salesOrder.salesAgent', 
+            'items.brandCategory', 
+            'items.item.uom', 
+            'items.uom'
+        ])->findOrFail($id);
+        
+        $setting = Setting::with(['state', 'city'])->first();
+        $totalPcs = $invoice->items->sum('quantity');
+
+        $pdf = Pdf::loadView('sales_invoice.delivery_order', compact('invoice', 'setting', 'totalPcs'));
+        $pdf->setPaper('A4', 'portrait');
+        
+        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
+        return $pdf->stream('Delivery_Order_' . $safeInvoiceNo . '.pdf');
+    }
+
+    public function downloadOpenDeliveryOrder($id)
+    {
+        $invoice = SalesInvoice::with([
+            'customer.state', 
+            'customer.city', 
+            'salesOrder.salesAgent', 
+            'items.brandCategory', 
+            'items.item.uom', 
+            'items.uom'
+        ])->findOrFail($id);
+        
+        $setting = Setting::with(['state', 'city'])->first();
+        $totalPcs = $invoice->items->sum('quantity');
+
+        $pdf = Pdf::loadView('sales_invoice.open_delivery_order', compact('invoice', 'setting', 'totalPcs'));
+        $pdf->setPaper('A4', 'portrait');
+        
+        $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);
+        return $pdf->stream('Open_Delivery_Order_' . $safeInvoiceNo . '.pdf');
+    }
+
     public function generateEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
     {
         $invoice = SalesInvoice::findOrFail($id);

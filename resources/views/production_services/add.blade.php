@@ -85,6 +85,27 @@
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
+                            <div class="col-md-3">
+                                <div class="form-floating form-floating-outline">
+                                    <select name="process_group_ids[]" id="process_group_ids" class="select2 form-select @error('process_group_ids') is-invalid @enderror" data-placeholder="Select Process Groups" multiple>
+                                        @foreach($processGroups as $group)
+                                        @php
+                                            $selected = false;
+                                            if (is_array(old('process_group_ids'))) {
+                                                $selected = in_array($group->id, old('process_group_ids'));
+                                            } elseif ($service && $service->processGroups) {
+                                                $selected = $service->processGroups->contains($group->id);
+                                            }
+                                        @endphp
+                                        <option value="{{ $group->id }}" {{ $selected ? 'selected' : '' }}>{{ $group->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="process_group_ids">Process Groups <span class="text-danger">*</span></label>
+                                </div>
+                                @error('process_group_ids')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
 
                             <!-- Quantity Calculation Logic -->
                             <div class="col-12 mt-4">
@@ -93,7 +114,7 @@
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
                                     <select name="applies_to" id="applies_to" class="select2 form-select @error('applies_to') is-invalid @enderror">
-                                        @foreach(['ALL', 'Full Sleeve', 'Half Sleeve', 'Both'] as $opt)
+                                        @foreach(['Full Sleeve', 'Half Sleeve', 'Both'] as $opt)
                                         <option value="{{ $opt }}" {{ old('applies_to', $service->applies_to ?? 'ALL') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
                                         @endforeach
                                     </select>

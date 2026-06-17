@@ -776,23 +776,39 @@ class ProductionReceiptController extends Controller
                             'styles.style_name'
                         )
                         ->first();
-                    $barcodeMaster = \App\Models\BarcodeMaster::where('job_card_entry_id', $jobCard->id)->first();
-                    $styleCode = $barcodeMaster->style_code ?? $fallbackStyleCode;
-                    $styleName = $barcodeMaster->style_name ?? $fallbackStyleName;
-                    $itemCode = trim($brandCode.'-'.$styleCode.'-'.$sleeve,'-');
+                    $barcodeMaster = \App\Models\BarcodeMaster::where('job_card_entry_id', $jobCard->id)->where('size', $size)->where('sleeve_type', $sleeve)->first();
+                    if (!$barcodeMaster) {
+                        $barcodeMaster = \App\Models\BarcodeMaster::where('job_card_entry_id', $jobCard->id)->where('sleeve_type', $sleeve)->first();
+                    }
+                    if (!$barcodeMaster) {
+                        $barcodeMaster = \App\Models\BarcodeMaster::where('job_card_entry_id', $jobCard->id)->first();
+                    }
+
+                    $styleCode = $fallbackStyleCode;
+                    $styleName = $fallbackStyleName;
+                    if ($barcodeMaster && $barcodeMaster->style_id) {
+                        $style = \App\Models\Style::find($barcodeMaster->style_id);
+                        if ($style) {
+                            $styleCode = $style->code;
+                            $styleName = $style->style_name;
+                        }
+                    }
+                    $itemCode = $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : trim($brandCode.'-'.$styleCode.'-'.$sleeve,'-');
                     $itemName = $brandName . ' ' . $styleName . ' ' . $sleeve;
-                    $itemPrice = \App\Models\ItemPrice::where('finished_item_code', $itemCode)->first();
+
+                    $itemPrice = \App\Models\ItemPrice::where('status', 'Active')->where('finished_item_code', $itemCode)->where('art_no', $normalizedArtNo)->where('size', $size)->whereDate('effective_from', '<=', now())->orderBy('effective_from', 'desc')->orderBy('id', 'desc')->first();
+
                     $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
                     $mrp = $itemPrice ? $itemPrice->selling_price : $pricing['total_cost'];
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
-                        'item_code' => $barcodeMaster->item_code,
+                        'item_code' => $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $itemCode,
                         'service_name' => $serviceName,
                         'sleeve' => $sleeve,
                         'size' => $size,
                         'item_name' => $itemName,
                         'art_no' => $normalizedArtNo ?: null,
-                        'description' => trim($barcodeMaster->item_name ?? ''),
+                        'description' => trim($barcodeMaster && $barcodeMaster->item_name ? $barcodeMaster->item_name : $itemName),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
                         'mrp' => floatval($mrp),

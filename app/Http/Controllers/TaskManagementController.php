@@ -221,6 +221,8 @@ class TaskManagementController extends Controller
             $stage = ProcessSchedule::find($stageId);
             $stageMaxQty = $stage ? (float)$stage->planned_qty : 0;
 
+            $jobCard = JobCardEntry::find($request->input('job_card_entry_id'));
+
             if ($stageMaxQty > 0) {
                 $serviceQtySums = [];
                 foreach ($assignments as $assign) {
@@ -245,6 +247,25 @@ class TaskManagementController extends Controller
                         $service = ProductionService::find($serviceId);
                         $serviceName = $service ? $service->service_name : 'Selected Service';
                         throw new \Exception("Total quantity for service '$serviceName' ($totalQty) exceeds the stage planned quantity ($stageMaxQty PCS).");
+                    }
+                }
+            }
+
+            if ($jobCard && $jobCard->process_group_id) {
+                foreach ($assignments as $assign) {
+                    if (empty($assign['issued_to'])) {
+                        continue;
+                    }
+                    $serviceId = $assign['service_id'] ?? $assign['services'] ?? null;
+                    if (is_array($serviceId)) {
+                        $serviceId = $serviceId[0] ?? null;
+                    }
+                    if ($serviceId) {
+                        $service = ProductionService::with('processGroups')->find($serviceId);
+                        if ($service && !$service->processGroups->contains($jobCard->process_group_id)) {
+                            $serviceName = $service->service_name;
+                            throw new \Exception("The service '$serviceName' does not belong to the Job Card's Process Group.");
+                        }
                     }
                 }
             }
@@ -409,7 +430,13 @@ class TaskManagementController extends Controller
         }
 
         if ($selectedSchedule) {
-            $services = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active')->orderBy('sequence', 'asc')->get()->map(function ($s) use ($selectedSchedule, $jobCard) {
+            $query = ProductionService::where('operation_stage_id', $selectedSchedule->operation_stage_id)->where('status', 'Active');
+            if ($jobCard && $jobCard->process_group_id) {
+                $query->whereHas('processGroups', function($q) use ($jobCard) {
+                    $q->where('process_groups.id', $jobCard->process_group_id);
+                });
+            }
+            $services = $query->orderBy('sequence', 'asc')->get()->map(function ($s) use ($selectedSchedule, $jobCard) {
                 $qty = $selectedSchedule->planned_qty ?? 0;
                 if ($jobCard) {
                     if ($s->base_quantity_source == 'FS Qty') {

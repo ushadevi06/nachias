@@ -4,12 +4,41 @@
     <meta charset="utf-8">
     <title>Sales Invoice - {{ $invoice->inv_no }}</title>
     <style>
+        @page {
+            margin: 5px 10px 15px 10px;
+        }
         body {
-            font-family: 'Arial', sans-serif;
-            font-size: 10px;
-            color: #333;
+            font-family: 'Helvetica', Arial, sans-serif;
+            font-size: 11px;
+            color: #000000;
             margin: 0;
             padding: 0;
+        }
+        .footer-page {
+            position: fixed;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 15px;
+            font-size: 9px;
+            font-family: 'Helvetica', Arial, sans-serif;
+            color: #000000;
+            border-top: 1px solid #000000;
+            padding-top: 3px;
+        }
+        .footer-page-left {
+            position: absolute;
+            left: 0;
+        }
+        .footer-page-right {
+            position: absolute;
+            right: 0;
+        }
+        .page-num:after {
+            content: counter(page);
+        }
+        .page-total:after {
+            content: counter(pages);
         }
         .container {
             padding: 10px;
@@ -20,14 +49,15 @@
             margin: 0;
         }
         th, td {
-            border: 1px solid #000;
+            border: 1px solid #000000;
             padding: 4px;
             text-align: left;
             vertical-align: top;
+            color: #000000;
         }
         .item-table th, .item-table td {
-            border-left: 1px solid #000;
-            border-right: 1px solid #000;
+            border-left: 1px solid #000000;
+            border-right: 1px solid #000000;
             border-top: none;
             border-bottom: none;
             padding: 4px;
@@ -37,26 +67,32 @@
         .no-border th, .no-border td {
             border: none;
         }
+        .compact-details th, .compact-details td {
+            padding: 1px 4px;
+        }
         .text-center { text-align: center !important; }
         .text-right { text-align: right !important; }
         .bold { font-weight: bold; }
         .header-table td {
             border: none;
+            padding: 0px 4px;
         }
         .header-title {
-            font-size: 14px;
+            font-size: 17px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-top: 0px;
+            margin-bottom: 2px;
             text-align: center;
+            color: #000000;
         }
         .company-logo {
-            max-width: 150px;
+            max-width: 120px;
         }
         .qr-code {
             max-width: 100px;
         }
         .original-stamp {
-            border: 2px solid #000;
+            border: 2px solid #000000;
             padding: 5px;
             font-weight: bold;
             text-align: center;
@@ -72,23 +108,28 @@
             font-size: 14px;
         }
         .section-title {
-            background-color: #f2f2f2;
+            background-color: #a3a3a3;
             font-weight: bold;
             padding: 2px 5px;
-            border: 1px solid #000;
+            border: 1px solid #000000;
+            color: #000000;
         }
         .item-table {
-            border-bottom: 1px solid #000;
+            border-bottom: 1px solid #000000;
+            table-layout: fixed;
+            width: 100%;
         }
         .item-table th {
-            background-color: #f2f2f2;
+            background-color: #a3a3a3;
             text-align: center;
+            font-weight: bold;
+            color: #000000;
         }
         .item-table tbody tr:nth-child(even) {
             background-color: #f9f9f9;
         }
         .item-table tbody tr:last-child td {
-            border-bottom: 1px solid #000;
+            border-bottom: none;
         }
         .summary-table td {
             border: none;
@@ -99,18 +140,20 @@
         .footer-note {
             font-size: 9px;
             margin-top: 10px;
+            color: #000000;
         }
         .bank-details {
             margin-top: 10px;
-            border: 1px solid #000;
+            border: 1px solid #000000;
             padding: 5px;
+            color: #000000;
         }
         .signature-box {
             margin-top: 20px;
             text-align: right;
         }
         .signature-area {
-            border: 1px solid #000;
+            border: 1px solid #000000;
             width: 200px;
             height: 80px;
             display: inline-block;
@@ -124,7 +167,7 @@
             text-align: center;
         }
         .bottom-section {
-            border: 1px solid #000;
+            border: 1px solid #000000;
             border-top: none;
             width: 100%;
         }
@@ -135,10 +178,11 @@
         }
 
         .bottom-table td {
-            border-right: 1px solid #000;
+            border-right: 1px solid #000000;
             vertical-align: top;
             padding: 6px;
             font-size: 10px;
+            color: #000000;
         }
 
         .bottom-table td:last-child {
@@ -153,6 +197,7 @@
         .summary-box td {
             padding: 3px 5px;
             border: none;
+            color: #000000;
         }
 
         .summary-box .label {
@@ -164,14 +209,16 @@
         }
 
         .summary-box .total-row {
-            border-top: 1px solid #000;
+            border-top: 1px solid #000000;
             font-weight: bold;
+            color: #000000;
         }
 
         .amount-words {
-            border-top: 1px solid #000;
+            border-top: 1px solid #000000;
             padding: 5px;
             font-weight: bold;
+            color: #000000;
         }
 
         @media print {
@@ -182,6 +229,9 @@
             .container {
                 padding: 0;
             }
+        }
+        .item-table tbody table tr, .item-table tbody table td {
+            background-color: transparent !important;
         }
     </style>
 </head>
@@ -195,58 +245,111 @@ $showTax = in_array('tax', $showFields);
 $showGrandTotal = in_array('grandtotal', $showFields);
 $showMrp       = in_array('mrp', $showFields);
 $showPrice     = in_array('price', $showFields);
+
+$copies = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
+
+$colWidths = [
+    'sno' => 4,
+    'desc' => $showAmount ? 22 : 28,
+    'color' => 10,
+    'art' => 10,
+    'uom' => 6,
+    'size' => 8,
+    'qty' => 8,
+];
+if ($showMrp) {
+    $colWidths['mrp'] = 10;
+}
+if ($showPrice) {
+    $colWidths['price'] = 10;
+}
+if ($showAmount) {
+    $colWidths['amount'] = 12;
+}
+
+$totalW = array_sum($colWidths);
+foreach ($colWidths as $key => $w) {
+    $colWidths[$key] = round(($w / $totalW) * 100, 4);
+}
+
+$w_1_6 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['color'] + $colWidths['art'] + $colWidths['uom'] + $colWidths['size'];
+$w1_7 = $w_1_6 + $colWidths['qty'];
+
+$w_1_5 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['color'] + $colWidths['art'] + $colWidths['uom'];
+$w_6_7 = $colWidths['size'] + $colWidths['qty'];
+
+$w_colsAfterQty = 0;
+if ($showMrp) $w_colsAfterQty += $colWidths['mrp'];
+if ($showPrice) $w_colsAfterQty += $colWidths['price'];
+
+$colsAfterQty = 0;
+if ($showMrp) $colsAfterQty++;
+if ($showPrice) $colsAfterQty++;
 @endphp
-    <div class="container">
+
+<div class="footer-page">
+    <span class="footer-page-left">E.&O.E.</span>
+    <span class="footer-page-right">Page: <span class="page-num"></span> / <span class="page-total"></span></span>
+</div>
+
+@foreach($copies as $index => $copyLabel)
+    @php
+    $logoPath = public_path('assets/images/jc_logo.png');
+    $logoBase64 = '';
+    if (file_exists($logoPath)) {
+        $logoData = file_get_contents($logoPath);
+        $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+    }
+
+    $qrBase64 = '';
+    if (!empty($setting->qr_code)) {
+        $uploadedQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
+        if (file_exists($uploadedQrPath)) {
+            $qrData = file_get_contents($uploadedQrPath);
+            $qrBase64 = 'data:image/' . pathinfo($uploadedQrPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($qrData);
+        }
+    }
+    if (!$qrBase64) {
+        $qrPath = public_path('assets/images/qr_code.png');
+        if (file_exists($qrPath)) {
+            $qrData = file_get_contents($qrPath);
+            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
+        }
+    }
+
+    $einvoiceQr = '';
+    if (!empty($invoice->signed_qr_code)) {
+        try {
+            $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->signed_qr_code));
+        } catch (\Exception $e) {
+            \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
+        }
+    }
+    @endphp
+    <div class="container" style="{{ $index < 2 ? 'page-break-after: always;' : '' }}">
         <div style="position: relative;">
-            <table class="header-table">
+            <div style="position: absolute; right: 0; top: 0; text-align: right; width: 100px; z-index: 10;">
+                <div style="font-weight: bold; font-size: 14px;">{{ $copyLabel }}</div>
+                @if($einvoiceQr)
+                    <img src="{{ $einvoiceQr }}" class="qr-code" style="max-width: 100px; margin-top: 5px;">
+                @endif
+            </div>
+            <table class="header-table" style="width: 100%;">
                 <tr>
-                    <td width="60%">
+                    <td width="70%">
                         <table style="border: none;">
                             <tr>
                                 <td style="border: none; vertical-align: top; width:30%;">
-                                    @php
-                                    $logoPath = public_path('assets/images/jc_logo.png');
-                                    $logoBase64 = '';
-                                    if (file_exists($logoPath)) {
-                                        $logoData = file_get_contents($logoPath);
-                                        $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
-                                    }
-
-                                    $qrBase64 = '';
-                                    if (!empty($setting->qr_code)) {
-                                        $uploadedQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
-                                        if (file_exists($uploadedQrPath)) {
-                                            $qrData = file_get_contents($uploadedQrPath);
-                                            $qrBase64 = 'data:image/' . pathinfo($uploadedQrPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($qrData);
-                                        }
-                                    }
-                                    if (!$qrBase64) {
-                                        $qrPath = public_path('assets/images/qr_code.png');
-                                        if (file_exists($qrPath)) {
-                                            $qrData = file_get_contents($qrPath);
-                                            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
-                                        }
-                                    }
-
-                                    $einvoiceQr = '';
-                                    if (!empty($invoice->signed_qr_code)) {
-                                        try {
-                                            $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(120)->generate($invoice->signed_qr_code));
-                                        } catch (\Exception $e) {
-                                            \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
-                                        }
-                                    }
-                                    @endphp
                                     @if($logoBase64)
-                                        <img src="{{ $logoBase64 }}" style="width: 140px;">
+                                        <img src="{{ $logoBase64 }}" style="width: 220px;">
                                     @else
-                                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 140px;">
+                                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 220px;">
                                     @endif
-                                </td>
-                                <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;">
-                                    <div style="font-size: 11px; line-height: 1.3;">
-                                        {{ $setting->address }} 
-                                        <table style="width: 100%; border-collapse: collapse; margin-top: 2px;">
+                                 </td>
+                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;" >
+                                     <div style="font-size: 12px; line-height: 1.3;">
+                                         {{ $setting->address }} 
+                                         <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 12px;">
                                             <tr>
                                                 <td style="border: none; padding: 0; width: 45px;">Mobile</td>
                                                 <td style="border: none; padding: 0; width: 10px;">:</td>
@@ -262,24 +365,13 @@ $showPrice     = in_array('price', $showFields);
                                                 <td style="border: none; padding: 0;">:</td>
                                                 <td style="border: none; padding: 0;">{{ $setting->gst_no ?? '' }}</td>
                                             </tr>
-                                        </table>
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                    <td width="40%" class="text-right" style="vertical-align: top;">
-                        <div style="margin-right: 10px;">ORIGINAL</div>
-                        @if($einvoiceQr)
-                            <img src="{{ $einvoiceQr }}" class="qr-code">
-                        @else
-                            @if($qrBase64)
-                                <img src="{{ $qrBase64 }}" class="qr-code">
-                            @else
-                                <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" class="qr-code">
-                            @endif
-                        @endif
-                    </td>
+                                         </table>
+                                     </div>
+                                 </td>
+                             </tr>
+                         </table>
+                     </td>
+                     <td width="30%">&nbsp;</td>
                 </tr>
             </table>
         </div>
@@ -287,30 +379,31 @@ $showPrice     = in_array('price', $showFields);
         <table style="width: 100%; border-collapse: collapse;">
             <tr>
                 <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-                    <table class="no-border" style="margin: 0; width: 100%;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
                         <tr>
                             <td width="10%">Bill To</td>
                             <td width="5%">:</td>
                             <td>
                                 <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
-                                {{ $invoice->customer->address ?? '' }}<br>
-                                {{ $invoice->customer->city->city_name ?? '' }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}
+                                {{ strtoupper($invoice->customer->address_line_1 ?? '') }}<br>
+                                {{ strtoupper($invoice->customer->city->city_name ?? '') }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}<br>
+                                {{ $invoice->customer->mobile_no ?? ''}}
                             </td>
-                        </tr>
+                        </tr>   
                         <tr>
                             <td width="20%">State</td>
                             <td width="5%">:</td>
                             <td width="75%">{{ $invoice->customer->state->state_name ?? 'N/A' }}({{ $invoice->customer->state->state_code ?? '' }})</td>
                         </tr>
                         <tr>
-                            <td width="20%">GSTIN/UIN</td>
+                            <td width="20%">GSTIN</td>
                             <td width="5%">:</td>
                             <td width="75%">{{ $invoice->customer->gst_no ?? 'N/A' }}</td>
                         </tr>
                     </table>
                 </td>
                 <td width="50%" style="padding: 0; vertical-align: top; border-bottom: 1px solid #000;">
-                    <table class="no-border" style="margin: 0; width: 100%;">
+                    <table class="no-border" style="margin: 0; width: 100%; font-size:12px;">
                         <tr>
                             <td width="30%">Invoice No.</td>
                             <td width="5%">:</td>
@@ -336,18 +429,19 @@ $showPrice     = in_array('price', $showFields);
             </tr>
             <tr>
                 <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
-                    <table class="no-border" style="margin: 0; width: 100%;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
                         <tr>
                             <td width="20%">Ship To</td>
                             <td width="5%">:</td>
                             <td>
                                 <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
                                 @if($invoice->delivery_address)
-                                    {!! nl2br(e($invoice->delivery_address)) !!}
+                                    {!! nl2br(e(mb_strtoupper($invoice->delivery_address ?? '', 'UTF-8'))) !!}
                                 @else
-                                    {{ $invoice->customer->address ?? '' }}<br>
+                                   {!! nl2br(e(mb_strtoupper($invoice->customer->address ?? '', 'UTF-8'))) !!}
                                     {{ $invoice->customer->city->city_name ?? '' }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}
-                                @endif
+                                @endif <br>
+                                {{ $invoice->customer->mobile_no ?? ''}}
                             </td>
                         </tr>
                         <tr>
@@ -363,11 +457,11 @@ $showPrice     = in_array('price', $showFields);
                     </table>
                 </td>
                 <td width="50%" style="padding: 0; vertical-align: top;">
-                    <table class="no-border" style="margin: 0; width: 100%;">
+                    <table class="no-border" style="margin: 0; width: 100%; font-size: 12px;">
                         <tr>
                             <td width="30%">Transport</td>
                             <td width="5%">:</td>
-                            <td width="65%">{{ $invoice->salesOrder->transporter_name ?? 'N/A' }}</td>
+                            <td width="65%">{{ $invoice->salesOrder->transporter_name ?? '' }}</td>
                         </tr>
                         <tr>
                             <td>Doc No.</td>
@@ -393,7 +487,7 @@ $showPrice     = in_array('price', $showFields);
                 </td>
             </tr>
         </table>
-        <table class="item-table" style="margin-top: 0;">
+        <table class="item-table" style="margin-top: 0;  font-size: 11px;">
             <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
                     <th width="4%">S.No</th>
@@ -420,37 +514,48 @@ $showPrice     = in_array('price', $showFields);
                         <td class="text-center">{{ $index + 1 }}</td>
                         <td>
                             @php
-                            $brandName = '';
                             $itemName = '';
-                            if ($item->item) {
-                                $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : ''));
-                                $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
-                            } elseif ($item->stockEntryItem) {
-                                if ($item->stockEntryItem->item) {
-                                    $seItem = $item->stockEntryItem->item;
-                                    $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : ''));
-                                    $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
-                                } else {
-                                    $brandName = $item->stockEntryItem->finished_item_code;
-                                }
-                            } else {
-                                $brandName = $item->brandCategory ? $item->brandCategory->name : '';
-                                $itemName = $item->item ? $item->item->name : '';
+                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
+                            if ($soItem) {
+                                $itemName = $soItem->getAttributes()['item_name'] ?? $soItem->item_name ?? '';
                             }
 
-                            if (empty($brandName) || $brandName === '-') {
-                                if ($item->brandCategory) {
-                                    $brandName = $item->brandCategory->name;
+                            if (empty($itemName) || $itemName === '-') {
+                                if ($item->item) {
+                                    $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+                                } elseif ($item->stockEntryItem) {
+                                    if ($item->stockEntryItem->item) {
+                                        $seItem = $item->stockEntryItem->item;
+                                        $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+                                    } else {
+                                        $itemName = $item->stockEntryItem->finished_item_code;
+                                    }
+                                } else {
+                                    $itemName = $item->item ? $item->item->name : '';
+                                }
+
+                                if (empty($itemName) || $itemName === '-') {
+                                    if (!empty($item->art_no)) {
+                                        $itemName = $item->art_no;
+                                    }
                                 }
                             }
-                            if (empty($itemName) || $itemName === '-') {
-                                if (!empty($item->art_no)) {
-                                    $itemName = $item->art_no;
+
+                            if (!empty($itemName) && $itemName !== '-') {
+                                $parts = explode('-', $itemName);
+                                if (count($parts) >= 2) {
+                                    $brand = \App\Models\Brand::where('code', trim($parts[0]))->first();
+                                    $style = \App\Models\Style::where('code', trim($parts[1]))->first();
+                                    if ($brand && $style) {
+                                        $itemName = $brand->brand_name . ' ' . $style->style_name;
+                                        if (isset($parts[2])) {
+                                            $itemName .= ' ' . trim($parts[2]);
+                                        }
+                                    }
                                 }
                             }
                             @endphp
-                            <div class="bold">{{ $brandName }}</div>
-                            <div>{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</div>
+                            <div class="bold">{{ $itemName }}</div>
                         </td>
                         <td class="text-center">{{ $item->color ? $item->color->color_name : '-' }}</td>
                         <td class="text-center">{{ $item->art_no }}</td>
@@ -485,92 +590,117 @@ $showPrice     = in_array('price', $showFields);
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="6" class="text-right bold">Total</td>
-                    <td class="text-center bold">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
-                    @if($showMrp)<td>&nbsp;</td>@endif
-                    @if($showPrice)<td>&nbsp;</td>@endif
-                    @if($showAmount)<td>&nbsp;</td>@endif
+                    <td style="border-top: none;"></td>
+                    <td style="border-top: none;"></td> 
+                    <td style="border-top: none;"></td> 
+                    <td style="border-top: none;"></td>
+                    <td style="border-top: none;"></td> 
+                    <td style="border-top: none;"></td> 
+                    <td class="text-center bold" style="border-top: 1px solid #000000;">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
+                    
+                    @if($showMrp && $showPrice)
+                        <td style="border-top: none;"></td>
+                        <td class="text-right bold" style="padding-right: 8px; vertical-align: middle; border-top: 1px solid #000000;">Gross</td>
+                    @elseif($showMrp || $showPrice)
+                        <td class="text-right bold" style="padding-right: 8px; vertical-align: middle; border-top: 1px solid #000000;">Gross</td>
+                    @endif
+                    
+                    @if($showAmount)
+                        <td class="text-right bold" style="padding-right: 4px; vertical-align: middle; border-top: 1px solid #000000;">{{ number_format($invoice->sub_total, 2) }}</td>
+                    @endif
                 </tr>
             </tfoot>
-        </table>
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none;">
-            <tr>
-                <td style="width: 70%; padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: none; border-top:none;">
-                    <div style="padding: 4px;">
-                        IRN: {{ $invoice->irn ?? '' }}<br>
-                        Ack No.: {{ $invoice->ack_no ?? '' }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Eway Bill No. : {{ $invoice->eway_bill_no ?? '' }}
-                    </div>
-                    <table style="width: 100%; border-collapse: collapse; border-top: 1px solid #000;">
-                        <tr>
-                            <td style="width: 75%; padding: 4px; border-right: 1px solid #000; vertical-align: top; border-bottom: none; border-left: none;">
-                                <b>Company's Bank Details :</b><br>
-                                Bank Name : {{ $setting->bank_name ?? '' }}<br>
-                                A/C No. : {{ $setting->account_no ?? '' }}<br>
-                                Branch & IFS Code : {{ $setting->branch_location ? $setting->branch_location . ', ' : '' }}{{ $setting->ifsc_code ?? '' }}
-                            </td>
-                            <td style="width: 25%; padding: 4px; vertical-align: top; text-align: center; border-bottom: none; border-right: none;">
-                                <span style="font-weight: bold;">For UPI Payment</span><br>
-                                @if($qrBase64)
-                                    <img src="{{ $qrBase64 }}" style="max-width: 85px; margin-top: 0px;">
+            <tbody>
+                <tr style="border-top: 1px solid #000000;">
+                    <!-- Left Side (IRN + Bank + UPI) in a nested table to ensure borders join edge-to-edge -->
+                    <td colspan="7" style="width: {{ $w1_7 }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
+                        <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
+                            <tr>
+                                <td colspan="2" style="padding: 4px; vertical-align: top; border: none; border-bottom: 1px solid #000000;">
+                                    <div style="font-size: 11px;">
+                                        IRN: {{ $invoice->irn ?? '' }}<br>
+                                        Ack No.: {{ $invoice->ack_no ?? '' }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Eway Bill No. : {{ $invoice->eway_bill_no ?? '' }}
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: {{ ($w_1_5 / $w1_7) * 100 }}%; padding: 4px; vertical-align: top; border: none; border-right: 1px solid #000000;">
+                                    <div style="font-size: 12px;">
+                                        <b>Company's Bank Details :</b><br>
+                                        Bank Name : {{ $setting->bank_name ?? '' }}, {{ $setting->branch_location ? $setting->branch_location . ', ' : '' }}<br>
+                                        A/C No. : {{ $setting->account_no ?? '' }}<br>
+                                        Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}<br>
+                                        {!! $invoice->notes ?? '' !!}
+                                    </div>
+                                </td>
+                                <td style="width: {{ ($w_6_7 / $w1_7) * 100 }}%; padding: 4px; vertical-align: top; text-align: center; border: none;">
+                                    <div style="font-size: 11px; min-height: 85px;">
+                                        <span style="font-weight: bold;">For UPI Payment</span><br>
+                                        @if($qrBase64)
+                                            <img src="{{ $qrBase64 }}" style="max-width: 100px; margin-top: 4px;">
+                                        @else
+                                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="max-width: 100px; margin-top: 4px;">
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <!-- Right Side Labels -->
+                    <td colspan="{{ $colsAfterQty }}" style="width: {{ $w_colsAfterQty }}%; padding: 0; vertical-align: top; border-bottom: 1px solid #000000; border-top: 1px solid #000000; border-right: 1px solid #000000;">
+                        <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
+                            @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Discount({{ $invoice->discount_percent }}%)</td></tr>
+                            @endif
+                            @if($showSubTotal)
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Taxable Value</td></tr>
+                            @endif
+                            @if($showTax)
+                                @if(!$invoice->other_state)
+                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT CGST</td></tr>
+                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT SGST</td></tr>
                                 @else
-                                <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="max-width: 85px; margin-top: 0px;">
+                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT IGST</td></tr>
                                 @endif
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-                <td style="width: 18%; padding: 0; vertical-align: top; border-bottom: none; border-top:none; border-right: 1px solid #000;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">Discount({{ $invoice->discount_percent }}%)</td></tr>
-                        @endif
-                        @if($showSubTotal)
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">Taxable Value</td></tr>
-                        @endif
-                        @if($showTax)
-                            @if(!$invoice->other_state)
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT CGST</td></tr>
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT SGST</td></tr>
-                            @else
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT IGST</td></tr>
                             @endif
-                        @endif
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">Round Off</td></tr>
-                    </table>
-                </td>
-                <td style="width: 12%; padding: 0; vertical-align: top; border-bottom: none; border-top:none;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
-                        @endif
-                        @if($showSubTotal)
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td></tr>
-                        @endif
-                        @if($showTax)
-                            @if(!$invoice->other_state)
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->cgst, 2) }}</td></tr>
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sgst, 2) }}</td></tr>
-                            @else
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst, 2) }}</td></tr>
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Round Off</td></tr>
+                        </table>
+                    </td>
+                    <!-- Right Side Amounts -->
+                    <td colspan="1" style="width: {{ $colWidths['amount'] }}%; padding: 0; vertical-align: top; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
+                        <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
+                            @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
                             @endif
-                        @endif
-                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ (in_array(strtolower($invoice->round_off_type ?? ''), ['less', 'minus']) ? ' - ' : '') . number_format($invoice->round_off ?? 0, 2) }}</td></tr>
-                    </table>
-                </td>
-            </tr>
-            @if($showGrandTotal)
-            <tr>
-                <td style="width: 70%; padding: 8px; border-right: none;">
-                    Rupees &nbsp;&nbsp;&nbsp;: {{ strtoupper($totalInWords) }}
-                </td>
-                <td style="width: 18%; padding: 4px; font-weight: bold; text-align: right; border-right: 1px solid #000; border-top:none;">
-                    Total
-                </td>
-                <td style="width: 12%; padding: 4px; font-weight: bold; text-align: right; border-left: none; border-top:none;">
-                    {{ number_format($invoice->grand_total, 2) }}
-                </td>
-            </tr>
-            @endif
+                            @if($showSubTotal)
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td></tr>
+                            @endif
+                            @if($showTax)
+                                @if(!$invoice->other_state)
+                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->cgst, 2) }}</td></tr>
+                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sgst, 2) }}</td></tr>
+                                @else
+                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst, 2) }}</td></tr>
+                                @endif
+                            @endif
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ (in_array(strtolower($invoice->round_off_type ?? ''), ['less', 'minus']) ? ' - ' : '') . number_format($invoice->round_off ?? 0, 2) }}</td></tr>
+                        </table>
+                    </td>
+                </tr>
+                @if($showGrandTotal)
+                <tr>
+                    <td colspan="7" style="padding: 8px; border-right: none; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
+                        Rupees &nbsp;&nbsp;&nbsp;: {{ strtoupper($totalInWords) }}
+                    </td>
+                    <td colspan="{{ $colsAfterQty }}" style="padding: 4px; font-weight: bold; text-align: right; border-right: 1px solid #000000; border-top: 1px solid #000000; border-bottom: 1px solid #000000;">
+                        Total
+                    </td>
+                    <td colspan="1" style="padding: 4px; font-weight: bold; text-align: right; border-top: 1px solid #000000; border-bottom: 1px solid #000000;">
+                        {{ number_format($invoice->grand_total, 2) }}
+                    </td>
+                </tr>
+                @endif
+            </tbody>
         </table>
         <div class="bold" style="margin-top: 5px; display: none;">Amount of Tax(in words) : {{ $totalTaxInWords }}</div>
         @if($showTax)
@@ -598,20 +728,20 @@ $showPrice     = in_array('price', $showFields);
                 @foreach($taxSummary as $hsn => $summary)
                     <tr>
                         <td class="text-center">{{ $i++ }}</td>
-                        <td class="text-center">{{ $hsn }}</td>
+                        <td class="text-left">{{ $invoice->hsn_sac }}</td>
                         <td class="text-right">{{ number_format($summary['taxable_value'], 2) }}</td>
                         @if(!$invoice->other_state)
                         <td class="text-right">{{ $summary['cgst_rate'] }}</td>
                         <td class="text-right">{{ number_format($summary['cgst_amount'], 2) }}</td>
                         <td class="text-right">{{ $summary['sgst_rate'] }}</td>
                         <td class="text-right">{{ number_format($summary['sgst_amount'], 2) }}</td>
-                        <td class="text-center">-</td>
-                        <td class="text-right">-</td>
+                        <td class="text-center"></td>
+                        <td class="text-right"></td>
                         @else
-                        <td class="text-center">-</td>
-                        <td class="text-right">-</td>
-                        <td class="text-center">-</td>
-                        <td class="text-right">-</td>
+                        <td class="text-center"></td>
+                        <td class="text-right"></td>
+                        <td class="text-center"></td>
+                        <td class="text-right"></td>
                         <td class="text-right">{{ $summary['igst_rate'] }}</td>
                         <td class="text-right">{{ number_format($summary['igst_amount'], 2) }}</td>
                         @endif
@@ -619,39 +749,40 @@ $showPrice     = in_array('price', $showFields);
                 @endforeach
             </tbody>
             <tfoot>
-                <tr>
-                    <td colspan="2" class="text-right">Total</td>
-                    <td class="text-right">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td>
+                <tr style="border-top: 1px solid #000000;">
+                    <td class="text-center">&nbsp;</td>
+                    <td class="text-right bold" style="padding-right: 8px;">Total</td>
+                    <td class="text-right bold">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td>
                     @if(!$invoice->other_state)
-                    <td>-</td>
-                    <td class="text-right">{{ number_format($invoice->cgst, 2) }}</td>
-                    <td>-</td>
-                    <td class="text-right">{{ number_format($invoice->sgst, 2) }}</td>
-                    <td>-</td>
-                    <td>-</td>
+                    <td>&nbsp;</td>
+                    <td class="text-right bold">{{ number_format($invoice->cgst, 2) }}</td>
+                    <td>&nbsp;</td>
+                    <td class="text-right bold">{{ number_format($invoice->sgst, 2) }}</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
                     @else
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
                     <td class="text-right bold">{{ number_format($invoice->igst, 2) }}</td>
                     @endif
                 </tr>
                 <tr>
-                    <td colspan="9" style="border-top: 1px solid #000; padding: 4px; text-align: left; border-bottom: 1px solid #000;">
+                    <td colspan="9" style="border-top: 1px solid #000000; border-bottom: 1px solid #000000; border-left: 1px solid #000000; border-right: 1px solid #000000; padding: 6px; text-align: left;">
                         Amount of Tax(in words) &nbsp;&nbsp;&nbsp;: {{ strtoupper($totalTaxInWords) }}
                     </td>
                 </tr>
             </tfoot>
         </table>
         @endif
-        <div style="margin-top: 4px; padding-left: 4px;">
-            <span style="font-size: 11px;">Additional Notes &nbsp;&nbsp;: {{ $invoice->notes ?? '' }}</span>
-        </div>
         <table class="no-border" style="margin-top: 15px; width: 100%;">
             <tr>
                 <td width="60%" style="vertical-align: top; padding-left: 4px;">
+                    <div style="margin-bottom: 8px; font-size: 10px;">
+                        <span>Remarks :</span> {{ $invoice->salesOrder->order_no ?? '' }}
+                    </div>
                     <div style="font-weight: bold; font-size: 10px;">Terms & Conditions :</div>
                     <div style="font-size: 9px; line-height: 1.4;">
                         1. Goods once sold will not be taken back or exchange<br>
@@ -664,7 +795,7 @@ $showPrice     = in_array('price', $showFields);
                 <td width="40%" class="text-right" style="vertical-align: bottom;">
                     <br>
                     <div style="border: 2px solid #000; border-radius: 2px; text-align: center; height: 90px; position: relative;">
-                        <div style="padding-top: 5px; font-size: 10px;">For Nachias Fashion Private Limited</div>
+                        <div style="padding-top: 5px; font-size: 11px;">For Nachias Fashion Private Limited</div>
                         
                         <div style="position: absolute; bottom: 0; width: 100%; border-top: 1px dotted #000; padding: 4px 0; font-size: 10px;">
                             Authorised Signatory
@@ -674,6 +805,7 @@ $showPrice     = in_array('price', $showFields);
             </tr>
         </table>
     </div>
+@endforeach
     @if(isset($is_print) && $is_print)
     <script>
         window.onload = function() {

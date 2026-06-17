@@ -13,6 +13,7 @@ class ItemPrice extends Model
     protected $fillable = [
         'finished_item_code',
         'art_no',
+        'size',
         'unit_price',
         'selling_price',
         'effective_from',

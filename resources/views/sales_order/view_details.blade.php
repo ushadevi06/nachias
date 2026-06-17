@@ -164,11 +164,107 @@
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $idx + 1) }}</td>
                                         <td>
                                             @php
-                                                $code = $item->finished_item_code; 
-                                                $itemName = $item->item_name;
+                                                $codeToParse = $item->getAttributes()['item_name'] ?? $item->item_name ?? $item->finished_item_code ?? '';
+                                                
+                                                $brandName = '';
+                                                $styleName = '';
+                                                $sleeve = '';
+                                                
+                                                if ($item->item) {
+                                                    $brandName = $item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : '');
+                                                    $styleName = $item->item->style ? $item->item->style->style_name : $item->item->name;
+                                                } elseif ($item->stockEntryItem && $item->stockEntryItem->item) {
+                                                    $seItem = $item->stockEntryItem->item;
+                                                    $brandName = $seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : '');
+                                                    $styleName = $seItem->style ? $seItem->style->style_name : $seItem->name;
+                                                }
 
-                                                $sleeve = is_array($item->sleeve) ? implode(', ', $item->sleeve) : $item->sleeve;
-                                                $displayDescription = (!empty($itemName) && $itemName !== $code && $itemName !== '-') ? $itemName : $code; 
+                                                $resolved = false;
+                                                
+                                                if (!empty($item->sleeve)) {
+                                                    $sleeveVal = is_array($item->sleeve) ? ($item->sleeve[0] ?? '') : $item->sleeve;
+                                                    $sleeveValUpper = strtoupper(trim($sleeveVal));
+                                                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                                        $sleeve = 'F/S';
+                                                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                                        $sleeve = 'H/S';
+                                                    } else {
+                                                        $sleeve = $sleeveVal;
+                                                    }
+                                                }
+
+                                                if (!empty($codeToParse) && $codeToParse !== '-') {
+                                                    $parts = explode('-', $codeToParse);
+                                                    
+                                                    if (count($parts) >= 2) {
+                                                        $brandCode = trim($parts[0]);
+                                                        $styleCode = trim($parts[1]);
+                                                        
+                                                        $dbBrand = \App\Models\Brand::where('code', $brandCode)->first();
+                                                        $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
+                                                        
+                                                        if ($dbBrand && $dbStyle) {
+                                                            $brandName = $dbBrand->brand_name;
+                                                            $styleName = $dbStyle->style_name;
+                                                            $resolved = true;
+                                                            
+                                                            if (empty($sleeve) && isset($parts[2])) {
+                                                                $sleeveVal = trim($parts[2]);
+                                                                $sleeveValUpper = strtoupper($sleeveVal);
+                                                                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                                                    $sleeve = 'F/S';
+                                                                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                                                    $sleeve = 'H/S';
+                                                                } else {
+                                                                    $sleeve = $sleeveVal;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    if (!$resolved && count($parts) >= 1) {
+                                                        $mainCode = trim($parts[0]);
+                                                        $dbBrand = null;
+                                                        $brandCode = '';
+                                                        $allBrands = \App\Models\Brand::all();
+                                                        foreach ($allBrands as $brand) {
+                                                            $bCode = trim($brand->code);
+                                                            if (!empty($bCode) && stripos($mainCode, $bCode) === 0) {
+                                                                $dbBrand = $brand;
+                                                                $brandCode = $bCode;
+                                                                break;
+                                                            }
+                                                        }
+                                                        
+                                                        if ($dbBrand) {
+                                                            $styleCode = substr($mainCode, strlen($brandCode));
+                                                            $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
+                                                            if ($dbStyle) {
+                                                                $brandName = $dbBrand->brand_name;
+                                                                $styleName = $dbStyle->style_name;
+                                                                $resolved = true;
+                                                                
+                                                                if (empty($sleeve) && isset($parts[1])) {
+                                                                    $sleeveVal = trim($parts[1]);
+                                                                    $sleeveValUpper = strtoupper($sleeveVal);
+                                                                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                                                        $sleeve = 'F/S';
+                                                                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                                                        $sleeve = 'H/S';
+                                                                    } else {
+                                                                        $sleeve = $sleeveVal;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                if ($resolved) {
+                                                    $displayDescription = trim($brandName . ' ' . $styleName . ' ' . $sleeve);
+                                                } else {
+                                                    $displayDescription = $codeToParse;
+                                                }
                                             @endphp
                                             <div class="fw-medium text-dark">{{ $displayDescription }}</div>
                                             @if($sleeve)

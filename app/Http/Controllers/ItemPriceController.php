@@ -25,12 +25,22 @@ class ItemPriceController extends Controller
             $prices = DB::table('item_prices')
                 ->leftJoin(DB::raw('(SELECT finished_item_code, MAX(item_id) as item_id FROM stock_entry_items WHERE deleted_at IS NULL GROUP BY finished_item_code) as sei'), 'item_prices.finished_item_code', '=', 'sei.finished_item_code')
                 ->leftJoin('items', 'sei.item_id', '=', 'items.id')
+                ->leftJoin(DB::raw('(SELECT item_code, MAX(item_name) as item_name FROM barcode_masters GROUP BY item_code) as bm'), 'item_prices.finished_item_code', '=', 'bm.item_code')
                 ->whereNull('item_prices.deleted_at')
                 ->select(
-                    'item_prices.*',
-                    DB::raw('COALESCE(items.name, "-") as item_display_name')
+                    DB::raw('MAX(item_prices.id) as id'),
+                    'item_prices.finished_item_code',
+                    'item_prices.art_no',
+                    DB::raw('MIN(item_prices.selling_price) as min_selling_price'),
+                    DB::raw('MAX(item_prices.selling_price) as max_selling_price'),
+                    DB::raw('MIN(item_prices.unit_price) as min_unit_price'),
+                    DB::raw('MAX(item_prices.unit_price) as max_unit_price'),
+                    DB::raw('MAX(item_prices.effective_from) as effective_from'),
+                    DB::raw('MAX(item_prices.status) as status'),
+                    DB::raw('COALESCE(items.name, bm.item_name, "-") as item_display_name')
                 )
-                ->orderBy('item_prices.id', 'desc')
+                ->groupBy('item_prices.finished_item_code', 'item_prices.art_no', 'items.name', 'bm.item_name')
+                ->orderBy('id', 'desc')
                 ->get();
 
             $data = [];
@@ -60,14 +70,22 @@ class ItemPriceController extends Controller
 
                 $action .= '</div>';
 
+                $itemName = $row->finished_item_code;
+
+                $selling_price = ($row->min_selling_price == $row->max_selling_price) 
+                            ? number_format($row->min_selling_price, 2) 
+                            : number_format($row->min_selling_price, 2) . ' - ' . number_format($row->max_selling_price, 2);
+
+                $unit_price = ($row->min_unit_price == $row->max_unit_price) 
+                            ? number_format($row->min_unit_price, 2) 
+                            : number_format($row->min_unit_price, 2) . ' - ' . number_format($row->max_unit_price, 2);
+
                 $data[] = [
                     'DT_RowIndex'    => $i++,
-                    'item_name'      => ($row->item_display_name && $row->item_display_name != '-') 
-                                        ? $row->finished_item_code . ' - ' . $row->item_display_name 
-                                        : $row->finished_item_code,
+                    'item_name'      => $itemName,
                     'art_no'         => $row->art_no ?? '-',
-                    'selling_price'  => number_format($row->selling_price, 2),
-                    'unit_price'     => number_format($row->unit_price, 2),
+                    'selling_price'  => $selling_price,
+                    'unit_price'     => $unit_price,
                     'effective_from' => $row->effective_from ? Carbon::parse($row->effective_from)->format('d-m-Y') : '-',
                     'status'         => $status,
                     'action'         => $action,
@@ -95,38 +113,210 @@ class ItemPriceController extends Controller
         $price = $id ? ItemPrice::findOrFail($id) : null;
 
         if ($request->isMethod('post')) {
+            if ($request->has('row_update')) {
+                if (auth()->id() != 1 && !auth()->user()->can('edit item-prices')) {
+                    return response()->json(['success' => false, 'message' => 'Unauthorized action.'], 403);
+                }
+
+                $request->validate([
+                    'finished_item_code' => 'required|string',
+                    'art_no'             => 'nullable|string',
+                    'size'               => 'required|string',
+                    'selling_price'      => 'required|numeric|min:0',
+                    'unit_price'         => 'required|numeric|min:0',
+                    'effective_from'     => 'required|date_format:d-m-Y',
+                    'status'             => 'required|in:Active,Inactive',
+                ]);
+
+                $effectiveFrom = Carbon::createFromFormat('d-m-Y', $request->effective_from)->format('Y-m-d');
+                $finishedItemCode = $request->finished_item_code;
+                $artNo = $request->art_no;
+                $size = $request->size;
+                $sellingPrice = $request->selling_price;
+                $unitPrice = $request->unit_price;
+                $status = $request->status;
+
+                $priceRow = ItemPrice::where('finished_item_code', $finishedItemCode)
+                    ->where('art_no', $artNo)
+                    ->where('size', $size)
+                    ->first();
+
+                $data = [
+                    'finished_item_code' => $finishedItemCode,
+                    'art_no'             => $artNo,
+                    'size'               => $size,
+                    'selling_price'      => $sellingPrice,
+                    'unit_price'         => $unitPrice,
+                    'effective_from'     => $effectiveFrom,
+                    'status'             => $status,
+                ];
+
+                if ($priceRow) {
+                    $data['updated_by'] = auth()->id() ?? 1;
+                    $priceRow->update($data);
+                    addLog('update', 'Item Price Row', 'item_prices', $priceRow->id, null, $data);
+                } else {
+                    $data['created_by'] = auth()->id() ?? 1;
+                    $priceRow = ItemPrice::create($data);
+                    addLog('create', 'Item Price Row', 'item_prices', $priceRow->id, null, $data);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Size {$size} price updated successfully.",
+                    'unit_price' => number_format($unitPrice, 2, '.', ''),
+                ]);
+            }
+
             $rules = [
                 'finished_item_code' => 'required|string',
                 'art_no'             => 'nullable|string',
                 'selling_price'      => 'required|numeric|min:0',
                 'effective_from'     => 'required|date_format:d-m-Y',
-                'status'             => 'required|in:Active,Inactive'
+                'status'             => 'required|in:Active,Inactive',
+                'sizes'              => 'nullable|array',
+                'size_prices'        => 'required_with:sizes|array',
             ];
+
+            if ($request->has('sizes') && is_array($request->sizes)) {
+                foreach ($request->sizes as $sz) {
+                    $rules["size_prices.{$sz}.selling_price"] = 'required|numeric|min:0';
+                }
+            }
+
             $messages = [
                 '*.required' => 'This field is required.',
             ];
             $request->validate($rules, $messages);
 
-            $data = $request->only(['finished_item_code', 'art_no', 'selling_price', 'status']);
-            $data['unit_price'] = $request->selling_price / 1.5;
-            $data['effective_from'] = Carbon::createFromFormat('d-m-Y', $request->effective_from)->format('Y-m-d');
+            $effectiveFrom = Carbon::createFromFormat('d-m-Y', $request->effective_from)->format('Y-m-d');
+            $finishedItemCode = $request->finished_item_code;
+            $artNo = $request->art_no;
+            $status = $request->status;
 
             if ($id) {
-                $data['updated_by'] = auth()->id();
-                ItemPrice::where('id', $id)->update($data);
+                $currentSize = $price->size;
+                $selPrice = $request->selling_price;
+                if ($request->has("size_prices.{$currentSize}.selling_price")) {
+                    $selPrice = $request->input("size_prices.{$currentSize}.selling_price");
+                }
+                $unitPrice = $request->has("size_prices.{$currentSize}.unit_price") 
+                    ? $request->input("size_prices.{$currentSize}.unit_price") 
+                    : ($selPrice / 1.5);
+                
+                $data = [
+                    'finished_item_code' => $finishedItemCode,
+                    'art_no'             => $artNo,
+                    'selling_price'      => $selPrice,
+                    'unit_price'         => $unitPrice,
+                    'effective_from'     => $effectiveFrom,
+                    'status'             => $status,
+                    'updated_by'         => auth()->id() ?? 1,
+                ];
+
+                $price->update($data);
                 addLog('update', 'Item Price', 'item_prices', $id, null, $data);
-                $msg = 'Item Price updated successfully';
+
+                $createdCount = 0;
+                if ($request->has('sizes') && is_array($request->sizes)) {
+                    foreach ($request->sizes as $sz) {
+                        if ($sz == $currentSize) {
+                            continue;
+                        }
+
+                        $selPrice = $request->input("size_prices.{$sz}.selling_price");
+                        $unitPrice = $request->has("size_prices.{$sz}.unit_price") 
+                            ? $request->input("size_prices.{$sz}.unit_price") 
+                            : ($selPrice / 1.5);
+                        $sizeData = [
+                            'finished_item_code' => $finishedItemCode,
+                            'art_no'             => $artNo,
+                            'size'               => $sz,
+                            'selling_price'      => $selPrice,
+                            'unit_price'         => $unitPrice,
+                            'effective_from'     => $effectiveFrom,
+                            'status'             => $status,
+                            'created_by'         => auth()->id() ?? 1,
+                        ];
+
+                        $existing = ItemPrice::where('finished_item_code', $finishedItemCode)
+                            ->where('size', $sz)
+                            ->whereDate('effective_from', $effectiveFrom)
+                            ->first();
+
+                        if ($existing) {
+                            $existing->update($sizeData);
+                        } else {
+                            ItemPrice::create($sizeData);
+                        }
+                        $createdCount++;
+                    }
+                }
+
+                if ($createdCount > 0) {
+                    $msg = 'Item Price updated and ' . $createdCount . ' other size prices added/updated successfully';
+                } else {
+                    $msg = 'Item Price updated successfully';
+                }
             } else {
-                $data['created_by'] = auth()->id();
-                $newPrice = ItemPrice::create($data);
-                addLog('create', 'Item Price', 'item_prices', $newPrice->id, null, $data);
-                $msg = 'Item Price added successfully';
+                if ($request->has('sizes') && is_array($request->sizes) && count($request->sizes) > 0) {
+                    $createdCount = 0;
+                    foreach ($request->sizes as $sz) {
+                        $selPrice = $request->input("size_prices.{$sz}.selling_price");
+                        $unitPrice = $request->has("size_prices.{$sz}.unit_price") 
+                            ? $request->input("size_prices.{$sz}.unit_price") 
+                            : ($selPrice / 1.5);
+                        $data = [
+                            'finished_item_code' => $finishedItemCode,
+                            'art_no'             => $artNo,
+                            'size'               => $sz,
+                            'selling_price'      => $selPrice,
+                            'unit_price'         => $unitPrice,
+                            'effective_from'     => $effectiveFrom,
+                            'status'             => $status,
+                            'created_by'         => auth()->id() ?? 1,
+                        ];
+
+                        $existing = ItemPrice::where('finished_item_code', $finishedItemCode)
+                            ->where('size', $sz)
+                            ->whereDate('effective_from', $effectiveFrom)
+                            ->first();
+
+                        if ($existing) {
+                            $existing->update($data);
+                        } else {
+                            ItemPrice::create($data);
+                        }
+                        $createdCount++;
+                    }
+                    $msg = "Item Prices for {$createdCount} sizes added successfully";
+                } else {
+                    $data = [
+                        'finished_item_code' => $finishedItemCode,
+                        'art_no'             => $artNo,
+                        'size'               => null,
+                        'selling_price'      => $request->selling_price,
+                        'unit_price'         => $request->selling_price / 1.5,
+                        'effective_from'     => $effectiveFrom,
+                        'status'             => $status,
+                        'created_by'         => auth()->id() ?? 1,
+                    ];
+                    $newPrice = ItemPrice::create($data);
+                    addLog('create', 'Item Price', 'item_prices', $newPrice->id, null, $data);
+                    $msg = 'Item Price added successfully';
+                }
             }
 
             return redirect('item_prices')->with('success', $msg);
         }
 
-        return view('item_prices.add', compact('price'));
+        $price = $id ? ItemPrice::findOrFail($id) : null;
+        $allPrices = [];
+        if ($price) {
+            $allPrices = ItemPrice::where('finished_item_code', $price->finished_item_code)->where('art_no', $price->art_no)->get()->keyBy('size');
+        }
+
+        return view('item_prices.add', compact('price', 'allPrices'));
     }
 
     public function destroy($id)
@@ -135,37 +325,45 @@ class ItemPriceController extends Controller
             return unauthorizedRedirect();
         }
         $price = ItemPrice::findOrFail($id);
-        $oldData = $price->toArray();
-        $price->delete();
-        addLog('delete', 'Item Price', 'item_prices', $id, $oldData, null);
-        return redirect('item_prices')->with('success', 'Item Price deleted successfully');
+        ItemPrice::where('finished_item_code', $price->finished_item_code)->where('art_no', $price->art_no)->delete();
+        addLog('delete', 'Item Price Group', 'item_prices', $id, $price->toArray(), null);
+        return redirect('item_prices')->with('success', 'Item Price group deleted successfully');
     }
 
     public function updateStatus(Request $request, $id)
     {
         $price = ItemPrice::findOrFail($id);
-        $oldData = $price->toArray();
-        $price->status = $request->status;
-        $price->save();
-        $newData = $price->toArray();
-        addLog('update_status', 'Item Price Status', 'item_prices', $price->id, $oldData, $newData);
+        ItemPrice::where('finished_item_code', $price->finished_item_code)->where('art_no', $price->art_no)->update(['status' => $request->status]);
+        addLog('update_status', 'Item Price Group Status', 'item_prices', $price->id, ['status' => $price->status], ['status' => $request->status]);
         return response()->json([
             'success' => true,
-            'status'  => $price->status
+            'status'  => $request->status
         ]);
     }
 
     public function getArtNos(Request $request)
     {
         $itemCode = $request->item_code;
-        $artNos = DB::table('stock_entry_items')
+        
+        $artNos1 = DB::table('stock_entry_items')
             ->where('finished_item_code', $itemCode)
             ->where('stock_type', 'finished_goods')
             ->whereNull('deleted_at')
             ->whereNotNull('art_no')
             ->where('art_no', '!=', '')
             ->distinct()
-            ->pluck('art_no');
+            ->pluck('art_no')
+            ->toArray();
+
+        $artNos2 = DB::table('barcode_masters')
+            ->where('item_code', $itemCode)
+            ->whereNotNull('art_no')
+            ->where('art_no', '!=', '')
+            ->distinct()
+            ->pluck('art_no')
+            ->toArray();
+
+        $artNos = array_values(array_unique(array_merge($artNos1, $artNos2)));
 
         return response()->json(['art_nos' => $artNos]);
     }
@@ -173,13 +371,15 @@ class ItemPriceController extends Controller
     public function searchItems(Request $request)
     {
         $term = $request->term;
-        $results = DB::table('stock_entry_items')
+        
+        $results1 = DB::table('stock_entry_items')
             ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
             ->where(function ($query) use ($term) {
                 $query->where('stock_entry_items.finished_item_code', 'LIKE', "%{$term}%")
-                    ->orWhere('items.name', 'LIKE', "%{$term}%");
+                    ->orWhere('items.name', 'LIKE', "%{$term}%")
+                    ->orWhere('stock_entry_items.art_no', 'LIKE', "%{$term}%");
             })
             ->select(
                 'stock_entry_items.item_id',
@@ -187,20 +387,55 @@ class ItemPriceController extends Controller
                 'items.name as item_name'
             )
             ->distinct()
-            ->limit(20)
+            ->get();
+
+        $results2 = DB::table('barcode_masters')
+            ->where(function ($query) use ($term) {
+                $query->where('item_code', 'LIKE', "%{$term}%")
+                    ->orWhere('item_name', 'LIKE', "%{$term}%")
+                    ->orWhere('art_no', 'LIKE', "%{$term}%");
+            })
+            ->select(
+                'item_code as finished_item_code',
+                'item_name'
+            )
+            ->distinct()
             ->get();
 
         $formattedResults = [];
-        foreach ($results as $item) {
-            $formattedResults[] = [
-                'id'    => $item->item_id,
-                'text'  => $item->finished_item_code . ($item->item_name ? ' - ' . $item->item_name : ''),
-                'code'  => $item->finished_item_code,
-                'name'  => $item->item_name ?? ''
-            ];
+        $seenCodes = [];
+
+        foreach ($results1 as $item) {
+            if (!in_array($item->finished_item_code, $seenCodes)) {
+                $seenCodes[] = $item->finished_item_code;
+                $formattedResults[] = [
+                    'id'    => $item->item_id,
+                    'text'  => $item->finished_item_code . ($item->item_name ? ' - ' . $item->item_name : ''),
+                    'code'  => $item->finished_item_code,
+                    'name'  => $item->item_name ?? ''
+                ];
+            }
         }
 
-        return response()->json($formattedResults);
+        foreach ($results2 as $item) {
+            if (!in_array($item->finished_item_code, $seenCodes)) {
+                $seenCodes[] = $item->finished_item_code;
+                
+                $itemId = DB::table('stock_entry_items')
+                    ->where('finished_item_code', $item->finished_item_code)
+                    ->whereNull('deleted_at')
+                    ->value('item_id');
+
+                $formattedResults[] = [
+                    'id'    => $itemId ?? '',
+                    'text'  => $item->finished_item_code . ($item->item_name ? ' - ' . $item->item_name : ''),
+                    'code'  => $item->finished_item_code,
+                    'name'  => $item->item_name ?? ''
+                ];
+            }
+        }
+
+        return response()->json(array_slice($formattedResults, 0, 20));
     }
 
     public function exportExcel()

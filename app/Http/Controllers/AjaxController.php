@@ -135,7 +135,15 @@ class AjaxController extends Controller
         if (!$schedule) {
             return response()->json(['success' => false, 'results' => [], 'message' => 'Schedule not found']);
         }
-        $services = ProductionService::where('operation_stage_id', $schedule->operation_stage_id)->where('status', 'Active')->get()->map(function($s) use ($schedule) {
+        
+        $query = ProductionService::where('operation_stage_id', $schedule->operation_stage_id)->where('status', 'Active');
+        if ($schedule->jobCard && $schedule->jobCard->process_group_id) {
+            $query->whereHas('processGroups', function($q) use ($schedule) {
+                $q->where('process_groups.id', $schedule->jobCard->process_group_id);
+            });
+        }
+        
+        $services = $query->get()->map(function($s) use ($schedule) {
             $qty = $schedule->planned_qty ?? 0;
             if ($s->base_quantity_source == 'FS Qty' && $schedule->jobCard) {
                 $qty = $schedule->jobCard->total_qty_fs ?? $qty;

@@ -17,7 +17,7 @@
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" name="item_search" class="form-control @error('finished_item_code') is-invalid @enderror" id="item_search" placeholder="Search Item Code or Name" value="{{ old('item_search', ($price && $price->finished_item_code) ? ($price->finished_item_code . (!empty($price->item->name) ? ' - ' . $price->item->name : '')) : '') }}">
+                                    <input type="text" name="item_search" class="form-control @error('finished_item_code') is-invalid @enderror" id="item_search" placeholder="Search Item Code or Name" value="{{ old('item_search', $price->finished_item_code ?? '') }}">
                                     <input type="hidden" name="finished_item_code" id="finished_item_code" value="{{ old('finished_item_code', $price->finished_item_code ?? '') }}">
                                     <label for="item_search">Item Name <span class="text-danger">*</span></label>
                                 </div>
@@ -44,7 +44,7 @@
                             <div class="col-md-6">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" step="0.01" class="form-control @error('selling_price') is-invalid @enderror" id="selling_price" placeholder="Enter Selling Price" name="selling_price" value="{{ old('selling_price', $price->selling_price ?? '') }}">
-                                    <label for="selling_price">Selling Price <span class="text-danger">*</span></label>
+                                    <label for="selling_price">Base Selling Price <span class="text-danger">*</span></label>
                                 </div>
                                 @error('selling_price')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -54,8 +54,39 @@
                             <div class="col-md-6">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="unit_price" placeholder="Unit Price" name="unit_price" value="{{ old('unit_price', $price->unit_price ?? '') }}" readonly tabindex="-1" style="pointer-events: none; background-color: #f0f0f0;">
-                                    <label for="unit_price">Unit Price</label>
+                                    <label for="unit_price">Base Unit Price</label>
                                 </div>
+                            </div>
+
+                            <input type="hidden" id="price_id_val" value="{{ $price->id ?? '' }}">
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Select Sizes for Pricing:</label>
+                                <div class="d-flex flex-wrap gap-3 mb-2">
+                                     @foreach(['36', '38', '40', '42', '44', '46', '48', '50'] as $sz)
+                                         <div class="form-check">
+                                             <input type="checkbox" name="sizes[{{ $sz }}]" id="size_{{ $sz }}" value="{{ $sz }}" class="form-check-input size-checkbox"
+                                                    {{ (old("sizes.$sz") || (isset($allPrices) && isset($allPrices[$sz]))) ? 'checked' : '' }}>
+                                             <label class="form-check-label" for="size_{{ $sz }}">{{ $sz }}</label>
+                                         </div>
+                                     @endforeach
+                                </div>
+                            </div>
+
+                            <div class="col-12 d-none" id="size-pricing-container">
+                                <label class="form-label fw-bold mb-2">Size-wise Pricing Grid:</label>
+                                <table class="table table-bordered table-sm align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Size</th>
+                                            <th>Selling Price <span class="text-danger">*</span></th>
+                                            <th>Unit Price (Auto)</th>
+                                            <th class="text-center" style="width: 80px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="size-pricing-tbody">
+                                    </tbody>
+                                </table>
                             </div>
 
                             <div class="col-md-6">
@@ -147,6 +178,138 @@
             } else {
                 $('#unit_price').val('');
             }
+            syncStandardSizes();
+        });
+
+        const standardSizes = ['36', '38', '40', '42', '44'];
+        const specialSizes = ['46', '48', '50'];
+        const dbPrices = @json($allPrices ?? (object)[]);
+        const isEditMode = {{ $price ? 'true' : 'false' }};
+        let editingRows = {};
+
+        function renderGrid() {
+            let hasChecked = false;
+            let tbody = $('#size-pricing-tbody');
+            
+            let currentValues = {};
+            let currentUnitPrices = {};
+            let unitPriceReadonly = {};
+            tbody.find('.size-price-input').each(function() {
+                let sz = $(this).data('size');
+                currentValues[sz] = $(this).val();
+            });
+            tbody.find('.size-unit-price').each(function() {
+                let sz = $(this).attr('id').replace('unit_price_', '');
+                currentUnitPrices[sz] = $(this).val();
+                unitPriceReadonly[sz] = $(this).prop('readonly');
+            });
+
+            tbody.empty();
+
+            $('.size-checkbox:checked').each(function() {
+                hasChecked = true;
+                let sz = $(this).val();
+                
+                let val = '';
+                if (currentValues[sz] !== undefined) {
+                    val = currentValues[sz];
+                } else if (dbPrices && dbPrices[sz] !== undefined) {
+                    val = dbPrices[sz].selling_price;
+                } else if (standardSizes.includes(sz)) {
+                    val = $('#selling_price').val();
+                }
+
+                let unitVal = '';
+                let isReadonly = true;
+                if (currentUnitPrices[sz] !== undefined) {
+                    unitVal = currentUnitPrices[sz];
+                    isReadonly = unitPriceReadonly[sz];
+                } else if (dbPrices && dbPrices[sz] !== undefined && dbPrices[sz].unit_price !== undefined) {
+                    unitVal = dbPrices[sz].unit_price;
+                } else if (val) {
+                    unitVal = (parseFloat(val) / 1.5).toFixed(2);
+                }
+
+                let actionTd = `
+                    <div class="text-center d-flex justify-content-center gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-primary edit-row-btn" data-size="${sz}" title="Edit Unit Price for size ${sz}">
+                            <i class="ri ri-edit-box-line me-1"></i> Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-size-row" data-size="${sz}" title="Remove size ${sz}">
+                            <i class="ri ri-delete-bin-line"></i>
+                        </button>
+                    </div>
+                `;
+
+                tbody.append(`
+                    <tr id="row_size_${sz}">
+                        <td><strong>Size ${sz}</strong></td>
+                        <td>
+                            <input type="number" step="0.01" name="size_prices[${sz}][selling_price]" class="form-control size-price-input" data-size="${sz}" value="${val}" placeholder="Enter Price for Size ${sz}" required>
+                        </td>
+                        <td>
+                            <input type="number" step="0.01" name="size_prices[${sz}][unit_price]" class="form-control size-unit-price" id="unit_price_${sz}" value="${unitVal}" placeholder="Enter Unit Price" required ${isReadonly ? 'readonly tabindex="-1" style="background-color: #f0f0f0;"' : 'style="background-color: #fff;"'}>
+                        </td>
+                        <td>
+                            ${actionTd}
+                        </td>
+                    </tr>
+                `);
+            });
+
+            if (hasChecked) {
+                $('#size-pricing-container').removeClass('d-none');
+            } else {
+                $('#size-pricing-container').addClass('d-none');
+            }
+        }
+
+        $(document).on('click', '.remove-size-row', function() {
+            let sz = $(this).data('size');
+            $(`#size_${sz}`).prop('checked', false).trigger('change');
+        });
+
+        function syncStandardSizes() {
+            let basePrice = $('#selling_price').val();
+            $('.size-price-input').each(function() {
+                let sz = $(this).data('size');
+                if (standardSizes.includes(sz.toString())) {
+                    $(this).val(basePrice);
+                    let unitInput = $(`#unit_price_${sz}`);
+                    if (unitInput.prop('readonly')) {
+                        if (basePrice) {
+                            let unitPrice = (parseFloat(basePrice) / 1.5).toFixed(2);
+                            unitInput.val(unitPrice);
+                        } else {
+                            unitInput.val('');
+                        }
+                    }
+                }
+            });
+        }
+
+        $('.size-checkbox').on('change', function() {
+            renderGrid();
+        });
+
+        $(document).on('input', '.size-price-input', function() {
+            let sz = $(this).data('size');
+            let unitInput = $(`#unit_price_${sz}`);
+            if (unitInput.prop('readonly')) {
+                let val = parseFloat($(this).val());
+                if (!isNaN(val)) {
+                    unitInput.val((val / 1.5).toFixed(2));
+                } else {
+                    unitInput.val('');
+                }
+            }
+        });
+
+        $(document).on('click', '.edit-row-btn', function() {
+            let sz = $(this).data('size');
+            let row = $(`#row_size_${sz}`);
+            let unitInput = row.find('.size-unit-price');
+            unitInput.prop('readonly', false).removeAttr('tabindex').css('background-color', '#fff').focus();
         });
 
         var itemAutocomplete = $('#item_search').autocomplete({
@@ -173,7 +336,7 @@
             select: function(event, ui) {
                 $('#item_id').val(ui.item.id);
                 $('#finished_item_code').val(ui.item.code);
-                $('#item_search').val(ui.item.label);
+                $('#item_search').val(ui.item.code);
 
                 loadArtNos(ui.item.code);
                 return false;
@@ -245,6 +408,7 @@
         if ($('#selling_price').val()) {
             $('#selling_price').trigger('input');
         }
+        renderGrid();
     });
 </script>
 @endsection

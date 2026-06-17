@@ -17,7 +17,7 @@ class ProductionServiceController extends Controller
         }
 
         if ($request->ajax()) {
-            $services = ProductionService::with('operationStage')->orderBy('operation_stage_id')->orderBy('sequence')->latest('id')->get();
+            $services = ProductionService::with(['operationStage', 'processGroups'])->orderBy('operation_stage_id')->orderBy('sequence')->latest('id')->get();
             $data = [];
             $i = 1;
 
@@ -54,6 +54,7 @@ class ProductionServiceController extends Controller
                     'service_code' => $row->service_code,
                     'service_name' => $row->service_name,
                     'operation_stage' => $row->operationStage ? $row->operationStage->operation_stage_name : '-',
+                    'process_group' => $row->processGroups->isNotEmpty() ? $row->processGroups->pluck('name')->implode(', ') : '-',
                     'applies_to'   => $row->applies_to,
                     'cost' => $row->cost !== null ? number_format($row->cost, 2) : '-',
                     'status'       => $status,
@@ -79,13 +80,15 @@ class ProductionServiceController extends Controller
             }
         }
 
-        $service = $id ? ProductionService::findOrFail($id) : null;
+        $service = $id ? ProductionService::with('processGroups')->findOrFail($id) : null;
 
         if ($request->isMethod('post')) {
             $rules = [
                 'service_name' => 'required|string|max:50|unique:production_services,service_name,' . $id . ',id,deleted_at,NULL',
                 'service_code' => 'required|string|max:75|unique:production_services,service_code,' . $id . ',id,deleted_at,NULL',
                 'operation_stage_id' => 'required|exists:operation_stages,id',
+                'process_group_ids' => 'required|array',
+                'process_group_ids.*' => 'exists:process_groups,id',
                 'cost' => 'nullable|numeric|min:0',
                 'status'       => 'required|in:Active,Inactive',
                 'applies_to'   => 'required|in:ALL,Full Sleeve,Half Sleeve,Both',
@@ -116,13 +119,15 @@ class ProductionServiceController extends Controller
                 'sequence', 'status', 'cost',
                 'applies_to', 'base_quantity_source'
             ]);
+            $data['process_group_id'] = $request->process_group_ids[0] ?? null;
             if (empty($data['cost'])) {
                 $data['cost'] = null;
             }
 
             if ($id) {
                 $data['updated_by'] = auth()->id();
-                ProductionService::where('id', $id)->update($data);
+                $service->update($data);
+                $service->processGroups()->sync($request->process_group_ids);
                 addLog('update', 'Production Service', 'production_services', $id, null, $data);
                 $msg = 'Production Service updated successfully';
             } else {
@@ -130,6 +135,7 @@ class ProductionServiceController extends Controller
                 $data['sequence'] = ($maxSequence ?? 0) + 1;
                 $data['created_by'] = auth()->id();
                 $newService = ProductionService::create($data);
+                $newService->processGroups()->sync($request->process_group_ids);
                 addLog('create', 'Production Service', 'production_services', $newService->id, null, $data);
                 $msg = 'Production Service added successfully';
             }
@@ -138,9 +144,10 @@ class ProductionServiceController extends Controller
         }
 
         $operationStages = OperationStage::active()->orderBy('id','desc')->get();
+        $processGroups = \App\Models\ProcessGroup::active()->orderBy('name')->get();
         $uoms = \App\Models\Uom::active()->orderBy('id','desc')->get();
 
-        return view('production_services.add', compact('service', 'operationStages', 'uoms'));
+        return view('production_services.add', compact('service', 'operationStages', 'uoms', 'processGroups'));
     }
     
     public function getNextSequence($stageId)

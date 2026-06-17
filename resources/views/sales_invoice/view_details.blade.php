@@ -14,6 +14,15 @@
                         <a href="{{ url('sales_invoices/print/' . $invoice->id) }}" class="btn btn-primary" target="_blank">
                             <i class="ri ri-printer-line back-arrow"></i>Print
                         </a>
+                        <div class="dropdown">
+                            <button class="btn btn-primary dropdown-toggle" type="button" id="deliveryOrderDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ri ri-truck-line back-arrow"></i>Delivery Order
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="deliveryOrderDropdown">
+                                <li><a class="dropdown-item" href="{{ url('sales_invoices/delivery-order/' . $invoice->id) }}" target="_blank">Delivery Order</a></li>
+                                <li><a class="dropdown-item" href="{{ url('sales_invoices/open-delivery-order/' . $invoice->id) }}" target="_blank">Open Delivery Order</a></li>
+                            </ul>
+                        </div>
                         <a href="{{ url('sales_invoices/print-sticker/' . $invoice->id) }}" class="btn btn-info" target="_blank" style="background-color: #00bcd4; border-color: #00bcd4;">
                             <i class="ri ri-printer-line back-arrow"></i>Print Sticker
                         </a>

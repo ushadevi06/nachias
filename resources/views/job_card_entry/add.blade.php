@@ -351,9 +351,6 @@
                                             <i class="ri ri-search-line"></i>
                                         </button>
                                     </div>
-                                    @if($jobCard)
-                                    <small class="text-muted"><i class="ri ri-information-line"></i> Process Group is read-only when editing</small>
-                                    @endif
                                     @error('process_group_id') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="col-md-6 col-xl-4">
@@ -932,7 +929,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-primary">
-                    <h5 class="modal-title text-white" id="processGroupModalLabel">{{ $jobCard ? 'view process-groups (Read-Only)' : 'Select Process Group' }}</h5>
+                    <h5 class="modal-title text-white" id="processGroupModalLabel">Select Process Group</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -947,7 +944,7 @@
                         <tbody>
                             @foreach($processGroups as $pg)
                             <tr>
-                                <td><input type="radio" name="process_option" value="{{ $pg->id }}" data-name="{{ $pg->name }}" {{ $jobCard ? 'disabled' : '' }} {{ ($jobCard && $jobCard->process_group_id == $pg->id) ? 'checked' : '' }}></td>
+                                <td><input type="radio" name="process_option" value="{{ $pg->id }}" data-name="{{ $pg->name }}" {{ ($jobCard && $jobCard->process_group_id == $pg->id) ? 'checked' : '' }}></td>
                                 <td>{{ explode(' - ', $pg->name)[0] }}</td>
                                 <td>{{ count(explode(' - ', $pg->name)) > 1 ? explode(' - ', $pg->name)[1] : $pg->name }}</td>
                             </tr>
@@ -956,10 +953,8 @@
                     </table>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ $jobCard ? 'Close' : 'Cancel' }}</button>
-                    @if(!$jobCard)
-                        <button type="button" class="btn btn-primary" id="confirmProcessGroup">Select</button>
-                    @endif
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmProcessGroup">Select</button>
                 </div>
             </div>
         </div>

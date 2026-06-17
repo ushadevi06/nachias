@@ -15,6 +15,7 @@ class ProductionService extends Model
         'service_name',
         'service_code',
         'operation_stage_id',
+        'process_group_id',
         'store_category_id',
         'sequence',
         'status',
@@ -27,6 +28,16 @@ class ProductionService extends Model
     public function operationStage()
     {
         return $this->belongsTo(OperationStage::class, 'operation_stage_id');
+    }
+
+    public function processGroup()
+    {
+        return $this->belongsTo(ProcessGroup::class, 'process_group_id');
+    }
+
+    public function processGroups()
+    {
+        return $this->belongsToMany(ProcessGroup::class, 'production_service_process_group', 'production_service_id', 'process_group_id');
     }
 
     public function storeCategory()

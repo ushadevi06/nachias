@@ -397,12 +397,35 @@ class SalesOrderController extends Controller
                 }
 
                 foreach ($request->items as $item) {
+                    $itemName = null;
+                    if (!empty($item['stock_entry_item_id'])) {
+                        $seItem = \App\Models\StockEntryItem::find($item['stock_entry_item_id']);
+                        if ($seItem) {
+                            $itemName = $seItem->finished_item_code;
+                        }
+                    }
+                    if (empty($itemName) && !empty($item['sku'])) {
+                        $seItem = \App\Models\StockEntryItem::where('sku', $item['sku'])
+                            ->orWhere('barcode', $item['sku'])
+                            ->first();
+                        if ($seItem) {
+                            $itemName = $seItem->finished_item_code;
+                        }
+                    }
+                    if (empty($itemName)) {
+                        $itemName = $item['stock_item_key'] ?? $item['sku'] ?? null;
+                        if ($itemName && strpos($itemName, ' - ') !== false) {
+                            $itemName = explode(' - ', $itemName)[0];
+                        }
+                    }
+
                     SalesOrderItem::create([
                         'sale_order_id' => $salesOrder->id,
                         'brand_cat_id' => $item['brand_cat_id'] ?? null,
                         'item_id' => $item['item_id'],
                         'color_id' => $item['color_id'] ?? null,
                         'art_no' => $item['art_no'] ?? null,
+                        'item_name' => $itemName,
                         'uom_id' => $item['uom_id'],
                         'size_id' => $item['size_id'] ?? null,
                         'qty' => $item['qty'],
@@ -881,8 +904,61 @@ class SalesOrderController extends Controller
             foreach ($items as $si) {
                 $sizeStock[$si->size] = ($sizeStock[$si->size] ?? 0) + (float)$si->balance;
             }
+            $sizePrices = [];
+            foreach (['36', '38', '40', '42', '44', '46', '48', '50'] as $sz) {
+                $priceRec = DB::table('item_prices')
+                    ->where('finished_item_code', $target->finished_item_code)
+                    ->where('art_no', $target->art_no)
+                    ->where('size', $sz)
+                    ->where('status', 'Active')
+                    ->whereNull('deleted_at')
+                    ->whereDate('effective_from', '<=', now())
+                    ->orderBy('effective_from', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+                
+                if (!$priceRec) {
+                    $priceRec = DB::table('item_prices')
+                        ->where('finished_item_code', $target->finished_item_code)
+                        ->where('art_no', $target->art_no)
+                        ->whereNull('size')
+                        ->where('status', 'Active')
+                        ->whereNull('deleted_at')
+                        ->whereDate('effective_from', '<=', now())
+                        ->orderBy('effective_from', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->first();
+                }
 
-            $itemPrice = DB::table('item_prices')->where('finished_item_code', $target->finished_item_code)->where('status', 'Active')->whereNull('deleted_at')->orderBy('effective_from', 'desc')->first();
+                $sizePrices[$sz] = [
+                    'mrp' => $priceRec ? $priceRec->selling_price : ($item ? $item->mrp : $target->price),
+                    'price' => $priceRec ? $priceRec->unit_price : $target->price,
+                ];
+            }
+
+            $itemPrice = DB::table('item_prices')
+                ->where('finished_item_code', $target->finished_item_code)
+                ->where('art_no', $target->art_no)
+                ->where('size', $target->size)
+                ->where('status', 'Active')
+                ->whereNull('deleted_at')
+                ->whereDate('effective_from', '<=', now())
+                ->orderBy('effective_from', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if (!$itemPrice) {
+                $itemPrice = DB::table('item_prices')
+                    ->where('finished_item_code', $target->finished_item_code)
+                    ->where('art_no', $target->art_no)
+                    ->whereNull('size')
+                    ->where('status', 'Active')
+                    ->whereNull('deleted_at')
+                    ->whereDate('effective_from', '<=', now())
+                    ->orderBy('effective_from', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+            }
 
             $finalMrp = $itemPrice ? $itemPrice->selling_price : ($item ? $item->mrp : $target->price);
             $finalPrice = $itemPrice ? $itemPrice->unit_price : $target->price;
@@ -900,6 +976,7 @@ class SalesOrderController extends Controller
                 'art_no' => $target->art_no,
                 'price' => $finalPrice,
                 'mrp' => $finalMrp,
+                'size_prices' => $sizePrices,
                 'uom_id' => $target->uom_id,
                 'sleeve_type' => $target->sleeve_type,
                 'sku' => $target->sku,
