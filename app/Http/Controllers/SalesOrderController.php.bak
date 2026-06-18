@@ -795,7 +795,6 @@ class SalesOrderController extends Controller
         $pdf->setPaper('A4', 'portrait');
 
         $safeSoNo = str_replace(['/', '\\'], '_', $salesOrder->so_no);
-        // return view('sales_order.pdf', compact('salesOrder', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords'));
         return $pdf->stream('Sales_Order_' . $safeSoNo . '.pdf');
     }
 
@@ -1104,5 +1103,4 @@ class SalesOrderController extends Controller
             return redirect('sales_orders')->with('error', 'Sync failed: ' . $e->getMessage());
         }
     }
-
 }

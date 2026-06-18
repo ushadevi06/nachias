@@ -149,6 +149,7 @@ class OrderaxeService
                 'customer_id'  => $customer->id,
                 'agent_id'     => $agentId,
                 'status'       => 'Pending',
+                'submitted_by' => isset($orderData['updated_by']) && is_array($orderData['updated_by']) && count($orderData['updated_by']) > 0 ? $orderData['updated_by'][0]['name'] : null,
                 'total_qty'    => $orderData['overall_quantity'] ?? 0,
                 'total_amount' => $orderData['total_amount'] ?? 0,
                 'order_type'   => 'Customer Order',
@@ -313,7 +314,9 @@ class OrderaxeService
                     SalesOrderItem::create([
                         'sale_order_id' => $salesOrder->id,
                         'item_id' => null,
-                        'brand_cat_id' => null,                     
+                        'brand_cat_id' => null,
+                        'category_name' => $product['category']['name'] ?? null,
+                        'categories_path_val' => $product['categories_path_val'] ?? null,
                         'qty' => $qty,
                         'rate' => $rate,
                         'mrp' => $itemData['mrp'] ?? 0,
@@ -381,13 +384,31 @@ class OrderaxeService
     }
     private function formatAddress(array $address): string
     {
-        return implode(', ', array_filter([
+        $parts = array_filter([
             $address['address_line1'] ?? '',
             $address['address_line2'] ?? '',
             $address['city'] ?? '',
-            $address['state'] ?? '',
-            $address['country'] ?? '',
-            isset($address['zip']) ? (string) $address['zip'] : '',
-        ]));
+        ]);
+
+        $cleanedParts = [];
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if (!empty($part)) {
+                $lines = preg_split('/\r\n|\r|\n/', $part);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (!empty($line)) {
+                        $lastPart = end($cleanedParts);
+                        if (!$lastPart || strtolower($lastPart) !== strtolower($line)) {
+                            if (!in_array(strtolower($line), array_map('strtolower', $cleanedParts))) {
+                                $cleanedParts[] = $line;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return implode(', ', $cleanedParts);
     }
 }

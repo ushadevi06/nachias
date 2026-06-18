@@ -520,11 +520,12 @@ class ProductionReceiptController extends Controller
             if ($normalizedArtNo === '') {
                 return null;
             }
-            $rawMaterial = \App\Models\RawMaterial::where('code', $normalizedArtNo)
-                ->orWhere('name', $normalizedArtNo)
+
+            $stockItem = \App\Models\StockEntryItem::where('art_no', $normalizedArtNo)
+                ->orderByDesc('id')
                 ->first();
-            if ($rawMaterial) {
-                return $rawMaterial->store_category_id;
+            if ($stockItem && $stockItem->store_category_id) {
+                return $stockItem->store_category_id;
             }
 
             $row = \DB::table('grn_entry_items')
@@ -535,7 +536,18 @@ class ProductionReceiptController extends Controller
                 ->select('raw_materials.store_category_id')
                 ->first();
 
-            return $row?->store_category_id ?? null;
+            if ($row && $row->store_category_id) {
+                return $row->store_category_id;
+            }
+
+            $rawMaterial = \App\Models\RawMaterial::where('code', $normalizedArtNo)
+                ->orWhere('name', $normalizedArtNo)
+                ->first();
+            if ($rawMaterial) {
+                return $rawMaterial->store_category_id;
+            }
+
+            return null;
         };
 
 

@@ -831,9 +831,16 @@ class JobCardEntryController extends Controller
 
             foreach ($missingArtNos as $mArtNo) {
                 if (!isset($artCategoryMap[$mArtNo])) {
+                    $sei = \App\Models\StockEntryItem::where('art_no', $mArtNo)->orderBy('id', 'desc')->first();
+                    if ($sei && $sei->store_category_id) {
+                        $artCategoryMap[$mArtNo] = $sei->store_category_id;
+                    }
+
                     $rm = RawMaterial::where('code', $mArtNo)->orWhere('name', $mArtNo)->first();
                     if ($rm) {
-                        $artCategoryMap[$mArtNo] = $rm->store_category_id ?? 1;
+                        if (!isset($artCategoryMap[$mArtNo])) {
+                            $artCategoryMap[$mArtNo] = $rm->store_category_id ?? 1;
+                        }
                         if (!isset($artMaterialMap[$mArtNo]))
                             $artMaterialMap[$mArtNo] = $rm->name;
                     }

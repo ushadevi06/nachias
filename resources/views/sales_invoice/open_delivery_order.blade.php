@@ -93,35 +93,26 @@
 </head>
 <body>
     @php
-        $groupedItems = $invoice->items->groupBy(function($item) {
+        $groupedItems = $invoice->items->groupBy(function($item) use ($invoice) {
             $brandName = '';
-            if ($item->item) {
-                $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : ''));
-            } elseif ($item->stockEntryItem) {
-                if ($item->stockEntryItem->item) {
-                    $seItem = $item->stockEntryItem->item;
-                    $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : ''));
-                } else {
-                    $brandName = $item->stockEntryItem->finished_item_code;
-                }
-            } else {
-                $brandName = $item->brandCategory ? $item->brandCategory->name : '';
-            }
 
-            if (empty($brandName) || $brandName === '-') {
-                $brandName = '';
-            }
+            if ($invoice->so_id) {
+                $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
+                    ->where('sku', $item->sku)
+                    ->first();
 
-            if ($brandName) {
-                $parts = explode('-', $brandName);
-                $prefix = trim($parts[0]);
-                $dbBrand = \App\Models\Brand::where('code', $prefix)->orWhere('code', $brandName)->first();
-                if ($dbBrand) {
-                    $brandName = $dbBrand->brand_name;
+                if ($soItem && $soItem->stock_entry_item_id) {
+                    $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
+                    if ($seItem && $seItem->brand_id) {
+                        $brand = \App\Models\Brand::find($seItem->brand_id);
+                        if ($brand) {
+                            $brandName = $brand->brand_name;
+                        }
+                    }
                 }
             }
 
-            return trim($brandName) ?: 'OTHER';
+            return trim($brandName);
         });
 
         // Get all unique sizes sorted
@@ -392,18 +383,30 @@
         <table class="items-table" style="margin-bottom: 15px;">
             <thead>
                 <tr style="background-color: #60a5fa;">
-                    <th colspan="{{ 6 + count($allSizes) }}" style="text-align: left; padding: 6px 10px; font-size: 14px; text-transform: uppercase; color: #000000; background-color: #60a5fa; border: 1px solid #000000; border-bottom: none;">
+                    @php
+                        $headerColspan = 3;
+                        if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $headerColspan++;
+                        if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $headerColspan++;
+                        if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields)) $headerColspan++;
+                    @endphp
+                    <th colspan="{{ $headerColspan + count($allSizes) }}" style="text-align: left; padding: 6px 10px; font-size: 14px; text-transform: uppercase; color: #000000; background-color: #60a5fa; border: 1px solid #000000; border-bottom: none;">
                         {{ $groupName }}
                     </th>
                 </tr>
                 <tr>
                     <th rowspan="2" style="text-align: center; padding-left: 6px;">Description</th>
                     <th rowspan="2" style="width: 6%;">UOM</th>
+                    @if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
                     <th rowspan="2" style="width: 10%;">Retail Price</th>
+                    @endif
+                    @if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
                     <th rowspan="2" style="width: 10%;">Unit Price</th>
+                    @endif
                     <th colspan="{{ count($allSizes) }}">Size</th>
                     <th rowspan="2" style="width: 8%;">Total</th>
+                    @if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
                     <th rowspan="2" style="width: 15%;">Art</th>
+                    @endif
                 </tr>
                 <tr>
                     @foreach($allSizes as $size)
@@ -428,8 +431,12 @@
                                 <td rowspan="{{ $priceCount }}" class="text-center" style="vertical-align: middle;">{{ $descData['uom'] }}</td>
                                 @php $isFirstPrice = false; @endphp
                             @endif
+                            @if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
                             <td class="text-right" style="padding-right: 6px;">{{ number_format($priceData['mrp'], 2) }}</td>
+                            @endif
+                            @if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
                             <td class="text-right" style="padding-right: 6px;">{{ number_format($priceData['rate'], 2) }}</td>
+                            @endif
                             @foreach($allSizes as $size)
                                 @php
                                     $qty = $priceData['quantities'][$size] ?? 0;
@@ -438,7 +445,9 @@
                                 <td class="text-center">{{ $qty > 0 ? number_format($qty, 0) : '' }}</td>
                             @endforeach
                             <td class="text-center bold bg-light-blue">{{ number_format($priceData['total'], 0) }}</td>
+                            @if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
                             <td class="text-center" style="font-size: 10px; word-break: break-all;">{{ $artDisplay }}</td>
+                            @endif
                             @php
                                 $groupGrandTotal += $priceData['total'];
                             @endphp
@@ -446,12 +455,19 @@
                     @endforeach
                 @endforeach
                 <tr class="bold bg-light-blue">
-                    <td colspan="4" class="text-right" style="padding-right: 8px;">Total</td>
+                    @php
+                        $leftColspan = 2;
+                        if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $leftColspan++;
+                        if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $leftColspan++;
+                    @endphp
+                    <td colspan="{{ $leftColspan }}" class="text-right" style="padding-right: 8px;">Total</td>
                     @foreach($allSizes as $size)
                         <td class="text-center">{{ $groupSizeTotals[$size] > 0 ? number_format($groupSizeTotals[$size], 0) : '' }}</td>
                     @endforeach
                     <td class="text-center">{{ number_format($groupGrandTotal, 0) }}</td>
+                    @if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
                     <td>&nbsp;</td>
+                    @endif
                 </tr>
             </tbody>
         </table>

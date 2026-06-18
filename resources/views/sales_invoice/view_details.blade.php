@@ -168,37 +168,49 @@
                                                     <td>{{ $index + 1 }}</td>
                                                      <td>
                                                         @php
-                                                            $brandName = '';
                                                             $itemName = '';
-                                                            if ($item->item) {
-                                                                $brandName = ($item->item->brand ? $item->item->brand->brand_name : ($item->brandCategory ? $item->brandCategory->name : '-'));
-                                                                $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
-                                                            } elseif ($item->stockEntryItem) {
-                                                                if ($item->stockEntryItem->item) {
-                                                                    $seItem = $item->stockEntryItem->item;
-                                                                    $brandName = ($seItem->brand ? $seItem->brand->brand_name : ($seItem->brandCategory ? $seItem->brandCategory->name : '-'));
-                                                                    $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
-                                                                } else {
-                                                                    $brandName = $item->stockEntryItem->finished_item_code;
-                                                                }
-                                                            } else {
-                                                                $brandName = $item->brandCategory ? $item->brandCategory->name : '-';
-                                                                $itemName = $item->item ? $item->item->name : '-';
+                                                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
+                                                            if ($soItem) {
+                                                                $itemName = $soItem->getAttributes()['item_name'] ?? $soItem->item_name ?? '';
                                                             }
 
-                                                            if (empty($brandName) || $brandName === '-') {
-                                                                if ($item->brandCategory) {
-                                                                    $brandName = $item->brandCategory->name;
+                                                            if (empty($itemName) || $itemName === '-') {
+                                                                if ($item->item) {
+                                                                    $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
+                                                                } elseif ($item->stockEntryItem) {
+                                                                    if ($item->stockEntryItem->item) {
+                                                                        $seItem = $item->stockEntryItem->item;
+                                                                        $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
+                                                                    } else {
+                                                                        $itemName = $item->stockEntryItem->finished_item_code;
+                                                                    }
+                                                                } else {
+                                                                    $itemName = $item->item ? $item->item->name : '';
+                                                                }
+
+                                                                if (empty($itemName) || $itemName === '-') {
+                                                                    if (!empty($item->art_no)) {
+                                                                        $itemName = $item->art_no;
+                                                                    }
                                                                 }
                                                             }
-                                                            if (empty($itemName) || $itemName === '-') {
-                                                                if (!empty($item->art_no)) {
-                                                                    $itemName = $item->art_no;
+
+                                                            if (!empty($itemName) && $itemName !== '-') {
+                                                                $parts = explode('-', $itemName);
+                                                                if (count($parts) >= 2) {
+                                                                    $brand = \App\Models\Brand::where('code', trim($parts[0]))->first();
+                                                                    $style = \App\Models\Style::where('code', trim($parts[1]))->first();
+                                                                    if ($brand && $style) {
+                                                                        $itemName = $brand->brand_name . ' ' . $style->style_name;
+                                                                        if (isset($parts[2])) {
+                                                                            $itemName .= ' ' . trim($parts[2]);
+                                                                        }
+                                                                    }
                                                                 }
                                                             }
                                                         @endphp
-                                                        <div class="fw-bold">{{ $brandName }}</div>
-                                                        <small class="text-muted">{{ $itemName }} ({{ $item->sleeve_type ?? '-' }})</small>
+                                                        <div class="fw-bold">{{ $itemName ?: '-' }}</div>
+                                                        <small class="text-muted">{{ $item->sleeve_type ? '(' . $item->sleeve_type . ')' : '' }}</small>
                                                         @if(!empty($item->sku))
                                                             <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
                                                         @endif
@@ -270,6 +282,33 @@
                                                 <div class="form-check form-check-inline">
                                                     <input class="form-check-input" type="checkbox" id="showPrice" {{ is_array($invoice->show_fields) && in_array('price', $invoice->show_fields) ? 'checked' : '' }} disabled>
                                                     <label class="form-check-label" for="showPrice">Show Price</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-12 mt-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="mb-3 fw-bold">Show in Delivery Order PDF</h6>
+                                        <div class="row g-3">
+                                            <div class="col-md-4 col-lg-3">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="showDeliveryMrp" {{ is_array($invoice->delivery_show_fields) && in_array('mrp', $invoice->delivery_show_fields) ? 'checked' : '' }} disabled>
+                                                    <label class="form-check-label" for="showDeliveryMrp">Show Retail Price (MRP)</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-lg-3">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="showDeliveryPrice" {{ is_array($invoice->delivery_show_fields) && in_array('price', $invoice->delivery_show_fields) ? 'checked' : '' }} disabled>
+                                                    <label class="form-check-label" for="showDeliveryPrice">Show Unit Price</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-lg-3">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="checkbox" id="showDeliveryArtNo" {{ is_array($invoice->delivery_show_fields) && in_array('art_no', $invoice->delivery_show_fields) ? 'checked' : '' }} disabled>
+                                                    <label class="form-check-label" for="showDeliveryArtNo">Show Art No</label>
                                                 </div>
                                             </div>
                                         </div>

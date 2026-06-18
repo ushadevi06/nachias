@@ -552,6 +552,36 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    <!-- Show Fields in Delivery Order PDF -->
+                                    <div class="border-top pt-5 mt-5">
+                                        <h6 class="fw-bold mb-2">Show in Delivery Order PDF</h6>
+                                        <div class="row">
+                                            @php
+                                                $selected_delivery_fields = old('delivery_show_fields', isset($invoice->delivery_show_fields) ? $invoice->delivery_show_fields : ['mrp', 'price', 'art_no']);
+                                            @endphp
+                                            <div class="col-md-6 col-lg-4 mt-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="delivery_show_mrp" name="delivery_show_fields[]" value="mrp" {{ in_array('mrp', $selected_delivery_fields) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="delivery_show_mrp">Show Retail Price (MRP)</label>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 col-lg-4 mt-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="delivery_show_price" name="delivery_show_fields[]" value="price" {{ in_array('price', $selected_delivery_fields) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="delivery_show_price">Show Unit Price</label>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6 col-lg-4 mt-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="delivery_show_art_no" name="delivery_show_fields[]" value="art_no" {{ in_array('art_no', $selected_delivery_fields) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="delivery_show_art_no">Show Art No</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -738,13 +768,8 @@
                     </div>
                 </div>
                 <div class="text-end mt-4">
-                    <?php if(isset($invoice) && (!empty($invoice->ack_no) || !empty($invoice->eway_bill_no))) { ?>
-                        <button type="submit" class="btn btn-primary" disabled>Submit</button>
-                        <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
-                    <?php } else { ?>
-                        <button type="submit" class="btn btn-primary">Submit</button>
-                        <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
-                    <?php } ?>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

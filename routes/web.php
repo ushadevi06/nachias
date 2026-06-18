@@ -456,6 +456,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('sales_orders/status/{id}', [SalesOrderController::class, 'updateStatus']);
     Route::get('sales_orders/search-stock-items', [SalesOrderController::class, 'searchStockItems']);
     Route::get('sales_orders/sync-orderaxe', [SalesOrderController::class, 'syncOrderaxe']);
+    Route::get('sales_orders/clean-addresses', [SalesOrderController::class, 'cleanAddresses']);
     Route::get('stock_entries/export-finished-goods', [StockEntryController::class, 'exportFinishedGoods']);
     Route::get('stock_entries/export-barcode', [StockEntryController::class, 'exportBarcode']);
     Route::get('stock_entries/export-raw-materials', [StockEntryController::class, 'exportRawMaterials']);

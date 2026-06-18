@@ -231,6 +231,7 @@ class SalesInvoiceController extends Controller
                     $invoiceData['due_date'] = Carbon::createFromFormat('d-m-Y', $request->due_date)->format('Y-m-d');
                 }
                 $invoiceData['show_fields'] = $request->show_fields ?? [];
+                $invoiceData['delivery_show_fields'] = $request->delivery_show_fields ?? [];
                 $invoiceData['other_state'] = $request->other_state == 'yes';
                 $invoiceData['so_ids'] = json_encode($request->so_ids);
                 $invoiceData['so_id'] = $request->so_ids[0] ?? null;
