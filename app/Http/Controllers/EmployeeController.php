@@ -182,6 +182,7 @@ class EmployeeController extends Controller
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
                 '*.numeric' => 'This field must be a number.',
+                'image.max' => 'Profile picture should not be more than 1MB.',
                 'esi.max' => 'ESI file should not be more than 2MB.',
                 'pf.max' => 'PF file should not be more than 2MB.',
                 'aadhaar.max' => 'Aadhaar file should not be more than 2MB.',

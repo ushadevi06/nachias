@@ -833,6 +833,26 @@ class SalesInvoiceController extends Controller
         return view('sales_invoice.sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
     }
 
+    public function printTransportSticker($id)
+    {
+        $invoice = SalesInvoice::with(['customer.state', 'customer.city', 'customer.place'])->findOrFail($id);
+        $totalPcs = $invoice->items->sum('quantity');
+        $boxCount = (int) ($invoice->no_of_box ?: 1);
+        $setting = Setting::with(['state', 'city'])->first();
+        $is_print = true;
+        return view('sales_invoice.transport_sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
+    }
+
+    public function printCourierSticker($id)
+    {
+        $invoice = SalesInvoice::with(['customer.state', 'customer.city', 'customer.place'])->findOrFail($id);
+        $totalPcs = $invoice->items->sum('quantity');
+        $boxCount = (int) ($invoice->no_of_box ?: 1);
+        $setting = Setting::with(['state', 'city'])->first();
+        $is_print = true;
+        return view('sales_invoice.courier_sticker', compact('invoice', 'totalPcs', 'setting', 'is_print', 'boxCount'));
+    }
+
     public function downloadDeliveryOrder($id)
     {
         $invoice = SalesInvoice::with([

@@ -141,10 +141,11 @@ class PermissionSeeder extends Seeder
             }
         }
         $dashboardPerms = [ 
-            ['action' => 'view-sales-order',       'label' => 'Sales & Order Dashboard'],
-            ['action' => 'view-accounts-financial', 'label' => 'Accounts & Financial Dashboard'],
-            ['action' => 'view-production',         'label' => 'Production Dashboard'],
-            ['action' => 'view-maintenance',         'label' => 'Maintenance Dashboard'],
+            ['action' => 'view-sales-order',           'label' => 'Sales & Order Dashboard'],
+            ['action' => 'view-attendance',            'label' => 'Attendance Dashboard'],
+            ['action' => 'view-accounts-financial',    'label' => 'Accounts & Financial Dashboard'],
+            ['action' => 'view-production',            'label' => 'Production Dashboard'],
+            ['action' => 'view-maintenance',           'label' => 'Maintenance Dashboard'],
         ];
         foreach ($dashboardPerms as $dp) {
             Permission::firstOrCreate(

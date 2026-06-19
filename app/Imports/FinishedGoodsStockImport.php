@@ -7,6 +7,7 @@ use App\Models\StockEntry;
 use App\Models\StockEntryItem;
 use App\Models\StoreLocation;
 use App\Models\Uom;
+use App\Models\Style;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,7 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
         $price = $this->parseNumber($this->getRowValue($row, ['price']), 'Price is required.');
         $remarks = trim((string) ($this->getRowValue($row, ['remarks']) ?? ''));
         $color = $this->resolveColor($this->getRowValue($row, ['color_id', 'colorid', 'color']));
+        $style = $this->resolveStyle($this->getRowValue($row, ['style_id', 'styleid', 'style']));
         $sku = $this->nullableTrim($this->getRowValue($row, ['sku', 'sku_barcode', 'skubarcode', 'sku_barcode_', 'sku_barco']));
 
         if (!$finishedItemCode) {
@@ -92,6 +94,7 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             'finished_item_code' => $finishedItemCode,
             'size' => $this->nullableTrim($this->getRowValue($row, ['size'])),
             'color_id' => $color?->id,
+            'style_id' => $style?->id,
             'sleeve_type' => $this->nullableTrim($this->getRowValue($row, ['sleeve_type', 'sleevetype', 'sleeve_typ'])),
             'store_location_id' => $storeLocation->id,
             'uom_id' => $uom->id,
@@ -231,6 +234,28 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
 
         if (!$record) {
             throw new \Exception("Color '{$lookup}' was not found.");
+        }
+
+        return $record;
+    }
+
+    protected function resolveStyle($value): ?Style
+    {
+        $lookup = $this->nullableTrim($value);
+        if (!$lookup) {
+            return null;
+        }
+
+        $record = Style::query()
+            ->where('style_name', $lookup)
+            ->orWhere('code', $lookup)
+            ->when(is_numeric($lookup), function ($query) use ($lookup) {
+                $query->orWhere('id', (int) $lookup);
+            })
+            ->first();
+
+        if (!$record) {
+            throw new \Exception("Style '{$lookup}' was not found.");
         }
 
         return $record;

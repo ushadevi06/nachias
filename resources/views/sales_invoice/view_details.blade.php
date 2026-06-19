@@ -23,9 +23,15 @@
                                 <li><a class="dropdown-item" href="{{ url('sales_invoices/open-delivery-order/' . $invoice->id) }}" target="_blank">Open Delivery Order</a></li>
                             </ul>
                         </div>
-                        <a href="{{ url('sales_invoices/print-sticker/' . $invoice->id) }}" class="btn btn-info" target="_blank" style="background-color: #00bcd4; border-color: #00bcd4;">
-                            <i class="ri ri-printer-line back-arrow"></i>Print Sticker
-                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-info dropdown-toggle text-white" type="button" id="stickerPrintDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: #00bcd4; border-color: #00bcd4;">
+                                <i class="ri ri-printer-line back-arrow"></i>Sticker Print
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="stickerPrintDropdown">
+                                <li><a class="dropdown-item" href="{{ url('sales_invoices/transport-sticker/' . $invoice->id) }}" target="_blank">Transport Sticker</a></li>
+                                <li><a class="dropdown-item" href="{{ url('sales_invoices/courier-sticker/' . $invoice->id) }}" target="_blank">Courier Sticker</a></li>
+                            </ul>
+                        </div>
                         @if($invoice->irn || $invoice->eway_bill_no)
                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#einvoiceDetailsModal">
                             <i class="ri ri-receipt-line"></i> E-INVOICE Details
