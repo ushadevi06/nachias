@@ -68,7 +68,9 @@
                             <thead class="bg-light">
                                 <tr>
                                     <th class="ps-4 py-3 text-muted text-uppercase small fw-bold" width="80">S.No</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold">Item Description</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold">Raw Material</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold">Art No</th>
+                                    <th class="py-3 text-muted text-uppercase small fw-bold">Supplier Design Name</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Quantity</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-end">Rate</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-end pe-4">Total Amount</th>
@@ -77,13 +79,19 @@
                             <tbody>
                                 @if($debitNote->items->isEmpty())
                                     <tr>
-                                        <td colspan="5" class="text-center py-5 text-muted">
-                                            <i class="ri-information-line fs-3 d-block mb-2"></i>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="ri ri-information-line fs-3 d-block mb-2"></i>
                                             No items found for this debit note
                                         </td>
                                     </tr>
                                 @else
                                     @foreach($debitNote->items as $index => $item)
+                                    @php
+                                        $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem'])->find($item->purchase_invoice_item_id);
+                                        $supplierDesignName = $dbInvItem->purchaseOrderItem->supplier_design_name ?? '-';
+                                        $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
+                                        $artNo = $grnItem->art_no ?? '-';
+                                    @endphp
                                     <tr>
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
                                         <td>
@@ -91,6 +99,12 @@
                                             @if($item->rawMaterial && $item->rawMaterial->material_code)
                                                 <small class="text-primary fw-medium">{{ $item->rawMaterial->material_code }}</small>
                                             @endif
+                                        </td>
+                                        <td>
+                                            {{ $artNo }}
+                                        </td>
+                                        <td>
+                                            {{ $supplierDesignName }}
                                         </td>
                                         <td class="text-center">
                                             <span class="badge bg-light text-dark px-3 py-2 fw-medium">
@@ -204,7 +218,7 @@
                             </div>
                             @endif
 
-                            @if($debitNote->round_off > 0)
+                            @if($debitNote->round_off != 0)
                             <div class="d-flex justify-content-between mb-3 text-muted italic">
                                 <span>Round Off ({{ $debitNote->round_off_type }})</span>
                                 <span>{{ $debitNote->round_off_type == 'Less' ? '-' : '+' }}₹{{ number_format($debitNote->round_off, 2) }}</span>

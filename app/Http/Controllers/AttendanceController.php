@@ -145,11 +145,22 @@ class AttendanceController extends Controller
                 }
                 $dbIn = $existingAttendance ? $existingAttendance->in_time : null;
                 $dbOut = $existingAttendance ? $existingAttendance->out_time : null;
-                $allTimes = array_filter([$in, $out, $dbIn, $dbOut]);
+                $allTimes = array_values(array_unique(array_filter([$in, $out, $dbIn, $dbOut])));
                 if (!empty($allTimes)) {
                     sort($allTimes);
-                    $in = $allTimes[0];
-                    $out = count($allTimes) > 1 ? end($allTimes) : null;
+                    if (count($allTimes) == 1) {
+                        $cutoffTime = strtotime($date . ' 13:00:00');
+                        if (strtotime($allTimes[0]) >= $cutoffTime) {
+                            $in = null;
+                            $out = $allTimes[0];
+                        } else {
+                            $in = $allTimes[0];
+                            $out = null;
+                        }
+                    } else {
+                        $in = $allTimes[0];
+                        $out = end($allTimes);
+                    }
                 }
                 $hours = ($in && $out)
                     ? (strtotime($out) - strtotime($in)) / 3600

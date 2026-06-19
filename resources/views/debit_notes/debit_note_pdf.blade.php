@@ -214,7 +214,9 @@
       style="border-collapse:collapse; table-layout:fixed; width:100%;">
       <tr style="height:0; visibility:hidden; line-height:0;">
         <td style="width:5%;"></td>
-        <td style="width:49%;"></td>
+        <td style="width:29%;"></td>
+        <td style="width:10%;"></td>
+        <td style="width:10%;"></td>
         <td style="width:8%;"></td>
         <td style="width:8%;"></td>
         <td style="width:15%;"></td>
@@ -230,6 +232,12 @@
             ITEM DESCRIPTION</th>
           <th
             style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">
+            ART NO</th>
+          <th
+            style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">
+            SUPPLIER DESIGN NAME</th>
+          <th
+            style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">
             QUANTITY</th>
           <th
             style="border-bottom:1px solid #000; border-right:1px solid #000; font-size:10px; padding:6px 2px; text-align:center;">
@@ -242,10 +250,17 @@
         </tr>
 
         @foreach($debitNote->items as $index => $item)
+          @php
+            $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem'])->find($item->purchase_invoice_item_id);
+            $supplierDesignName = $dbInvItem->purchaseOrderItem->supplier_design_name ?? '-';
+            $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
+            $artNo = $grnItem->art_no ?? '-';
+          @endphp
           <tr>
             <td style="padding:5px; text-align:center; font-size:11px; border-right:1px solid #000;">{{ $index + 1 }}</td>
-            <td style="padding:5px; font-size:11px; border-right:1px solid #000;">{{ $item->rawMaterial->name ?? '' }}
-            </td>
+            <td style="padding:5px; font-size:11px; border-right:1px solid #000;">{{ $item->rawMaterial->name ?? '' }}</td>
+            <td style="padding:5px; font-size:11px; border-right:1px solid #000;">{{ $artNo }}</td>
+            <td style="padding:5px; font-size:11px; border-right:1px solid #000;">{{ $supplierDesignName }}</td>
             <td style="padding:5px; text-align:right; font-size:11px; border-right:1px solid #000;">
               {{ number_format($item->quantity, 2) }}
             </td>
@@ -266,6 +281,8 @@
             <td style="border-right:1px solid #000;"></td>
             <td style="border-right:1px solid #000;"></td>
             <td style="border-right:1px solid #000;"></td>
+            <td style="border-right:1px solid #000;"></td>
+            <td style="border-right:1px solid #000;"></td>
             <td></td>
           </tr>
         @endfor
@@ -276,7 +293,7 @@
           $taxableAmt = $debitNote->sub_total + $preGstCharges;
         @endphp
         <tr style="border-top:1px solid #000; font-weight:bold;">
-          <td colspan="4" style="border-right:1px solid #000; padding:6px; text-align:right;">Sub Total</td>
+          <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Sub Total</td>
           <td colspan="2" style="text-align:right; padding:6px; border-top:1px solid #000;">
             {{ number_format($debitNote->sub_total, 2) }}
           </td>
@@ -284,18 +301,18 @@
 
         @if($preGstCharges > 0)
           <tr>
-            <td colspan="4" style="border-right:1px solid #000; padding:6px; text-align:right;">Pre-GST Charges</td>
+            <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Pre-GST Charges</td>
             <td colspan="2" style="text-align:right; padding:6px;">{{ number_format($preGstCharges, 2) }}</td>
           </tr>
           <tr style="font-weight:bold;">
-            <td colspan="4" style="border-right:1px solid #000; padding:6px; text-align:right;">Taxable Total</td>
+            <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Taxable Total</td>
             <td colspan="2" style="text-align:right; padding:6px;">{{ number_format($taxableAmt, 2) }}</td>
           </tr>
         @endif
 
         @if($debitNote->other_state == 'Y')
           <tr>
-            <td colspan="4" style="border-right:1px solid #000; padding:4px; text-align:right;">IGST
+            <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">IGST
               ({{ $debitNote->igst_percent }}%)</td>
             <td colspan="2" style="text-align:right; padding:4px;">
               {{ number_format($taxableAmt * ($debitNote->igst_percent / 100), 2) }}
@@ -303,14 +320,14 @@
           </tr>
         @else
           <tr>
-            <td colspan="4" style="border-right:1px solid #000; padding:4px; text-align:right;">CGST
+            <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">CGST
               ({{ $debitNote->cgst_percent }}%)</td>
             <td colspan="2" style="text-align:right; padding:4px;">
               {{ number_format($taxableAmt * ($debitNote->cgst_percent / 100), 2) }}
             </td>
           </tr>
           <tr>
-            <td colspan="4" style="border-right:1px solid #000; padding:4px; text-align:right;">SGST
+            <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">SGST
               ({{ $debitNote->sgst_percent }}%)</td>
             <td colspan="2" style="text-align:right; padding:4px;">
               {{ number_format($taxableAmt * ($debitNote->sgst_percent / 100), 2) }}
@@ -320,14 +337,14 @@
 
         @if($postGstCharges > 0)
           <tr>
-            <td colspan="4" style="border-right:1px solid #000; padding:6px; text-align:right;">Post-GST Charges</td>
+            <td colspan="6" style="border-right:1px solid #000; padding:6px; text-align:right;">Post-GST Charges</td>
             <td colspan="2" style="text-align:right; padding:6px;">{{ number_format($postGstCharges, 2) }}</td>
           </tr>
         @endif
 
         @if($debitNote->round_off != 0)
           <tr>
-            <td colspan="4" style="border-right:1px solid #000; padding:4px; text-align:right;">Round Off
+            <td colspan="6" style="border-right:1px solid #000; padding:4px; text-align:right;">Round Off
               ({{ $debitNote->round_off_type }})</td>
             <td colspan="2" style="text-align:right; padding:4px;">
               {{ $debitNote->round_off_type == 'Less' ? '-' : '' }}{{ number_format($debitNote->round_off, 2) }}
@@ -337,7 +354,7 @@
 
         <tr
           style="background-color:#f2f2f2; font-weight:bold; border-top:1px solid #000; border-bottom:1px solid #000;">
-          <td colspan="4" style="border-right:1px solid #000; padding:8px; text-align:right; font-size:12px;">Grand
+          <td colspan="6" style="border-right:1px solid #000; padding:8px; text-align:right; font-size:12px;">Grand
             Total (Rs.)</td>
           <td colspan="2" style="text-align:right; padding:8px; font-size:12px;">
             {{ number_format($debitNote->grand_total, 2) }}
@@ -345,14 +362,14 @@
         </tr>
 
         <tr>
-          <td colspan="6" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
+          <td colspan="8" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
             <strong>Amount in Words:</strong> {{ strtoupper($totalInWords) }}
           </td>
         </tr>
 
         @if($debitNote->remarks)
           <tr>
-            <td colspan="6" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
+            <td colspan="8" style="padding:8px; font-size:10px; border-bottom:1px solid #000;">
               <strong>Remarks:</strong> {{ $debitNote->remarks }}
             </td>
           </tr>
@@ -360,12 +377,12 @@
 
         <!-- SIGNATURE SECTION -->
         <tr>
-          <td colspan="3"
+          <td colspan="4"
             style="border-right:1px solid #000; border-bottom:1px solid #000; padding:30px 10px 10px; vertical-align:bottom;">
             <div style="border-top:1px solid #000; width:150px; text-align:center; font-weight:bold; font-size:10px;">
               Receiver's Signature</div>
           </td>
-          <td colspan="3" style="padding:10px; text-align:center; vertical-align:top; border-bottom:1px solid #000;">
+          <td colspan="4" style="padding:10px; text-align:center; vertical-align:top; border-bottom:1px solid #000;">
             <div style="font-weight:bold; font-size:11px;">For {{ $setting->company_name }}</div>
             <br><br><br><br>
             <div style="font-weight:bold; font-size:10px;">Authorised Signature</div>

@@ -113,7 +113,7 @@ class DebitNoteController extends Controller
             if (auth()->id() != 1 && !auth()->user()->can('edit debit-notes')) {
                 return unauthorizedRedirect();
             }
-            $debitNote = DebitNote::with(['items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
+            $debitNote = DebitNote::with(['purchaseInvoice', 'items.rawMaterial', 'items.uom', 'charges'])->findOrFail($id);
             $charges = $debitNote->charges;
         } else {
             if (auth()->id() != 1 && !auth()->user()->can('create debit-notes')) {
@@ -329,24 +329,32 @@ class DebitNoteController extends Controller
 
     public function getInvoiceDetails($id)
     {
-        $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial', 'items.uom'])->findOrFail($id);
+        $invoice = PurchaseInvoice::with(['supplier', 'items.rawMaterial.storeCategory', 'items.uom', 'items.purchaseOrderItem'])->findOrFail($id);
 
         $items = collect($invoice->items)->map(function ($item) {
             $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
             $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)->sum('quantity');
             $availableQty = $rejectedQty - $alreadyDebited;
+            
+            $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->first();
+            $categoryName = $item->rawMaterial->storeCategory->store_category_name ?? '-';
+            $artNo = $grnItem->art_no ?? '-';
+            $supplierDesignName = $item->purchaseOrderItem->supplier_design_name ?? '-';
 
             return [
                 'id' => $item->id,
                 'raw_material_id' => $item->raw_material_id,
                 'raw_material_name' => $item->rawMaterial ? $item->rawMaterial->name : '-',
+                'category_name' => $categoryName,
+                'art_no' => $artNo,
+                'supplier_design_name' => $supplierDesignName,
                 'uom_id' => $item->uom_id,
                 'uom_code' => $item->uom ? $item->uom->uom_code : '-',
                 'hsn_code' => $item->hsn_code,
                 'quantity' => $availableQty,
                 'max_quantity' => $availableQty,
                 'rate' => $item->rate,
-                'amount' => $availableQty * $item->rate,
+                'amount' => round($availableQty * $item->rate, 2),
             ];
         })->filter(function ($item) {
             return $item['quantity'] > 0;

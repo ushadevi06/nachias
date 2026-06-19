@@ -5,6 +5,7 @@ namespace App\Imports;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\Device;
+use App\Models\ServiceProvider;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -58,6 +59,14 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 )->value('serial_number');
             }
 
+            $serviceProviderId = null;
+            if (!empty($row['service_provider'])) {
+                $serviceProviderId = ServiceProvider::where(
+                    'name',
+                    trim($row['service_provider'])
+                )->value('id');
+            }
+
             $phone = !empty($row['phone'])
                 ? preg_replace('/[^0-9]/', '', (string)$row['phone'])
                 : '9' . str_pad($empId, 9, '0', STR_PAD_LEFT);
@@ -88,6 +97,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 'email' => $email,
                 'date_of_joining' => $dateOfJoining,
                 'department_id' => $departmentId,
+                'service_provider_id' => $serviceProviderId,
                 'esi_no' => $esiNo,
                 'pf_no' => $pfNo,
                 'fixed_gross' => $fixedGross,
@@ -115,6 +125,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 'fixed_gross' => 'nullable|numeric',
                 'bus_fare' => 'nullable|numeric',
                 'device' => 'required|exists:devices,serial_number',
+                'service_provider_id' => 'nullable|exists:service_providers,id',
             ]);
             if ($validator->fails()) {
                 $errors[] =
@@ -131,6 +142,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     'email' => $email,
                     'date_of_joining' => $dateOfJoining,
                     'department_id' => $departmentId,
+                    'service_provider_id' => $serviceProviderId,
                     'esi_no' => $esiNo,
                     'pf_no' => $pfNo,
                     'fixed_gross' => $fixedGross,
@@ -148,6 +160,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     'email' => $email,
                     'date_of_joining' => $dateOfJoining,
                     'department_id' => $departmentId,
+                    'service_provider_id' => $serviceProviderId,
                     'device' => $deviceSerialNumber,
                     'esi_no' => $esiNo,
                     'pf_no' => $pfNo,

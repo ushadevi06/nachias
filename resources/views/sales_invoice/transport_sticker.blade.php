@@ -7,12 +7,20 @@
     <style>
         @page {
             size: 100mm 150mm;
-            margin: 0;
+            margin: 0 !important;
         }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        html {
+            width: 100mm;
+            height: 150mm;
+            margin: 0;
+            padding: 0;
         }
         body {
             font-family: 'Arial Narrow', Arial, sans-serif;
@@ -21,6 +29,7 @@
             padding: 2mm;
             background: #fff;
             color: #000;
+            margin: 0;
         }
         .sticker {
             width: 100%;
@@ -93,7 +102,7 @@
             padding: 8px 10px;
         }
         .invoice-val {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 900;
             font-family: 'Arial Black', Impact, sans-serif;
             text-transform: uppercase;
@@ -132,6 +141,13 @@
             font-family: 'Arial Black', Impact, sans-serif;
             line-height: 1;
         }
+        .boxes-col .badge {
+            font-size: 20px;
+            padding: 4px 10px;
+        }
+        .boxes-col .stat-value {
+            font-size: 80px;
+        }
         .disclaimer-section {
             font-size: 13.5px;
             font-weight: bold;
@@ -160,13 +176,18 @@
             text-transform: uppercase;
         }
         @media print {
-            body {
+            html, body {
                 width: 100mm;
                 height: 150mm;
-                padding: 2mm;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             .sticker {
+                width: 100%;
+                height: 100%;
                 border: none;
+                padding: 2mm;
+                box-sizing: border-box;
             }
         }
     </style>
@@ -221,7 +242,7 @@
                 <div class="badge">NO OF PCS</div>
                 <div class="stat-value">{{ intval($totalPcs) }}</div>
             </div>
-            <div class="stats-col">
+            <div class="stats-col boxes-col">
                 <div class="badge">NO OF BOXES</div>
                 <div class="stat-value">{{ $boxCount }}</div>
             </div>

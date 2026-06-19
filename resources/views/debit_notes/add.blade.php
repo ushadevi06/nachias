@@ -82,7 +82,9 @@
                                 <thead>
                                     <tr class="item-row">
                                         <th>Select</th>
-                                        <th>Item Name</th>
+                                        <th>Raw Material Name</th>
+                                        <th>Art No</th>
+                                        <th>Supplier Design Name</th>
                                         <th>UOM</th>
                                         <th>Quantity</th>
                                         <th>Rate</th>
@@ -93,82 +95,106 @@
                                     @if(old('items'))
                                         @foreach(old('items') as $index => $item)
                                             @php
-                                            $invItemId = $item['purchase_invoice_item_id'] ?? 0;
-                                            $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->sum('qty_rejected');
-                                            $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $invItemId)
-                                                ->when(isset($debitNote), function ($q) use ($debitNote) {
-                                                    $q->where('debit_note_id', '!=', $debitNote->id);
-                                                })->sum('quantity');
-                                            $maxQty = $rejectedQty - $alreadyDebited;
-                                            @endphp
-                                            <tr class="item-row">
-                                                <td>
-                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
-                                                    <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item['purchase_invoice_item_id'] ?? '' }}">
-                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
-                                                </td>
-                                                <td>
-                                                    {{ \App\Models\RawMaterial::find($item['raw_material_id'])?->name ?? '-' }}
-                                                </td>
-                                                <td>
-                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
-                                                    {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
-                                                </td>
-                                                <td>
-                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item['quantity'] ?? 0 }}" step="0.01" data-max="{{ $maxQty }}">
-                                                    @error("items.$index.quantity")
-                                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                                    @enderror
-                                                    <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
-                                                </td>
+                                             $invItemId = $item['purchase_invoice_item_id'] ?? 0;
+                                             $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->sum('qty_rejected');
+                                             $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $invItemId)
+                                                  ->when(isset($debitNote), function ($q) use ($debitNote) {
+                                                      $q->where('debit_note_id', '!=', $debitNote->id);
+                                                  })->sum('quantity');
+                                             $maxQty = $rejectedQty - $alreadyDebited;
 
-                                                <td>
-                                                    <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item['rate'] ?? 0 }}" step="0.01" readonly>
-                                                </td>
-
-                                                <td>
-                                                    <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ $item['amount'] ?? 0 }}" step="0.01" readonly>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @elseif(isset($debitNote))
-                                        @foreach($debitNote->items as $index => $item)
-                                            @php
-                                                $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
-                                                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
-                                                $maxQty = $rejectedQty - $alreadyDebited;
+                                             $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['rawMaterial.storeCategory', 'purchaseOrderItem'])->find($invItemId);
+                                             $categoryName = $dbInvItem->rawMaterial->storeCategory->store_category_name ?? '-';
+                                             $supplierDesignName = $dbInvItem->purchaseOrderItem->supplier_design_name ?? '-';
+                                             $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $invItemId)->first();
+                                             $artNo = $grnItem->art_no ?? '-';
                                             @endphp
-                                            <tr class="item-row">
-                                                <td>
-                                                    <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" checked>
-                                                    <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item->purchase_invoice_item_id }}">
-                                                    <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item->raw_material_id }}">
-                                                </td>
-                                                <td>{{ $item->rawMaterial->name ?? '-' }}</td>
-                                                <td>
-                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item->uom_id }}">
-                                                    {{ $item->uom->uom_code ?? '-' }}
-                                                </td>
-                                                <td>
-                                                    <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item->quantity }}" step="0.01" data-max="{{ $maxQty }}">
-                                                    @error("items.$index.quantity")
-                                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                                    @enderror
-                                                    <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
-                                                </td>
-                                                <td>
-                                                    <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item->rate }}" step="0.01" readonly>
-                                                </td>
-                                                <td>
-                                                    <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ $item->amount }}" step="0.01" readonly>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @else
-                                        <tr>
-                                            <td colspan="7" class="text-center">No items added yet.</td>
-                                        </tr>
-                                    @endif
+                                             <tr class="item-row">
+                                                  <td>
+                                                      <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" {{ isset($item['selected']) ? 'checked' : '' }}>
+                                                      <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item['purchase_invoice_item_id'] ?? '' }}">
+                                                      <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item['raw_material_id'] ?? '' }}">
+                                                  </td>
+                                                  <td>
+                                                      <span class="fw-bold">{{ \App\Models\RawMaterial::find($item['raw_material_id'])?->name ?? '-' }}</span>
+                                                  </td>
+                                                  <td>
+                                                      {{ $artNo }}
+                                                  </td>
+                                                  <td>
+                                                      {{ $supplierDesignName }}
+                                                  </td>
+                                                 <td>
+                                                     <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item['uom_id'] ?? '' }}">
+                                                     {{ \App\Models\Uom::find($item['uom_id'])?->uom_code ?? '-' }}
+                                                 </td>
+                                                 <td>
+                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item['quantity'] ?? 0 }}" step="0.01" data-max="{{ $maxQty }}">
+                                                     @error("items.$index.quantity")
+                                                         <div class="text-danger small mt-1">{{ $message }}</div>
+                                                     @enderror
+                                                     <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
+                                                 </td>
+
+                                                 <td>
+                                                     <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item['rate'] ?? 0 }}" step="0.01" readonly>
+                                                 </td>
+
+                                                 <td>
+                                                     <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ number_format($item['amount'] ?? 0, 2, '.', '') }}" step="0.01" readonly>
+                                                 </td>
+                                             </tr>
+                                         @endforeach
+                                     @elseif(isset($debitNote))
+                                         @foreach($debitNote->items as $index => $item)
+                                             @php
+                                                 $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->sum('qty_rejected');
+                                                 $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->where('debit_note_id', '!=', $debitNote->id)->sum('quantity');
+                                                 $maxQty = $rejectedQty - $alreadyDebited;
+                                                 $dbInvItem = \App\Models\PurchaseInvoiceItem::with(['purchaseOrderItem'])->find($item->purchase_invoice_item_id);
+                                                 $supplierDesignName = $dbInvItem->purchaseOrderItem->supplier_design_name ?? '-';
+                                                 $grnItem = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->purchase_invoice_item_id)->first();
+                                                 $artNo = $grnItem->art_no ?? '-';
+                                             @endphp
+                                             <tr class="item-row">
+                                                 <td>
+                                                     <input type="checkbox" name="items[{{ $index }}][selected]" value="1" class="form-check-input item-checkbox" checked>
+                                                     <input type="hidden" name="items[{{ $index }}][purchase_invoice_item_id]" value="{{ $item->purchase_invoice_item_id }}">
+                                                     <input type="hidden" name="items[{{ $index }}][raw_material_id]" value="{{ $item->raw_material_id }}">
+                                                 </td>
+                                                 <td>
+                                                     <span class="fw-bold">{{ $item->rawMaterial->name ?? '-' }}</span>
+                                                 </td>
+                                                 <td>
+                                                      {{ $artNo }}
+                                                  </td>
+                                                  <td>
+                                                      {{ $supplierDesignName }}
+                                                  </td>
+                                                 <td>
+                                                     <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item->uom_id }}">
+                                                     {{ $item->uom->uom_code ?? '-' }}
+                                                 </td>
+                                                 <td>
+                                                     <input type="number" name="items[{{ $index }}][quantity]" class="form-control item-qty" value="{{ $item->quantity }}" step="0.01" data-max="{{ $maxQty }}">
+                                                     @error("items.$index.quantity")
+                                                         <div class="text-danger small mt-1">{{ $message }}</div>
+                                                     @enderror
+                                                     <div class="text-danger small qty-error-msg mt-1" style="display:none;"></div>
+                                                 </td>
+                                                 <td>
+                                                     <input type="number" name="items[{{ $index }}][rate]" class="form-control item-rate" value="{{ $item->rate }}" step="0.01" readonly>
+                                                 </td>
+                                                 <td>
+                                                     <input type="number" name="items[{{ $index }}][amount]" class="form-control item-amount" value="{{ number_format($item->amount, 2, '.', '') }}" step="0.01" readonly>
+                                                 </td>
+                                             </tr>
+                                         @endforeach
+                                     @else
+                                         <tr>
+                                             <td colspan="8" class="text-center">No items added yet.</td>
+                                         </tr>
+                                     @endif
                                 </tbody>
                             </table>
                         </div>
@@ -384,7 +410,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="text-muted">IGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', $debitNote->igst_percent ?? $debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
+                                            <input type="number" name="igst_percent" id="igst_percent" value="{{ old('igst_percent', ($debitNote && $debitNote->igst_percent > 0) ? $debitNote->igst_percent : ($debitNote->purchaseInvoice->igst_percent ?? $web_settings->igst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="igst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -395,7 +421,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="text-muted">CGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', $debitNote->cgst_percent ?? $debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
+                                            <input type="number" name="cgst_percent" id="cgst_percent" value="{{ old('cgst_percent', ($debitNote && $debitNote->cgst_percent > 0) ? $debitNote->cgst_percent : ($debitNote->purchaseInvoice->cgst_percent ?? $web_settings->cgst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="cgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -403,7 +429,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <label class="text-muted">SGST:</label>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', $debitNote->sgst_percent ?? $debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
+                                            <input type="number" name="sgst_percent" id="sgst_percent" value="{{ old('sgst_percent', ($debitNote && $debitNote->sgst_percent > 0) ? $debitNote->sgst_percent : ($debitNote->purchaseInvoice->sgst_percent ?? $web_settings->sgst ?? 0)) }}" class="form-control form-control-sm text-end" style="width: 85px;" step="0.01">
                                             <span class="small">%</span>
                                             <strong id="sgst_amt" class="ms-2">₹0.00</strong>
                                         </div>
@@ -559,7 +585,11 @@
                                         <input type="hidden" name="items[${index}][purchase_invoice_item_id]" value="${item.id}">
                                         <input type="hidden" name="items[${index}][raw_material_id]" value="${item.raw_material_id}">
                                     </td>
-                                    <td>${item.raw_material_name}</td>
+                                    <td>
+                                        <span class="fw-bold">${item.raw_material_name}</span>
+                                    </td>
+                                    <td>${item.art_no || '-'}</td>
+                                    <td>${item.supplier_design_name || '-'}</td>
                                     <td>
                                         <input type="hidden" name="items[${index}][uom_id]" value="${item.uom_id}">
                                         ${item.uom_code}
@@ -572,7 +602,7 @@
                                         <input type="number" name="items[${index}][rate]" class="form-control item-rate" value="${item.rate}" step="0.01" readonly>
                                     </td>
                                     <td>
-                                        <input type="number" name="items[${index}][amount]" class="form-control item-amount" value="${item.amount}" step="0.01" readonly>
+                                        <input type="number" name="items[${index}][amount]" class="form-control item-amount" value="${parseFloat(item.amount).toFixed(2)}" step="0.01" readonly>
                                     </td>
                                 </tr>
                             `);

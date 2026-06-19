@@ -31,7 +31,7 @@
     .company-address {
         font-size: 10pt;
         line-height: 1.3;
-        max-width: 250px;
+        max-width: 400px;
     }
     .title {
         text-align: center;
@@ -148,7 +148,7 @@
         <div class="company-address">
             {{ $setting->address ?? '' }}<br>
             @if(isset($setting))
-                GSTIN: <strong>{{ $setting->gst_no ?? '' }}</strong> &nbsp;&nbsp; MOB: {{ $setting->toll_free_no ?? '' }}
+                GSTIN: <strong>{{ $setting->gst_no ?? '' }}</strong><br>MOB: {{ $setting->toll_free_no ?? '' }}
             @endif
         </div>
     </div>

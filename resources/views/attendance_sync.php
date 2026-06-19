@@ -180,11 +180,22 @@ foreach ($allGrouped as $emp => $dates) {
 
         $dbIn = $existing ? $existing['in_time'] : null;
         $dbOut = $existing ? $existing['out_time'] : null;
-        $allTimes = array_filter([$in, $out, $dbIn, $dbOut]);
+        $allTimes = array_values(array_unique(array_filter([$in, $out, $dbIn, $dbOut])));
         if (!empty($allTimes)) {
             sort($allTimes);
-            $in = $allTimes[0];
-            $out = count($allTimes) > 1 ? end($allTimes) : null;
+            if (count($allTimes) == 1) {
+                $cutoffTime = strtotime($date . ' 13:00:00');
+                if (strtotime($allTimes[0]) >= $cutoffTime) {
+                    $in = null;
+                    $out = $allTimes[0];
+                } else {
+                    $in = $allTimes[0];
+                    $out = null;
+                }
+            } else {
+                $in = $allTimes[0];
+                $out = end($allTimes);
+            }
         }
 
         $deviceSerial = $serialNumber;

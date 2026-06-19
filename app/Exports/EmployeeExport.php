@@ -16,7 +16,7 @@ class EmployeeExport implements FromCollection, WithHeadings, WithMapping
     */
     public function collection()
     {
-        return User::with(['department', 'role', 'devices'])->orderBy('id', 'desc')->get();
+        return User::with(['department', 'role', 'devices', 'serviceProvider'])->orderBy('id', 'desc')->get();
     }
 
     public function headings(): array
@@ -34,6 +34,7 @@ class EmployeeExport implements FromCollection, WithHeadings, WithMapping
             'PF No',
             'Fixed Gross',
             'Bus Fare',
+            'Service Provider',
         ];
     }
 
@@ -53,6 +54,7 @@ class EmployeeExport implements FromCollection, WithHeadings, WithMapping
             $employee->pf_no ?? '-',
             $employee->fixed_gross ?? '-',
             $employee->bus_fare ?? '-',
+            $employee->serviceProvider->name ?? '-',
         ];
     }
 }
