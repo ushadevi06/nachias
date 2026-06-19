@@ -441,7 +441,7 @@
                                                                             <i class="ri ri-calendar-todo-line me-1"></i>{{ $assign->due_date ? \Carbon\Carbon::parse($assign->due_date)->format('d-m-Y') : 'N/A' }}
                                                                         </span>
                                                                         <span class="badge bg-label-{{ $statusColor }} border-{{ $statusColor }} fw-bold row-status-badge font-small">{{ $assign->status }}</span>
-                                                                        @if(auth()->user()->hasRole('QC') || auth()->user()->id == 1)
+                                                                        @if(auth()->user()->hasRole('QUALITY CHECKER') || auth()->user()->id == 1)
                                                                             <span class="badge bg-label-{{ $qcStatusColor }} border-{{ $qcStatusColor }} fw-bold row-qc-status-badge font-small">{{ $assign->qc_status ?? 'Pending' }}</span>
                                                                         @endif
                                                                     </div>
@@ -496,7 +496,7 @@
                                                                     </div>
 
                                                                     <div class="col-md-6">
-                                                                        @if(auth()->user()->hasRole('QC') || auth()->user()->id == 1)
+                                                                        @if(auth()->user()->hasRole('QUALITY CHECKER') || auth()->user()->id == 1)
                                                                             <div class="d-flex align-items-center mb-3">
                                                                                 <div class="section-icon bg-info bg-opacity-10 text-info me-2">
                                                                                     <i class="ri ri-shield-check-line"></i>

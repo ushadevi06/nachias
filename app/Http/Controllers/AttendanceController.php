@@ -106,6 +106,15 @@ class AttendanceController extends Controller
         $final = [];
         foreach ($grouped as $emp => $dates) {
             $empStr = (string)$emp;
+            $employeeExistsAndActive = DB::table('users')
+                ->where('emp_id', $empStr)
+                ->where('id', '!=', 1)
+                ->where('status', 'Active')
+                ->whereNull('deleted_at')
+                ->exists();
+            if (!$employeeExistsAndActive) {
+                continue;
+            }
             foreach ($dates as $date => $times) {
                 sort($times);
                 $in  = $times[0] ?? null;
@@ -234,6 +243,8 @@ class AttendanceController extends Controller
         }
         $allEmployees = DB::table('users')
             ->where('id', '!=', 1)
+            ->where('status', 'Active')
+            ->whereNull('deleted_at')
             ->pluck('emp_id')
             ->toArray();
         $datesToMark = is_array($selectedDate) ? $selectedDate : [$selectedDate];

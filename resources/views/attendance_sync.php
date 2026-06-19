@@ -138,7 +138,19 @@ while ($deviceRow = $devicesQuery->fetch_assoc()) {
 echo "<h3>Processing merged attendance...</h3>";
 
 foreach ($allGrouped as $emp => $dates) {
-      $deviceQuery = $conn->query("
+    $employeeCheck = $conn->query("
+        SELECT id FROM users
+        WHERE emp_id = '$emp'
+          AND id != 1
+          AND status = 'Active'
+          AND deleted_at IS NULL
+        LIMIT 1
+    ");
+    if (!$employeeCheck || $employeeCheck->num_rows === 0) {
+        continue;
+    }
+
+    $deviceQuery = $conn->query("
         SELECT d.serial_number
         FROM users u
         LEFT JOIN devices d
@@ -260,6 +272,8 @@ $usersQuery = $conn->query("
         ON d.serial_number COLLATE utf8mb4_general_ci =
            u.device COLLATE utf8mb4_general_ci
     WHERE u.id != 1
+      AND u.status = 'Active'
+      AND u.deleted_at IS NULL
 ");
 
 while ($user = $usersQuery->fetch_assoc()) {
