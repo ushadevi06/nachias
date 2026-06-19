@@ -109,11 +109,11 @@
                     <div class="row g-4 text-break">
                         <div class="col-md-4">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Billing Address</div>
-                            <div class="text-dark small" style="white-space: pre-line;">{{ $salesOrder->billing_address ?? '-' }}</div>
+                            <div class="text-dark small" style="white-space: pre-line;">{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($salesOrder->billing_address ?? '-'))) !!}</div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Shipping Address</div>
-                            <div class="text-dark small" style="white-space: pre-line;">{{ $salesOrder->shipping_address ?? '-' }}</div>
+                            <div class="text-dark small" style="white-space: pre-line;">{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($salesOrder->shipping_address ?? '-'))) !!}</div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-1 text-muted text-uppercase small fw-bold">Payment Terms</div>

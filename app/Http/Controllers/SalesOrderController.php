@@ -419,9 +419,57 @@ class SalesOrderController extends Controller
                         }
                     }
 
+                    $seItem = null;
+                    if (!empty($item['stock_entry_item_id'])) {
+                        $seItem = \App\Models\StockEntryItem::find($item['stock_entry_item_id']);
+                    }
+                    if (!$seItem && !empty($item['sku'])) {
+                        $seItem = \App\Models\StockEntryItem::where('sku', $item['sku'])->orWhere('barcode', $item['sku'])->first();
+                    }
+                    $styleId = $seItem ? $seItem->style_id : null;
+
+                    $categoryName = null;
+                    $categoriesPathVal = null;
+
+                    if ($styleId) {
+                        $styleModel = \App\Models\Style::find($styleId);
+                        if ($styleModel) {
+                            $baseCategory = $styleModel->style_name;
+                            
+                            $sleeveSuffix = '';
+                            $itemNameUpper = strtoupper($itemName);
+                            if (str_ends_with($itemNameUpper, 'F/S') || str_ends_with($itemNameUpper, ' FS') || str_ends_with($itemNameUpper, ' FULL')) {
+                                $sleeveSuffix = ' F/s';
+                            } elseif (str_ends_with($itemNameUpper, 'H/S') || str_ends_with($itemNameUpper, ' HS') || str_ends_with($itemNameUpper, ' HALF')) {
+                                $sleeveSuffix = ' H/s';
+                            } else {
+                                $sleeveVal = null;
+                                if (isset($item['sleeve'])) {
+                                    $sleeveVal = is_array($item['sleeve']) ? ($item['sleeve'][0] ?? null) : $item['sleeve'];
+                                }
+                                if (empty($sleeveVal) && $seItem && !empty($seItem->sleeve_type)) {
+                                    $sleeveVal = $seItem->sleeve_type;
+                                }
+                                if (!empty($sleeveVal)) {
+                                    $sleeveUpper = strtoupper(trim($sleeveVal));
+                                    if ($sleeveUpper === 'FULL' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FS') {
+                                        $sleeveSuffix = ' F/s';
+                                    } elseif ($sleeveUpper === 'HALF' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HS') {
+                                        $sleeveSuffix = ' H/s';
+                                    }
+                                }
+                            }
+
+                            $categoryName = trim($baseCategory . $sleeveSuffix);
+                            $categoriesPathVal = "Core > " . $categoryName;
+                        }
+                    }
+
                     SalesOrderItem::create([
                         'sale_order_id' => $salesOrder->id,
                         'brand_cat_id' => $item['brand_cat_id'] ?? null,
+                        'category_name' => $categoryName,
+                        'categories_path_val' => $categoriesPathVal,
                         'item_id' => $item['item_id'],
                         'color_id' => $item['color_id'] ?? null,
                         'art_no' => $item['art_no'] ?? null,

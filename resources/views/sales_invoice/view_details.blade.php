@@ -121,7 +121,7 @@
 
                             <div class="col-md-4">
                                 <label class="detail-title">Delivery Address:</label>
-                                <div class="text-muted">{{ $invoice->delivery_address ?? '-' }}</div>
+                                <div class="text-muted">{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address ?? '-'))) !!}</div>
                             </div>
 
                             <div class="col-md-4">

@@ -159,7 +159,7 @@
                 <tr>
                     <td style="padding: 6px; vertical-align: top; line-height: 1.4;">
                         <div style="font-weight: bold;  margin-bottom: 2px;">{{ $salesOrder->customer->name ?? 'A.k.ahamed Co' }}</div>
-                        <div>{!! nl2br(e($salesOrder->billing_address ?? "141 South Masi Street Madurai\nMadurai\nMadurai")) !!}</div>
+                        <div>{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($salesOrder->billing_address ?? "141 South Masi Street Madurai\nMadurai\nMadurai"))) !!}</div>
                         <div>{{ $salesOrder->customer->state->state_name ?? 'Tamilnadu' }}, India</div>
                         <div>{{ $salesOrder->customer->pin_code ?? '625001' }}</div>
                         <div>Phone <strong style="font-size: 13px;">{{ $salesOrder->customer->phone ?? '91-8220055110' }}</strong></div>

@@ -168,7 +168,7 @@
                         <td style="width: 15px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
                         <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">
                             {{ $invoice->customer->name ?? '-' }}<br>
-                            {!! nl2br(e(strtoupper($invoice->delivery_address))) !!}<br>
+                            {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
                             @if($invoice->customer && $invoice->customer->mobile_no)
                                 {{ $invoice->customer->mobile_no }}
                             @endif

@@ -23,7 +23,7 @@
         }
         .sticker {
             border: 3px solid #000;
-            border-radius: 14px;
+            border-radius: 0px; /* Square/sharp corners to match original */
             width: 100%;
             height: 100%;
             display: flex;
@@ -31,107 +31,105 @@
             overflow: hidden;
         }
         .content {
-            padding: 12px 14px 6px 14px;
+            padding: 10px 12px 6px 12px;
             flex: 1;
             display: flex;
             flex-direction: column;
         }
         .to {
-            font-size: 22px;
-            font-weight: 900;
-            margin-bottom: 6px;
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 8px;
         }
-        .row {
-            display: flex;
-            align-items: baseline;
-            margin-bottom: 4px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            padding: 4px 0;
+            vertical-align: top;
+            font-weight: bold;
         }
         .lbl {
-            font-size: 16px;
-            font-weight: 900;
-            min-width: 80px;
-            flex-shrink: 0;
+            font-size: 20px;
+            width: 120px;
+            white-space: nowrap;
         }
         .eq {
-            font-size: 16px;
-            font-weight: 900;
-            margin: 0 4px;
+            font-size: 20px;
+            width: 25px;
+            text-align: center;
         }
         .val {
-            font-size: 16px;
-            font-weight: 900;
+            font-size: 20px;
             text-transform: uppercase;
         }
         .val-party {
-            font-size: 20px;
-            font-weight: 900;
+            font-size: 22px;
             text-transform: uppercase;
         }
         .val-place {
-            font-size: 44px;
-            font-weight: 900;
+            font-size: 40px;
             font-family: 'Arial Black', Impact, sans-serif;
             text-transform: uppercase;
             line-height: 1;
         }
         .val-inv {
             font-size: 30px;
-            font-weight: 900;
             font-family: 'Arial Black', Impact, sans-serif;
             text-transform: uppercase;
             line-height: 1;
         }
         .val-pcs {
-            font-size: 52px;
-            font-weight: 900;
+            font-size: 50px;
             font-family: 'Arial Black', Impact, sans-serif;
-            text-align: center;
-            flex: 1;
             line-height: 1;
+            text-align: center;
+            width: 100%;
+            display: inline-block;
         }
         .val-box {
             font-size: 42px;
-            font-weight: 900;
             font-family: 'Arial Black', Impact, sans-serif;
-            text-align: center;
-            flex: 1;
             line-height: 1;
+            text-align: center;
+            width: 100%;
+            display: inline-block;
         }
         .disclaimer {
             font-size: 13px;
-            font-weight: 900;
+            font-weight: bold;
             text-transform: uppercase;
-            line-height: 1.2;
+            line-height: 1.3;
             margin-top: auto;
-            padding-top: 4px;
+            padding-top: 6px;
+            text-align: left;
         }
         .footer {
             flex-shrink: 0;
             border-top: 2px solid #000;
-            padding: 8px 14px 10px;
+            padding: 6px 10px 8px;
+            text-align: center;
         }
         .footer .f1 {
-            font-size: 13px;
-            font-weight: 900;
-            margin-bottom: 1px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            text-align: left;
         }
         .footer .f2 {
-            font-size: 14px;
-            font-weight: 900;
+            font-size: 18px;
+            font-weight: bold;
             font-family: 'Arial Black', sans-serif;
-            margin-bottom: 1px;
-            text-align: center;
-            letter-spacing: 1px;
+            margin-bottom: 2px;
         }
         .footer .f3 {
-            letter-spacing: 0.7px;
             font-size: 12px;
-            font-weight: 900;
-            line-height: 1.2;
-            text-align: center;
+            font-weight: bold;
+            line-height: 1.3;
         }
         @media print {
-            body { width: 100mm; height: 150mm; padding: 3mm; }
+            body { width: 100mm; height: 150mm; padding: 2mm; }
             .footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
@@ -141,50 +139,44 @@
         <div class="content">
             <div class="to">TO :-</div>
 
-            <div class="row">
-                <span class="lbl">PARTY</span>
-                <span class="eq">=</span>
-                <span class="val-party">{{ strtoupper($invoice->customer->name ?? 'N/A') }}</span>
-            </div>
-            <div class="row">
-                <span class="lbl">PHONE</span>
-                <span class="eq">=</span>
-                <span class="val" style="font-size: 18px;">{{ $invoice->customer->mobile_no ?? $invoice->customer->phone ?? 'N/A' }}</span>
-            </div>
-            <div class="row">
-                <span class="lbl">ADDRESS</span>
-                <span class="eq">=</span>
-                <span class="val">{{ strtoupper(implode(', ', array_filter([$invoice->customer->address_line_1 ?? '', $invoice->customer->address_line_2 ?? '', $invoice->customer->address_line_3 ?? '']))) }}</span>
-            </div>
+            <table>
+                <tr>
+                    <td class="lbl">PARTY</td>
+                    <td class="eq">=</td>
+                    <td class="val-party">{{ strtoupper($invoice->customer->name ?? 'N/A') }}</td>
+                </tr>
+                <tr>
+                    <td class="lbl">ADDRESS</td>
+                    <td class="eq">=</td>
+                    <td class="val">{{ strtoupper(implode(', ', array_filter([$invoice->customer->address_line_1 ?? '', $invoice->customer->address_line_2 ?? '', $invoice->customer->address_line_3 ?? '']))) }}</td>
+                </tr>
+                <tr>
+                    <td class="lbl">PLACE</td>
+                    <td class="eq">=</td>
+                    <td class="val-place">{{ strtoupper($invoice->customer->city->city_name ?? ($invoice->customer->place->place_name ?? 'N/A')) }}</td>
+                </tr>
+                <tr>
+                    <td class="lbl">INV NO</td>
+                    <td class="eq">=</td>
+                    <td class="val-inv">{{ strtoupper($invoice->inv_no) }}</td>
+                </tr>
+                <tr>
+                    <td class="lbl" style="vertical-align: middle;">NO OF PCS</td>
+                    <td class="eq" style="vertical-align: middle;">=</td>
+                    <td style="vertical-align: middle;"><span class="val-pcs">{{ intval($totalPcs) }}</span></td>
+                </tr>
+                <tr>
+                    <td class="lbl" style="vertical-align: middle;">NO OF BOX</td>
+                    <td class="eq" style="vertical-align: middle;">=</td>
+                    <td style="vertical-align: middle;"><span class="val-box">{{ $boxCount }}</span></td>
+                </tr>
+            </table>
 
-            <div class="row">
-                <span class="lbl">PLACE</span>
-                <span class="eq">=</span>
-                <span class="val-place">{{ strtoupper($invoice->customer->city->city_name ?? ($invoice->customer->place->place_name ?? 'N/A')) }}</span>
-            </div>
-
-            <div class="row">
-                <span class="lbl">INV NO</span>
-                <span class="eq">=</span>
-                <span class="val-inv">{{ strtoupper($invoice->inv_no) }}</span>
-            </div>
-
-            <div class="row">
-                <span class="lbl">NO OF PCS</span>
-                <span class="eq">=</span>
-                <span class="val-pcs">{{ intval($totalPcs) }}</span>
-            </div>
-
-            <div class="row">
-                <span class="lbl">NO OF BOX</span>
-                <span class="eq">=</span>
-                <span class="val-box">{{ $boxCount }}</span>
-            </div>
-            <div class="disclaimer">*THE ORIGINAL INVOICE FOR YOUR PURCHASE WILL BE SECURELY PLACED INSIDE THE CARTON IN A CASINO ENVELOPE</div>
+            <div class="disclaimer">*THE ORIGINAL INVOICE FOR YOUR PURCHASE WILL BE SECURALY PLACED INSIDE THE CARTON IN A CASINO ENVELOPE</div>
         </div>
 
         <div class="footer">
-            <div class="f1">MANUFACTURED &amp; MARKETED BY:-</div>
+            <div class="f1">MANUFEDTURED &amp; MARKETED BY:-</div>
             <div class="f2">NACHIAS FASHION PVT LTD</div>
             <div class="f3">272/2, SOMUNAGAR, SRINGERI NAGAR,<br>BY-PASS ROAD, MADURAI - 625 016.<br>PNO:9443330774,8489938214</div>
         </div>

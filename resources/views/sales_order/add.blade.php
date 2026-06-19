@@ -1368,8 +1368,27 @@ $(document).ready(function () {
                 type: 'GET',
                 success: function(res) {
                     if (res.success && res.customer) {
-                        let c = res.customer;
-                        let billingAddress = [c.address_line_1, c.address_line_2, c.address_line_3, c.city, c.state, c.pincode].filter(Boolean).join(', ');
+                        let parts = [c.address_line_1, c.address_line_2, c.address_line_3, c.city, c.state, c.pincode].filter(Boolean).map(s => s.trim());
+                        let uniqueParts = [];
+                        for (let part of parts) {
+                            let lowerPart = part.toLowerCase();
+                            let alreadyExists = false;
+                            for (let existing of uniqueParts) {
+                                let lowerExisting = existing.toLowerCase();
+                                if (lowerExisting === lowerPart) {
+                                    alreadyExists = true;
+                                    break;
+                                }
+                                if (/^[a-zA-Z0-9]+$/.test(part) && new RegExp('\\b' + lowerPart + '\\b').test(lowerExisting)) {
+                                    alreadyExists = true;
+                                    break;
+                                }
+                            }
+                            if (!alreadyExists) {
+                                uniqueParts.push(part);
+                            }
+                        }
+                        let billingAddress = uniqueParts.join(', ');
                         $('#billing_address').val(billingAddress);
                         $('#shipping_address').val(billingAddress);
                         if (c.payment_terms) $('#payment_terms').val(c.payment_terms);

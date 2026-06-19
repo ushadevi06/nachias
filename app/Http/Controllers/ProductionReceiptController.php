@@ -398,7 +398,6 @@ class ProductionReceiptController extends Controller
             }
         }
 
-
         foreach ($receipt->items as $item) {
             if ($item->qty_to_receive > 0) {
                 $itemCode = $item->item_code;
@@ -409,7 +408,6 @@ class ProductionReceiptController extends Controller
                     $sleeve = ($sleevePart == 'F/S') ? 'Full' : (($sleevePart == 'H/S') ? 'Half' : $sleevePart);
                 }
 
-                // --- Look up barcode from barcode_masters (generated during Job Card issue) ---
                 $sleeveTypeShort = ($sleeve == 'Full') ? 'F/S' : (($sleeve == 'Half') ? 'H/S' : $sleeve);
                 $barcodeMaster = \App\Models\BarcodeMaster::where('art_no', $item->art_no)
                     ->where('size', $item->size)
@@ -440,6 +438,25 @@ class ProductionReceiptController extends Controller
                     $barcodeMasterId = null;
                 }
                 // --- End barcode lookup ---
+
+                $styleId = null;
+                if ($barcodeMaster && !empty($barcodeMaster->style_id)) {
+                    $styleId = $barcodeMaster->style_id;
+                } else {
+                    $fallbackBm = \App\Models\BarcodeMaster::where('job_card_entry_id', $receipt->job_card_id)
+                        ->whereNotNull('style_id')
+                        ->first();
+                    if ($fallbackBm) {
+                        $styleId = $fallbackBm->style_id;
+                    } else {
+                        $fallbackBm2 = \App\Models\BarcodeMaster::where('art_no', $item->art_no)
+                            ->whereNotNull('style_id')
+                            ->first();
+                        if ($fallbackBm2) {
+                            $styleId = $fallbackBm2->style_id;
+                        }
+                    }
+                }
 
                 $itemModel = Item::with('fabricType')->find($item->item_id);
 
@@ -486,6 +503,7 @@ class ProductionReceiptController extends Controller
                     'sleeve_type' => $sleeve,
                     'fit_id' => $fitId,
                     'brand_id' => $brandId,
+                    'style_id' => $styleId,
                     'barcode_master_id' => $barcodeMasterId ?? null,
                 ]);
             }

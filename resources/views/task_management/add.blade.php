@@ -143,7 +143,7 @@
                                                 @endphp
                                                 @if($selectedStage)
                                                     <input type="text" class="form-control" value="{{ $selectedStage->operationStage->operation_stage_name ?? ($selectedStage->stage ?? 'No Name') }}" readonly>
-                                                    <input type="hidden" name="stage_id" id="stage_select" value="{{ $selectedStage->id }}" data-start-date="{{ $selectedStage->start_date ? \Carbon\Carbon::parse($selectedStage->start_date)->format('Y-m-d') : '' }}" data-qty="{{ $selectedStage->planned_qty ?? 0 }}"  data-service-provider-id="{{ $selectedStage->scheduled_to ?? '' }}" data-due-date="{{ $selectedStage->due_date ? \Carbon\Carbon::parse($selectedStage->due_date)->format('Y-m-d') : '' }}" data-operation-stage-id="{{ $selectedStage->operation_stage_id }}" data-services='@json($services)'>
+                                                     <input type="hidden" name="stage_id" id="stage_select" value="{{ $selectedStage->id }}" data-start-date="{{ $selectedStage->start_date ? \Carbon\Carbon::parse($selectedStage->start_date)->format('Y-m-d') : '' }}" data-qty="{{ $selectedStage->planned_qty ?? 0 }}"  data-service-provider-id="{{ $selectedStage->scheduled_to ?? '' }}" data-job-card-service-provider-id="{{ $jobCard->service_provider_id ?? '' }}" data-due-date="{{ $selectedStage->due_date ? \Carbon\Carbon::parse($selectedStage->due_date)->format('Y-m-d') : '' }}" data-operation-stage-id="{{ $selectedStage->operation_stage_id }}" data-services='@json($services)'>
                                                 @else
                                                     <input type="text" class="form-control" value="No Stage Selected" readonly>
                                                 @endif
@@ -1034,8 +1034,7 @@
                     ajax: {
                         url: function() {
                             var pId = getSelectedPlantId();
-                            var osId = getSelectedOperationStageId();
-                            return "{{ url('get-employees-by-plant') }}/all/" + osId;
+                            return "{{ url('get-employees-by-plant') }}/" + pId;
                         },
                         dataType: 'json',
                         delay: 250,
@@ -1089,7 +1088,11 @@
             function getSelectedPlantId() {
                 var $el = $('#stage_select');
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
-                return $selected.attr('data-service-provider-id') || $selected.data('service-provider-id') || 'all';
+                var pId = $selected.attr('data-service-provider-id') || $selected.data('service-provider-id');
+                if (!pId || pId === 'all') {
+                    pId = $selected.attr('data-job-card-service-provider-id') || $selected.data('job-card-service-provider-id');
+                }
+                return pId || 'all';
             }
 
             function getSelectedOperationStageId() {

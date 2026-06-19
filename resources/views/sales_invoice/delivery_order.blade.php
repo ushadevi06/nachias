@@ -184,7 +184,7 @@
                         <td style="width: 15px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
                         <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">
                             {{ $invoice->customer->name ?? '-' }}<br>
-                            {!! nl2br(e(strtoupper($invoice->delivery_address))) !!}<br>
+                            {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
                             @if($invoice->customer && $invoice->customer->mobile_no)
                                 {{ $invoice->customer->mobile_no }}
                             @endif
@@ -454,5 +454,20 @@
             </tbody>
         </table>
     @endforeach
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <tr>
+            <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
+                <strong>Remarks :</strong>
+            </td>
+        </tr>
+        <tr>
+            <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
+                Prepared By
+            </td>
+            <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
+                Checked By
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

@@ -436,9 +436,9 @@ if ($showPrice) $colsAfterQty++;
                             <td>
                                 <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
                                 @if($invoice->delivery_address)
-                                    {!! nl2br(e(mb_strtoupper($invoice->delivery_address ?? '', 'UTF-8'))) !!}
+                                    {!! nl2br(e(mb_strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address ?? ''), 'UTF-8'))) !!}
                                 @else
-                                   {!! nl2br(e(mb_strtoupper($invoice->customer->address ?? '', 'UTF-8'))) !!}
+                                   {!! nl2br(e(mb_strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->customer->address ?? ''), 'UTF-8'))) !!}
                                     {{ $invoice->customer->city->city_name ?? '' }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}
                                 @endif <br>
                                 {{ $invoice->customer->mobile_no ?? ''}}
