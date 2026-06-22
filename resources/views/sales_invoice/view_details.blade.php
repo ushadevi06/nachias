@@ -221,7 +221,7 @@
                                                             <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
                                                         @endif
                                                     </td>
-                                                    <td>{{ $item->color ? $item->color->color_name : '-' }}</td>
+                                                    <td>{{ $item->api_color ?: ($item->color ? $item->color->color_name : '-') }}</td>
                                                     <td>{{ $item->art_no ?? '-' }}</td>
                                                     <td>{{ $item->uom_id ?? '-' }}</td>
                                                     <td>{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>

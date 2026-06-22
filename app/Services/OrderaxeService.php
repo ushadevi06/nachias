@@ -169,6 +169,33 @@ class OrderaxeService
                 if (!empty($updateData)) {
                     $existingOrder->update($updateData);
                 }
+
+                // Resync api_color for existing order items
+                $products = $orderData['products'] ?? [];
+                foreach ($products as $product) {
+                    $combinations = $product['combinations'] ?? [];
+                    foreach ($combinations as $itemData) {
+                        $barcode = $itemData['sku'] ?? $itemData['barcode'] ?? null;
+                        if (!$barcode) continue;
+
+                        $attributes = $itemData['attributes'] ?? [];
+                        $apiColor = null;
+                        foreach ($attributes as $attr) {
+                            $attrId = $attr['attr_id'] ?? null;
+                            $attrName = strtolower($attr['name'] ?? $attr['key'] ?? '');
+                            if ($attrId === '672d9a34a4af6e35050547fe' || $attrName === 'color') {
+                                $apiColor = $attr['value'] ?? $attr['val'] ?? null;
+                                break;
+                            }
+                        }
+
+                        if ($apiColor) {
+                            SalesOrderItem::where('sale_order_id', $existingOrder->id)
+                                ->where('sku', $barcode)
+                                ->update(['api_color' => $apiColor]);
+                        }
+                    }
+                }
                 
                 return false;
             }
@@ -351,6 +378,7 @@ class OrderaxeService
                         'stock_entry_item_id' => $stockEntryItem->id ?? null,
                         'sku' => $barcode,
                         'color_id' => $colorId,
+                        'api_color' => $apiColor,
                         'uom_id' => 'PCS',
                         'size_id' => $sizeId,
                         'sleeve' => $apiFit ? [$apiFit] : ($sleeveType ? [$sleeveType] : null),

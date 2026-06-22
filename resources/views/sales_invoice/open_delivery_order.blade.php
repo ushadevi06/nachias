@@ -96,7 +96,9 @@
         $groupedItems = $invoice->items->groupBy(function($item) use ($invoice) {
             $brandName = '';
 
-            if ($invoice->so_id) {
+            if ($item->stockEntryItem && $item->stockEntryItem->brand) {
+                $brandName = $item->stockEntryItem->brand->brand_name;
+            } elseif ($invoice->so_id) {
                 $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
                     ->where('sku', $item->sku)
                     ->first();
@@ -242,6 +244,26 @@
                 $styleName = '';
                 $sleeve = '';
                 $resolved = false;
+
+                $seItem = $item->stockEntryItem;
+                if (!$seItem && $soItem && $soItem->stock_entry_item_id) {
+                    $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
+                }
+
+                if ($seItem) {
+                    if ($seItem->brand) {
+                        $brandName = $seItem->brand->brand_name;
+                    }
+                    if ($seItem->style) {
+                        $styleName = $seItem->style->style_name;
+                    }
+                    if (!empty($brandName) || !empty($styleName)) {
+                        $resolved = true;
+                    }
+                    if (empty($sleeve) && !empty($seItem->sleeve_type)) {
+                        $sleeve = $seItem->sleeve_type;
+                    }
+                }
                 
                 if (!empty($item->sleeve_type)) {
                     $sleeveValUpper = strtoupper(trim($item->sleeve_type));
@@ -252,9 +274,16 @@
                     } else {
                         $sleeve = $item->sleeve_type;
                     }
+                } elseif (!empty($sleeve)) {
+                    $sleeveValUpper = strtoupper(trim($sleeve));
+                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                        $sleeve = 'F/S';
+                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                        $sleeve = 'H/S';
+                    }
                 }
 
-                if (!empty($codeToParse) && $codeToParse !== '-') {
+                if (!$resolved && !empty($codeToParse) && $codeToParse !== '-') {
                     $parts = explode('-', $codeToParse);
                     
                     if (count($parts) >= 2) {
@@ -473,20 +502,22 @@
         </table>
     @endforeach
 
-    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-        <tr>
-            <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
-                <strong>Remarks :</strong>
-            </td>
-        </tr>
-        <tr>
-            <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
-                Prepared By
-            </td>
-            <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
-                Checked By
-            </td>
-        </tr>
-    </table>
+    <div style="position: absolute; bottom: 0; left: 0; width: 100%;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr>
+                <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
+                    <strong>Remarks :</strong>
+                </td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
+                    Prepared By
+                </td>
+                <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
+                    Checked By
+                </td>
+            </tr>
+        </table>
+    </div>
 </body>
 </html>

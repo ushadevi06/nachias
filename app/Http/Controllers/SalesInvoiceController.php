@@ -285,6 +285,7 @@ class SalesInvoiceController extends Controller
                             'art_no' => $item['art_no'] ?? null,
                             'size' => $item['size'] ?? null,
                             'color_id' => $item['color_id'] ?? null,
+                            'api_color' => $item['api_color'] ?? null,
                             'sleeve_type' => $item['sleeve_type'] ?? null,
                             'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
                         ]
@@ -501,6 +502,7 @@ class SalesInvoiceController extends Controller
                         'size_name' => $item->size ? $item->size->size : '',
                         'color_id' => $item->color_id,
                         'color_name' => $item->color ? $item->color->color_name : '',
+                        'api_color' => $item->api_color,
                         'sleeve' => $sleeveType ?: '',
                         'stock_entry_item_id' => $item->stock_entry_item_id,
                     ];
@@ -639,6 +641,7 @@ class SalesInvoiceController extends Controller
                 'size_name' => $item->size ? $item->size->size : '',
                 'color_id' => $item->color_id,
                 'color_name' => $item->color ? $item->color->color_name : '',
+                'api_color' => $item->api_color,
                 'sleeve' => $sleeveType ?: '',
                 'stock_entry_item_id' => $item->stock_entry_item_id,
             ];

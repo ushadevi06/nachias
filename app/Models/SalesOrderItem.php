@@ -32,6 +32,7 @@ class SalesOrderItem extends Model
         'sleeve',
         'stock_entry_item_id',
         'sku',
+        'api_color',
     ];
 
     protected $casts = [

@@ -721,3 +721,61 @@ Route::get('/run-permission-seeder', function () {
         '--class' => 'Database\\Seeders\\PermissionSeeder'
     ]);
 });
+
+Route::get('/testaxe', function () {
+    $service = new \App\Services\OrderaxeService();
+    $orders = $service->fetchOrders(0, 1);
+    if (!$orders) {
+        return "No orders fetched";
+    }
+
+    $output = "";
+    foreach ($orders as $orderData) {
+        if (!empty($orderData['products'])) {
+            foreach ($orderData['products'] as $product) {
+                $output .= "Product keys: " . implode(", ", array_keys($product)) . "<br>";
+                if (isset($product['product_items'])) {
+                    $output .= "product_items exist! Count: " . count($product['product_items']) . "<br>";
+                } else {
+                    $output .= "product_items missing!<br>";
+                }
+            }
+        }
+    }
+    return $output;
+});
+
+Route::get('/update-invoice-colors', function () {
+    $invoiceItems = \App\Models\SalesInvoiceItem::whereNull('api_color')->with('salesInvoice')->get();
+    $count = 0;
+    foreach ($invoiceItems as $invItem) {
+        if (!$invItem->salesInvoice) continue;
+        
+        $soIds = $invItem->salesInvoice->so_ids;
+        if (empty($soIds) && !empty($invItem->salesInvoice->so_id)) {
+            $soIds = [$invItem->salesInvoice->so_id];
+        } else {
+            $soIds = is_string($soIds) ? json_decode($soIds, true) : $soIds;
+        }
+        
+        if (empty($soIds)) continue;
+
+        $query = \App\Models\SalesOrderItem::whereIn('sale_order_id', $soIds);
+        if (!empty($invItem->sku)) {
+            $query->where('sku', $invItem->sku);
+        } else {
+            $query->where('art_no', $invItem->art_no)
+                  ->where('color_id', $invItem->color_id)
+                  ->where('size', $invItem->size);
+        }
+
+        $soItem = $query->first();
+
+        if ($soItem && !empty($soItem->api_color)) {
+            $invItem->api_color = $soItem->api_color;
+            $invItem->save();
+            $count++;
+        }
+    }
+    return "Updated $count sales invoice items.";
+});

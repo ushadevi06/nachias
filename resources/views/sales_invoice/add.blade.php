@@ -264,7 +264,8 @@
                                                     'item_name' => $itemName ?: '',
                                                     'sleeve_type' => $sleeveType ?: '',
                                                     'color_id' => $item->color_id,
-                                                    'color_name' => $item->color ? $item->color->color_name : '',
+                                                    'color_name' => $item->api_color ?: ($item->color ? $item->color->color_name : ''),
+                                                    'api_color' => $item->api_color,
                                                     'size' => $item->size,
                                                     'size_name' => $item->sizeRatio ? $item->sizeRatio->size : $item->size,
                                                     'art_no' => $item->art_no,
@@ -305,8 +306,9 @@
                                                 <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
                                             </td>
                                             <td>
-                                                <span class="color-text">{{ $row->color_name ?? '-' }}</span>
+                                                <span class="color-text">{{ $row->api_color ?: ($row->color_name ?? '-') }}</span>
                                                 <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id" value="{{ $row->color_id }}">
+                                                <input type="hidden" name="items[{{ $index }}][api_color]" class="api-color" value="{{ $row->api_color ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name" value="{{ $row->color_name ?? '' }}">
                                             </td>
                                             <td>
@@ -969,8 +971,9 @@
                         <input type="hidden" name="items[${index}][stock_entry_item_id]" class="stock-entry-item-id" value="${matchedItem.stock_entry_item_id || ''}">
                     </td>
                     <td>
-                        <span class="color-text">${matchedItem.color_name || '-'}</span>
+                        <span class="color-text">${matchedItem.api_color || matchedItem.color_name || '-'}</span>
                         <input type="hidden" name="items[${index}][color_id]" class="color-id" value="${matchedItem.color_id || ''}">
+                        <input type="hidden" name="items[${index}][api_color]" class="api-color" value="${matchedItem.api_color || ''}">
                         <input type="hidden" name="items[${index}][color_name]" class="color-name" value="${matchedItem.color_name || ''}">
                     </td>
                     <td>

@@ -85,7 +85,7 @@
             }
             
             $productName = $item->item_name ?: ($item->art_no ?: '-');
-            $colorName = $item->color->color_name ?? '-';
+            $colorName = $item->api_color ?: ($item->color->color_name ?? '-');
             $minRate = $item->rate;
             $mrp = $item->mrp;
             

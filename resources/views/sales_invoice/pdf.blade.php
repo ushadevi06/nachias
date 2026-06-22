@@ -492,8 +492,8 @@ if ($showPrice) $colsAfterQty++;
                 <tr>
                     <th width="4%">S.No</th>
                     <th width="{{ $showAmount ? '22%' : '28%' }}">Description</th>
-                    <th width="10%">Color</th>
                     <th width="10%">Art</th>
+                    <th width="10%">Color</th>
                     <th width="6%">UOM</th>
                     <th width="8%">Size</th>
                     <th width="8%">Qty</th>
@@ -557,8 +557,8 @@ if ($showPrice) $colsAfterQty++;
                             @endphp
                             <div class="bold">{{ $itemName }}</div>
                         </td>
-                        <td class="text-center">{{ $item->color ? $item->color->color_name : '-' }}</td>
                         <td class="text-center">{{ $item->art_no }}</td>
+                        <td class="text-center">{{ $item->api_color ?: ($item->color ? $item->color->color_name : '-') }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>

@@ -19,6 +19,7 @@ class SalesInvoiceItem extends Model
         'mrp',
         'amount',
         'color_id',
+        'api_color',
         'hsn_sac',
         'art_no',
         'size',

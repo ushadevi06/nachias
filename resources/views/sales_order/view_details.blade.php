@@ -278,7 +278,7 @@
                                             <div class="badge bg-light text-dark border fw-medium">{{ $item->sku ?? '-' }}</div>
                                         </td>
                                         <td class="text-center">
-                                            <div class="small fw-bold">{{ $item->color->color_name ?? '-' }}</div>
+                                            <div class="small fw-bold">{{ $item->api_color ?: ($item->color->color_name ?? '-') }}</div>
                                             <div class="badge bg-light text-dark border">{{ $item->size->name ?? $item->size_id ?? '-' }}</div>
                                         </td>
                                         <td class="text-center">
