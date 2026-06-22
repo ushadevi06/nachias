@@ -89,12 +89,12 @@ class OrderaxeService
 
             if (!$orderNo) return false;
 
-            if ($orderAxeId && SalesOrder::where('orderaxe_id', $orderAxeId)->exists()) {
-                return false;
+            $existingOrder = null;
+            if ($orderAxeId) {
+                $existingOrder = SalesOrder::where('orderaxe_id', $orderAxeId)->first();
             }
-
-            if ($orderNo && SalesOrder::where('order_no', $orderNo)->exists()) {
-                return false;
+            if (!$existingOrder && $orderNo) {
+                $existingOrder = SalesOrder::where('order_no', $orderNo)->first();
             }
 
             $customerData = $orderData['retailer'] ?? [];
@@ -124,9 +124,7 @@ class OrderaxeService
                 if (preg_match('/Zone-(\d+)/i', $refZone, $matches)) {
                     $num = $matches[1];
                     if ($num == 1) {
-                        $zoneModel = \App\Models\Zone::where('zone_name', 'like', '%Zone%I%')
-                            ->orWhere('zone_name', 'like', '%Zone%1%')
-                            ->first();
+                        $zoneModel = \App\Models\Zone::where('zone_name', 'like', '%Zone%I%')->orWhere('zone_name', 'like', '%Zone%1%')->first();
                     } else {
                         $zoneModel = \App\Models\Zone::where('zone_name', 'like', '%Zone%' . $num . '%')->first();
                     }
@@ -140,12 +138,49 @@ class OrderaxeService
                 $zoneId = $customer->zone_id;
             }
 
+            $orderaxeRefId = $orderData['retailer']['reference_id'] ?? null;
+            $deliveryDate = null;
+            if (!empty($orderData['delivery_date'])) {
+                $deliveryDate = date('Y-m-d', (int)($orderData['delivery_date'] / 1000));
+            }
+
+            if ($existingOrder) {
+                $updateData = [];
+                if (is_null($existingOrder->agent_id) && $agentId) {
+                    $updateData['agent_id'] = $agentId;
+                }
+                if (is_null($existingOrder->zone_id) && $zoneId) {
+                    $updateData['zone_id'] = $zoneId;
+                }
+                
+                $submittedBy = isset($orderData['updated_by']) && is_array($orderData['updated_by']) && count($orderData['updated_by']) > 0 ? $orderData['updated_by'][0]['name'] : null;
+                if (is_null($existingOrder->submitted_by) && $submittedBy) {
+                    $updateData['submitted_by'] = $submittedBy;
+                }
+
+                if (is_null($existingOrder->orderaxe_ref_id) && $orderaxeRefId) {
+                    $updateData['orderaxe_ref_id'] = $orderaxeRefId;
+                }
+                
+                if (is_null($existingOrder->delivery_date) && $deliveryDate) {
+                    $updateData['delivery_date'] = $deliveryDate;
+                }
+
+                if (!empty($updateData)) {
+                    $existingOrder->update($updateData);
+                }
+                
+                return false;
+            }
+
             $salesOrder = SalesOrder::create([
                 'so_no'        => SalesOrder::generateSoNo(),
                 'order_no'     => $orderNo,
                 'orderaxe_id'  => $orderAxeId,
-                'so_date'      => date('Y-m-d', ($orderData['created_at'] / 1000)),
-                'request_date' => date('Y-m-d', ($orderData['created_at'] / 1000)),
+                'orderaxe_ref_id' => $orderaxeRefId,
+                'so_date'      => date('Y-m-d', (int)($orderData['created_at'] / 1000)),
+                'request_date' => date('Y-m-d', (int)($orderData['created_at'] / 1000)),
+                'delivery_date'=> $deliveryDate,
                 'customer_id'  => $customer->id,
                 'agent_id'     => $agentId,
                 'status'       => 'Pending',
@@ -243,18 +278,13 @@ class OrderaxeService
                             $sizeId = $stockEntryItem->size ?? $apiSize;
                             $sleeveType = $stockEntryItem->sleeve_type;
                         } else {
-                            // Log the unmatched barcode, size, and sleeve for debugging
                             Log::warning('Orderaxe Sync: Exact StockEntryItem match failed (barcode + size + sleeve).', [
                                 'barcode' => $barcode,
                                 'size' => $apiSize,
                                 'sleeve' => $apiFit,
                                 'order_no' => $orderNo
                             ]);
-
-                            // Query BarcodeMaster as fallback for metadata (keeping stock_entry_item_id null)
-                            $barcodeMaster = \App\Models\BarcodeMaster::where('barcode_no', $barcode)
-                                ->orderBy('id', 'desc')
-                                ->first();
+                            $barcodeMaster = \App\Models\BarcodeMaster::where('barcode_no', $barcode)->orderBy('id', 'desc')->first();
                             if ($barcodeMaster) {
                                 $artNo = $barcodeMaster->art_no;
                                 $finishedItemCode = $barcodeMaster->item_code;
@@ -268,12 +298,8 @@ class OrderaxeService
                                     $sleeveType = 'Half';
                                 }
                             }
-
-                            // Fallback to resolve art_no by product name matching finished_item_code/item_code
                             if (!$artNo && !empty($orderaxeItemName)) {
-                                $fallbackStock = StockEntryItem::where('finished_item_code', $orderaxeItemName)
-                                    ->whereNotNull('art_no')
-                                    ->first();
+                                $fallbackStock = StockEntryItem::where('finished_item_code', $orderaxeItemName)->whereNotNull('art_no')->first();
                                 if ($fallbackStock) {
                                     $artNo = $fallbackStock->art_no;
                                     $finishedItemCode = $fallbackStock->finished_item_code;
@@ -289,7 +315,6 @@ class OrderaxeService
                             }
                         }
 
-                        // Fallback: use parsed apiSize if size_id is still empty
                         if (!$sizeId) {
                             $sizeId = $apiSize;
                         }

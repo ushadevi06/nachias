@@ -139,7 +139,14 @@
                         $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
                         table.ajax.reload(null, false);
                     },
-                    error: function () { alert('Failed to update status'); }
+                    error: function (xhr) {
+                        let message = 'Failed to update status';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                        alert(message);
+                        table.ajax.reload(null, false);
+                    }
                 });
             });
             $(document).on('click', '.delete-btn', function (e) {

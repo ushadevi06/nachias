@@ -96,7 +96,7 @@ class LeaveController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     // 'leave_id' => 'LV-' . $leave->id,
-                    'employee' => $leave->employee->name ? $leave->employee->name.' ('.$leave->employee->emp_id.')' : '-',
+                    'employee' => $leave->employee ? $leave->employee->name.' ('.$leave->employee->emp_id.')' : '-',
                     'leave_type' => $leave->leave_type,
                     'start_date' => Carbon::parse($leave->leave_date)->format('d-m-Y'),
                     // 'end_date' => Carbon::parse($leave->end_date)->format('d-m-Y'),

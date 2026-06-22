@@ -123,6 +123,7 @@
             $categoryTotals[$fullCatPath]['total_qty'] += $item->qty;
         }
         
+        ksort($groupedItems);
         sort($sizeColumns);
     @endphp
 
@@ -158,29 +159,34 @@
             <tbody>
                 <tr>
                     <td style="padding: 6px; vertical-align: top; line-height: 1.4;">
-                        <div style="font-weight: bold;  margin-bottom: 2px;">{{ $salesOrder->customer->name ?? 'A.k.ahamed Co' }}</div>
-                        <div>{!! nl2br(e(\App\Models\SalesInvoice::cleanAddress($salesOrder->billing_address ?? "141 South Masi Street Madurai\nMadurai\nMadurai"))) !!}</div>
-                        <div>{{ $salesOrder->customer->state->state_name ?? 'Tamilnadu' }}, India</div>
-                        <div>{{ $salesOrder->customer->pin_code ?? '625001' }}</div>
-                        <div>Phone <strong style="font-size: 13px;">{{ $salesOrder->customer->phone ?? '91-8220055110' }}</strong></div>
-                        <div>GST <strong style="font-size: 13px;">{{ $salesOrder->customer->gst_no ?? '33AADFA4747M1ZD' }}</strong></div>
-                        <div>Ref Id <strong style="font-size: 13px;">{{ $salesOrder->customer->customer_code ?? '6072' }}</strong></div>
+                        <div style="font-weight: bold;  margin-bottom: 2px;">{{ $salesOrder->customer->name ?? '-' }}</div>
+                        <div>{!! $salesOrder->billing_address ? nl2br(e(\App\Models\SalesInvoice::cleanAddress($salesOrder->billing_address))) : '-' !!}</div>
+                        <div>{{ isset($salesOrder->customer->state) ? $salesOrder->customer->state->state_name : '-' }}, India</div>
+                        <div>{{ $salesOrder->customer->zip_code ?? '-' }}</div>
+                        <div>Phone <strong style="font-size: 13px;">{{ $salesOrder->customer->mobile_no ?? '-' }}</strong></div>
+                        <div>GST <strong style="font-size: 13px;">{{ $salesOrder->customer->gst_no ?? '-' }}</strong></div>
+                        @if($salesOrder->orderaxe_ref_id != '')
+                            <div>Ref Id <strong style="font-size: 13px;">{{ $salesOrder->orderaxe_ref_id ?? '-' }}</strong></div>
+                        @endif
                     </td>
                     <td style="padding: 6px; vertical-align: top; line-height: 1.4;">
-                        <div>{{ $salesOrder->salesAgent->name ?? 'Muthupandi' }}</div>
-                        <div>{{ $salesOrder->zone->zone_name ?? 'Zone-1' }}</div>
+                        <div>{{ $salesOrder->salesAgent->name ?? '-' }}</div>
+                        <div>{{ $salesOrder->zone->zone_name ?? '-' }}</div>
                         <div>Chennai</div>
                         <div>Tamil Nadu</div>
                         <div>India</div>
-                        <div>Phone <strong style="font-size: 13px;">{{ $salesOrder->salesAgent->mobile_no ?? '91-9150078504' }}</strong></div>
-                        <div>Email <strong style="font-size: 13px;">{{ $salesOrder->salesAgent->email ?? 'muthupandiy5@gmail.com' }}</strong></div>
-                        <div>Ref Id <strong style="font-size: 13px;">{{ $salesOrder->zone->zone_name ?? 'Zone-1' }}</strong></div>
+                        <div>Phone <strong style="font-size: 13px;">{{ $salesOrder->salesAgent->mobile_no ?? '-' }}</strong></div>
+                        <div>Email <strong style="font-size: 13px;">{{ $salesOrder->salesAgent->email ?? '-' }}</strong></div>
+                        <div>Ref Id <strong style="font-size: 13px;">{{ $salesOrder->zone->zone_name ?? '-' }}</strong></div>
                     </td>
                     <td style="padding: 6px; vertical-align: top; line-height: 1.4;">
                         <div>Sales Order No.</div>
                         <div style="font-weight: bold; font-size: 12px; margin-bottom: 2px;">{{ !empty($salesOrder->order_no) ? $salesOrder->order_no : $salesOrder->so_no }}</div>
                         <div>Sales Order Date <strong style="font-size: 13px;">{{ $salesOrder->so_date->format('M, d, Y') }}</strong></div>
-                        <div>Submitted By <strong style="font-size: 13px;">{{ $salesOrder->submitted_by ?? $salesOrder->salesAgent->name ?? 'Sindhu' }}</strong></div>
+                        <div>Submitted By <strong style="font-size: 13px;">{{ $salesOrder->submitted_by ?? $salesOrder->salesAgent->name ?? '-' }}</strong></div>
+                        @if($salesOrder->delivery_date != '')
+                            <div>Delivery Date <strong style="font-size: 13px;">{{ $salesOrder->delivery_date->format('M, d, Y') }}</strong></div>
+                        @endif
                     </td>
                 </tr>
             </tbody>
@@ -188,7 +194,7 @@
 
         <!-- REMARKS EXACT MATCH -->
         <div style="margin-bottom: 10px; font-size: 12px;">
-            <strong>Remarks</strong> {{ $salesOrder->internal_remarks ?? 'Sample Order' }}
+            <strong>Remarks</strong> {{ $salesOrder->internal_remarks ?? '-' }}
         </div>
 
         <!-- MATRIX ITEMS TABLE EXACT MATCH -->

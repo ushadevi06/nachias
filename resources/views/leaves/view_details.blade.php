@@ -13,7 +13,7 @@
                     <div class="row g-4">
                         <div class="col-md-4">
                             <label class="detail-title">Employee:</label>
-                            <div class="text-muted">{{ $leave->employee->name }} ({{ $leave->employee->emp_id }})</div>
+                            <div class="text-muted">{{ $leave->employee ? $leave->employee->name . ' (' . $leave->employee->emp_id . ')' : 'N/A' }}</div>
                         </div>
                         <div class="col-md-4">
                             <label class="detail-title">Leave Type:</label>

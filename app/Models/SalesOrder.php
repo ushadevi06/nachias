@@ -29,6 +29,7 @@ class SalesOrder extends Model
         'transport_mode_id',
         'dispatch_from_id',
         'status',
+        'submitted_by',
         'total_qty',
         'sub_total_qty',
         'commission_percent',
@@ -64,6 +65,7 @@ class SalesOrder extends Model
         'updated_by',
         'apply_box_discount',
         'order_no',
+        'orderaxe_ref_id',
     ];
 
     protected $casts = [
