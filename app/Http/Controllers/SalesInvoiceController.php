@@ -486,7 +486,7 @@ class SalesInvoiceController extends Controller
                         'brand_id' => $item->brand_cat_id,
                         'brand_name' => $brandName ?: '',
                         'item_id' => $item->item_id,
-                        'item_name' => $itemName ?: '',
+                        'item_name' => $itemName ?: ($item->item_name ?? ''),
                         'item_code' => $item->item ? $item->item->code : '',
                         'uom_id' => $item->uom_id,
                         'uom_code' => $item->uom_id ?: '',
@@ -508,7 +508,11 @@ class SalesInvoiceController extends Controller
                     ];
 
                     $existingItemKey = $allItems->search(function($i) use ($item) {
-                        return $i['stock_entry_item_id'] == $item->stock_entry_item_id && $i['rate'] == $item->rate;
+                        if (!empty($item->stock_entry_item_id) && !empty($i['stock_entry_item_id'])) {
+                            return $i['stock_entry_item_id'] == $item->stock_entry_item_id && $i['rate'] == $item->rate;
+                        } else {
+                            return $i['sku'] == $item->sku && $i['rate'] == $item->rate && $i['size_id'] == $item->size_id && $i['color_id'] == $item->color_id && $i['art_no'] == $item->art_no;
+                        }
                     });
                     
                     if ($existingItemKey !== false) {
@@ -625,7 +629,7 @@ class SalesInvoiceController extends Controller
                 'brand_id' => $item->brand_cat_id,
                 'brand_name' => $brandName ?: '',
                 'item_id' => $item->item_id,
-                'item_name' => $itemName ?: '',
+                'item_name' => $itemName ?: ($item->item_name ?? ''),
                 'item_code' => $item->item ? $item->item->code : '',
                 'uom_id' => $item->uom_id,
                 'uom_code' => $item->uom_id ?: '',

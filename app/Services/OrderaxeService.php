@@ -166,11 +166,14 @@ class OrderaxeService
                     $updateData['delivery_date'] = $deliveryDate;
                 }
 
+                if (is_null($existingOrder->internal_remarks) && !empty($orderData['remarks'])) {
+                    $updateData['internal_remarks'] = $orderData['remarks'];
+                }
+
                 if (!empty($updateData)) {
                     $existingOrder->update($updateData);
                 }
 
-                // Resync api_color for existing order items
                 $products = $orderData['products'] ?? [];
                 foreach ($products as $product) {
                     $combinations = $product['combinations'] ?? [];
@@ -221,6 +224,7 @@ class OrderaxeService
                 'created_by'   => 1,
                 'billing_address' => $this->formatAddress($customerData['alias']['address'] ?? []),
                 'shipping_address' => $this->formatAddress($customerData['alias']['address'] ?? []),
+                'internal_remarks' => $orderData['remarks'] ?? null, 
             ]);
             $products = $orderData['products'] ?? [];
             $totalQty = 0;

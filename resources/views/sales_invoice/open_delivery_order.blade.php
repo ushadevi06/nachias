@@ -95,20 +95,60 @@
     @php
         $groupedItems = $invoice->items->groupBy(function($item) use ($invoice) {
             $brandName = '';
-
-            if ($item->stockEntryItem && $item->stockEntryItem->brand) {
-                $brandName = $item->stockEntryItem->brand->brand_name;
-            } elseif ($invoice->so_id) {
+            
+            $seItem = $item->stockEntryItem;
+            $soItem = null;
+            if ($invoice->so_id) {
                 $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
                     ->where('sku', $item->sku)
                     ->first();
-
-                if ($soItem && $soItem->stock_entry_item_id) {
+                if (!$seItem && $soItem && $soItem->stock_entry_item_id) {
                     $seItem = \App\Models\StockEntryItem::find($soItem->stock_entry_item_id);
-                    if ($seItem && $seItem->brand_id) {
-                        $brand = \App\Models\Brand::find($seItem->brand_id);
-                        if ($brand) {
+                }
+            }
+
+            if ($seItem && $seItem->brand) {
+                $brandName = $seItem->brand->brand_name;
+            }
+            
+            if (empty($brandName) && $seItem && !empty($seItem->finished_item_code)) {
+                $parts = explode('-', $seItem->finished_item_code);
+                if (count($parts) > 0) {
+                    $dbBrand = \App\Models\Brand::where('code', trim($parts[0]))->first();
+                    if ($dbBrand) {
+                        $brandName = $dbBrand->brand_name;
+                    }
+                }
+            }
+            
+            if (empty($brandName)) {
+                $codeToParse = '';
+                if ($soItem) {
+                    $codeToParse = $soItem->getAttributes()['item_name'] ?? '';
+                    if (empty($codeToParse) || $codeToParse === '-') {
+                        $codeToParse = $soItem->finished_item_code;
+                    }
+                }
+                if (empty($codeToParse) || $codeToParse === '-') {
+                    if ($seItem) {
+                        $codeToParse = $seItem->finished_item_code;
+                    } elseif ($item->item) {
+                        $codeToParse = $item->item->code;
+                    }
+                }
+                if (empty($codeToParse) || $codeToParse === '-') {
+                    $codeToParse = $item->sku ?? '';
+                }
+                
+                if (!empty($codeToParse) && $codeToParse !== '-') {
+                    $parts = explode('-', $codeToParse);
+                    $mainCode = trim($parts[0]);
+                    $allBrands = \App\Models\Brand::all();
+                    foreach ($allBrands as $brand) {
+                        $bCode = trim($brand->code);
+                        if (!empty($bCode) && stripos($mainCode, $bCode) === 0) {
                             $brandName = $brand->brand_name;
+                            break;
                         }
                     }
                 }
@@ -257,6 +297,17 @@
                     if ($seItem->style) {
                         $styleName = $seItem->style->style_name;
                     }
+                    
+                    if (empty($brandName) && !empty($seItem->finished_item_code)) {
+                        $seParts = explode('-', $seItem->finished_item_code);
+                        if (count($seParts) > 0) {
+                            $dbBrand = \App\Models\Brand::where('code', trim($seParts[0]))->first();
+                            if ($dbBrand) {
+                                $brandName = $dbBrand->brand_name;
+                            }
+                        }
+                    }
+                    
                     if (!empty($brandName) || !empty($styleName)) {
                         $resolved = true;
                     }
@@ -283,7 +334,7 @@
                     }
                 }
 
-                if (!$resolved && !empty($codeToParse) && $codeToParse !== '-') {
+                if ((empty($brandName) || empty($styleName)) && !empty($codeToParse) && $codeToParse !== '-') {
                     $parts = explode('-', $codeToParse);
                     
                     if (count($parts) >= 2) {
@@ -293,26 +344,30 @@
                         $dbBrand = \App\Models\Brand::where('code', $brandCode)->first();
                         $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
                         
-                        if ($dbBrand && $dbStyle) {
+                        if ($dbBrand && empty($brandName)) {
                             $brandName = $dbBrand->brand_name;
+                        }
+                        if ($dbStyle && empty($styleName)) {
                             $styleName = $dbStyle->style_name;
+                        }
+                        if (!empty($brandName) || !empty($styleName)) {
                             $resolved = true;
-                            
-                            if (empty($sleeve) && isset($parts[2])) {
-                                $sleeveVal = trim($parts[2]);
-                                $sleeveValUpper = strtoupper($sleeveVal);
-                                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                    $sleeve = 'F/S';
-                                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                    $sleeve = 'H/S';
-                                } else {
-                                    $sleeve = $sleeveVal;
-                                }
+                        }
+                        
+                        if (empty($sleeve) && isset($parts[2])) {
+                            $sleeveVal = trim($parts[2]);
+                            $sleeveValUpper = strtoupper($sleeveVal);
+                            if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                $sleeve = 'F/S';
+                            } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                $sleeve = 'H/S';
+                            } else {
+                                $sleeve = $sleeveVal;
                             }
                         }
                     }
                     
-                    if (!$resolved && count($parts) >= 1) {
+                    if ((empty($brandName) || empty($styleName)) && count($parts) >= 1) {
                         $mainCode = trim($parts[0]);
                         $dbBrand = null;
                         $brandCode = '';
@@ -327,23 +382,25 @@
                         }
                         
                         if ($dbBrand) {
+                            if (empty($brandName)) {
+                                $brandName = $dbBrand->brand_name;
+                            }
                             $styleCode = substr($mainCode, strlen($brandCode));
                             $dbStyle = \App\Models\Style::where('code', $styleCode)->first();
-                            if ($dbStyle) {
-                                $brandName = $dbBrand->brand_name;
+                            if ($dbStyle && empty($styleName)) {
                                 $styleName = $dbStyle->style_name;
-                                $resolved = true;
-                                
-                                if (empty($sleeve) && isset($parts[1])) {
-                                    $sleeveVal = trim($parts[1]);
-                                    $sleeveValUpper = strtoupper($sleeveVal);
-                                    if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
-                                        $sleeve = 'F/S';
-                                    } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
-                                        $sleeve = 'H/S';
-                                    } else {
-                                        $sleeve = $sleeveVal;
-                                    }
+                            }
+                            $resolved = true;
+                            
+                            if (empty($sleeve) && isset($parts[1])) {
+                                $sleeveVal = trim($parts[1]);
+                                $sleeveValUpper = strtoupper($sleeveVal);
+                                if ($sleeveValUpper === 'FULL' || $sleeveValUpper === 'F/S' || $sleeveValUpper === 'FS') {
+                                    $sleeve = 'F/S';
+                                } elseif ($sleeveValUpper === 'HALF' || $sleeveValUpper === 'H/S' || $sleeveValUpper === 'HS') {
+                                    $sleeve = 'H/S';
+                                } else {
+                                    $sleeve = $sleeveVal;
                                 }
                             }
                         }
