@@ -73,7 +73,9 @@ class CreditNoteController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        $customers = Customer::all();
+        $customers = Customer::whereHas('salesInvoices', function($q) {
+            $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+        })->get();
         return view('credit_notes.view', compact('customers'));
     }
 
@@ -255,7 +257,9 @@ class CreditNoteController extends Controller
         }
 
         // GET logic
-        $customers = Customer::all();
+        $customers = Customer::whereHas('salesInvoices', function($q) {
+            $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+        })->get();
         $zones = \App\Models\Zone::active()->get();
         $sales_agent = \App\Models\SalesAgent::active()->get();
         $charges = \App\Models\Charge::where('status', 'Active')->orderBy('charge_name')->get();
@@ -264,11 +268,19 @@ class CreditNoteController extends Controller
         $salesInvoices = [];
         $creditNoteCharges = collect();
         if ($creditNote) {
-            $salesInvoices = SalesInvoice::where('customer_id', $creditNote->customer_id)->latest()->get();
+            $salesInvoices = SalesInvoice::where('customer_id', $creditNote->customer_id)
+                ->where(function($q) {
+                    $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+                })
+                ->latest()->get();
             $creditNoteCharges = $creditNote->charges;
         } elseif (old('customer_id') && old('sales_invoice_ids')) {
             // Restore invoices for old() repopulation after validation failure
-            $salesInvoices = SalesInvoice::where('customer_id', old('customer_id'))->latest()->get();
+            $salesInvoices = SalesInvoice::where('customer_id', old('customer_id'))
+                ->where(function($q) {
+                    $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+                })
+                ->latest()->get();
         }
 
         $nextNoteNo = '';
@@ -304,7 +316,6 @@ class CreditNoteController extends Controller
 
         foreach ($invoices as $invoice) {
             foreach ($invoice->items as $item) {
-                // Calculate already returned qty across Approved or Draft credit notes
                 $alreadyReturned = DB::table('credit_note_items')
                     ->join('credit_notes', 'credit_notes.id', '=', 'credit_note_items.credit_note_id')
                     ->where('credit_note_items.sales_invoice_item_id', $item->id)
@@ -372,6 +383,9 @@ class CreditNoteController extends Controller
     public function getCustomerInvoices($customerId)
     {
         $invoices = SalesInvoice::where('customer_id', $customerId)
+            ->where(function($q) {
+                $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
+            })
             ->orderBy('id', 'desc')
             ->get(['id', 'inv_no', 'inv_date']);
 
@@ -433,6 +447,10 @@ class CreditNoteController extends Controller
         }
         $note = CreditNote::findOrFail($id);
         $oldData = $note->toArray();
+        
+        CreditNoteItem::where('credit_note_id', $id)->delete();
+        \App\Models\CreditNoteCharge::where('credit_note_id', $id)->delete();
+        
         $note->delete();
         addLog('delete', 'Credit Note', 'credit_notes', $id, $oldData, null);
         return redirect(url('credit_notes'))->with('success', 'Credit Note deleted successfully');

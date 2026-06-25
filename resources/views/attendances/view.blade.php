@@ -8,6 +8,11 @@
                 <div>
                     <h4 class="mb-1">Attendance Management</h4>
                 </div>
+                <div>
+                    <button class="btn btn-outline-primary shadow-sm" id="exportCsvBtn">
+                        <i class="ri-file-excel-line me-1"></i> Export to CSV
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -22,12 +27,18 @@
                             </div>
                             <div class="col-sm-6 col-md-3">
                                 <label class="form-label small fw-semibold">Device</label>
-                                <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
+                                {{-- <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
                                     <option value="">Choose device</option>
                                     <option value="AEVL183660459" {{ (isset($device) && $device === 'AEVL183660459') ? 'selected' : '' }}>HO</option>
                                     <option value="BJ2C180660790" {{ (isset($device) && $device === 'BJ2C180660790') ? 'selected' : '' }}>HO 1</option>
                                     <option value="CEXJ210460057" {{ (isset($device) && $device === 'CEXJ210460057') ? 'selected' : '' }}>KALAVASAL</option>
                                     <option value="CEXJ211160630" {{ (isset($device) && $device === 'CEXJ211160630') ? 'selected' : '' }}>SAMAYANALLUR</option>
+                                </select> --}}
+                                <select class="select2 form-select" name="device" id="deviceSelect" data-placeholder="Choose device">
+                                    <option value="">Choose device</option>
+                                    @foreach ($devices as $device)
+                                        <option value="{{ $device->serial_number }}" {{ (isset($device) && $device->serial_number === $device) ? 'selected' : '' }}>{{ $device->device_name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-sm-6 col-md-3">
@@ -49,6 +60,53 @@
                             </div>
                         </div>
                     </form>
+
+                    <div class="row mt-4 g-3" id="dailySummaryCards" style="display: none;">
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card bg-success text-white h-100">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-white mb-1 opacity-75">Present</h6>
+                                        <h3 class="card-text text-white mb-0 fw-bold" id="summaryPresentCount">0</h3>
+                                    </div>
+                                    <div class="fs-1 opacity-50"><i class="ri-user-follow-line"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card bg-danger text-white h-100">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-white mb-1 opacity-75">Absent</h6>
+                                        <h3 class="card-text text-white mb-0 fw-bold" id="summaryAbsentCount">0</h3>
+                                    </div>
+                                    <div class="fs-1 opacity-50"><i class="ri-user-unfollow-line"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card bg-warning text-dark h-100">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-dark mb-1 opacity-75">Late Comers</h6>
+                                        <h3 class="card-text text-dark mb-0 fw-bold" id="summaryLateCount">0</h3>
+                                    </div>
+                                    <div class="fs-1 opacity-50"><i class="ri-time-line"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card bg-info text-white h-100">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-white mb-1 opacity-75">Overtime</h6>
+                                        <h3 class="card-text text-white mb-0 fw-bold" id="summaryOvertimeCount">0</h3>
+                                    </div>
+                                    <div class="fs-1 opacity-50"><i class="ri-history-line"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="row mt-4 g-3 align-items-center">
                         <div class="col-md-10">
@@ -89,46 +147,48 @@
                 </div>
             </div>
         </div>
-        <div class="modal fade" id="editAttendanceModal">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5>Edit Attendance</h5>
+        <div class="modal fade" id="editAttendanceModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom-0 pb-3">
+                        <h5 class="modal-title fw-bold">Edit Attendance</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body px-4 pt-4">
                         <input type="hidden" id="attendance_id">
-                        <div class="mb-3">
-                            <label>In Time</label>
-                            <input type="time"
-                                id="edit_in_time"
-                                class="form-control">
-                            <small class="text-danger error-text" id="in_time_error"></small>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-muted">In Time</label>
+                                <input type="time" id="edit_in_time" class="form-control form-control-lg">
+                                <small class="text-danger error-text" id="in_time_error"></small>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-muted">Out Time</label>
+                                <input type="time" id="edit_out_time" class="form-control form-control-lg">
+                                <small class="text-danger error-text" id="out_time_error"></small>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label>Out Time</label>
-                            <input type="time"
-                                id="edit_out_time"
-                                class="form-control">
-                            <small class="text-danger error-text" id="out_time_error"></small>
-                        </div>
-                        <div class="mb-3">
-                            <label>Status</label>
-                            <select id="edit_status" class="form-control">
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-semibold text-muted">Status</label>
+                            <select id="edit_status" class="form-select form-select-lg">
                                 <option value="">Select Status</option>
-                                <option>Present</option>
-                                <option>Late</option>
-                                <option>Absent</option>
-                                <option>Missing Time Card</option>
-                                <option>Overtime</option>
-                                <option>Holiday</option>
-                                <option>Week Off</option>
+                                <option value="Present">Present</option>
+                                <option value="Late">Late</option>
+                                <option value="Absent">Absent</option>
+                                <option value="Missing Time Card">Missing Time Card</option>
+                                <option value="Overtime">Overtime</option>
+                                <option value="Holiday">Holiday</option>
+                                <option value="Week Off">Week Off</option>
                             </select>
                             <small class="text-danger error-text" id="status_error"></small>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-success" id="saveAttendanceBtn">
-                            Save
+                    <div class="modal-footer border-top-0 pt-0 px-4 pb-4">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary px-4" id="saveAttendanceBtn">
+                            Save Changes
                         </button>
                     </div>
                 </div>
@@ -287,6 +347,7 @@
                             </div>
                             <div class="small text-muted" id="staffReportSummary"></div>
                         </div>
+
                         <div class="table-responsive">
                             <table class="table table-sm table-striped align-middle mb-0" id="staffReportTable">
                                 <thead class="table-light">
@@ -861,8 +922,8 @@
                 const late =
                     data.filter(x => x.status === 'Late').length;
                 const absent =
-                    data.filter(x => x.status === 'Absent').length;
-                // staffReportSummary.textContent = `${data[0].employee}: ${data.length} days, ` + `${present} present, ${late} late, ${absent} absent.`;
+                    data.filter(x => x.status === 'Absent' || x.status === 'Missing Time Card').length;
+                staffReportSummary.innerHTML = `<span class="badge bg-success me-1">${present} Present</span> <span class="badge bg-warning text-dark me-1">${late} Late</span> <span class="badge bg-danger">${absent} Absent</span>`;
             })
             .catch(err => {
                 console.error(err);
@@ -884,6 +945,7 @@
         let selectedHolidayDates = [];
         let selectedHolidayNames = {};
         let currentEditingDate = null;
+
         function resetHolidaySelectionState(rows) {
             selectedHolidayDates = rows.map(item => item.date);
             selectedHolidayNames = {};
@@ -1312,6 +1374,16 @@
                 view === 'staff' ?
                 'Showing staff wise attendance report' :
                 'Showing declared holiday settings';
+                
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+            if (exportCsvBtn) {
+                if (view === 'all') {
+                    exportCsvBtn.classList.remove('d-none');
+                } else {
+                    exportCsvBtn.classList.add('d-none');
+                }
+            }
+            
             renderTable();
         }
 
@@ -1352,6 +1424,52 @@
         viewStaffWiseButton.addEventListener('click', function() {
             setActiveView('staff');
         });
+
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        if (exportCsvBtn) {
+            exportCsvBtn.addEventListener('click', function() {
+                if (!attendanceRecords || attendanceRecords.length === 0) {
+                    showStatus('warning', 'No data available to export.');
+                    return;
+                }
+                
+                const recordsToExport = getCurrentRecords();
+                if(recordsToExport.length === 0) {
+                    showStatus('warning', 'No data available for the current view.');
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "S.No,Employee Name,Employee Code,Department,Date,In Time,Out Time,Hours,Status\n";
+
+                recordsToExport.forEach((item, index) => {
+                    const rowDate = formatDate(item.date) || formatDate(attendanceDate.value);
+                    const inTime = item.in_time || '-';
+                    const outTime = item.out_time || '-';
+                    const hours = item.hours || '-';
+                    const row = [
+                        index + 1,
+                        `"${item.name}"`,
+                        `"${item.code}"`,
+                        `"${item.department || ''}"`,
+                        `"${rowDate}"`,
+                        `"${formatAttendanceTime(inTime)}"`,
+                        `"${formatAttendanceTime(outTime)}"`,
+                        `"${hours}"`,
+                        `"${item.status}"`
+                    ].join(",");
+                    csvContent += row + "\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `Attendance_Export_${attendanceDate.value}_${currentView}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
 
         resetButton.addEventListener('click', resetAttendancePage);
 
@@ -1554,6 +1672,18 @@
                 .then(res => res.json())
                 .then(res => {
                     attendanceRecords = res.data || [];
+                    
+                    // Update Summary Cards
+                    if (attendanceRecords.length > 0) {
+                        document.getElementById('dailySummaryCards').style.display = 'flex';
+                        document.getElementById('summaryPresentCount').textContent = attendanceRecords.filter(r => r.status === 'Present').length;
+                        document.getElementById('summaryAbsentCount').textContent = attendanceRecords.filter(r => r.status === 'Absent' || r.status === 'Missing Time Card').length;
+                        document.getElementById('summaryLateCount').textContent = attendanceRecords.filter(r => r.status === 'Late').length;
+                        document.getElementById('summaryOvertimeCount').textContent = attendanceRecords.filter(r => r.status === 'Overtime').length;
+                    } else {
+                        document.getElementById('dailySummaryCards').style.display = 'none';
+                    }
+
                     renderTable();
                     syncLoader.classList.add('d-none');
                     showStatus(

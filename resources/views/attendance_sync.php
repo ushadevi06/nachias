@@ -48,7 +48,7 @@ function getStatus($conn, $date, $inTime, $outTime, $hours)
 // $selectedDate = date('Y-m-d');
 // $from = $selectedDate . ' 00:00:00';
 // $to   = $selectedDate . ' 23:59:59';
-$fromDate = date('Y-m-d', strtotime('-6 days'));
+$fromDate = '2026-06-01';
 $toDate   = date('Y-m-d');
 $from     = $fromDate . ' 00:00:00';
 $to       = $toDate . ' 23:59:59';
@@ -207,6 +207,9 @@ foreach ($allGrouped as $emp => $dates) {
             } else {
                 $in = $allTimes[0];
                 $out = end($allTimes);
+                if ((strtotime($out) - strtotime($in)) < 600) {
+                    $out = null;
+                }
             }
         }
 

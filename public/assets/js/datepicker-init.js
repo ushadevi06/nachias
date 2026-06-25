@@ -1,9 +1,11 @@
 $(document).ready(function () {
     // Standard Date Pickers
-    $('.po_date').flatpickr({
-        dateFormat: 'd-m-Y',
-        allowInput: true,
-        defaultDate: 'today',
+    $('.po_date').each(function() {
+        $(this).flatpickr({
+            dateFormat: 'd-m-Y',
+            allowInput: true,
+            defaultDate: $(this).val() || 'today',
+        });
     });
 
     $('#doj').flatpickr({
@@ -21,11 +23,13 @@ $(document).ready(function () {
         allowInput: true
     });
 
-    $('.so_date').flatpickr({
-        dateFormat: 'd-m-Y',
-        defaultDate: 'today',
-        minDate: 'today',
-        allowInput: true
+    $('.so_date').each(function() {
+        $(this).flatpickr({
+            dateFormat: 'd-m-Y',
+            defaultDate: $(this).val() || 'today',
+            minDate: 'today',
+            allowInput: true
+        });
     });
 
     $('.delivery_date').flatpickr({

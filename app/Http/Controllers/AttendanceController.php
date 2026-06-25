@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use App\Jobs\SyncAttendanceJob;
+use App\Models\Device;
 class AttendanceController extends Controller
 {
     public function getLogs($date, $device, $toDate = null)
@@ -169,6 +170,9 @@ class AttendanceController extends Controller
                     } else {
                         $in = $allTimes[0];
                         $out = end($allTimes);
+                        if ((strtotime($out) - strtotime($in)) < 600) {
+                            $out = null;
+                        }
                     }
                 }
                 $hours = ($in && $out)
@@ -464,7 +468,8 @@ class AttendanceController extends Controller
             }
             $lastSynced = now()->format('d-m-Y H:i:s');
         }
-        return view('attendances/view', compact('attendances', 'device', 'date', 'lastSynced'));
+        $devices = Device::get();
+        return view('attendances/view', compact('attendances', 'device', 'date', 'lastSynced', 'devices'));
     }
     public function saveHolidays(Request $request)
     {

@@ -92,6 +92,11 @@ class Customer extends Model
         return $this->hasMany(SalesOrder::class, 'customer_id');
     }
 
+    public function salesInvoices()
+    {
+        return $this->hasMany(SalesInvoice::class, 'customer_id');
+    }
+
     public function scopeActive($query){
         return $query->where('status', 'Active');
     }
