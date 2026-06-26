@@ -21,6 +21,8 @@ class SalesInvoice extends Model
         'delivery_address',
         'remarks',
         'invoice_status',
+        'delivery_status',
+        'dispatch_completed_at',
         'payment_mode',
         'extra_input',
         'due_date',
@@ -80,6 +82,7 @@ class SalesInvoice extends Model
         'ack_date' => 'datetime',
         'eway_bill_date' => 'datetime',
         'eway_bill_valid_till' => 'datetime',
+        'dispatch_completed_at' => 'datetime',
     ];
 
     public function salesOrder()

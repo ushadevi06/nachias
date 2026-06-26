@@ -86,6 +86,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="credit-note-tab" data-bs-toggle="tab" data-bs-target="#credit-note-report" type="button" role="tab">Credit Note Report</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="despatch-tab" data-bs-toggle="tab" data-bs-target="#despatch-report" type="button" role="tab">Despatch Tracking</button>
+                </li>
                 {{-- <li class="nav-item" role="presentation">
                     <button class="nav-link" id="outstanding-tab" data-bs-toggle="tab" data-bs-target="#outstanding-report" type="button" role="tab">Zone Wise Outstanding</button>
                 </li>
@@ -145,6 +148,11 @@
                 <!-- 12. Credit Note Report -->
                 <div class="tab-pane fade" id="credit-note-report" role="tabpanel">
                     @include('reports.sales_marketing_reports._credit_note_report')
+                </div>
+
+                <!-- 13. Despatch Tracking Report -->
+                <div class="tab-pane fade" id="despatch-report" role="tabpanel">
+                    @include('reports.sales_marketing_reports._despatch_tracking_report')
                 </div>
 
                 <!-- 5. Zonewise Outstanding Report -->

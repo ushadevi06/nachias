@@ -787,38 +787,38 @@
         var preselectedCustomer = $('#customer_id').val();
         var preselectedSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []));
 
-        if (preselectedCustomer && preselectedSoIds.length > 0 && $('#so_ids option').length === 0) {
-            $.ajax({
-                url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
-                type: "GET",
-                data: { customer_id: preselectedCustomer, invoice_id: "{{ isset($invoice) ? $invoice->id : '' }}" },
-                success: function(response) {
-                    if (response.success) {
-                        var soSelect = $('#so_ids');
-                        soSelect.empty();
-                        $.each(response.data, function(index, so) {
-                            var selected = preselectedSoIds.map(String).includes(so.id.toString());
-                            soSelect.append(new Option(
-                                so.so_no + ' (Pending: ' + so.pending_qty + ')',
-                                so.id,
-                                selected,
-                                selected
-                            ));
-                        });
-                        soSelect.trigger('change.select2');
-
-                        if (preselectedSoIds.length > 0) {
-                            $.ajax({
-                                url: "{{ url('sales_invoices/get-multiple-sale-orders-details') }}",
-                                type: "POST",
-                                data: { so_ids: preselectedSoIds, _token: "{{ csrf_token() }}" },
-                                success: function(data) {
-                                    if (data.success) {
-                                        window.availableSOItems = data.items;
-                                    }
-                                }
+        if (preselectedCustomer && preselectedSoIds.length > 0) {
+            if ($('#so_ids option').length === 0) {
+                $.ajax({
+                    url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
+                    type: "GET",
+                    data: { customer_id: preselectedCustomer, invoice_id: "{{ isset($invoice) ? $invoice->id : '' }}" },
+                    success: function(response) {
+                        if (response.success) {
+                            var soSelect = $('#so_ids');
+                            soSelect.empty();
+                            $.each(response.data, function(index, so) {
+                                var selected = preselectedSoIds.map(String).includes(so.id.toString());
+                                soSelect.append(new Option(
+                                    so.so_no + ' (Pending: ' + so.pending_qty + ')',
+                                    so.id,
+                                    selected,
+                                    selected
+                                ));
                             });
+                            soSelect.trigger('change.select2');
                         }
+                    }
+                });
+            }
+
+            $.ajax({
+                url: "{{ url('sales_invoices/get-multiple-sale-orders-details') }}",
+                type: "POST",
+                data: { so_ids: preselectedSoIds, _token: "{{ csrf_token() }}" },
+                success: function(data) {
+                    if (data.success) {
+                        window.availableSOItems = data.items;
                     }
                 }
             });

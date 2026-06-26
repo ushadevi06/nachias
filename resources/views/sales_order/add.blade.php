@@ -49,6 +49,13 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control delivery_date" id="delivery_date" name="delivery_date" placeholder="Delivery Date" value="{{ old('delivery_date', $salesOrder && $salesOrder->delivery_date ? $salesOrder->delivery_date->format('d-m-Y') : '') }}">
+                                    <label for="delivery_date">Delivery Date</label>
+                                </div>
+                                @error('delivery_date')<div class="text-danger mt-1">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating form-floating-outline">
                                     <select id="season_id" name="season_id" class="select2 form-select" data-placeholder="Select Season">
                                         <option value="">Select Season</option>
                                         @foreach($seasons as $season)
@@ -1368,6 +1375,7 @@ $(document).ready(function () {
                 type: 'GET',
                 success: function(res) {
                     if (res.success && res.customer) {
+                        let c = res.customer;
                         let parts = [c.address_line_1, c.address_line_2, c.address_line_3, c.city, c.state, c.pincode].filter(Boolean).map(s => s.trim());
                         let uniqueParts = [];
                         for (let part of parts) {

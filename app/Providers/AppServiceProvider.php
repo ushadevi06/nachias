@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
         if (!defined('WEB_SETTINGS')) {
             define('WEB_SETTINGS', $web_settings);
         }
+
+        // Force HTTPS when running behind Ngrok proxy
+        if (request()->server('HTTP_X_FORWARDED_PROTO') === 'https' || str_contains(url('/'), 'ngrok')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
     }
 
 }

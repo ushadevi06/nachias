@@ -23,12 +23,19 @@ function getStatus($conn, $date, $inTime, $outTime, $hours)
         return 'Overtime';
     }
 
-    // Has in_time but no out_time → Missing Time Card
+    $isToday = ($date === date('Y-m-d'));
+
+    // Missing IN time (punched out but no in) - applies to any day
     if (empty($inTime) && !empty($outTime)) {
         return 'Missing Time Card';
     }
 
-    // Worked more than 9 hours → Overtime
+    if (!empty($inTime) && empty($outTime)) {
+        if (!$isToday) {
+            return 'Missing Time Card';
+        }
+    }
+
     if ($hours > 9) {
         return 'Overtime';
     }

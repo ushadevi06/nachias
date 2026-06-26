@@ -454,6 +454,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_orders/print/{id}', [SalesOrderController::class, 'print']);
     Route::get('sales_orders/delete/{id}', [SalesOrderController::class, 'destroy']);
     Route::post('sales_orders/status/{id}', [SalesOrderController::class, 'updateStatus']);
+    Route::post('sales_orders/update-delay-reason/{id}', [SalesOrderController::class, 'updateDelayReason']);
     Route::get('sales_orders/search-stock-items', [SalesOrderController::class, 'searchStockItems']);
     Route::get('sales_orders/sync-orderaxe', [SalesOrderController::class, 'syncOrderaxe']);
     Route::get('sales_orders/clean-addresses', [SalesOrderController::class, 'cleanAddresses']);
@@ -479,6 +480,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/courier-sticker/{id}', [SalesInvoiceController::class, 'printCourierSticker']);
     Route::get('sales_invoices/delivery-order/{id}', [SalesInvoiceController::class, 'downloadDeliveryOrder']);
     Route::get('sales_invoices/open-delivery-order/{id}', [SalesInvoiceController::class, 'downloadOpenDeliveryOrder']);
+    Route::get('sales_invoices/scan-items/{id}', [SalesInvoiceController::class, 'scanItems']);
+    Route::post('sales_invoices/save-scan-progress/{id}', [SalesInvoiceController::class, 'saveScanProgress'])->name('sales_invoices.save_scan_progress');
+    Route::post('sales_invoices/complete-dispatch/{id}', [SalesInvoiceController::class, 'completeDispatch'])->name('sales_invoices.complete_dispatch');
     Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
     Route::post('sales_invoices/generate-ewaybill/{id}', [SalesInvoiceController::class, 'generateEWayBill']);
     Route::post('sales_invoices/cancel-einvoice/{id}', [SalesInvoiceController::class, 'cancelEInvoice']);
@@ -533,7 +537,6 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/get-sizes/{id}', [JobCardEntryController::class, 'getSizes'])->name('job_card_entries.get_sizes');
     Route::get('job_card_entries/barcode-matrix/{id}', [JobCardEntryController::class, 'barcodeMatrix'])->name('job_card_entries.barcode_matrix');
     Route::get('job_card_entries/barcode-preview/{id}', [JobCardEntryController::class, 'barcodePreview'])->name('job_card_entries.barcode_preview');
-    Route::get('job_card_entries/fix-legacy', [JobCardEntryController::class, 'fixLegacyJobCards'])->name('job_card_entries.fix_legacy');
 
     /* Task Management */
     Route::get('task_management', [TaskManagementController::class, 'index']);

@@ -342,6 +342,71 @@ class SalesInvoiceController extends Controller
         return view('sales_invoice.view_details', compact('invoice'));
     }
     
+    private function getCustomerPendingItems($customerId, $currentInvoiceId = null)
+    {
+        $allCustomerSOs = \App\Models\SalesOrder::with(['items'])
+            ->where('customer_id', $customerId)
+            ->whereIn('status', ['Approved', 'Dispatched'])
+            ->orderBy('id', 'asc')
+            ->get();
+        
+        $soItemOrdered = [];
+        $soItemInvoiced = [];
+
+        foreach($allCustomerSOs as $so) {
+            foreach($so->items as $item) {
+                $soItemOrdered[$so->id][$item->stock_entry_item_id] = $item->qty;
+            }
+        }
+
+        $invoices = DB::table('sales_invoices')
+            ->where('customer_id', $customerId)
+            ->where(function($q) {
+                $q->whereNull('einvoice_status')
+                  ->orWhere('einvoice_status', '!=', 'cancelled');
+            })
+            ->when($currentInvoiceId, function($q) use ($currentInvoiceId) {
+                $q->where('id', '!=', $currentInvoiceId);
+            })
+            ->get(['id', 'so_ids', 'so_id']);
+
+        foreach($invoices as $inv) {
+            $so_ids = json_decode($inv->so_ids, true);
+            if (!$so_ids && $inv->so_id) {
+                $so_ids = [(string)$inv->so_id];
+            }
+            if (!$so_ids) continue;
+
+            $invItems = DB::table('sales_invoice_items')->where('sales_invoice_id', $inv->id)->get();
+
+            foreach($invItems as $invItem) {
+                $itemId = $invItem->stock_entry_item_id;
+                $qtyToAllocate = $invItem->quantity;
+
+                foreach($so_ids as $so_id) {
+                    if ($qtyToAllocate <= 0) break;
+
+                    $ordered = $soItemOrdered[$so_id][$itemId] ?? 0;
+                    $alreadyInvoiced = $soItemInvoiced[$so_id][$itemId] ?? 0;
+                    $pending = $ordered - $alreadyInvoiced;
+
+                    if ($pending > 0) {
+                        $allocate = min($pending, $qtyToAllocate);
+                        $soItemInvoiced[$so_id][$itemId] = $alreadyInvoiced + $allocate;
+                        $qtyToAllocate -= $allocate;
+                    }
+                }
+                
+                if ($qtyToAllocate > 0 && count($so_ids) > 0) {
+                     $first_so = $so_ids[0];
+                     $soItemInvoiced[$first_so][$itemId] = ($soItemInvoiced[$first_so][$itemId] ?? 0) + $qtyToAllocate;
+                }
+            }
+        }
+
+        return $soItemInvoiced;
+    }
+
     public function getCustomerSalesOrders(Request $request)
     {
         $customerId = $request->customer_id;
@@ -350,32 +415,16 @@ class SalesInvoiceController extends Controller
             return response()->json(['success' => false, 'message' => 'Customer ID required']);
         }
 
-        $saleOrders = SalesOrder::with(['items'])->where('customer_id', $customerId)->where('status', 'Approved')->orderBy('id', 'desc')->get();
+        $saleOrders = SalesOrder::with(['items'])->where('customer_id', $customerId)->whereIn('status', ['Approved', 'Dispatched'])->orderBy('id', 'desc')->get();
+        $soItemInvoiced = $this->getCustomerPendingItems($customerId, $currentInvoiceId);
 
-        $data = $saleOrders->map(function($so) use ($currentInvoiceId) {
+        $data = $saleOrders->map(function($so) use ($soItemInvoiced) {
             $totalQty = 0;
             $invoicedQty = 0;
 
             foreach ($so->items as $item) {
                 $totalQty += $item->qty;
-
-                $itemInvoiced = DB::table('sales_invoice_items')
-                    ->join('sales_invoices', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
-                    ->where(function($q) use ($so) {
-                        $q->where('sales_invoices.so_id', $so->id)
-                          ->orWhereRaw('JSON_CONTAINS(sales_invoices.so_ids, ?)', ['"' . $so->id . '"']);
-                    })
-                    ->where('sales_invoice_items.stock_entry_item_id', $item->stock_entry_item_id)
-                    ->where(function($q) {
-                        $q->whereNull('sales_invoices.einvoice_status')
-                          ->orWhere('sales_invoices.einvoice_status', '!=', 'cancelled');
-                    })
-                    ->when($currentInvoiceId, function($q) use ($currentInvoiceId) {
-                        $q->where('sales_invoices.id', '!=', $currentInvoiceId);
-                    })
-                    ->sum('sales_invoice_items.quantity');
-
-                $invoicedQty += $itemInvoiced;
+                $invoicedQty += ($soItemInvoiced[$so->id][$item->stock_entry_item_id] ?? 0);
             }
 
             $pendingQty = max(0, $totalQty - $invoicedQty);
@@ -419,6 +468,10 @@ class SalesInvoiceController extends Controller
             return response()->json(['success' => false, 'message' => 'Sale Orders not found']);
         }
 
+        $customerId = $saleOrders->first()->customer_id;
+        $currentInvoiceId = $request->invoice_id ?? null;
+        $soItemInvoiced = $this->getCustomerPendingItems($customerId, $currentInvoiceId);
+
         $allItems = collect();
         $billingAddress = '';
         $shippingAddress = '';
@@ -435,16 +488,7 @@ class SalesInvoiceController extends Controller
             }
 
             foreach ($so->items as $item) {
-                $invoicedQty = DB::table('sales_invoice_items')
-                    ->join('sales_invoices', 'sales_invoices.id', '=', 'sales_invoice_items.sales_invoice_id')
-                    ->whereRaw('JSON_CONTAINS(sales_invoices.so_ids, ?)', ['"'.$so->id.'"'])
-                    ->where('sales_invoice_items.stock_entry_item_id', $item->stock_entry_item_id)
-                    ->where(function($q) {
-                        $q->whereNull('sales_invoices.einvoice_status')
-                          ->orWhere('sales_invoices.einvoice_status', '!=', 'cancelled');
-                    })
-                    ->sum('sales_invoice_items.quantity');
-                
+                $invoicedQty = $soItemInvoiced[$so->id][$item->stock_entry_item_id] ?? 0;
                 $pendingQty = max(0, $item->qty - $invoicedQty);
                 
                 if ($pendingQty > 0) {
@@ -975,9 +1019,7 @@ class SalesInvoiceController extends Controller
 
         $oldData = $invoice->toArray();
 
-        // 1. Automatically cancel linked E-Way Bill if it exists
         if (!empty($invoice->eway_bill_no)) {
-            // Check E-Way Bill cancellation time window (24 hours)
             if ($invoice->eway_bill_date) {
                 $ewbDateTime = \Carbon\Carbon::parse($invoice->eway_bill_date);
                 if ($ewbDateTime->diffInHours(now()) >= 24) {
@@ -998,7 +1040,6 @@ class SalesInvoiceController extends Controller
             $invoice->refresh();
         }
 
-        // 2. Cancel the E-Invoice
         $result = $eInvoiceService->cancelEInvoice($invoice, $cancelReason, $cancelRemarks);
 
         if ($result['success']) {
@@ -1083,10 +1124,6 @@ class SalesInvoiceController extends Controller
                 $newItem->sales_invoice_id = $newInvoice->id;
                 $newItem->save();
             }
-
-
-            // Keep the so_id on the original cancelled invoice so that it still shows the linked Sales Order on the index/view screens, but it won't block reuse because we exclude cancelled e-invoices from $usedSoIds
-
 
             DB::commit();
 
@@ -1228,5 +1265,59 @@ class SalesInvoiceController extends Controller
         $c = 2 * atan2(sqrt($a), sqrt(1-$a));
 
         return $earthRadius * $c;
+    }
+
+    public function scanItems($id)
+    {
+        $invoice = SalesInvoice::with(['customer', 'items.item', 'items.stockEntryItem'])->findOrFail($id);
+        
+        $setting = \App\Models\Setting::first();
+        
+        return view('sales_invoice.scan_items', compact('invoice', 'setting'));
+    }
+
+    public function saveScanProgress(Request $request, $id)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+        
+        if ($invoice->delivery_status === 'Dispatched') {
+            return response()->json(['success' => false, 'message' => 'Invoice is already dispatched and locked.'], 400);
+        }
+        
+        if (strtolower($invoice->einvoice_status) === 'cancelled') {
+            return response()->json(['success' => false, 'message' => 'E-Invoice is cancelled. Scanning is not allowed.'], 400);
+        }
+
+        $items = $request->input('items', []);
+        
+        foreach ($items as $itemData) {
+            $itemId = $itemData['id'];
+            $scannedQty = $itemData['scanned_qty'];
+            
+            $invoiceItem = \App\Models\SalesInvoiceItem::where('sales_invoice_id', $id)->where('id', $itemId)->first();
+            if ($invoiceItem) {
+                if ($scannedQty <= $invoiceItem->quantity) {
+                    $invoiceItem->update(['scanned_qty' => $scannedQty]);
+                }
+            }
+        }
+        
+        return response()->json(['success' => true, 'message' => 'Progress saved']);
+    }
+
+    public function completeDispatch($id)
+    {
+        $invoice = SalesInvoice::findOrFail($id);
+        
+        if (strtolower($invoice->einvoice_status) === 'cancelled') {
+            return response()->json(['success' => false, 'message' => 'Cannot dispatch a cancelled e-invoice.'], 400);
+        }
+
+        $invoice->update([
+            'delivery_status' => 'Dispatched',
+            'dispatch_completed_at' => now()
+        ]);
+        
+        return response()->json(['success' => true, 'message' => 'Dispatch completed successfully']);
     }
 }

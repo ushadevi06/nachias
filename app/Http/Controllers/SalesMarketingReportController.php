@@ -12,12 +12,81 @@ use Illuminate\Support\Facades\DB;
 
 class SalesMarketingReportController extends Controller
 {
+    private function getCustomerPendingItems($customerId)
+    {
+        $allCustomerSOs = \App\Models\SalesOrder::with(['items'])
+            ->where('customer_id', $customerId)
+            ->whereIn('status', ['Approved', 'Dispatched', 'Delivered', 'Partial Delivery'])
+            ->orderBy('id', 'asc')
+            ->get();
+        
+        $soItemOrdered = [];
+        $soItemInvoiced = [];
+
+        foreach($allCustomerSOs as $so) {
+            foreach($so->items as $item) {
+                $soItemOrdered[$so->id][$item->stock_entry_item_id] = $item->qty;
+            }
+        }
+
+        $invoices = DB::table('sales_invoices')
+            ->where('customer_id', $customerId)
+            ->where(function($q) {
+                $q->whereNull('einvoice_status')
+                  ->orWhere('einvoice_status', '!=', 'cancelled');
+            })
+            ->get(['id', 'so_ids', 'so_id', 'delivery_status']);
+
+        foreach($invoices as $inv) {
+            $so_ids = json_decode($inv->so_ids, true);
+            if (!$so_ids && $inv->so_id) {
+                $so_ids = [(string)$inv->so_id];
+            }
+            if (!$so_ids) continue;
+
+            $invItems = DB::table('sales_invoice_items')->where('sales_invoice_id', $inv->id)->get();
+
+            foreach($invItems as $invItem) {
+                $itemId = $invItem->stock_entry_item_id;
+                
+                if ($invItem->scanned_qty > 0) {
+                    $qtyToAllocate = $invItem->scanned_qty;
+                } elseif ($inv->delivery_status === 'Dispatched') {
+                    $qtyToAllocate = $invItem->quantity;
+                } else {
+                    $qtyToAllocate = $invItem->scanned_qty ?? 0;
+                }
+
+                foreach($so_ids as $so_id) {
+                    if ($qtyToAllocate <= 0) break;
+
+                    $ordered = $soItemOrdered[$so_id][$itemId] ?? 0;
+                    $alreadyInvoiced = $soItemInvoiced[$so_id][$itemId] ?? 0;
+                    $pending = $ordered - $alreadyInvoiced;
+
+                    if ($pending > 0) {
+                        $allocate = min($pending, $qtyToAllocate);
+                        $soItemInvoiced[$so_id][$itemId] = $alreadyInvoiced + $allocate;
+                        $qtyToAllocate -= $allocate;
+                    }
+                }
+                
+                if ($qtyToAllocate > 0 && count($so_ids) > 0) {
+                    $first_so = $so_ids[0];
+                    $soItemInvoiced[$first_so][$itemId] = ($soItemInvoiced[$first_so][$itemId] ?? 0) + $qtyToAllocate;
+                }
+            }
+        }
+
+        return $soItemInvoiced;
+    }
+
     public function index(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view sales-marketing-report')) {
             return unauthorizedRedirect();
         }
-        $query = SalesOrder::with(['customer', 'items.stockEntryItem'])->whereNull('deleted_at');
+        $query = SalesOrder::with(['customer.place', 'customer.city', 'items.stockEntryItem', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices'])->whereNull('deleted_at');
 
         if ($request->from_date) {
             $query->where('so_date', '>=', date('Y-m-d', strtotime($request->from_date)));
@@ -35,21 +104,75 @@ class SalesMarketingReportController extends Controller
 
         $orders = $query->orderBy('id', 'desc')->get();
 
+        $customerPendingItemsCache = [];
+
         foreach ($orders as $order) {
-            $delivered_qty = DB::table('sales_invoice_items')->join('sales_invoices', 'sales_invoice_items.sales_invoice_id', '=', 'sales_invoices.id')->where('sales_invoices.so_id', $order->id)->whereNull('sales_invoices.deleted_at')->whereNull('sales_invoice_items.deleted_at')->sum('sales_invoice_items.quantity');
+            if (!isset($customerPendingItemsCache[$order->customer_id])) {
+                $customerPendingItemsCache[$order->customer_id] = $this->getCustomerPendingItems($order->customer_id);
+            }
+            
+            $delivered_qty = 0;
+            if (isset($customerPendingItemsCache[$order->customer_id][$order->id])) {
+                foreach ($customerPendingItemsCache[$order->customer_id][$order->id] as $qty) {
+                    $delivered_qty += $qty;
+                }
+            }
+
+            // Calculate brand categories
+            $dhoti_qty = 0; $white_qty = 0; $core_qty = 0; $bravo_qty = 0; $deal_qty = 0; $formal_qty = 0;
+            foreach ($order->items as $item) {
+                $brandStr = '';
+                if ($item->item && $item->item->brand) {
+                    $brandStr .= strtoupper($item->item->brand->brand_name) . ' ';
+                }
+                $brandStr .= strtoupper($item->categories_path_val ?? '') . ' ';
+                $brandStr .= strtoupper($item->category_name ?? '');
+
+                if (strpos($brandStr, 'DHOTI') !== false) $dhoti_qty += $item->qty;
+                if (strpos($brandStr, 'WHITE') !== false) $white_qty += $item->qty;
+                if (strpos($brandStr, 'CORE') !== false) $core_qty += $item->qty;
+                if (strpos($brandStr, 'BRAVO') !== false) $bravo_qty += $item->qty;
+                if (strpos($brandStr, 'DEAL') !== false) $deal_qty += $item->qty;
+                if (strpos($brandStr, 'FORMAL') !== false && strpos($brandStr, 'CORE') === false) {
+                    $formal_qty += $item->qty;
+                }
+            }
+
+            $order->dhoti_qty = $dhoti_qty;
+            $order->white_qty = $white_qty;
+            $order->core_qty = $core_qty;
+            $order->bravo_qty = $bravo_qty;
+            $order->deal_qty = $deal_qty;
+            $order->formal_qty = $formal_qty;
 
             $order->delivered_qty = $delivered_qty;
             $order->pending_qty = max(0, $order->total_qty - $delivered_qty);
+
+            $validInvoices = $order->salesInvoices->filter(function($inv) {
+                return empty($inv->einvoice_status) || strtolower($inv->einvoice_status) !== 'cancelled';
+            })->sortBy('inv_date');
+            
+            $order->partial_d_date = null;
+            $order->despatch_complete_date = null;
+            
+            if ($validInvoices->count() > 0) {
+                $order->partial_d_date = $validInvoices->first()->inv_date ? $validInvoices->first()->inv_date->format('d-m-Y') : null;
+                if ($order->pending_qty <= 0) {
+                    $lastInvoice = $validInvoices->last();
+                    $order->despatch_complete_date = $lastInvoice->dispatch_completed_at ? $lastInvoice->dispatch_completed_at->format('d-m-Y') : ($lastInvoice->updated_at ? $lastInvoice->updated_at->format('d-m-Y') : ($lastInvoice->inv_date ? $lastInvoice->inv_date->format('d-m-Y') : null));
+                }
+            }
 
             if ($delivered_qty <= 0) {
                 $order->fulfillment_status = 'Planned';
             }
             elseif ($order->pending_qty > 0) {
-                $order->fulfillment_status = 'Processing';
+                $order->fulfillment_status = 'Partial Delivery';
             }
             else {
-                $order->fulfillment_status = 'Completed';
+                $order->fulfillment_status = 'Delivered';
             }
+            $order->delay_reason = $order->reason_for_delay;
         }
 
         $customers = Customer::where('status', 'Active')->get();
@@ -198,6 +321,7 @@ class SalesMarketingReportController extends Controller
                 'swatch-report' => view('reports.sales_marketing_reports._swatch_report')->render(),
                 'complaint-report' => view('reports.sales_marketing_reports._complaint_report')->render(),
                 'credit-note-report' => view('reports.sales_marketing_reports._credit_note_report', compact('creditNotes'))->render(),
+                'despatch-report' => view('reports.sales_marketing_reports._despatch_tracking_report', compact('orders'))->render(),
             ]);
         }
 

@@ -158,6 +158,7 @@ class SalesOrderController extends Controller
                 'so_no' => 'required|string|min:3|max:50|unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'so_date' => 'required|date',
                 'request_date' => 'nullable|date',
+                'delivery_date' => 'nullable|date',
                 'order_type' => 'required|string|max:50',
                 'season_id' => 'nullable|exists:seasons,id',
                 'customer_id' => 'required|exists:customers,id',
@@ -258,6 +259,7 @@ class SalesOrderController extends Controller
                     'so_no' => $request->so_no,
                     'so_date' => Carbon::createFromFormat('d-m-Y', $request->so_date)->format('Y-m-d'),
                     'request_date' => $request->request_date ?Carbon::createFromFormat('d-m-Y', $request->request_date)->format('Y-m-d') : null,
+                    'delivery_date' => $request->delivery_date ?Carbon::createFromFormat('d-m-Y', $request->delivery_date)->format('Y-m-d') : null,
                     'order_type' => $request->order_type,
                     'season_id' => $request->season_id,
                     'customer_id' => $request->customer_id,
@@ -618,6 +620,15 @@ class SalesOrderController extends Controller
         $salesOrder->delete();
         addLog('delete', 'Sale Order', 'sales_orders', $id, $salesOrder->toArray(), null);
         return redirect('sales_orders')->with('success', 'Sale Order deleted successfully');
+    }
+    public function updateDelayReason(Request $request, $id)
+    {
+        $salesOrder = SalesOrder::findOrFail($id);
+        $oldData = $salesOrder->toArray();
+        $salesOrder->reason_for_delay = $request->reason_for_delay;
+        $salesOrder->save();
+        addLog('update', 'Sale Order Delay Reason', 'sales_orders', $id, $oldData, $salesOrder->toArray());
+        return response()->json(['success' => true, 'message' => 'Delay reason updated successfully']);
     }
 
     public function updateStatus(Request $request, $id)

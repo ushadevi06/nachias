@@ -328,6 +328,15 @@
                                     <div class="text-muted text-uppercase small fw-bold mb-1">Internal Remarks</div>
                                     <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" style="white-space: pre-line;">{{ $salesOrder->internal_remarks ?? '-' }}</p>
                                 </div>
+                                <div class="col-12 mt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div class="text-muted text-uppercase small fw-bold">Reason for Delay</div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" data-bs-toggle="modal" data-bs-target="#editDelayReasonModal">
+                                            <i class="ri ri-edit-2-fill me-1" style="font-size: 14px;"></i> Edit
+                                        </button>
+                                    </div>
+                                    <p class="small text-dark border p-3 rounded bg-white shadow-sm mb-0 text-break" id="delayReasonDisplay" style="white-space: pre-line;">{{ $salesOrder->reason_for_delay ?? '-' }}</p>
+                                </div>
                                 @if($salesOrder->attachment)
                                 <div class="col-12 mt-3">
                                     <div class="text-muted text-uppercase small fw-bold mb-2">Attachments</div>
@@ -446,4 +455,61 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Delay Reason Modal -->
+<div class="modal fade" id="editDelayReasonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Reason for Delay</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <textarea class="form-control" id="delayReasonInput" rows="4" placeholder="Enter reason for delayed delivery...">{{ $salesOrder->reason_for_delay }}</textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveDelayReasonBtn">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('saveDelayReasonBtn').addEventListener('click', function() {
+    const reason = document.getElementById('delayReasonInput').value;
+    const btn = this;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = 'Saving...';
+    btn.disabled = true;
+
+    fetch('{{ url("sales_orders/update-delay-reason", $salesOrder->id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ reason_for_delay: reason })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('delayReasonDisplay').innerText = reason || '-';
+            bootstrap.Modal.getInstance(document.getElementById('editDelayReasonModal')).hide();
+        } else {
+            alert('Failed to update reason');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+});
+</script>
+
 @endsection

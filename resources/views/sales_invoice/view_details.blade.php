@@ -21,6 +21,7 @@
                             <ul class="dropdown-menu" aria-labelledby="deliveryOrderDropdown">
                                 <li><a class="dropdown-item" href="{{ url('sales_invoices/delivery-order/' . $invoice->id) }}" target="_blank">Delivery Order</a></li>
                                 <li><a class="dropdown-item" href="{{ url('sales_invoices/open-delivery-order/' . $invoice->id) }}" target="_blank">Open Delivery Order</a></li>
+                                <li><a class="dropdown-item" href="{{ url('sales_invoices/scan-items/' . $invoice->id) }}">Scan Items</a></li>
                             </ul>
                         </div>
                         <div class="dropdown">
