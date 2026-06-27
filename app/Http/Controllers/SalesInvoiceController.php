@@ -110,7 +110,7 @@ class SalesInvoiceController extends Controller
                 }
 
                 $editBtn = '';
-                if ($inv->einvoice_status !== 'cancelled' && $inv->delivery_status !== 'Dispatched') {
+                if ($inv->einvoice_status !== 'cancelled') {
                     $editBtn = '<a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 

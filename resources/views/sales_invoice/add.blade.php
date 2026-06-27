@@ -35,13 +35,13 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer/Buyer" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'disabled' : '' }}>
+                                    <select id="customer_id" name="customer_id" class="select2 form-select @error('customer_id') is-invalid @enderror" data-placeholder="Select Customer/Buyer" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'disabled' : '' }}>
                                         <option value="">Select Customer/Buyer</option>
                                         @foreach($customers as $customer)
                                             <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-pincode="{{ $customer->zip_code }}" {{ (old('customer_id', isset($invoice) ? $invoice->customer_id : '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }} ({{ $customer->code }})</option>
                                         @endforeach
                                     </select>
-                                    @if(isset($invoice) && $invoice->einvoice_status === 'generated')
+                                    @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
                                         <input type="hidden" name="customer_id" value="{{ $invoice->customer_id }}">
                                     @endif
                                     <label for="customer_id">Customer <span class="text-danger">*</span></label>
@@ -52,12 +52,12 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <select id="so_ids" name="so_ids[]" class="select2 form-select @error('so_ids') is-invalid @enderror" multiple data-placeholder="Select Sales Orders" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'disabled' : '' }}>
+                                    <select id="so_ids" name="so_ids[]" class="select2 form-select @error('so_ids') is-invalid @enderror" multiple data-placeholder="Select Sales Orders" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'disabled' : '' }}>
                                         @foreach($saleOrders as $so)
                                             <option value="{{ $so->id }}" {{ (is_array(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : [])) && in_array($so->id, old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []))) ? 'selected' : '' }}>{{ $so->so_no }}</option>
                                         @endforeach
                                     </select>
-                                    @if(isset($invoice) && $invoice->einvoice_status === 'generated')
+                                    @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
                                         @foreach(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []) as $soId)
                                             <input type="hidden" name="so_ids[]" value="{{ $soId }}">
                                         @endforeach
@@ -144,7 +144,7 @@
                                 <div class="text-danger small mb-2">{{ $message }}</div>
                             @enderror
                         </div>
-                        @if(!(isset($invoice) && $invoice->einvoice_status === 'generated'))
+                        @if(!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
                         <div class="row mb-4">
                             <div class="col-md-6 text-center">
                                 <div class="input-group mb-2 mx-auto">
@@ -336,7 +336,7 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
+                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
                                                     <label>Qty *</label>
                                                 </div>
                                                 <div class="qty-error text-danger small" style="display:none;"></div>
@@ -344,7 +344,7 @@
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif
                                                 {{-- @if(isset($row->stock_qty) && $row->stock_qty !== '')
-                                                     <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-warning' : 'text-success' }} d-block">In Stock: {{ $row->stock_qty }}</small>
+                                                    <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-warning' : 'text-success' }} d-block">In Stock: {{ $row->stock_qty }}</small>
                                                 @endif --}}
                                             </td>
                                             <td>
@@ -366,7 +366,7 @@
                                                 </div>
                                             </td>
                                             <td>
-                                                @if(isset($invoice) && $invoice->einvoice_status === 'generated')
+                                                @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
                                                     <span class="text-muted">-</span>
                                                 @else
                                                     <button type="button" class="btn btn-sm btn-danger remove-item"><i class="ri ri-delete-bin-line"></i></button>
@@ -925,10 +925,11 @@
 
         window.isEditMode = {{ isset($invoice) ? 'true' : 'false' }};
         window.einvoiceStatus = "{{ isset($invoice) ? $invoice->einvoice_status : '' }}";
+        window.isDispatched = "{{ isset($invoice) && $invoice->delivery_status === 'Dispatched' ? 'true' : 'false' }}";
         window.availableSOItems = [];
 
         function addInvoiceItem(matchedItem, qty = null, maxQty = null) {
-            if (window.einvoiceStatus === 'generated') {
+            if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                 return;
             }
             if (maxQty === null && matchedItem.qty) {
@@ -1176,7 +1177,7 @@
         }
 
         $('#item-rows').on('click', '.remove-item', function() {
-            if (window.einvoiceStatus === 'generated') {
+            if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
                 return;
             }
             if ($('#item-rows .item-row').length > 0) {

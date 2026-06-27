@@ -97,6 +97,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Item Name</th>
+                                    <th>Art No</th>
                                     <th>SKU / Barcode</th>
                                     <th>Req. Qty</th>
                                     <th>Scanned</th>
@@ -291,6 +292,7 @@
                                                 Color: {{ $colorStr }}
                                             </small>
                                         </td>
+                                        <td>{{ $item->art_no ?? '-' }}</td>
                                         <td>{{ $item->sku ?? '-' }}</td>
                                         <td>{{ number_format($req, 0) }}</td>
                                         <td class="scan-val fw-bold">{{ number_format($scan, 0) }}</td>

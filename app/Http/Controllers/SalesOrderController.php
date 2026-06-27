@@ -470,6 +470,27 @@ class SalesOrderController extends Controller
                         }
                     }
 
+                    $apiColor = $item['api_color'] ?? null;
+                    if (empty($apiColor)) {
+                        $artNo = $item['art_no'] ?? '';
+                        if (!empty($artNo) && strpos($artNo, '-') !== false) {
+                            $parts = explode('-', $artNo);
+                            $lastPart = trim(end($parts));
+                            if (is_numeric($lastPart)) {
+                                $apiColor = $lastPart;
+                            }
+                        }
+                    }
+                    if (empty($apiColor)) {
+                        if (!empty($itemName) && strpos($itemName, '-') !== false) {
+                            $parts = explode('-', $itemName);
+                            $lastPart = trim(end($parts));
+                            if (is_numeric($lastPart)) {
+                                $apiColor = $lastPart;
+                            }
+                        }
+                    }
+
                     SalesOrderItem::create([
                         'sale_order_id' => $salesOrder->id,
                         'brand_cat_id' => $item['brand_cat_id'] ?? null,
@@ -477,6 +498,7 @@ class SalesOrderController extends Controller
                         'categories_path_val' => $categoriesPathVal,
                         'item_id' => $item['item_id'],
                         'color_id' => $item['color_id'] ?? null,
+                        'api_color' => $apiColor,
                         'art_no' => $item['art_no'] ?? null,
                         'item_name' => $itemName,
                         'uom_id' => $item['uom_id'],

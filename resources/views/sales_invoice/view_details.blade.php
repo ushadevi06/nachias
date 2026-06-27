@@ -174,54 +174,59 @@
                                                 <tr>
                                                     <td>{{ $index + 1 }}</td>
                                                      <td>
-                                                        @php
-                                                            $itemName = '';
-                                                            $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)->where('sku', $item->sku)->first();
-                                                            if ($soItem) {
-                                                                $itemName = $soItem->getAttributes()['item_name'] ?? $soItem->item_name ?? '';
-                                                            }
+                                                         @php
+                                                             $brandName = '';
+                                                             $itemName = '';
+                                                             $sleeveType = $item->sleeve_type;
 
-                                                            if (empty($itemName) || $itemName === '-') {
-                                                                if ($item->item) {
-                                                                    $itemName = ($item->item->style ? $item->item->style->style_name : $item->item->name);
-                                                                } elseif ($item->stockEntryItem) {
-                                                                    if ($item->stockEntryItem->item) {
-                                                                        $seItem = $item->stockEntryItem->item;
-                                                                        $itemName = ($seItem->style ? $seItem->style->style_name : $seItem->name);
-                                                                    } else {
-                                                                        $itemName = $item->stockEntryItem->finished_item_code;
-                                                                    }
-                                                                } else {
-                                                                    $itemName = $item->item ? $item->item->name : '';
-                                                                }
+                                                             if ($item->item) {
+                                                                 if ($item->item->brand) {
+                                                                     $brandName = $item->item->brand->brand_name;
+                                                                 } elseif ($item->brandCategory) {
+                                                                     $brandName = $item->brandCategory->name;
+                                                                 }
 
-                                                                if (empty($itemName) || $itemName === '-') {
-                                                                    if (!empty($item->art_no)) {
-                                                                        $itemName = $item->art_no;
-                                                                    }
-                                                                }
-                                                            }
+                                                                 if ($item->item->style) {
+                                                                     $itemName = $item->item->style->style_name;
+                                                                 } else {
+                                                                     $itemName = $item->item->name;
+                                                                 }
+                                                             } elseif ($item->stockEntryItem) {
+                                                                 if ($item->stockEntryItem->item) {
+                                                                     $seItem = $item->stockEntryItem->item;
+                                                                     if ($seItem->brand) {
+                                                                         $brandName = $seItem->brand->brand_name;
+                                                                     } elseif ($seItem->brandCategory) {
+                                                                         $brandName = $seItem->brandCategory->name;
+                                                                     }
 
-                                                            if (!empty($itemName) && $itemName !== '-') {
-                                                                $parts = explode('-', $itemName);
-                                                                if (count($parts) >= 2) {
-                                                                    $brand = \App\Models\Brand::where('code', trim($parts[0]))->first();
-                                                                    $style = \App\Models\Style::where('code', trim($parts[1]))->first();
-                                                                    if ($brand && $style) {
-                                                                        $itemName = $brand->brand_name . ' ' . $style->style_name;
-                                                                        if (isset($parts[2])) {
-                                                                            $itemName .= ' ' . trim($parts[2]);
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        @endphp
-                                                        <div class="fw-bold">{{ $itemName ?: '-' }}</div>
-                                                        <small class="text-muted">{{ $item->sleeve_type ? '(' . $item->sleeve_type . ')' : '' }}</small>
-                                                        @if(!empty($item->sku))
-                                                            <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
-                                                        @endif
-                                                    </td>
+                                                                     if ($seItem->style) {
+                                                                         $itemName = $seItem->style->style_name;
+                                                                     } else {
+                                                                         $itemName = $seItem->name;
+                                                                     }
+                                                                 } else {
+                                                                     $brandName = $item->stockEntryItem->finished_item_code;
+                                                                 }
+
+                                                                 if (empty($sleeveType)) {
+                                                                     $sleeveType = $item->stockEntryItem->sleeve_type;
+                                                                 }
+                                                             }
+
+                                                             if (empty($brandName) && $item->brandCategory) {
+                                                                 $brandName = $item->brandCategory->name;
+                                                             }
+                                                             if (empty($itemName) && !empty($item->art_no)) {
+                                                                 $itemName = $item->art_no;
+                                                             }
+                                                         @endphp
+                                                         <div class="fw-bold">{{ $brandName ?: '-' }}</div>
+                                                         <div class="small text-muted">{{ $itemName ?: '' }} {{ $sleeveType ? '(' . $sleeveType . ')' : '' }}</div>
+                                                         @if(!empty($item->sku))
+                                                             <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
+                                                         @endif
+                                                     </td>
                                                     <td>{{ $item->api_color ?: ($item->color ? $item->color->color_name : '-') }}</td>
                                                     <td>{{ $item->art_no ?? '-' }}</td>
                                                     <td>{{ $item->uom_id ?? '-' }}</td>
