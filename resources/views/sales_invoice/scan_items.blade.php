@@ -539,17 +539,14 @@
                         aspectRatio: 1.0
                     },
                     (decodedText, decodedResult) => {
-                        // Handle success
                         console.log(`Scan result: ${decodedText}`);
                         $('#barcode_input').val(decodedText);
                         
-                        // Automatically stop scanner and trigger lookup
                         html5QrCode.stop().then((ignore) => {
                             $('#reader').hide();
                             isCameraOpen = false;
                             $('#btn_camera_scan').html('<i class="ri-camera-line me-1"></i> Camera');
                             
-                            // Trigger enter event
                             var e = $.Event("keypress");
                             e.which = 13;
                             $('#barcode_input').trigger(e);
@@ -558,7 +555,6 @@
                         });
                     },
                     (errorMessage) => {
-                        // Parse error, ignore it
                     }
                 ).then(() => {
                     isCameraOpen = true;

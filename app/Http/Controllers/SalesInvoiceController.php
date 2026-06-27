@@ -398,8 +398,8 @@ class SalesInvoiceController extends Controller
                 }
                 
                 if ($qtyToAllocate > 0 && count($so_ids) > 0) {
-                     $first_so = $so_ids[0];
-                     $soItemInvoiced[$first_so][$itemId] = ($soItemInvoiced[$first_so][$itemId] ?? 0) + $qtyToAllocate;
+                    $first_so = $so_ids[0];
+                    $soItemInvoiced[$first_so][$itemId] = ($soItemInvoiced[$first_so][$itemId] ?? 0) + $qtyToAllocate;
                 }
             }
         }

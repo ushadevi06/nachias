@@ -146,10 +146,19 @@
                         </div>
                         @if(!(isset($invoice) && $invoice->einvoice_status === 'generated'))
                         <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="form-floating form-floating-outline">
-                                    <input type="text" id="barcode_scanner" class="form-control border-primary" placeholder="Scan Barcode" autocomplete="off" style="border-width: 2px;" autofocus>
-                                    <label for="barcode_scanner" class="text-primary fw-bold">SCAN BARCODE</label>
+                            <div class="col-md-6 text-center">
+                                <div class="input-group mb-2 mx-auto">
+                                    <div class="form-floating form-floating-outline flex-grow-1">
+                                        <input type="text" id="barcode_scanner" class="form-control border-primary" placeholder="Scan Barcode" autocomplete="off" style="border-width: 2px; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0;" autofocus>
+                                        <label for="barcode_scanner" class="text-primary fw-bold">SCAN BARCODE</label>
+                                    </div>
+                                    <button class="btn btn-outline-primary px-4" type="button" id="btn_camera_scan" style="border-width: 2px; border-left: none; border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                        <i class="ri-camera-line me-1"></i> CAMERA
+                                    </button>
+                                </div>
+                                <div id="reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
+                                <div id="scan_alert" class="alert alert-danger mt-3 mx-auto" style="display: none; max-width: 500px; text-align: left;">
+                                    <span id="scan_msg"></span>
                                 </div>
                             </div>
                             <div class="col-md-6 d-flex align-items-center">
@@ -778,6 +787,7 @@
     </div>
 </div>
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
     $(document).ready(function() {
         $('.select2').select2({
@@ -787,7 +797,7 @@
         var preselectedCustomer = $('#customer_id').val();
         var preselectedSoIds = @json(old('so_ids', isset($invoice) && $invoice->so_ids ? json_decode($invoice->so_ids, true) : []));
 
-        if (preselectedCustomer && preselectedSoIds.length > 0) {
+        if (preselectedCustomer) {
             if ($('#so_ids option').length === 0) {
                 $.ajax({
                     url: "{{ url('sales_invoices/get-customer-sales-orders') }}",
@@ -812,16 +822,18 @@
                 });
             }
 
-            $.ajax({
-                url: "{{ url('sales_invoices/get-multiple-sale-orders-details') }}",
-                type: "POST",
-                data: { so_ids: preselectedSoIds, _token: "{{ csrf_token() }}" },
-                success: function(data) {
-                    if (data.success) {
-                        window.availableSOItems = data.items;
+            if (preselectedSoIds.length > 0) {
+                $.ajax({
+                    url: "{{ url('sales_invoices/get-multiple-sale-orders-details') }}",
+                    type: "POST",
+                    data: { so_ids: preselectedSoIds, _token: "{{ csrf_token() }}" },
+                    success: function(data) {
+                        if (data.success) {
+                            window.availableSOItems = data.items;
+                        }
                     }
-                }
-            });
+                });
+            }
         }
         if ($('input[name="other_state"]:checked').val() == 'yes') {
             $('#igst_section').show();
@@ -900,7 +912,6 @@
 
                             window.availableSOItems = data.items;
                             if (window.isEditMode !== true) {
-                                // Do not auto populate item rows as per new requirements
                             }
                             $('#barcode_scanner').focus();
                             calculateTotals();
@@ -940,9 +951,13 @@
                 var maxVal = parseFloat(qtyInput.attr('data-max')) || 999999;
 
                 if (currentQty + 1 > maxVal) {
-                    var errorMsg = existingRow.find('.qty-error');
-                    errorMsg.text('Quantity exceeds pending quantity').show();
-                    qtyInput.addClass('is-invalid');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Limit Exceeded',
+                        text: 'Cannot add more. Quantity already matches the pending ordered quantity.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
                     return;
                 }
 
@@ -1033,7 +1048,11 @@
                     response([]);
                     return;
                 }
-                var term = request.term.toLowerCase();
+                var term = request.term;
+                if (term.includes('|')) {
+                    term = term.split('|')[0].trim();
+                }
+                term = term.toLowerCase();
                 var matches = window.availableSOItems.filter(function (item) {
                     return (item.sku && String(item.sku).toLowerCase().includes(term)) ||
                         (item.art_no && String(item.art_no).toLowerCase().includes(term)) ||
@@ -1109,6 +1128,10 @@
                 e.preventDefault();
                 var barcode = $(this).val().trim();
                 if (!barcode) return;
+                
+                if (barcode.includes('|')) {
+                    barcode = barcode.split('|')[0].trim();
+                }
 
                 if (!window.availableSOItems || window.availableSOItems.length === 0) {
                     Swal.fire({
@@ -1442,6 +1465,64 @@
                 }
             });
         });
+    });
+
+    // Camera scanning logic
+    let html5QrCode = null;
+    let isCameraOpen = false;
+
+    $('#btn_camera_scan').click(function() {
+        if (isCameraOpen && html5QrCode) {
+            html5QrCode.stop().then((ignore) => {
+                $('#reader').hide();
+                isCameraOpen = false;
+                $(this).html('<i class="ri-camera-line me-1"></i> CAMERA');
+                $('#barcode_scanner').focus();
+            }).catch((err) => {
+                console.error("Failed to stop camera:", err);
+            });
+        } else {
+            $('#reader').show();
+            html5QrCode = new Html5Qrcode("reader");
+            
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 100 },
+                    aspectRatio: 1.0
+                },
+                (decodedText, decodedResult) => {
+                    let cleanedText = decodedText;
+                    if (cleanedText && cleanedText.includes('|')) {
+                        cleanedText = cleanedText.split('|')[0].trim();
+                    }
+                    $('#barcode_scanner').val(cleanedText);
+                    
+                    html5QrCode.stop().then((ignore) => {
+                        $('#reader').hide();
+                        isCameraOpen = false;
+                        $('#btn_camera_scan').html('<i class="ri-camera-line me-1"></i> CAMERA');
+                        
+                        var e = $.Event("keypress");
+                        e.which = 13;
+                        $('#barcode_scanner').trigger(e);
+                    }).catch((err) => {
+                        console.error("Failed to stop camera after scan:", err);
+                    });
+                },
+                (errorMessage) => {
+                }
+            ).then(() => {
+                isCameraOpen = true;
+                $(this).html('<i class="ri-close-line me-1"></i> CLOSE CAMERA');
+            }).catch((err) => {
+                console.error("Error starting camera", err);
+                $('#scan_alert').removeClass('alert-success').addClass('alert-danger').show();
+                $('#scan_msg').html('<strong>Error:</strong> Could not start camera. Please ensure camera permissions are granted.');
+                $('#reader').hide();
+            });
+        }
     });
 </script>
 @endsection

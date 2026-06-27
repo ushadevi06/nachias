@@ -359,7 +359,7 @@
                         <tr>
                             <td>Late Fine</td>
                             <td class="right">
-                                ₹ 0.00
+                                ₹ {{ number_format($salary->late_fine, 2) }}
                             </td>
                         </tr>
                         <tr class="gross-row">
@@ -372,7 +372,7 @@
                                     number_format(
                                         $salary->pf +
                                         $salary->esi +
-                                        $salary->salary_advance,
+                                        $salary->salary_advance + $salary->late_fine,
                                         2
                                     )
                                 }}

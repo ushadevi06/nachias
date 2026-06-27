@@ -120,10 +120,7 @@ class AttendanceController extends Controller
                 sort($times);
                 $in  = $times[0] ?? null;
                 $out = count($times) > 1 ? end($times) : null;
-                $existingAttendance = DB::table('attendances')
-                    ->where('emp_code', $empStr)
-                    ->where('date', $date)
-                    ->first();
+                $existingAttendance = DB::table('attendances')->where('emp_code', $empStr)->where('date', $date)->first();
                 if ($existingAttendance && $existingAttendance->is_manual) {
                     $attendanceId = $existingAttendance->id;
                     $name = DB::table('users')
@@ -251,7 +248,13 @@ class AttendanceController extends Controller
             ->whereNull('deleted_at')
             ->pluck('emp_id')
             ->toArray();
-        $datesToMark = is_array($selectedDate) ? $selectedDate : [$selectedDate];
+        $datesToMark = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $datesToMark[] = date('Y-m-d', strtotime("-$i days"));
+        }
+        $selectedDates = is_array($selectedDate) ? $selectedDate : [$selectedDate];
+        $datesToMark = array_unique(array_merge($datesToMark, $selectedDates));
+        
         foreach ($datesToMark as $dateKey) {
             foreach ($allEmployees as $emp) {
                 $empStr = (string)$emp;
@@ -350,9 +353,7 @@ class AttendanceController extends Controller
     private function getStatus($date, $inTime, $outTime, $hours)
     {
         $isSunday = date('w', strtotime($date)) == 0;
-        $isHoliday = DB::table('declared_holidays')
-            ->whereDate('date', $date)
-            ->exists();
+        $isHoliday = DB::table('declared_holidays')->whereDate('date', $date)->exists();
         if (!$inTime && !$outTime) {
             if ($isHoliday) {
                 return 'Holiday';
@@ -362,8 +363,15 @@ class AttendanceController extends Controller
             }
             return 'Absent';
         }
-        if (!$inTime) {
+        $isToday = ($date === date('Y-m-d'));
+        if (empty($inTime) && !empty($outTime)) {
             return 'Missing Time Card';
+        }
+
+        if (!empty($inTime) && empty($outTime)) {
+            if (!$isToday) {
+                return 'Missing Time Card';
+            }
         }
         if (($isSunday || $isHoliday) && ($inTime || $outTime)) {
             return 'Overtime';

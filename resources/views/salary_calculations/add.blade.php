@@ -53,7 +53,7 @@
                                         id="salary_month"
                                         class="form-control"
                                         max="{{ now()->subMonth()->format('Y-m') }}"
-                                        value="{{ isset($salary) ? $salary->salary_year.'-'.date('m', strtotime($salary->salary_month)) : '' }}">
+                                        value="{{ isset($salary) ? $salary->salary_year.'-'.str_pad($salary->salary_month, 2, '0', STR_PAD_LEFT) : '' }}">
                                     @if(!isset($salary))
                                         <button type="button"
                                                 id="generateSalary"
@@ -112,13 +112,13 @@
                                         </thead>
                                         <tbody id="salaryTableBody">
                                             @if(isset($salary))
-                                                <tr class="salary-row">
+                                                <tr class="salary-row" data-index="0">
                                                     <input type="hidden" class="salary_id" value="{{ $salary->id }}">
                                                     <input type="hidden" class="employee_id" value="{{ $salary->employee_id }}">
                                                     <input type="hidden" class="total_days" value="{{ $salary->total_days }}">
                                                     {{-- Checkbox --}}
                                                     <td>
-                                                        <input type="checkbox" class="form-check-input employee-check">
+                                                        <input type="checkbox" class="form-check-input employee_checkbox">
                                                     </td>
                                                     {{-- Employee --}}
                                                     <td>
@@ -267,7 +267,7 @@
 <script>
     $(document).ready(function () {
         updateTotalDays();
-        let allPayrollData = [];
+        let allPayrollData = {!! isset($salary) ? '[' . json_encode($salary) . ']' : '[]' !!};
         let currentPage = 1;
         const perPage = 10;
         $('#generateSalary').click(function () {
@@ -575,6 +575,9 @@
             $('.salary-row').each(function () {
                 let row = $(this);
                 let index = row.data('index');
+                if (typeof index === 'undefined') return;
+                
+                allPayrollData[index].salary_id = row.find('.salary_id').val();
                 allPayrollData[index].is_selected = row.find('.employee_checkbox').is(':checked');
                 allPayrollData[index].basic_salary =
                     parseFloat(row.find('.basic_salary').val()) || 0;
@@ -592,6 +595,12 @@
                     parseFloat(row.find('.salary_advance').val()) || 0;
                 allPayrollData[index].net_salary =
                     parseFloat(row.find('.net_salary').val()) || 0;
+                allPayrollData[index].gross_salary =
+                    parseFloat(row.find('.gross_salary').val()) || 0;
+                allPayrollData[index].total_deduction =
+                    parseFloat(row.find('.total_deduction').val()) || 0;
+                allPayrollData[index].lop_amount =
+                    parseFloat(row.find('.lop_amount').val()) || 0;
             });
         }
         $(document).on('change', '#checkAllEmployees', function () {

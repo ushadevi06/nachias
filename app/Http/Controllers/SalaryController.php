@@ -69,7 +69,6 @@ class SalaryController extends Controller
                 $query->skip($start)->take($length);
             }
             $salaries = $query->get();
-            // dd($salaries);
             $data = [];
             $count = 1;
             foreach ($salaries as $salary) {
@@ -193,13 +192,9 @@ class SalaryController extends Controller
                 $sundays++;
             }
         }
-        $holidays = DB::table('declared_holidays')
-            ->whereMonth('date', $monthNumber)
-            ->whereYear('date', $year)
-            ->count();
+        $holidays = DB::table('declared_holidays')->whereMonth('date', $monthNumber)->whereYear('date', $year)->count();
         $totHolidays = $sundays + $holidays;
-        $employees = User::where('id', '!=', 1)
-        ->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
+        $employees = User::where('id', '!=', 1)->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
             $query->select(
                 DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
             )
@@ -211,16 +206,9 @@ class SalaryController extends Controller
         ->get();
         $payroll = [];
         foreach ($employees as $employee) {
-            $attendance = DB::table('attendances')
-                ->where('emp_code', $employee->emp_id)
-                ->whereBetween('date', [$startDate, $endDate])
-                ->get();
-            $presentDays = $attendance
-                ->whereIn('status', ['Present', 'Late', 'Overtime'])
-                ->count();
-            $absentDays = $attendance
-                ->where('status', 'Absent')
-                ->count();
+            $attendance = DB::table('attendances')->where('emp_code', $employee->emp_id)->whereBetween('date', [$startDate, $endDate])->get();
+            $presentDays = $attendance->whereIn('status', ['Present', 'Late', 'Overtime'])->count();
+            $absentDays = $attendance->where('status', 'Absent')->count();
             if ($presentDays == 0) {
                 $payroll[] = [
                     'employee_id'      => $employee->emp_id,
@@ -265,9 +253,7 @@ class SalaryController extends Controller
                         $inTime->diffInMinutes($outTime) / 60
                     );
                     $isSunday = Carbon::parse($att->date)->isSunday();
-                    $isHoliday = DB::table('declared_holidays')
-                        ->whereDate('date', $att->date)
-                        ->exists();
+                    $isHoliday = DB::table('declared_holidays')->whereDate('date', $att->date)->exists();
                     if ($isSunday || $isHoliday) {
                         $otHours += $workedHours;
                     } else {
@@ -283,20 +269,12 @@ class SalaryController extends Controller
             $hra    = ($fixedGross * 20) / 100;
             $da     = ($fixedGross * 20) / 100;
             $oa     = ($fixedGross * 10) / 100;
-            /* $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)
-                ->whereMonth('issue_date', $monthNumber)
-                ->whereYear('issue_date', $year)
-                ->sum('total_cost') ?? 0; */
-            $incentive = 0;
-            $misc = $employee->bus_fare
-            ? $otDays * $employee->bus_fare
-            : 0;
+            $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)->whereMonth('issue_date', $monthNumber)->whereYear('issue_date', $year)->sum('total_cost') ?? 0; 
+            $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
             $salaryAdvance = 0;
             $otherDeduction = 0;
             $workingDays = $presentDays - $otDays;
-            $busFare = $employee->bus_fare
-                ? $workingDays * $employee->bus_fare
-                : 0;
+            $busFare = $employee->bus_fare ? $workingDays * $employee->bus_fare : 0;
             $perDaySalary = $fixedGross / $totalDays;
             $perHourSalary = $perDaySalary / 8;
             $otAmount = $perHourSalary * $otHours;
@@ -315,7 +293,6 @@ class SalaryController extends Controller
                     $totalPermissionHours += (float) $att->permission_hours;
                 }
             }
-            // Free 2 hours permission
             $freePermissionHours = 2;
             $lateFine = 0;
             if ($totalPermissionHours > $freePermissionHours) {
@@ -324,13 +301,7 @@ class SalaryController extends Controller
                 $lateHours = $totalPermissionHours;
             }
             $lateFine = $lateHours * $perHourSalary;
-            // dd($lateHours, $perHourSalary, $lateFine);
-            $totalDeduction =
-                $pf
-                + $esi
-                + $otherDeduction
-                + $salaryAdvance
-                + $lateFine;
+            $totalDeduction = $pf + $esi + $otherDeduction + $salaryAdvance + $lateFine;
             $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
             $netSalary = $totalEarnings - $totalDeduction;
             $payroll[] = [
@@ -428,9 +399,12 @@ class SalaryController extends Controller
                         'bus_fare'        => $row['bus_fare'],
                         'pf'              => $row['pf'],
                         'esi'             => $row['esi'],
+                        'other_deduction' => $row['other_deduction'],
                         'salary_advance'  => $row['salary_advance'],
+                        'late_fine'       => $row['late_fine'],
                         'lop_amount'      => $row['lop_amount'],
                         'gross_salary'    => $row['gross_salary'],
+                        'total_deduction' => $row['total_deduction'],
                         'net_salary'      => $row['net_salary'],
                         'updated_at'      => now()
                     ]);
@@ -550,33 +524,12 @@ class SalaryController extends Controller
                 ->first();
             $month = $salary->salary_month;
             $year  = $salary->salary_year;
-            $totalDays = \Carbon\Carbon::create(
-                $year,
-                $month,
-                1
-            )->daysInMonth;
-            $onTimeDays = DB::table('attendances')
-                ->where('emp_code', $salary->employee_id)
-                ->whereMonth('date', $month)
-                ->whereYear('date', $year)
-                ->where('status', 'Present')
-                ->count();
-
-            $lateDays = DB::table('attendances')
-                ->where('emp_code', $salary->employee_id)
-                ->whereMonth('date', $month)
-                ->whereYear('date', $year)
-                ->where('status', 'Late')
-                ->count();
+            $totalDays = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
+            $onTimeDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Present')->count();
+            $lateDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Late')->count();
             $setting = Setting::with(['state', 'city'])->first();
-            $pdf = Pdf::loadView(
-                'salary_calculations.payslip_pdf',
-                compact('salary', 'setting', 'totalDays', 'onTimeDays', 'lateDays')
-            );
-            
-            $uploadPath = public_path(
-                'uploads/payroll/payslips'
-            );
+            $pdf = Pdf::loadView('salary_calculations.payslip_pdf', compact('salary', 'setting', 'totalDays', 'onTimeDays', 'lateDays'));
+            $uploadPath = public_path('uploads/payroll/payslips');
             if (!file_exists($uploadPath)) {
                 mkdir($uploadPath, 0755, true);
             }
@@ -762,12 +715,11 @@ class SalaryController extends Controller
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
             $grossSalary = $fixedGross - $lopAmount;
-            /* $incentive = DB::table('task_assign_employees')
+            $incentive = DB::table('task_assign_employees')
                 ->where('issued_to', $employee->id)
                 ->whereMonth('issue_date', $monthNumber)
                 ->whereYear('issue_date', $year)
-                ->sum('total_cost') ?? 0; */
-            $incentive = 0;
+                ->sum('total_cost') ?? 0; 
             $misc = $employee->bus_fare
             ? $otDays * $employee->bus_fare
             : 0;
