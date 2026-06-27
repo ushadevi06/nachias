@@ -102,7 +102,16 @@
                 { data: 'so_no' },
                 { data: 'total_items' },
                 { data: 'grand_total' },
-                { data: 'status' },
+                { 
+                    data: 'status',
+                    searchable: true,
+                    render: function (data, type, row) {
+                        if (type === 'filter') {
+                            return row.status_text;
+                        }
+                        return data;
+                    }
+                },
                 { data: 'action', orderable: false, searchable: false },
             ]
         });

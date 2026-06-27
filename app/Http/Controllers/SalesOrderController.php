@@ -117,6 +117,7 @@ class SalesOrderController extends Controller
                     'total_qty' => number_format($so->total_qty, 2),
                     'sales_agent' => $so->salesAgent ? $so->salesAgent->name : '-',
                     'status' => $statusDropdown,
+                    'status_text' => $so->status,
                     'total_amount' => '₹' . number_format($so->total_amount, 2),
                     'action' => $action,
                 ];

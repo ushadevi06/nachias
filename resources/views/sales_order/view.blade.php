@@ -107,7 +107,17 @@
                     { data: 'customer_po_ref' },
                     { data: 'total_qty' },
                     { data: 'sales_agent' },
-                    { data: 'status', orderable: false, searchable: false },
+                    { 
+                        data: 'status', 
+                        orderable: false, 
+                        searchable: true,
+                        render: function (data, type, row) {
+                            if (type === 'filter') {
+                                return row.status_text;
+                            }
+                            return data;
+                        }
+                    },
                     { data: 'total_amount' },
                     { data: 'action', orderable: false, searchable: false },
                 ]

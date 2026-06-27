@@ -110,7 +110,7 @@ class SalesInvoiceController extends Controller
                 }
 
                 $editBtn = '';
-                if ($inv->einvoice_status !== 'cancelled') {
+                if ($inv->einvoice_status !== 'cancelled' && $inv->delivery_status !== 'Dispatched') {
                     $editBtn = '<a href="' . url('sales_invoices/add/' . $inv->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
@@ -129,6 +129,7 @@ class SalesInvoiceController extends Controller
                     'total_items' => $inv->items->count(),
                     'grand_total' => '₹' . number_format($inv->grand_total, 2),
                     'status' => $statusDropdown,
+                    'status_text' => $inv->invoice_status,
                     'action' => $action,
                 ];
             }
