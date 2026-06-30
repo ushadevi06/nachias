@@ -35,6 +35,7 @@ class EmployeeExport implements FromCollection, WithHeadings, WithMapping
             'Fixed Gross',
             'Bus Fare',
             'Service Provider',
+            'Operation Stage',
         ];
     }
 
@@ -55,6 +56,7 @@ class EmployeeExport implements FromCollection, WithHeadings, WithMapping
             $employee->fixed_gross ?? '-',
             $employee->bus_fare ?? '-',
             $employee->serviceProvider->name ?? '-',
+            $employee->operation_stages_names,
         ];
     }
 }

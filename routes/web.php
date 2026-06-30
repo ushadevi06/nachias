@@ -636,6 +636,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('/holidays/save', [AttendanceController::class, 'saveHolidays']);
     Route::get('holidays/{month}', [AttendanceController::class, 'getHolidays']);
     Route::post('/staff-report', [AttendanceController::class, 'getStaffReport']);
+    Route::get('/export-staff-report', [AttendanceController::class, 'exportStaffReport']);
     Route::get('/get-employees', [AttendanceController::class, 'getEmployees']);
     Route::post('/attendance/update', [AttendanceController::class, 'updateAttendance']);
     Route::get('/attendance-records', [AttendanceController::class, 'getAttendanceRecords']);

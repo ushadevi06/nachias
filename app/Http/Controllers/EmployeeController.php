@@ -388,7 +388,7 @@ class EmployeeController extends Controller
     public function downloadSample()
     {
         $headers = [
-            'Emp Code', 'Name',  'Date of Joining', 'Phone', 'Email', 'Department', 'Designation', 'Device', 'ESI No', 'PF No', 'Fixed Gross', 'Bus Fare', 'Service Provider'
+            'Emp Code', 'Name',  'Date of Joining', 'Phone', 'Email', 'Department', 'Designation', 'Device', 'ESI No', 'PF No', 'Fixed Gross', 'Bus Fare', 'Service Provider', 'Operation Stage'
         ];
         $callback = function() use ($headers) {
             $file = fopen('php://output', 'w');

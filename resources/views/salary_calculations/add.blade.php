@@ -61,12 +61,11 @@ th.sticky-col-employee {
                                             <option value="range">Date Range</option>
                                         </select>
                                         <div id="month_picker_wrapper">
-                                            <input type="month" id="salary_month" class="form-control"
-                                                max="{{ now()->format('Y-m') }}">
+                                            <input type="month" id="salary_month" class="form-control" max="{{ now()->format('Y-m') }}">
                                         </div>
                                         <div id="date_range_wrapper" style="display: none;" class="gap-2">
-                                            <input type="date" id="salary_from_date" class="form-control">
-                                            <input type="date" id="salary_to_date" class="form-control">
+                                            <input type="date" id="salary_from_date" class="form-control" max="{{ now()->format('Y-m-d') }}">
+                                            <input type="date" id="salary_to_date" class="form-control" max="{{ now()->format('Y-m-d') }}">
                                         </div>
                                         <button type="button" id="generateSalary" class="btn btn-primary">
                                             Generate

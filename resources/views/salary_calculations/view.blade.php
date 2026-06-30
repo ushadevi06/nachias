@@ -7,7 +7,7 @@
             <div class="table-header-box">
                 <h4>Monthly Payroll</h4>
                 <div class="d-flex gap-2 align-items-center">
-                    <input type="month" id="export_month" class="form-control" style="width: 180px;" title="Select month to export">
+                    <input type="month" id="export_month" class="form-control" style="width: 180px;" title="Select month to export" max="{{ now()->format('Y-m') }}">
                     <button type="button" id="exportPayroll" class="btn btn-outline-success"><i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Export</button>
                     <a class="btn btn-primary" href="{{ url('add_monthly_payroll') }}"><i class="menu-icon icon-base ri ri-add-circle-line"></i> Add</a>
                 </div>
@@ -32,7 +32,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4 col-lg-3">
-                                <input type="month" id="filter_month" class="form-control" placeholder="Select Month">
+                                <input type="month" id="filter_month" class="form-control" placeholder="Select Month" max="{{ now()->format('Y-m') }}">
                             </div>
                             <div class="col-md-3">
                                 <button type="button" id="filterBtn" class="btn btn-primary">FILTER</button>
