@@ -406,12 +406,12 @@
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
                                         <input type="number" step="0.01"
-                                            class="form-control @error('box_discount') is-invalid @enderror"
-                                            id="box_discount" placeholder="Enter Box Discount" name="box_discount"
-                                            value="{{ old('box_discount', $customer->box_discount ?? '') }}">
-                                        <label for="box_discount">Box Discount (%)</label>
+                                            class="form-control @error('box_discount_amount') is-invalid @enderror"
+                                            id="box_discount_amount" placeholder="Enter Box Discount Amount" name="box_discount_amount"
+                                            value="{{ old('box_discount_amount', $customer->box_discount_amount ?? '') }}">
+                                        <label for="box_discount_amount">Box Discount Amount (Per PCS)</label>
                                     </div>
-                                    @error('box_discount')
+                                    @error('box_discount_amount')
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>

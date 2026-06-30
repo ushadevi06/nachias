@@ -393,7 +393,7 @@
 
                             @if($salesOrder->discount_amount > 0)
                             <div class="d-flex justify-content-between mb-3 text-danger">
-                                <span class="fw-medium">{{ $salesOrder->apply_box_discount ? 'Box Discount' : 'Discount' }} ({{ number_format($salesOrder->discount_percent, 2) }}%)</span>
+                                <span class="fw-medium">{{ $salesOrder->apply_box_discount ? 'Box Discount (Per PCS)' : 'Discount' }} ({{ number_format($salesOrder->box_discount_amount, 2) }})</span>
                                 <span class="fw-bold">-₹{{ number_format($salesOrder->discount_amount, 2) }}</span>
                             </div>
                             @endif

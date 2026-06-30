@@ -208,8 +208,10 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-                                        <span class="text-muted">Box Discount</span>
-                                        <span class="fw-bold text-primary">{{ $customer->box_discount ? $customer->box_discount . '%' : '0%' }}</span>
+                                        <p class="mb-0 text-muted">Box Discount Amount (Per PCS)</p>
+                                        <h6 class="mb-0">
+                                            <span class="fw-bold text-primary">₹ {{ $customer->box_discount_amount ?: '0.00' }}</span>
+                                        </h6>
                                     </div>
                                 </div>
                             </div>

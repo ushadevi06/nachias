@@ -800,8 +800,8 @@
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <label class="fw-bold">Box Discount:</label>
                                             <div class="input-group input-group-sm" style="width:100px;">
-                                                <input type="number" class="form-control form-control-sm text-end" id="discount_percent" name="discount_percent" step="0.01" min="0" max="100" value="{{ old('discount_percent', $salesOrder->discount_percent ?? '0') }}">
-                                                <span class="input-group-text px-1">%</span>
+                                                <span class="input-group-text px-1">₹</span>
+                                                <input type="number" class="form-control form-control-sm text-end" id="box_discount_amount" name="box_discount_amount" step="0.01" min="0" value="{{ old('box_discount_amount', $salesOrder->box_discount_amount ?? '0') }}">
                                             </div>
                                         </div>
                                         <input type="hidden" name="apply_box_discount" id="apply_box_discount_hidden" value="1">
@@ -1031,7 +1031,7 @@ $(document).ready(function () {
                         $('#customer_box_discount').val(res.box_discount || 0);
                         $('#customer_sales_discount').val(res.sales_discount || 0);
                         $('#sales_discount_percent').val(res.sales_discount || 0);
-                        $('#discount_percent').val(res.box_discount || 0);
+                        $('#box_discount_amount').val(res.box_discount_amount || 0);
                         calculateTotals();
                     }
                 }
@@ -1421,7 +1421,7 @@ $(document).ready(function () {
                         $('#customer_box_discount').val(c.box_discount || 0);
                         $('#customer_sales_discount').val(c.sales_discount || 0);
                         $('#sales_discount_percent').val(c.sales_discount || 0);
-                        $('#discount_percent').val(c.box_discount || 0);
+                        $('#box_discount_amount').val(c.box_discount_amount || 0);
 
                         let customerStateId = c.state_id;
                         let companyStateId = "{{ $web_settings->state_id ?? '' }}";
@@ -1581,11 +1581,13 @@ $(document).ready(function () {
         $('#total_qty').val(totalQty.toFixed(2));
         $('#sub_total_qty').val(subTotal.toFixed(2));
 
-        const discPercent = parseFloat($('#discount_percent').val()) || 0;
+        const boxDiscountAmountPerPiece = parseFloat($('#box_discount_amount').val()) || 0;
         const salesDiscPercent = parseFloat($('#sales_discount_percent').val()) || 0;
-        const totalDiscPercent = discPercent + salesDiscPercent;
         
-        const discountAmount = (subTotal * totalDiscPercent) / 100;
+        const boxDiscountValue = totalQty * boxDiscountAmountPerPiece;
+        const salesDiscountValue = (subTotal * salesDiscPercent) / 100;
+        const discountAmount = boxDiscountValue + salesDiscountValue;
+        
         $('#discount_amount').val(discountAmount.toFixed(2));
 
         let preGstCharges = 0;
@@ -1653,7 +1655,7 @@ $(document).ready(function () {
         $('#total_amount').val(finalTotal.toFixed(2));
     }
 
-    $(document).on('input', '#discount_percent, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off, #commission_percent', calculateTotals);
+    $(document).on('input', '#box_discount_amount, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off, #commission_percent', calculateTotals);
     $(document).on('change', 'input[name="other_state"], input[name="round_off_type"]', calculateTotals);
 
     $('#commission_percent').on('input', function() {
@@ -1669,7 +1671,7 @@ $(document).ready(function () {
         calculateTotals();
     });
     function initDiscountState() {
-        $('#discount_percent').prop('disabled', false);
+        $('#box_discount_amount').prop('disabled', false);
     }
     initDiscountState();
 

@@ -31,6 +31,11 @@ class RawMaterial extends Model
         return $this->hasOne(StandardConsumption::class, 'raw_material_id');
     }
 
+    public function artNos()
+    {
+        return $this->hasMany(RawMaterialArtNo::class, 'raw_material_id');
+    }
+
     public function storeCategory()
     {
         return $this->belongsTo(StoreCategory::class, 'store_category_id');

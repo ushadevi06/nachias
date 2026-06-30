@@ -40,7 +40,7 @@ class Customer extends Model
         'payment_terms',
         'credit_limit',
         'sales_discount',
-        'box_discount',
+        'box_discount_amount',
         'bank_name',
         'branch',
         'account_number',

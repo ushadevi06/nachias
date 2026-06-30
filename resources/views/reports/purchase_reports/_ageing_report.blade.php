@@ -92,7 +92,7 @@
             destroy: true,
             processing: true,
             serverSide: true,
-            pageLength: 25,
+            pageLength: 10,
             bLengthChange: true,
             bFilter: true,
             bInfo: true,

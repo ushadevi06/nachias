@@ -58,7 +58,12 @@ class PurchaseReportController extends Controller
         }
 
         $suppliers = Supplier::where('status', 'Active')->get();
-        return view('reports.purchase_reports.fabric_store', compact('suppliers'));
+        $artNos = \App\Models\GrnEntryItem::whereNotNull('art_no')
+            ->where('art_no', '!=', '')
+            ->distinct()
+            ->orderBy('art_no', 'asc')
+            ->pluck('art_no');
+        return view('reports.purchase_reports.fabric_store', compact('suppliers', 'artNos'));
     }
 
     public function accessoriesStore(Request $request)
@@ -248,13 +253,19 @@ class PurchaseReportController extends Controller
         return $purchaseOrders;
     }
 
-    private function getStockData($storeCategoryId, Request $request, $isStockReport = false)
+    private function getStockData($storeCategoryId, Request $request, $isStockReport = false, $isMinStock = false)
     {
         $query = \App\Models\StockEntryItem::with(['rawMaterial', 'item.brand', 'brand', 'style', 'color', 'fabricType', 'fabricWidth'])->where('store_category_id', $storeCategoryId);
 
         if ($request->supplier_id) {
             $query->whereHas('grnEntryItem.grnEntry', function($q) use ($request) {
                 $q->where('supplier_id', $request->supplier_id);
+            });
+        }
+
+        if ($isMinStock && $request->art_no) {
+            $query->whereHas('rawMaterial.artNos', function($q) use ($request) {
+                $q->where('art_no', $request->art_no);
             });
         }
 
@@ -536,15 +547,13 @@ class PurchaseReportController extends Controller
 
     private function getMinStockData($storeCategoryId, Request $request)
     {
-        $allStock = $this->getStockData($storeCategoryId, $request);
-        
+        $allStock = $this->getStockData($storeCategoryId, $request, false, true);
         $lowStockItems = [];
         
         foreach ($allStock as $item) {
-            if ($item['min_stock'] > 0 && $item['closing'] <= $item['min_stock']) {
-                $item['shortage'] = $item['min_stock'] - $item['closing'];
-                $lowStockItems[] = $item;
-            }
+            $shortage = $item['min_stock'] - $item['closing'];
+            $item['shortage'] = $shortage > 0 ? $shortage : 0;
+            $lowStockItems[] = $item;
         }
         
         return $lowStockItems;
@@ -961,9 +970,13 @@ class PurchaseReportController extends Controller
 
                 $count = $start + 1;
                 foreach ($minStockData as $row) {
-                    $statusBadge = ($row['closing'] <= 0) 
-                        ? '<span class="badge bg-label-danger">Out of Stock</span>' 
-                        : '<span class="badge bg-label-warning">Low Stock</span>';
+                    if ($row['closing'] <= 0) {
+                        $statusBadge = '<span class="badge bg-label-danger">Out of Stock</span>';
+                    } elseif ($row['closing'] <= $row['min_stock']) {
+                        $statusBadge = '<span class="badge bg-label-warning">Low Stock</span>';
+                    } else {
+                        $statusBadge = '<span class="badge bg-label-success">Excess Stock</span>';
+                    }
 
                     if ($isFabric) {
                         $data[] = [

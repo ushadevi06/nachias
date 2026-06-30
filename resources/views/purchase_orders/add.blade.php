@@ -150,9 +150,9 @@
                                         <th style="min-width: 150px;" class="th-style">Style</th>
                                         <th style="min-width: 150px;" class="th-fabric-width">Fabric Width</th>
                                         <th style="min-width: 150px;" class="th-fabric-type">Fabric Type</th>
-                                        <th style="min-width: 100px;">UOM *</th>
                                         <th style="min-width: 180px;">Supplier Design Name</th>
                                         <th style="min-width: 150px;">Color</th>
+                                        <th style="min-width: 100px;">UOM *</th>
                                         <th style="min-width: 150px;">Qty *</th>
                                         <th style="min-width: 150px;">Rate</th>
                                         <th style="min-width: 120px;">Amount</th>
@@ -242,19 +242,6 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror" name="items[{{ $index }}][uom_id]" disabled data-placeholder="Select UOM">
-                                                        <option value="">Select UOM</option>
-                                                        @foreach($uoms as $uom)
-                                                            <option value="{{ $uom->id }}" {{ ($item['uom_id'] ?? '') == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <input type="hidden" name="items[{{ $index }}][uom_id]"
-                                                        value="{{ $item['uom_id'] ?? '' }}" class="uom_hidden">
-                                                    @error('items.' . $index . '.uom_id')
-                                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                                    @enderror
-                                                </td>
-                                                <td>
                                                     <input type="text" class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror" name="items[{{ $index }}][supplier_design_name]" value="{{ $item['supplier_design_name'] ?? '' }}">
                                                     @error('items.' . $index . '.supplier_design_name')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -269,6 +256,19 @@
                                                         @endforeach
                                                     </select>
                                                     @error('items.' . $index . '.color_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror" name="items[{{ $index }}][uom_id]" disabled data-placeholder="Select UOM">
+                                                        <option value="">Select UOM</option>
+                                                        @foreach($uoms as $uom)
+                                                            <option value="{{ $uom->id }}" {{ ($item['uom_id'] ?? '') == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]"
+                                                        value="{{ $item['uom_id'] ?? '' }}" class="uom_hidden">
+                                                    @error('items.' . $index . '.uom_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
@@ -384,17 +384,6 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <select class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror" disabled data-placeholder="Select UOM">
-                                                        @foreach($uoms as $uom)
-                                                            <option value="{{ $uom->id }}" {{ $item->uom_id == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item->uom_id }}" class="uom_hidden">
-                                                    @error('items.' . $index . '.uom_id')
-                                                        <div class="text-danger small mt-1">{{ $message }}</div>
-                                                    @enderror
-                                                </td>
-                                                <td>
                                                     <input type="text" class="form-control supplier_design_name @error('items.' . $index . '.supplier_design_name') is-invalid @enderror" name="items[{{ $index }}][supplier_design_name]" value="{{ $item->supplier_design_name }}">
                                                     @error('items.' . $index . '.supplier_design_name')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -408,6 +397,17 @@
                                                         @endforeach
                                                     </select>
                                                     @error('items.' . $index . '.color_id')
+                                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                                    @enderror
+                                                </td>
+                                                <td>
+                                                    <select class="select2 form-select uom @error('items.' . $index . '.uom_id') is-invalid @enderror" disabled data-placeholder="Select UOM">
+                                                        @foreach($uoms as $uom)
+                                                            <option value="{{ $uom->id }}" {{ $item->uom_id == $uom->id ? 'selected' : '' }}>{{ $uom->uom_code }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ $item->uom_id }}" class="uom_hidden">
+                                                    @error('items.' . $index . '.uom_id')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
                                                 </td>
@@ -518,15 +518,6 @@
                                                 <span class="hyphen d-none">-</span>
                                             </td>
                                             <td>
-                                                <select class="select2 form-select uom" name="items[0][uom_id]" disabled data-placeholder="Select UOM">
-                                                    <option value="">Select UOM</option>
-                                                    @foreach($uoms as $uom)
-                                                        <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
-                                            </td>
-                                            <td>
                                                 <input type="text" class="form-control supplier_design_name" name="items[0][supplier_design_name]" placeholder="Enter Supplier Design Name">
                                             </td>
                                             <td>
@@ -536,6 +527,15 @@
                                                         <option value="{{ $color->id }}">{{ $color->color_name }}</option>
                                                     @endforeach
                                                 </select>
+                                            </td>
+                                            <td>
+                                                <select class="select2 form-select uom" name="items[0][uom_id]" disabled data-placeholder="Select UOM">
+                                                    <option value="">Select UOM</option>
+                                                    @foreach($uoms as $uom)
+                                                        <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
                                             </td>
                                             <td>
                                                 <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
@@ -827,15 +827,6 @@
                         <span class="hyphen d-none">-</span>
                     </td>
                     <td>
-                        <select class="select2 form-select uom" name="items[${itemIndex}][uom_id]" disabled data-placeholder="Select UOM">
-                            <option value="">Select UOM</option>
-                            @foreach($uoms as $uom)
-                                <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
-                            @endforeach
-                        </select>
-                        <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
-                    </td>
-                    <td>
                         <input type="text" class="form-control supplier_design_name" name="items[${itemIndex}][supplier_design_name]" placeholder="Enter Supplier Design Name">
                     </td>
                     <td>
@@ -845,6 +836,15 @@
                                 <option value="{{ $color->id }}">{{ $color->color_name }}</option>
                             @endforeach
                         </select>
+                    </td>
+                    <td>
+                        <select class="select2 form-select uom" name="items[${itemIndex}][uom_id]" disabled data-placeholder="Select UOM">
+                            <option value="">Select UOM</option>
+                            @foreach($uoms as $uom)
+                                <option value="{{ $uom->id }}">{{ $uom->uom_code }}</option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
                     </td>
                     <td>
                         <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">

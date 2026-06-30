@@ -4,6 +4,5 @@ ALTER TABLE `sales_invoices` ADD COLUMN `delivery_status` VARCHAR(50) NOT NULL D
 ALTER TABLE `sales_invoice_items` ADD COLUMN `scanned_qty` INT NOT NULL DEFAULT 0 AFTER `quantity`;
 ALTER TABLE `sales_invoices` ADD COLUMN `dispatch_completed_at` DATETIME NULL AFTER `delivery_status`;
 
-ALTER TABLE salary_generations 
-ADD COLUMN from_date DATE NULL,
-ADD COLUMN to_date DATE NULL;
+ALTER TABLE salary_generations ADD COLUMN from_date DATE NULL, ADD COLUMN to_date DATE NULL;
+ALTER TABLE barcode_masters ADD COLUMN job_card_entry_id BIGINT UNSIGNED NULL AFTER id;

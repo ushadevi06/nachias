@@ -264,10 +264,10 @@
 					<th width="8%">Style</th>
 					<th width="6%">Fabric Width</th>
 					<th width="7%">Fabric Type</th>
-					<th width="5%">UOM</th>
-					<th width="7%">Quantity</th>
 					<th width="8%">Supplier Design</th>
 					<th width="7%">Color</th>
+					<th width="5%">UOM</th>
+					<th width="7%">Quantity</th>
 					<th width="6%">Rate</th>
 					<th width="8%">Amount</th>
 					<th width="9%">Image</th>
@@ -300,12 +300,12 @@
                     <td class="text-center">{{ $item->style->style_name ?? '-' }}</td>
                     <td class="text-center">{{ $item->fabricWidth->width ?? '-' }}</td>
                     <td class="text-center">{{ $item->fabricType->fabric_type ?? '-' }}</td>
-                    <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
-                    <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
                     <td class="text-center" style="font-weight: bold;">
                         {{ $item->supplier_design_name ?? '-' }}
                     </td>
                     <td class="text-center">{{ $item->color->color_name ?? '-' }}</td>
+                    <td class="text-center">{{ $item->uom->uom_code ?? '-' }}</td>
+                    <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
                     <td class="text-right">{{ number_format($item->rate, 2) }}</td>
                     <td class="text-right">{{ number_format($item->amount, 2) }}</td>
 

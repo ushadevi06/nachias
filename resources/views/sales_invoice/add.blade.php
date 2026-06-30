@@ -126,7 +126,7 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('hsn_sac') is-invalid @enderror"
                                         id="hsn_sac" name="hsn_sac" placeholder="HSN Code"
-                                        value="{{ old('hsn_sac', isset($invoice) ? $invoice->hsn_sac : '') }}">
+                                        value="{{ old('hsn_sac', isset($invoice) ? $invoice->hsn_sac : '62053000') }}">
                                     <label for="hsn_sac">HSN Code <span class="text-danger">*</span></label>
                                     @error('hsn_sac')
                                         <div class="text-danger small mt-1">{{ $message }}</div>

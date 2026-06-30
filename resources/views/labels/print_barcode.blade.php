@@ -8,233 +8,365 @@
             size: {{ $width }}mm {{ $height }}mm;
             margin: 0;
         }
+        
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
         html, body {
             width: {{ $width }}mm;
             height: {{ $height }}mm;
             margin: 0;
             padding: 0;
-            font-family: 'Arial Narrow', Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             background-color: white;
-            -webkit-print-color-adjust: exact;
+            color: black;
+            overflow: hidden;
         }
-        .label-container {
+
+        .page-container {
             width: {{ $width }}mm;
             height: {{ $height }}mm;
-            padding: {{ $margin }}mm;
-            background-color: {{ $bg_color }};
+            position: relative;
+            background-color: white;
+            border: 1px solid #000;
+            border-radius: 4mm;
             box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* Helpers */
+        .fw-bold { font-weight: bold; }
+        .fw-normal { font-weight: normal; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        
+        .f-5 { font-size: 5pt; }
+        .f-6 { font-size: 6pt; }
+        .f-7 { font-size: 7pt; }
+        .f-8 { font-size: 8pt; }
+        .f-9 { font-size: 9pt; }
+        .f-10 { font-size: 10pt; }
+        .f-12 { font-size: 12pt; }
+        .f-14 { font-size: 14pt; }
+        
+        /* ---------------------------------------------------
+           PRICE TAG STYLES (45 x 85 mm)
+           --------------------------------------------------- */
+        .tag-container {
+            width: 100%;
+            height: 100%;
+            padding: 1mm 2mm;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
             position: relative;
         }
-
-        /* Header */
-        .header-section {
-            padding-bottom: 1mm;
-            margin-bottom: 0mm;
-        }
-        .mkt-by { font-size: 7.5pt; font-weight: bold; margin-bottom: 0.5mm; }
-        .comp-name { font-size: 9.5pt; font-weight: bold; margin-bottom: 1mm; }
-        .address-text { font-size: 7pt; line-height: 1.2; margin-bottom: 1mm; color: #333; text-transform: uppercase; }
-        .contact-row { font-size: 7pt; margin-bottom: 0.5mm; font-weight: normal; }
-
-        /* Content Area */
-        .content-area { width: 100%; position: relative; }
-        .data-table { width: 100%; border-collapse: collapse; }
-        .label-col { width: 18mm; font-size: 8.5pt; font-weight: bold; vertical-align: top; padding: 0.8mm 0; }
-        .colon-col { width: 3mm; font-size: 8.5pt; font-weight: bold; vertical-align: top; padding: 0.8mm 0; }
-        .value-col { font-size: 8.5pt; font-weight: 800; vertical-align: top; padding: 0.8mm 0; text-transform: uppercase; padding-right: 2mm; white-space: nowrap; }
         
-        .logo-box {
-            position: absolute;
-            right: 0;
-            top: 2mm;
-            width: 10mm;
-            height: 10mm;
-            padding: 1mm;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: white;
-            z-index: 10;
-        }
-
-        /* MRP & QR Section */
-        .mrp-qr-section {
-            padding-top: 0mm;
-            margin-top: 1mm;
+        .tag-header-icons {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
+            height: 8mm;
+            padding: 0 4mm 0 16mm;
         }
-        .mrp-left { flex: 1; }
-        .mrp-row { display: flex; align-items: baseline; margin-bottom: 0mm; }
-        .mrp-label { width: 18mm; font-size: 8.5pt; font-weight: bold; }
-        .mrp-colon { width: 3mm; font-size: 8.5pt; font-weight: bold; }
-        .mrp-symbol { font-size: 8.5pt; font-weight: 800; margin-right: 1.5mm; }
-        .mrp-val { font-size: 9.5pt; font-weight: 800; letter-spacing: 0.1px; }
-        .mrp-sub { font-size: 6.2pt; font-weight: normal; display: block; margin-top: 0mm; margin-left: 18mm; }
-
-        .mfg-lot { font-size: 8.5pt; font-weight: bold; line-height: 1.4; margin-top: 1mm; }
-
-        .qr-section { width: 17mm; text-align: center; }
-        .sku-text { font-size: 9pt; font-weight: bold; margin-top: 1mm; letter-spacing: 0.2px; }
-
-        /* Footer */
-        .footer-section {
-            margin-top: 0mm;
-            font-size: 7.5pt;
-            font-weight: normal;
+        .tag-logo {
+            height: 6mm;
+            width: auto;
         }
-        .footer-row { margin-bottom: 0.5mm; }
-        .flex-footer { display: flex; justify-content: space-between; align-items: flex-end; }
-        .made-in { font-size: 8pt; font-weight: normal; }
+        .tag-hole {
+            width: 4mm;
+            height: 4mm;
+            border-radius: 50%;
+            border: 1px solid #000;
+        }
+
+        .size-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1mm 3mm;
+            color: white;
+            margin-bottom: 2mm;
+            height: 6.5mm;
+        }
+        
+        .tag-main-details {
+            display: flex;
+            justify-content: space-between;
+            flex: 1;
+            position: relative;
+        }
+        
+        .details-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .details-table td {
+            padding: 0.1mm 0;
+            vertical-align: top;
+            font-size: 5pt;
+            line-height: 1.1;
+        }
+        .td-lbl { width: 11mm;  }
+        .td-col { width: 2mm; text-align: center; font-weight: bold; }
+        .td-val { width: 26mm; }
+        
+        .tag-qr-section {
+            position: absolute;
+            right: 0;
+            top: 6mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .tag-qr-section img, .tag-qr-section svg {
+            width: 13mm;
+            height: 13mm;
+        }
+        
+        .lot-vertical {
+            position: absolute;
+            right: 1.5mm;
+            bottom: 35mm;
+            transform: rotate(-90deg);
+            transform-origin: right bottom;
+            font-size: 4.5pt;
+            color: #555;
+            white-space: nowrap;
+        }
+        
+        .tag-separator {
+            border-top: 1px solid #000;
+            margin: 1.5mm 0;
+        }
+        
+        .tag-footer-info {
+            text-align: left;
+            line-height: 1.1;
+        }
+        
+        .complaints-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .complaints-table td {
+            font-size: 4.5pt;
+            line-height: 1.2;
+            vertical-align: top;
+        }
+        .comp-lbl { width: 13mm; }
+        .comp-col { width: 2mm; text-align: center; }
+        .comp-val { }
+        
+        .mrp-section {
+            text-align: center;
+            margin-top: auto;
+            margin-bottom: 1mm;
+        }
+        
+        /* ---------------------------------------------------
+           PRICE STICKER STYLES (70 x 50 mm)
+           --------------------------------------------------- */
+        .sticker-container {
+            width: 100%;
+            height: 100%;
+            padding: 2mm 3mm;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sticker-top-row {
+            display: flex;
+            justify-content: space-between;
+            flex: 1;
+        }
+        
+        .sticker-left-details {
+            width: 42mm;
+        }
+        
+        .sticker-right-details {
+            width: 20mm;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .sticker-size-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            width: 20mm;
+            height: 6mm;
+            padding: 0 2mm;
+            margin-bottom: 2mm;
+        }
+        
+        .sticker-qr {
+            margin-bottom: 2mm;
+            text-align: right;
+        }
+        .sticker-qr img, .sticker-qr svg {
+            width: 12mm;
+            height: 12mm;
+        }
+        
+        .sticker-mrp-section {
+            text-align: right;
+        }
+        
+        .sticker-footer-info {
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 1mm 0;
+            line-height: 1.1;
+            margin-bottom: 0.5mm;
+        }
+
     </style>
 </head>
 <body onload="window.print()">
     @php
         $labelCollection = isset($labels) ? $labels : [$labelData];
-    @endphp
-    @foreach($labelCollection as $labelData)
-    <div class="label-container" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
-        <div class="header-section">
-            <div class="mkt-by">MANUFACTURED & MARKETED BY</div>
-            <div class="comp-name">{{ strtoupper($labelData['company_name']) }}</div>
-            <div class="address-text">
-                {!! nl2br(e($labelData['company_address'])) !!}
-            </div>
-                <div class="contact-row">TOLL-FREE : {{ $labelData['toll_free'] }}</div>
-                <div class="contact-row">EMAIL : {{ $labelData['company_email'] }}</div>
-                <div class="contact-row">GSTIN : {{ $labelData['company_gstin'] }}</div>
-        </div>
-
-        @php $fields = explode(',', $order); @endphp
+        $isTag = ($format ?? 'tag') === 'tag';
         
-        @foreach($fields as $field)
+        $sizeColors = [
+            '36' => '#cba3cc', // Purple
+            '38' => '#86bc8b', // Green
+            '40' => '#c8af79', // Khaki
+            '42' => '#75a0c9', // Blue
+            '44' => '#e76b66', // Red
+        ];
+    @endphp
 
-            @if(in_array($field, ['product', 'brand', 'art', 'color', 'fabric', 'size']))
-                @if($loop->first || $fields[$loop->index - 1] == 'header' || $fields[$loop->index - 1] == 'mfg' || $fields[$loop->index - 1] == 'footer' || $fields[$loop->index - 1] == 'mrp')
-                <div class="content-area">
-                    <div class="logo-box">
-                        <img src="{{ url('assets/images/fav.jpeg') }}" style="width: 100%; height: 100%; object-fit: contain;">
+    @foreach($labelCollection as $labelData)
+        @php
+            $currentSize = preg_replace('/[^0-9]/', '', $labelData['size'] ?? '');
+            $bgColor = $sizeColors[$currentSize] ?? '#888888';
+            
+            $qrString = ($labelData['sku'] ?? '-') . " | " . ($labelData['product_name'] ?? '-') . " | " . ($labelData['size'] ?? '-');
+            
+            $sText = $labelData['sleeve'] ?? 'Full';
+            $sText = str_replace(['F/S', 'H/S'], ['Full', 'Half'], $sText);
+
+            $brandText = ucwords(strtolower($labelData['brand_name'] ?? '-'));
+            $companyName = ucwords(strtolower($labelData['company_name'] ?? 'Nachias Fashion Private Limited'));
+        @endphp
+
+        <div class="page-container" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
+            
+            @if($isTag)
+                <!-- PRICE TAG (45x85 mm) -->
+                <div class="tag-container">
+                    <div class="tag-header-icons">
+                        <img src="{{ url('assets/images/fav.jpeg') }}" class="tag-logo" alt="Logo">
+                        <div class="tag-hole"></div>
                     </div>
-                    <table class="data-table">
-                @endif
-
-                    @if($field == 'product')
-                    <tr>
-                        <td class="label-col">PRODUCT</td>
-                        <td class="colon-col">:</td>
-                        <td class="value-col">{{ $labelData['product_name'] }}</td>
-                    </tr>
-                    @elseif($field == 'brand')
-                    <tr>
-                        <td class="label-col">BRAND NAME</td>
-                        <td class="colon-col">:</td>
-                        <td class="value-col">{{ $labelData['brand_name'] }}</td>
-                    </tr>
-                    @elseif($field == 'art')
-                    <tr>
-                        <td class="label-col">ART NO</td>
-                        <td class="colon-col">:</td>
-                        <td class="value-col">{{ $labelData['design'] }}</td>
-                    </tr>
-                    @elseif($field == 'color')
-                    <tr>
-                        <td class="label-col">COLOUR</td>
-                        <td class="colon-col">:</td>
-                        <td class="value-col">{{ $labelData['color'] }}</td>
-                    </tr>
-                    @elseif($field == 'fabric')
-                    <tr>
-                        <td class="label-col">FABRIC</td>
-                        <td class="colon-col">:</td>
-                        <td class="value-col">{{ $labelData['fabric'] }}</td>
-                    </tr>
-                    @elseif($field == 'size')
-                    <tr>
-                        <td class="label-col">SIZE</td>
-                        <td class="colon-col">:</td>
-                        <td class="value-col">
-                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-right: 2mm;">
-                                <span>{{ $labelData['size'] }} CM</span>
-                                <div style="font-size: 8.5pt;">
-                                    <span style="font-weight: 800;">SLEEVE</span>
-                                    <span style="margin-left: 1mm;">
-                                        @php
-                                            $sText = $labelData['sleeve'];
-                                            $sText = str_replace(['F/S', 'H/S'], ['FULL', 'HALF'], $sText);
-                                        @endphp
-                                        {{ $sText }}
-                                    </span>
-                                </div>
+                    
+                    <div class="size-banner" style="background-color: {{ $bgColor }};">
+                        <span class="f-8 fw-bold">Size</span>
+                        <span class="f-14 fw-bold">{{ $labelData['size'] ?? '-' }}</span>
+                    </div>
+                    
+                    <div class="tag-main-details">
+                        <table class="details-table">
+                            <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
+                            <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
+                            <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ $labelData['fit'] ?? 'Tailor Fit' }}</td></tr>
+                            <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
+                            <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
+                            <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
+                            <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">1 Number</td></tr>
+                            <tr><td class="td-lbl" style="padding-top: 1.5mm;">Art No</td><td class="td-col" style="padding-top: 1.5mm;">:</td><td class="td-val fw-bold" style="padding-top: 1.5mm; font-size: 8pt;">{{ $labelData['design'] ?? '-' }}</td></tr>
+                        </table>
+                        <div class="tag-qr-section">
+                            {!! QrCode::size(50)->generate($qrString) !!}
+                        </div>
+                    </div>
+                    <div class="lot-vertical">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
+                    
+                    <div class="tag-footer-info f-6">
+                        <div class="f-5" style="color: #444; margin-bottom: 0.5mm;">Manufactured & Marketed by:</div>
+                        <div class="fw-bold" style="font-size: 5pt; margin-bottom: 0.5mm;">{{ $companyName }}</div>
+                        <div style="font-size: 4pt; line-height: 1.2;">
+                            {{ $labelData['company_address'] }}
+                        </div>
+                        
+                        <div class="tag-separator"></div>
+                        
+                        <table class="complaints-table">
+                            <tr>
+                                <td class="comp-lbl">Complaints</td>
+                                <td class="comp-col">:</td>
+                                <td class="comp-val fw-bold">{{ $labelData['toll_free'] ?? '84899 38071 | 84899 38073' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="comp-lbl">Email</td>
+                                <td class="comp-col">:</td>
+                                <td class="comp-val">{{ $labelData['company_email'] ?? 'srinachias@yahoo.in' }}</td>
+                            </tr>
+                        </table>
+                        <div class="tag-separator"></div>
+                    </div>
+                    
+                    <div class="mrp-section">
+                        <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
+                        <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                        <div class="f-5" style="color: #000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
+                    </div>
+                </div>
+            @else
+                <!-- PRICE STICKER (50x70 mm) -> Landscape 70x50 -->
+                <div class="sticker-container">
+                    <div class="sticker-top-row">
+                        <div class="sticker-left-details">
+                            <table class="details-table">
+                                <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
+                                <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
+                                <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ $labelData['fit'] ?? 'Tailor Fit' }}</td></tr>
+                                <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
+                                <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
+                                <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
+                                <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">1 Number</td></tr>
+                                <tr><td class="td-lbl" style="padding-top: 1mm;">Art No</td><td class="td-col" style="padding-top: 1mm;">:</td><td class="td-val fw-bold" style="padding-top: 1mm; font-size: 12pt;">{{ $labelData['design'] ?? '-' }}</td></tr>
+                            </table>
+                        </div>
+                        <div class="sticker-right-details">
+                            <div class="sticker-size-box" style="background-color: {{ $bgColor }};">
+                                <span class="f-7 fw-bold">Size</span>
+                                <span class="f-12 fw-bold">{{ $labelData['size'] ?? '-' }}</span>
                             </div>
-                        </td>
-                    </tr>
-                    @endif
-
-                @if($loop->last || !in_array($fields[$loop->index + 1], ['product', 'brand', 'art', 'color', 'fabric', 'size']))
+                            <div class="sticker-qr">
+                                {!! QrCode::size(45)->generate($qrString) !!}
+                                <div class="f-5" style="color: #666; text-align: right; margin-top: 1mm;">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
+                            </div>
+                            <div class="sticker-mrp-section">
+                                <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
+                                <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                                <div class="f-5" style="color: #666;">MADE IN INDIA WITH PRIDE</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sticker-footer-info f-5 mt-1">
+                        <span class="f-5" style="color: #444;">Mfr. & Mktd. by:</span> <span class="fw-bold" style="font-size: 4.5pt;">{{ $companyName }}</span><br>
+                        <span style="font-size: 4pt; line-height: 1.1;">{{ $labelData['company_address'] }}</span>
+                    </div>
+                    <table class="complaints-table" style="margin-bottom: 0;">
+                        <tr>
+                            <td class="comp-lbl">Complaints</td>
+                            <td class="comp-col">:</td>
+                            <td class="comp-val fw-bold">{{ $labelData['toll_free'] ?? '84899 38071 | 84899 38073' }}</td>
+                            <td style="text-align:right;">Email: {{ $labelData['company_email'] ?? 'srinachias@yahoo.in' }}</td>
+                        </tr>
                     </table>
                 </div>
-                @endif
-
-            @elseif($field == 'mrp')
-                <div class="mrp-qr-section">
-                    <div class="mrp-left">
-                        <div class="mrp-row">
-                            <span class="mrp-label">MRP</span>
-                            <span class="mrp-colon">:</span>
-                            <span class="mrp-symbol">₹</span>
-                            <span class="mrp-val">{{ number_format((float) $labelData['price'], 2) }}</span>
-                        </div>
-                        <span class="mrp-sub">(Inclusive of All Taxes)</span>
-
-                        @if(isset($fields[$loop->index + 1]) && $fields[$loop->index + 1] == 'mfg')
-                            <div class="mfg-lot">
-                                <div>DATE OF MFG : {{ strtoupper($labelData['mfg_date']) }}</div>
-                                <div style="margin-top: 1mm;">LOT #{{ $labelData['lot_no'] }}</div>
-                            </div>
-                        @endif
-                    </div>
-                    <div class="qr-section">
-                        @php
-                            $qrString = ($labelData['sku'] ?? '-') . " | " . ($labelData['product_name'] ?? '-') . " | " . ($labelData['size'] ?? '-');
-                        @endphp
-                        {!! QrCode::size(65)->generate($qrString) !!}
-                        <div class="sku-text">{{ $labelData['sku'] }}</div>
-                    </div>
-                </div>
-
-            @elseif($field == 'mfg')
-                @if(!isset($fields[$loop->index - 1]) || $fields[$loop->index - 1] != 'mrp')
-                <div class="mfg-lot" style="margin: 2mm 0;">
-                    <div>DATE OF MFG : {{ strtoupper($labelData['mfg_date']) }}</div>
-                    <div style="margin-top: 1mm;">LOT #{{ $labelData['lot_no'] }}</div>
-                </div>
-                @endif
             @endif
-        @endforeach
 
-        <div class="footer-section">
-            <div class="footer-row">FOR COMPLAINTS PLEASE CONTACT</div>
-            <div class="footer-row">CUSTOMERCARE EXECUTIVE</div>
-
-            <div class="flex-footer" style="margin-top: 1mm;">
-                <div class="footer-row">ADDRESS AS ABOVE</div>
-                <div class="made-in">MADE IN INDIA</div>
-            </div>
-
-            <div class="footer-row">{{ strtoupper($labelData['company_name']) }}</div>
-
-            <div class="footer-row" style="margin-top: 0.5mm;">
-                MOBILE: {{ $labelData['phone_number'] }} &nbsp;({{ $labelData['opening_time'] }} TO {{ $labelData['closing_time'] }})
-            </div>
-            <div class="footer-row" style="font-size: 6.5pt; margin-left: 23mm;">
-                {{ strtoupper($labelData['working_days']) }}
-            </div>
         </div>
-    </div>
     @endforeach
 </body>
 </html>

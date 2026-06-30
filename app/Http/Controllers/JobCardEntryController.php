@@ -2422,6 +2422,18 @@ class JobCardEntryController extends Controller
         return view('job_card_entry.costing_analysis', compact('jobCard', 'analysis'));
     }
 
+    public function printLabelTag($id, Request $request)
+    {
+        $request->merge(['format' => 'tag']);
+        return $this->printLabel($id, $request);
+    }
+
+    public function printLabelSticker($id, Request $request)
+    {
+        $request->merge(['format' => 'sticker']);
+        return $this->printLabel($id, $request);
+    }
+
     public function printLabel($id, Request $request)
     {
         $issueItem = JobCardIssueItem::with([
@@ -2438,6 +2450,7 @@ class JobCardEntryController extends Controller
         $orientation = $request->orientation ?? 'portrait';
         $width = $request->width ?? 60;
         $height = $request->height ?? 135;
+        $format = $request->format ?? 'tag';
         $margin = $request->margin ?? 2;
         $bg_color = $request->bg_color ?? '#ffffff';
         $v_align = $request->v_align ?? 'top';
@@ -2625,7 +2638,7 @@ class JobCardEntryController extends Controller
 
         $labelData = count($labels) > 0 ? $labels[0] : [];
 
-        return view('labels.print_barcode', compact('labelData', 'labels', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order'));
+        return view('labels.print_barcode', compact('labelData', 'labels', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order', 'format'));
     }
 
     public function barcodePreview($id, Request $request)

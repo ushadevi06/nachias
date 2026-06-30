@@ -20,7 +20,7 @@ class ZoneController extends Controller
         }
         if ($request->ajax()) {
 
-            $zones = Zone::with('state')->orderBy('id','desc')->get();
+            $zones = Zone::orderBy('id','desc')->get();
             $data = [];
             $count = 1;
 
@@ -57,7 +57,7 @@ class ZoneController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'zone_name' => $zone->zone_name,
-                    'state_name' => $zone->state ? $zone->state->state_name : 'N/A',
+                    'state_name' => $zone->state_names ?: 'N/A',
                     'city_names' => $zone->city_names,
                     'status' => $status,
                     'action' => $action,
@@ -93,7 +93,8 @@ class ZoneController extends Controller
             $request = request();
 
             $rules = [
-                'state_id' => 'required|exists:states,id',
+                'state_ids' => 'required|array',
+                'state_ids.*' => 'exists:states,id',
                 'city_ids' => 'required|array',
                 'city_ids.*' => 'exists:cities,id',
                 'zone_name' => [
@@ -119,7 +120,7 @@ class ZoneController extends Controller
 
             $data = [
                 'zone_name' => $request->zone_name,
-                'state_id' => $request->state_id,
+                'state_ids' => implode(',', $request->state_ids),
                 'city_ids' => implode(',', $request->city_ids),
                 'status' => $request->status
             ];
@@ -143,12 +144,12 @@ class ZoneController extends Controller
 
         $states = State::active()->orderBy('id','desc')->get();
         $cities = [];
-        $stateId = old('state_id') ?? ($zone->state_id ?? null);
-        if ($stateId) {
-            $cities = City::where('state_id', $stateId)->orderBy('id','desc')->get();
+        $stateIds = old('state_ids', $zone ? explode(',', $zone->state_ids) : []);
+        if (!empty($stateIds)) {
+            $cities = City::whereIn('state_id', $stateIds)->orderBy('id','desc')->get();
         }
 
-        return view('zones.add', compact('zone', 'states', 'cities'));
+        return view('zones.add', compact('zone', 'states', 'cities', 'stateIds'));
     }
 
     public function destroy($id)

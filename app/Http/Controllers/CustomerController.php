@@ -140,7 +140,7 @@ class CustomerController extends Controller
                 'payment_terms' => 'nullable|string|min:3|max:255|regex:/^[^<>]*$/',
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
-                'box_discount' => 'nullable|numeric|min:0|max:100',
+                'box_discount_amount' => 'nullable|numeric|min:0',
                 'bank_name' => 'nullable|string|min:3|max:50',
                 'branch' => 'nullable|string|min:3|max:50',
                 'account_number' => [
@@ -197,7 +197,7 @@ class CustomerController extends Controller
                 'payment_terms' => $request->payment_terms,
                 'credit_limit' => $request->credit_limit ?? 0,
                 'sales_discount' => $request->sales_discount ?? 0,
-                'box_discount' => $request->box_discount ?? 0,
+                'box_discount_amount' => $request->box_discount_amount ?? 0,
                 'bank_name' => $request->bank_name,
                 'branch' => $request->branch,
                 'account_number' => $request->account_number,

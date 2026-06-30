@@ -21,14 +21,11 @@
             <div class="section-title">PAGE SETUP</div>
             <div class="setup-grid">
                 <div class="form-group">
-                    <label>Height (mm)</label>
-                    <input type="number" id="labelHeight" class="form-control" value="135">
-                </div>
-                <div class="form-group d-flex align-items-end">
-                    <div class="form-check form-switch p-0 mb-2">
-                        <input class="form-check-input ms-0" type="checkbox" id="orientationToggle" role="switch">
-                        <label class="switch-label" for="orientationToggle">LANDSCAPE MODE</label>
-                    </div>
+                    <label>Label Format</label>
+                    <select id="labelFormat" class="form-select">
+                        <option value="tag">Price Tag (45 x 85 mm)</option>
+                        <option value="sticker">Price Sticker (50 x 70 mm)</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -232,8 +229,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const orientationToggle = document.getElementById('orientationToggle');
-        const heightInput = document.getElementById('labelHeight');
         const sortableContainer = document.getElementById('sortableFields');
         const finalPrintBtn = document.getElementById('finalPrintBtn');
 
@@ -245,18 +240,31 @@
 
         // Final Print Logic
         finalPrintBtn.addEventListener('click', function() {
-            const orientation = orientationToggle.checked ? 'landscape' : 'portrait';
-            const w = 60; // Fixed width
-            const h = heightInput.value || 135;
-            const margin = 2; // Default margin
-            const bgColor = encodeURIComponent('#ffffff'); // Default white
-            const vAlign = 'top'; // Default top alignment
+            const format = document.getElementById('labelFormat').value;
+            let orientation = 'portrait';
+            let w = 45;
+            let h = 85;
+
+            if (format === 'sticker') {
+                orientation = 'landscape';
+                w = 70; 
+                h = 50; 
+            }
+
+            const margin = 0; 
+            const bgColor = encodeURIComponent('#ffffff'); 
+            const vAlign = 'top'; 
             const order = Array.from(sortableContainer.children).map(child => child.dataset.id).join(',');
 
-            const printUrl = `{{ route('job_card_entries.print_label', $labelData['id']) }}?` + 
+            let baseUrl = format === 'tag' 
+                ? `{{ route('job_card_entries.print_label_tag', $labelData['id']) }}` 
+                : `{{ route('job_card_entries.print_label_sticker', $labelData['id']) }}`;
+
+            const printUrl = baseUrl + `?` + 
                 `size={{ urlencode($labelData['size']) }}&` +
                 `sleeve={{ urlencode($labelData['sleeve']) }}&` +
                 `bulk_print={{ request('bulk_print') ? 1 : 0 }}&` +
+                `format=${format}&` +
                 `orientation=${orientation}&` +
                 `width=${w}&` +
                 `height=${h}&` +

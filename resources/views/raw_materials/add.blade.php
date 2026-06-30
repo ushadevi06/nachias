@@ -88,6 +88,20 @@
                                     <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
+                                <!-- Art Nos -->
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select name="art_nos[]" id="art_nos" class="select2 form-select @error('art_nos') is-invalid @enderror" multiple data-placeholder="Select Art Nos">
+                                            @foreach($artNos as $artNo)
+                                                <option value="{{ $artNo }}" {{ (is_array(old('art_nos', $selectedArtNos)) && in_array($artNo, old('art_nos', $selectedArtNos))) ? 'selected' : '' }}>{{ $artNo }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="art_nos">Art Nos</label>
+                                    </div>
+                                    @error('art_nos')
+                                    <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
                                 <!-- Reference Image -->
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">

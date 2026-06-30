@@ -18,27 +18,21 @@
                         <div class="row g-4 justify-content-center">
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="state_id" id="zone_state_id" class="select2 form-select @error('state_id') is-invalid @enderror"
-                                        data-placeholder="Select State">
+                                    <select name="state_ids[]" id="zone_state_id" class="select2 form-select @error('state_ids') is-invalid @enderror" data-placeholder="Select State" multiple>
                                         <option value="">Select State</option>
                                         @foreach($states as $state)
-                                        <option value="{{ $state->id }}"
-                                            {{ old('state_id', $zone->state_id ?? '') == $state->id ? 'selected' : '' }}>
-                                            {{ $state->state_name }}
-                                        </option>
+                                        <option value="{{ $state->id }}" {{ in_array($state->id, $stateIds ?? []) ? 'selected' : '' }}>{{ $state->state_name }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="state_id">State <span class="text-danger">*</span></label>
+                                    <label for="zone_state_id">State <span class="text-danger">*</span></label>
                                 </div>
-                                @error('state_id')
+                                @error('state_ids')
                                 <div class="text-danger mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="city_ids[]" id="city_ids" class="select2 form-select @error('city_ids') is-invalid @enderror"
-                                        data-placeholder="Select City" multiple>
-                                        <option value="">Select City</option>
+                                    <select name="city_ids[]" id="city_ids" class="select2 form-select @error('city_ids') is-invalid @enderror" data-placeholder="Select City" multiple>
                                         @php
                                         $selectedCities = old('city_ids', $zone ? explode(',', $zone->city_ids) : []);
                                         @endphp
@@ -68,15 +62,10 @@
                             </div>
                             <div class="col-md-6 col-xl-12">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror"
-                                        data-placeholder="Select Status">
+                                    <select name="status" id="status" class="select2 form-select @error('status') is-invalid @enderror" data-placeholder="Select Status">
                                         <option value="">Select Status</option>
-                                        <option value="Active"
-                                            {{ old('status', $zone->status ?? '') == 'Active' ? 'selected' : '' }}>
-                                            Active</option>
-                                        <option value="Inactive"
-                                            {{ old('status', $zone->status ?? '') == 'Inactive' ? 'selected' : '' }}>
-                                            Inactive</option>
+                                        <option value="Active" {{ old('status', $zone->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                        <option value="Inactive" {{ old('status', $zone->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                     </select>
                                     <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
@@ -101,21 +90,24 @@
 <script>
     $(document).ready(function() {
         $('#zone_state_id').on('change', function() {
-            var stateId = $(this).val();
-            $('#city_ids').html('<option value="">Select City</option>');
+            var stateIds = $(this).val();
+            var selectedCities = $('#city_ids').val() || [];
+            $('#city_ids').empty();
 
-            if (stateId) {
+            if (stateIds && stateIds.length > 0) {
                   $.ajax({
-                    url: APP_URL + '/get-cities/' + stateId,
+                    url: APP_URL + '/get-cities/' + stateIds.join(','),
                     type: 'GET',
                     success: function(data) {
-                        $('#city_ids').html('<option value="">Select City</option>');
+                        $('#city_ids').empty();
                         $.each(data, function(index, city) {
                             $('#city_ids').append('<option value="' + city.id + '">' + city.city_name + '</option>');
                         });
-                        $('#city_ids').trigger('change');
+                        $('#city_ids').val(selectedCities).trigger('change');
                     }
                 });
+            } else {
+                $('#city_ids').trigger('change');
             }
         });
     });

@@ -171,13 +171,31 @@ class RawMaterialController extends Controller
                 addLog('create', 'Raw Material', 'raw_materials', $material->id, null, $newData);
                 $message = 'Raw Material added successfully';
             }
+            
+            $savedMaterial = $id ? RawMaterial::find($id) : $material;
+            if ($savedMaterial) {
+                $savedMaterial->artNos()->delete();
+                if ($request->has('art_nos') && is_array($request->art_nos)) {
+                    foreach ($request->art_nos as $artNo) {
+                        $savedMaterial->artNos()->create(['art_no' => $artNo]);
+                    }
+                }
+            }
 
             return redirect('raw_materials')->with('success', $message);
         }
 
         $storeCategories = StoreCategory::where('status', 'Active')->get();
         $uoms = Uom::where('status', 'Active')->get();
-        return view('raw_materials.add', compact('rawMaterial', 'storeCategories', 'uoms'));
+        
+        $artNos = \App\Models\GrnEntryItem::whereNotNull('art_no')->where('art_no', '!=', '')->distinct()->orderBy('art_no', 'asc')->pluck('art_no');
+            
+        $selectedArtNos = [];
+        if ($rawMaterial) {
+            $selectedArtNos = $rawMaterial->artNos()->pluck('art_no')->toArray();
+        }
+        
+        return view('raw_materials.add', compact('rawMaterial', 'storeCategories', 'uoms', 'artNos', 'selectedArtNos'));
     }
 
     public function destroy($id)

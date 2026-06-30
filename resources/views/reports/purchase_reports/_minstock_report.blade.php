@@ -67,7 +67,7 @@
             destroy: true,
             processing: true,
             serverSide: true,
-            pageLength: 25,
+            pageLength: 10,
             bLengthChange: true,
             bFilter: true,
             bInfo: true,
@@ -79,6 +79,7 @@
                     d.from_date = $('.start_date').val();
                     d.to_date = $('.end_date').val();
                     d.supplier_id = $('select[name="supplier_id"]').val();
+                    d.art_no = $('select[name="art_no"]').val();
                 }
             },
             columns: columns,

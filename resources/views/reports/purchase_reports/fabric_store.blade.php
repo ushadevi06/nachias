@@ -33,12 +33,21 @@
                     <label class="form-label small fw-bold text-muted">To Date</label>
                     <input type="text" class="form-control end_date" name="to_date" placeholder="DD-MM-YYYY">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">Supplier</label>
-                    <select class="form-select select2" name="supplier_id" data-placeholder="Select Supplier">
+                    <select class="form-select select2" name="supplier_id" id="supplier_id" data-placeholder="Select Supplier">
                         <option value=""></option>
                         @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                            <option value="{{ $supplier->id }}" {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Art No</label>
+                    <select class="form-select select2" name="art_no" id="art_no" data-placeholder="Select Art No">
+                        <option value=""></option>
+                        @foreach($artNos as $artNo)
+                            <option value="{{ $artNo }}" {{ request('art_no') == $artNo ? 'selected' : '' }}>{{ $artNo }}</option>
                         @endforeach
                     </select>
                 </div>

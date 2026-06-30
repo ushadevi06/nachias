@@ -23,13 +23,21 @@ class AjaxController extends Controller
 {
     public function fetchCities($state_id)
     {
-        $cities = City::active()->where('state_id', $state_id)->select('id', 'city_name')->get();
+        $stateIds = explode(',', $state_id);
+        $cities = City::active()->whereIn('state_id', $stateIds)->select('id', 'city_name')->get();
         return response()->json($cities);
     }
 
     public function fetchZones($state_id)
     {
-        $zones = Zone::active()->where('state_id', $state_id)->select('id', 'zone_name')->get();
+        $stateIds = explode(',', $state_id);
+        $zones = Zone::active()->where(function($q) use ($stateIds) {
+            foreach($stateIds as $sId) {
+                if (trim($sId) !== '') {
+                    $q->orWhereRaw("FIND_IN_SET(?, state_ids)", [trim($sId)]);
+                }
+            }
+        })->select('id', 'zone_name')->get();
         return response()->json($zones);
     }
 
@@ -249,7 +257,7 @@ class AjaxController extends Controller
         return response()->json([
             'success' => true,
             'customer' => $customer,
-            'box_discount' => (float)$customer->box_discount,
+            'box_discount_amount' => (float)$customer->box_discount_amount,
             'sales_discount' => (float)$customer->sales_discount
         ]);
     }

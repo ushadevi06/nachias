@@ -12,16 +12,21 @@ class Zone extends Model
 
     protected $fillable = [
         'zone_name',
-        'state_id',
+        'state_ids',
         'city_ids',
         'status',
         'created_by',
         'updated_by',
     ];
 
-    public function state()
+    public function getStateNamesAttribute()
     {
-        return $this->belongsTo(State::class);
+        if (!$this->state_ids)
+            return '';
+
+        $stateIds = explode(',', $this->state_ids);
+        $states = State::whereIn('id', $stateIds)->pluck('state_name')->toArray();
+        return implode(', ', $states);
     }
 
     public function getCityNamesAttribute()

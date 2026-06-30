@@ -35,7 +35,7 @@ class SalesOrder extends Model
         'commission_percent',
         'commission_amount',
         'sales_discount_percent',
-        'discount_percent',
+        'box_discount_amount',
         'discount_amount',
         'taxable_amount',
         'other_state',

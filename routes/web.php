@@ -71,6 +71,7 @@ use App\Http\Controllers\FitController;
 use App\Http\Controllers\PattiTypeController;
 use App\Http\Controllers\CollarTypeController;
 use App\Http\Controllers\CuffTypeController;
+use App\Http\Controllers\FgMinStockController;
 use App\Http\Controllers\PocketTypeController;
 use App\Http\Controllers\BottomCutController;
 use App\Http\Controllers\ColorController;
@@ -246,6 +247,13 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::match(['GET', 'POST'], '/fits/add/{id?}', [FitController::class, 'add']);
     Route::get('/fits/delete/{id}', [FitController::class, 'destroy']);
     Route::post('/fits/status/{id}', [FitController::class, 'updateStatus']);
+
+    /* FG Min Stocks */
+    Route::get('/fg-min-stocks', [FgMinStockController::class, 'index']);
+    Route::match(['GET', 'POST'], '/fg-min-stocks/add/{id?}', [FgMinStockController::class, 'add']);
+    Route::get('/fg-min-stocks/delete/{id}', [FgMinStockController::class, 'destroy']);
+    Route::post('/fg-min-stocks/status/{id}', [FgMinStockController::class, 'updateStatus']);
+    Route::get('/fg-min-stocks/search', [FgMinStockController::class, 'searchStockItems']);
 
     /* Patti Types */
     Route::get('/patti_types', [PattiTypeController::class, 'index']);
@@ -535,6 +543,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/download/{id}', [JobCardEntryController::class, 'download_details'])->name('job_card_entries.download');
     Route::get('job_card_entries/costing-analysis/{id}', [JobCardEntryController::class, 'costing_analysis'])->name('job_card_entries.costing_analysis');
     Route::get('job_card_entries/print-label/{id}', [JobCardEntryController::class, 'printLabel'])->name('job_card_entries.print_label');
+    Route::get('job_card_entries/print-label-tag/{id}', [JobCardEntryController::class, 'printLabelTag'])->name('job_card_entries.print_label_tag');
+    Route::get('job_card_entries/print-label-sticker/{id}', [JobCardEntryController::class, 'printLabelSticker'])->name('job_card_entries.print_label_sticker');
     Route::get('job_card_entries/get-sizes/{id}', [JobCardEntryController::class, 'getSizes'])->name('job_card_entries.get_sizes');
     Route::get('job_card_entries/barcode-matrix/{id}', [JobCardEntryController::class, 'barcodeMatrix'])->name('job_card_entries.barcode_matrix');
     Route::get('job_card_entries/barcode-preview/{id}', [JobCardEntryController::class, 'barcodePreview'])->name('job_card_entries.barcode_preview');

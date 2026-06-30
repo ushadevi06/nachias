@@ -115,10 +115,10 @@
                                     <th class="text-uppercase small fw-bold">Style</th>
                                     <th class="text-uppercase small fw-bold">Width</th>
                                     <th class="text-uppercase small fw-bold">Fabric Type</th>
-                                    <th class="text-center text-uppercase small fw-bold">UOM</th>
-                                    <th class="text-center text-uppercase small fw-bold">Qty</th>
                                     <th class="text-uppercase small fw-bold">Supplier Design</th>
                                     <th class="text-uppercase small fw-bold">Color</th>
+                                    <th class="text-center text-uppercase small fw-bold">UOM</th>
+                                    <th class="text-center text-uppercase small fw-bold">Qty</th>
                                     <th class="text-end text-uppercase small fw-bold">Rate</th>
                                     <th class="text-end text-uppercase small fw-bold">Amount</th>
                                     <th class="text-uppercase small fw-bold">Remarks</th>
@@ -152,12 +152,12 @@
                                     <td class="small text-dark">{{ $item->style->style_name ?? '-' }}</td>
                                     <td class="small text-dark">{{ $item->fabricWidth->width ?? '-' }}</td>
                                     <td class="small text-dark">{{ $item->fabricType->fabric_type ?? '-' }}</td>
+                                    <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
+                                    <td class="small text-dark">{{ $item->color->color_name ?? '-' }}</td>
                                     <td class="text-center">
                                         <span class="badge bg-light text-dark">{{ $item->uom->uom_code ?? '-' }}</span>
                                     </td>
                                     <td class="text-center fw-bold">{{ number_format($item->quantity, 2) }}</td>
-                                    <td class="small text-dark text-break">{{ $item->supplier_design_name ?? '-' }}</td>
-                                    <td class="small text-dark">{{ $item->color->color_name ?? '-' }}</td>
                                     <td class="text-end fw-semibold text-dark">₹{{ number_format($item->rate, 2) }}</td>
                                     <td class="text-end fw-bold text-primary">₹{{ number_format($item->amount, 2) }}</td>
                                     <td class="small text-dark">{{ $item->remarks ?? '-' }}</td>
