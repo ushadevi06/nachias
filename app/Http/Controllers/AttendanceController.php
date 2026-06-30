@@ -209,12 +209,8 @@ class AttendanceController extends Controller
                         'is_manual' => 0
                     ]
                 );
-                $name = DB::table('users')
-                    ->where('emp_id', $empStr)
-                    ->value('name');
-                $department_id = DB::table('users')
-                    ->where('emp_id', $empStr)
-                    ->value('department_id');
+                $name = DB::table('users')->where('emp_id', $empStr)->value('name');
+                $department_id = DB::table('users')->where('emp_id', $empStr)->value('department_id');
                 $department = DB::table('departments')
                     ->where('id', $department_id)
                     ->value('department');
@@ -268,8 +264,7 @@ class AttendanceController extends Controller
                             $name = DB::table('users')
                                 ->where('emp_id', $empStr)
                                 ->value('name');
-                            $department_id = DB::table('users')
-                                ->where('emp_id', $empStr)
+                            $department_id = DB::table('users')->where('emp_id', $empStr)
                                 ->value('department_id');
                             $department = DB::table('departments')
                                 ->where('id', $department_id)
@@ -321,19 +316,10 @@ class AttendanceController extends Controller
                             'is_manual' => 0
                         ]
                     );
-                    $name = DB::table('users')
-                        ->where('emp_id', $empStr)
-                        ->value('name');
-                    $department_id = DB::table('users')
-                        ->where('emp_id', $empStr)
-                        ->value('department_id');
-                    $department = DB::table('departments')
-                        ->where('id', $department_id)
-                        ->value('department');
-                    $attendanceId = DB::table('attendances')
-                        ->where('emp_code', $empStr)
-                        ->where('date', $dateKey)
-                        ->value('id');
+                    $name = DB::table('users')->where('emp_id', $empStr)->value('name');
+                    $department_id = DB::table('users')->where('emp_id', $empStr)->value('department_id');
+                    $department = DB::table('departments')->where('id', $department_id)->value('department');
+                    $attendanceId = DB::table('attendances')->where('emp_code', $empStr)->where('date', $dateKey)->value('id');
                     $final[] = [
                         'id' => $attendanceId,
                         'name' => $name ?? 'Unknown',
@@ -487,10 +473,7 @@ class AttendanceController extends Controller
         }
         $month = date('Y-m', strtotime($holidays[0]['date']));
         $dates = collect($holidays)->pluck('date')->toArray();
-        DB::table('declared_holidays')
-            ->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])
-            ->whereNotIn('date', $dates)
-            ->delete();
+        DB::table('declared_holidays')->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])->whereNotIn('date', $dates)->delete();
         foreach ($holidays as $holiday) {
             DB::table('declared_holidays')->updateOrInsert(
                 ['date' => $holiday['date']],
@@ -506,15 +489,15 @@ class AttendanceController extends Controller
     public function getHolidays(Request $request)
     {
         $month = $request->month;
-        $holidays = DB::table('declared_holidays')
-            ->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])
-            ->get();
+        $holidays = DB::table('declared_holidays')->whereRaw("DATE_FORMAT(date, '%Y-%m') = ?", [$month])->get();
         return response()->json($holidays);
     }
     public function getStaffReport(Request $request)
     {
         $empCode = $request->emp_code;
         $month   = $request->month;
+        $fromDate = $request->from_date;
+        $toDate   = $request->to_date;
         $query = DB::table('attendances')
             ->join('users', function ($join) {
                 $join->on(
@@ -532,23 +515,45 @@ class AttendanceController extends Controller
                 'attendances.work_hours as hours',
                 'attendances.status'
             );
-        if ($empCode) {
+        if ($empCode && $empCode !== 'all') {
             $query->where('attendances.emp_code', $empCode);
         }
         if ($month) {
             $query->where('attendances.date', 'like', $month . '%');
+        } elseif ($fromDate && $toDate) {
+            $query->whereBetween('attendances.date', [$fromDate, $toDate]);
         }
         $records = $query->orderBy('attendances.date','desc') ->orderBy('users.emp_id', 'desc')->get();
         return response()->json($records);
     }
     public function getEmployees()
     {
-        $employees = DB::table('users')
-            ->select('emp_id as code', 'name')
-            ->where('id', '!=', 1)
-            ->orderBy('id','desc')
-            ->get();
+        $employees = DB::table('users')->select('emp_id as code', 'name')->where('id', '!=', 1)->orderBy('id','desc')->get();
         return response()->json($employees);
+    }
+
+    public function exportStaffReport(Request $request)
+    {
+        $empCode = $request->emp_code;
+        $month   = $request->month;
+        $fromDate = $request->from_date;
+        $toDate   = $request->to_date;
+
+        $fileName = 'Staff_Wise_Report';
+        if ($empCode && $empCode !== 'all') {
+            $empName = DB::table('users')->where('emp_id', $empCode)->value('name');
+            $fileName .= '_' . str_replace(' ', '_', $empName);
+        }
+        if ($fromDate && $toDate) {
+            $fileName .= '_' . $fromDate . '_to_' . $toDate;
+        } elseif ($month) {
+            $fileName .= '_' . $month;
+        }
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\StaffReportExport($empCode, $month, $fromDate, $toDate),
+            $fileName . '.xlsx'
+        );
     }
     public function edit() {
         return view('attendances/edit');
@@ -575,7 +580,6 @@ class AttendanceController extends Controller
         if (!$attendance) {
             abort(404, 'Attendance not found');
         }
-        // dd($attendance);
         return view('attendances.view_details', compact('attendance'));
     }
     public function updateAttendance(Request $request)
@@ -583,12 +587,10 @@ class AttendanceController extends Controller
         $request->validate([
             'id' => 'required',
             'in_time' => 'required',
-            'out_time' => 'required',
+            'out_time' => 'nullable',
             'status' => 'required'
         ]);
-        $attendance = DB::table('attendances')
-            ->where('id', $request->id)
-            ->first();
+        $attendance = DB::table('attendances')->where('id', $request->id)->first();
         if (!$attendance) {
             return response()->json([
                 'success' => false,
@@ -596,12 +598,8 @@ class AttendanceController extends Controller
             ]);
         }
         $date = $attendance->date;
-        $in = $request->in_time
-            ? $date . ' ' . date('H:i:s', strtotime($request->in_time))
-            : null;
-        $out = $request->out_time
-            ? $date . ' ' . date('H:i:s', strtotime($request->out_time))
-            : null;
+        $in = $request->in_time ? $date . ' ' . date('H:i:s', strtotime($request->in_time)) : null;
+        $out = $request->out_time ? $date . ' ' . date('H:i:s', strtotime($request->out_time)) : null;
         $hours = 0;
         if ($in && $out) {
             $hours = round(
@@ -617,9 +615,7 @@ class AttendanceController extends Controller
             $status = 'Absent';
         } else {
             $isSunday = date('w', strtotime($date)) == 0;
-            $isHoliday = DB::table('declared_holidays')
-                ->whereDate('date', $date)
-                ->exists();
+            $isHoliday = DB::table('declared_holidays')->whereDate('date', $date)->exists();
             if ($isSunday || $isHoliday) {
                 $status = 'Overtime';
             } else if ($hours > 9) {

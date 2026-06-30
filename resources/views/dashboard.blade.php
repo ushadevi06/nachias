@@ -249,49 +249,49 @@
             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-primary">
                     <p class="text-muted small mb-1">Total Sales Val.</p>
-                    <h5 class="mb-0 fw-bold">₹{{ number_format($total_sales_value, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold">₹{{ formatIndianCurrency($total_sales_value) }}</h5>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-danger">
                     <p class="text-muted small mb-1">Total Sales Return</p>
-                    <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($sales_return, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold text-danger">₹{{ formatIndianCurrency($sales_return) }}</h5>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-primary">
                     <p class="text-muted small mb-1">Total Debtors</p>
-                    <h5 class="mb-0 fw-bold text-primary">₹{{ number_format($total_debtors, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold text-primary">₹{{ formatIndianCurrency($total_debtors) }}</h5>
                 </div>
             </div>
              <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-primary">
                     <p class="text-muted small mb-1">Bill Disc. ({{ $bill_discount_percent }}%)</p>
-                    <h5 class="mb-0 fw-bold">₹{{ number_format($bill_discount, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold">₹{{ formatIndianCurrency($bill_discount) }}</h5>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-primary">
                     <p class="text-muted small mb-1">Cash Disc. ({{ $cash_discount_percent }}%)</p>
-                    <h5 class="mb-0 fw-bold">₹{{ number_format($cash_discount, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold">₹{{ formatIndianCurrency($cash_discount) }}</h5>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-dark">
                     <p class="text-muted small mb-1">Total Purchase</p>
-                    <h5 class="mb-0 fw-bold text-navy">₹{{ number_format($total_purchase, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold text-navy">₹{{ formatIndianCurrency($total_purchase) }}</h5>
                 </div>
             </div>
              <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-danger">
                     <p class="text-muted small mb-1">Purchase Return</p>
-                    <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($purchase_return, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold text-danger">₹{{ formatIndianCurrency($purchase_return) }}</h5>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card financial-stat border-0 shadow-sm p-3 border-top-danger">
                     <p class="text-muted small mb-1">Total Creditors</p>
-                    <h5 class="mb-0 fw-bold text-danger">₹{{ number_format($total_creditors, 2) }}</h5>
+                    <h5 class="mb-0 fw-bold text-danger">₹{{ formatIndianCurrency($total_creditors) }}</h5>
                 </div>
             </div>
         </div>
@@ -321,11 +321,11 @@
                                         @foreach ($debtors_aging as $row)
                                         <tr>
                                             <td><strong>{{ $row->zone_name }}</strong></td>
-                                            <td>{{ number_format($row->total_due, 2) }}</td>
-                                            <td class="text-success">{{ number_format($row->bucket_30, 2) }}</td>
-                                            <td>{{ number_format($row->bucket_60, 2) }}</td>
-                                            <td class="text-warning">{{ number_format($row->bucket_90, 2) }}</td>
-                                            <td class="text-danger fw-bold">{{ number_format($row->bucket_above_90, 2) }}</td>
+                                            <td>{{ formatIndianCurrency($row->total_due) }}</td>
+                                            <td class="text-success">{{ formatIndianCurrency($row->bucket_30) }}</td>
+                                            <td>{{ formatIndianCurrency($row->bucket_60) }}</td>
+                                            <td class="text-warning">{{ formatIndianCurrency($row->bucket_90) }}</td>
+                                            <td class="text-danger fw-bold">{{ formatIndianCurrency($row->bucket_above_90) }}</td>
                                         </tr>
                                         @endforeach
                                     @else
@@ -364,11 +364,11 @@
                                         @foreach ($creditors_aging as $row)
                                         <tr>
                                             <td><strong>{{ $row->supplier_name }}</strong></td>
-                                            <td>{{ number_format($row->total_due, 2) }}</td>
-                                            <td class="text-success">{{ number_format($row->bucket_30, 2) }}</td>
-                                            <td>{{ number_format($row->bucket_60, 2) }}</td>
-                                            <td class="text-warning">{{ number_format($row->bucket_90, 2) }}</td>
-                                            <td class="text-danger fw-bold">{{ number_format($row->bucket_above_90, 2) }}</td>
+                                            <td>{{ formatIndianCurrency($row->total_due) }}</td>
+                                            <td class="text-success">{{ formatIndianCurrency($row->bucket_30) }}</td>
+                                            <td>{{ formatIndianCurrency($row->bucket_60) }}</td>
+                                            <td class="text-warning">{{ formatIndianCurrency($row->bucket_90) }}</td>
+                                            <td class="text-danger fw-bold">{{ formatIndianCurrency($row->bucket_above_90) }}</td>
                                         </tr>
                                         @endforeach
                                     @else
@@ -393,19 +393,19 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
                                 <div><i class="ri ri-checkbox-blank-circle-fill text-primary me-2"></i>Fabric</div>
-                                <span class="fw-bold">₹{{ number_format($fabric_value, 2) }}</span>
+                                <span class="fw-bold">₹{{ formatIndianCurrency($fabric_value) }}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
                                 <div><i class="ri ri-checkbox-blank-circle-fill text-info me-2"></i>Accessories</div>
-                                <span class="fw-bold">₹{{ number_format($accessories_value, 2) }}</span>
+                                <span class="fw-bold">₹{{ formatIndianCurrency($accessories_value) }}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
                                 <div><i class="ri ri-checkbox-blank-circle-fill text-warning me-2"></i>WIP</div>
-                                <span class="fw-bold">₹{{ number_format($wip_value, 2) }}</span>
+                                <span class="fw-bold">₹{{ formatIndianCurrency($wip_value) }}</span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0">
                                 <div><i class="ri ri-checkbox-blank-circle-fill text-success me-2"></i>Finished Goods</div>
-                                <span class="fw-bold">₹{{ number_format($finished_goods_value, 2) }}</span>
+                                <span class="fw-bold">₹{{ formatIndianCurrency($finished_goods_value) }}</span>
                             </li>
                         </ul>
                         <hr>

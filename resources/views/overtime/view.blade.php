@@ -192,13 +192,7 @@ $(function () {
                 .addClass('is-invalid');
             hasError = true;
         }
-        if (!outTime) {
-            $('#ot_out_time_error')
-                .text('Out time is required');
-            $('#ot_out_time')
-                .addClass('is-invalid');
-            hasError = true;
-        }
+
         if (inTime && outTime && outTime < inTime) {
             $('#ot_out_time_error')
                 .text(

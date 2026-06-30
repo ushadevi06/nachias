@@ -95,3 +95,34 @@ if (!function_exists('numberToWords')) {
         return strtoupper(($result ? $result . "Rupees " : "") . $paise . " Only");
     }
 }
+
+if (!function_exists('formatIndianCurrency')) {
+    function formatIndianCurrency($number)
+    {
+        if (!is_numeric($number)) {
+            return $number;
+        }
+        $isNegative = $number < 0;
+        $number = abs($number);
+
+        $parts = explode('.', sprintf('%0.2f', $number));
+        $integerPart = $parts[0];
+        $decimalPart = isset($parts[1]) ? $parts[1] : '00';
+
+        $len = strlen($integerPart);
+        if ($len > 3) {
+            $lastThree = substr($integerPart, -3);
+            $remaining = substr($integerPart, 0, -3);
+            $reversedRemaining = strrev($remaining);
+            $chunks = str_split($reversedRemaining, 2);
+            $formattedRemaining = strrev(implode(',', $chunks));
+            
+            $formattedInteger = $formattedRemaining . ',' . $lastThree;
+        } else {
+            $formattedInteger = $integerPart;
+        }
+
+        $formatted = $formattedInteger . '.' . $decimalPart;
+        return $isNegative ? '-' . $formatted : $formatted;
+    }
+}

@@ -62,13 +62,16 @@ class MonthlyPayrollExport implements FromCollection, WithHeadings, WithMapping
             'Emp Code',
             'Staff Name',
             'Department',
+            'From Date',
+            'To Date',
             'Fixed Gross',
-            'Wrk Days',
-            'Leave Days',
+            'Present Days',
+            'Absent Days (LOP)',
+            'Working Days',
             'Holidays',
             'OT Hrs',
             'Late Hrs',
-            'LOP',
+            'LOP Amt',
             'Basic Pay',
             'DA',
             'HRA',
@@ -90,6 +93,9 @@ class MonthlyPayrollExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($row): array
     {
+        $presentDays = $row->present_days ?? 0;
+        $absentDays  = $row->absent_days ?? 0;
+        $workingDays = $presentDays - $absentDays;
 
         return [
             $row->device_name,
@@ -97,9 +103,12 @@ class MonthlyPayrollExport implements FromCollection, WithHeadings, WithMapping
             $row->emp_id,
             $row->name,
             $row->department,
+            $row->from_date ? \Carbon\Carbon::parse($row->from_date)->format('d-m-Y') : '—',
+            $row->to_date   ? \Carbon\Carbon::parse($row->to_date)->format('d-m-Y')   : '—',
             $row->fixed_gross ?? 0,
-            $row->present_days ?? 0,
-            $row->absent_days ?? 0,
+            $presentDays,
+            $absentDays,
+            $workingDays,
             $row->holidays ?? 0,
             $row->ot_hours ?? 0,
             $row->late_hours ?? 0,

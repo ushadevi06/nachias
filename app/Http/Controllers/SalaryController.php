@@ -61,6 +61,10 @@ class SalaryController extends Controller
                     $request->status
                 );
             }
+            if (!empty($request->month)) {
+                $date = Carbon::parse($request->month);
+                $query->where('salary_generations.salary_month', $date->month)->where('salary_generations.salary_year', $date->year);
+            }
             $totalRecords = $query->count();
             $filteredRecords = $totalRecords;
             $start = $request->input('start', 0);
@@ -96,50 +100,37 @@ class SalaryController extends Controller
                             <i class="icon-base ri ri-edit-box-line"></i>
                         </a>';
                 }
-                if ((auth()->id() == 1 || auth()->user()->can('view_details monthly-payroll')) && !empty($salary->payslip_pdf)) {
+                if (auth()->id() == 1 || auth()->user()->can('view_details monthly-payroll')) {
                     $action .= '
                         <a href="'.url('view-payslip/'.$salary->id).'"
                             target="_blank"
                             class="btn btn-view">
-
                             <i class="icon-base ri ri-eye-line"></i>
-
                         </a>';
                     $action .= '
                         <a href="'.url('print-payslip/'.$salary->id).'"
                             target="_blank"
                             class="btn btn-cancel">
-
                             <i class="icon-base ri ri-printer-line"></i>
-
                         </a>';
                     $action .= '
                         <a href="'.url('download-payslip/'.$salary->id).'"
                             target="_blank"
                             class="btn btn-cancel">
                             <i class="ri ri-download-line me-1"></i>
-
                         </a>';
                 }
                 $action .= '</div>';
                 $data[] = [
-                    'checkbox' => $checkbox,
-                    'DT_RowIndex' => $count++,
-                    'month_year' =>
-                        $salary->salary_month.'/'.$salary->salary_year,
-                    'employee' =>
-                        $salary->name.'
-                        <span class="mini-title">
-                            ('.$salary->emp_id.')
-                        </span>',
-                    'gross' =>
-                        '₹'.number_format($salary->gross_salary, 2),
-                    // 'deduction' =>
-                    //     '₹'.number_format($salary->deduction_amount, 2),
-                    'net_salary' =>
-                        '₹'.number_format($salary->net_salary, 2),
-                    'status' => $statusBadge,
-                    'action' => $action,
+                    'checkbox'      => $checkbox,
+                    'DT_RowIndex'   => $count++,
+                    'month_year'    => \Carbon\Carbon::create()->month($salary->salary_month)->format('F') . ' ' . $salary->salary_year,
+                    'employee_name' => $salary->name,
+                    'emp_code'      => $salary->emp_id,
+                    'gross'         => '₹' . number_format($salary->gross_salary, 2),
+                    'net_salary'    => '₹' . number_format($salary->net_salary, 2),
+                    'status'        => $statusBadge,
+                    'action'        => $action,
                 ];
             }
             return response()->json([
@@ -179,29 +170,43 @@ class SalaryController extends Controller
     public function generatePayroll(Request $request)
     {
         $month = $request->month;
-        $date = Carbon::parse($month);
-        $year = $date->year;
-        $monthNumber = $date->month;
-        $startDate = $date->copy()->startOfMonth()->toDateString();
-        $endDate = $date->copy()->endOfMonth()->toDateString();
-        $totalDays = $date->daysInMonth;
+        $fromDate = $request->from_date;
+        $toDate = $request->to_date;
+        $type = $request->type ?: 'monthly';
+
+        if ($type === 'range' && $fromDate && $toDate) {
+            $startDate = Carbon::parse($fromDate)->toDateString();
+            $endDate = Carbon::parse($toDate)->toDateString();
+            $carbonStart = Carbon::parse($fromDate);
+            $carbonEnd = Carbon::parse($toDate);
+            $totalDays = $carbonStart->diffInDays($carbonEnd) + 1;
+            $monthNumber = $carbonStart->month;
+            $year = $carbonStart->year;
+        } else {
+            $date = Carbon::parse($month);
+            $year = $date->year;
+            $monthNumber = $date->month;
+            $startDate = $date->copy()->startOfMonth()->toDateString();
+            $endDate = $date->copy()->endOfMonth()->toDateString();
+            $totalDays = $date->daysInMonth;
+        }
+
         $sundays = 0;
-        for ($day = 1; $day <= $totalDays; $day++) {
-            $currentDate = Carbon::create($year, $monthNumber, $day);
+        for ($day = 0; $day < $totalDays; $day++) {
+            $currentDate = Carbon::parse($startDate)->addDays($day);
             if ($currentDate->isSunday()) {
                 $sundays++;
             }
         }
-        $holidays = DB::table('declared_holidays')->whereMonth('date', $monthNumber)->whereYear('date', $year)->count();
+        $holidays = DB::table('declared_holidays')->whereBetween('date', [$startDate, $endDate])->count();
         $totHolidays = $sundays + $holidays;
-        $employees = User::where('id', '!=', 1)->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
+        $employees = User::where('id', '!=', 1)->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($startDate, $endDate) {
             $query->select(
                 DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
             )
             ->from('salary_generations')
-            ->where('salary_month', $monthNumber)
-            ->where('salary_year', $year);
-
+            ->where('from_date', '<=', $endDate)
+            ->where('to_date', '>=', $startDate);
         })
         ->get();
         $payroll = [];
@@ -265,28 +270,27 @@ class SalaryController extends Controller
             }
             $otDays = $otHours / 8;
             $fixedGross = $employee->fixed_gross ?? 0;
-            $basic = ($fixedGross * 50) / 100;
-            $hra    = ($fixedGross * 20) / 100;
-            $da     = ($fixedGross * 20) / 100;
-            $oa     = ($fixedGross * 10) / 100;
-            $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)->whereMonth('issue_date', $monthNumber)->whereYear('issue_date', $year)->sum('total_cost') ?? 0; 
-            $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
+            $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)->whereBetween('issue_date', [$startDate, $endDate])->sum('total_cost') ?? 0;
             $salaryAdvance = 0;
             $otherDeduction = 0;
             $workingDays = $presentDays - $otDays;
             $busFare = $employee->bus_fare ? $workingDays * $employee->bus_fare : 0;
-            $perDaySalary = $fixedGross / $totalDays;
+            $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
+            $perDaySalary = $fixedGross > 0 ? $fixedGross / $totalDays : 0;
             $perHourSalary = $perDaySalary / 8;
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
-            $grossSalary = $fixedGross - $lopAmount;
+
+            $payable = $fixedGross - $lopAmount;
+
+            $basic = ($payable * 50) / 100;
+            $da    = ($payable * 20) / 100;
+            $hra   = ($payable * 20) / 100;
+            $oa    = ($payable * 10) / 100;
+
             $wage = $basic + $da;
-            $pf = ($wage * 12) / 100;
-            if ($wage <= 21000) {
-                $esi = ($wage * 0.75) / 100;
-            } else {
-                $esi = (21000 * 0.75) / 100;
-            }
+            $pf   = ($wage * 12) / 100;
+            $esi  = ($wage <= 21000) ? ($wage * 0.75) / 100 : (21000 * 0.75) / 100;
             $totalPermissionHours = 0;
             foreach ($attendance as $att) {
                 if (!empty($att->permission_hours)) {
@@ -302,7 +306,7 @@ class SalaryController extends Controller
             }
             $lateFine = $lateHours * $perHourSalary;
             $totalDeduction = $pf + $esi + $otherDeduction + $salaryAdvance + $lateFine;
-            $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
+            $totalEarnings = $payable + $otAmount + $incentive + $misc + $busFare;
             $netSalary = $totalEarnings - $totalDeduction;
             $payroll[] = [
                 'employee_id'      => $employee->emp_id,
@@ -343,9 +347,20 @@ class SalaryController extends Controller
     }
     public function savePayroll(Request $request)
     {
-        // dd($request->all());
         $month = $request->month;
-        $date = Carbon::parse($month);
+        $fromDate = $request->from_date;
+        $toDate = $request->to_date;
+        $type = $request->type ?: 'monthly';
+
+        if ($type === 'range' && $fromDate && $toDate) {
+            $date = Carbon::parse($fromDate);
+            $startDate = Carbon::parse($fromDate)->toDateString();
+            $endDate = Carbon::parse($toDate)->toDateString();
+        } else {
+            $date = Carbon::parse($month);
+            $startDate = $date->copy()->startOfMonth()->toDateString();
+            $endDate = $date->copy()->endOfMonth()->toDateString();
+        }
         $salaryMonth = $date->month;
         $salaryYear = $date->year;
         $isEdit = false;
@@ -356,34 +371,17 @@ class SalaryController extends Controller
             }
         }
         foreach ($request->payroll as $row) {
-            if(
-                $row['basic_salary'] <= 0 ||
-                $row['hra'] <= 0 ||
-                $row['da'] <= 0 ||
-                $row['gross_salary'] <= 0 ||
-                $row['net_salary'] <= 0
-            ) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid payroll values detected'
-                ], 422);
+            if($row['basic_salary'] <= 0 || $row['hra'] <= 0 || $row['da'] <= 0 || $row['gross_salary'] <= 0 || $row['net_salary'] <= 0) {
+                return response()->json(['success' => false, 'message' => 'Invalid payroll values detected'], 422);
             }
             if($row['salary_advance'] > $row['gross_salary']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Salary advance cannot exceed gross salary'
-                ], 422);
+                return response()->json(['success' => false, 'message' => 'Salary advance cannot exceed gross salary'], 422);
             }
             if ($row['total_deduction'] > $row['gross_salary']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Total deduction cannot exceed gross salary'
-                ], 422);
+                return response()->json(['success' => false, 'message' => 'Total deduction cannot exceed gross salary'], 422);
             }
             if(!empty($row['salary_id'])) {
-                DB::table('salary_generations')
-                    ->where('id', $row['salary_id'])
-                    ->update([
+                DB::table('salary_generations')->where('id', $row['salary_id'])->update([
                         'basic_salary'    => $row['basic_salary'],
                         'hra'             => $row['hra'],
                         'da'              => $row['da'],
@@ -409,11 +407,7 @@ class SalaryController extends Controller
                         'updated_at'      => now()
                     ]);
             } else {
-                 $alreadyGenerated = DB::table('salary_generations')
-                    ->where('salary_month', $salaryMonth)
-                    ->where('salary_year', $salaryYear)
-                    ->where('employee_id', $row['employee_id'])
-                    ->exists();
+                $alreadyGenerated = DB::table('salary_generations')->where('employee_id', $row['employee_id'])->where('from_date', '<=', $endDate)->where('to_date', '>=', $startDate)->exists();
                 if($alreadyGenerated) {
                     continue;
                 }
@@ -421,6 +415,8 @@ class SalaryController extends Controller
                     'employee_id'      => $row['employee_id'],
                     'salary_month'     => $salaryMonth,
                     'salary_year'      => $salaryYear,
+                    'from_date'        => $startDate,
+                    'to_date'          => $endDate,
                     'fixed_gross'      => $row['fixed_gross'],
                     'basic_salary'     => $row['basic_salary'],
                     'hra'              => $row['hra'],
@@ -457,9 +453,7 @@ class SalaryController extends Controller
     }
     public function updatePayrollStatus(Request $request)
     {
-        $salary = DB::table('salary_generations')
-            ->where('id', $request->id)
-            ->first();
+        $salary = DB::table('salary_generations')->where('id', $request->id)->first();
         if(!$salary) {
             return response()->json([
                 'success' => false,
@@ -482,9 +476,7 @@ class SalaryController extends Controller
         if($request->status == 'Paid') {
             $updateData['paid_at'] = now();
         }
-        DB::table('salary_generations')
-            ->where('id', $request->id)
-            ->update($updateData);
+        DB::table('salary_generations')->where('id', $request->id)->update($updateData);
         return response()->json(['success' => true, 'message' => 'Payroll status updated successfully']);
     }
     public function generatePayslipPdf(Request $request)
@@ -528,18 +520,10 @@ class SalaryController extends Controller
             $onTimeDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Present')->count();
             $lateDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Late')->count();
             $setting = Setting::with(['state', 'city'])->first();
-            $pdf = Pdf::loadView('salary_calculations.payslip_pdf', compact('salary', 'setting', 'totalDays', 'onTimeDays', 'lateDays'));
-            $uploadPath = public_path('uploads/payroll/payslips');
-            if (!file_exists($uploadPath)) {
-                mkdir($uploadPath, 0755, true);
-            }
-            $filename = 'Payslip_' . $salary->salary_month . '_' . $salary->salary_year . '_' . Str::slug($salary->name) . '_' .$salary->emp_id .'.pdf';
-            $pdf->save($uploadPath.'/'.$filename);
-            $filePath = 'uploads/payroll/payslips/'.$filename;
+            // Just mark as Paid — PDF is generated on-demand when downloading/viewing
             DB::table('salary_generations')
                 ->where('id', $id)
                 ->update([
-                    'payslip_pdf' => $filePath,
                     'status' => 'Paid',
                     'updated_at' => now()
                 ]);
@@ -551,12 +535,34 @@ class SalaryController extends Controller
     public function viewPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->where('id', $id)
+            ->join('users', function ($join) {
+                $join->on(
+                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
+                    '=',
+                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
+                );
+            })
+            ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
+            ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+            ->select(
+                'salary_generations.*',
+                'users.name',
+                'users.emp_id',
+                'users.esi_no',
+                'users.pf_no',
+                'departments.department as department_name',
+                'roles.name as role_name'
+            )
+            ->where('salary_generations.id', $id)
             ->first();
-
-        return response()->file(
-            public_path($salary->payslip_pdf)
-        );
+        $month = $salary->salary_month;
+        $year  = $salary->salary_year;
+        $totalDays = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
+        $onTimeDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Present')->count();
+        $lateDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Late')->count();
+        $setting = Setting::with(['state', 'city'])->first();
+        $pdf = Pdf::loadView('salary_calculations.payslip_pdf', compact('salary', 'setting', 'totalDays', 'onTimeDays', 'lateDays'));
+        return $pdf->stream('Payslip_'.$salary->salary_month.'_'.$salary->salary_year.'_'.$salary->emp_id.'.pdf');
     }
     public function printPayslip($id)
     {
@@ -598,41 +604,80 @@ class SalaryController extends Controller
     public function downloadPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->where('id', $id)
+            ->join('users', function ($join) {
+                $join->on(
+                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
+                    '=',
+                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
+                );
+            })
+            ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
+            ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
+            ->select(
+                'salary_generations.*',
+                'users.name',
+                'users.emp_id',
+                'users.esi_no',
+                'users.pf_no',
+                'departments.department as department_name',
+                'roles.name as role_name'
+            )
+            ->where('salary_generations.id', $id)
             ->first();
-        $filePath = public_path($salary->payslip_pdf);
-        if (!file_exists($filePath)) {
-            abort(404, 'File not found');
-        }
-        return response()->download(
-            $filePath,
-            basename($filePath)
-        );
+        $month = $salary->salary_month;
+        $year  = $salary->salary_year;
+        $totalDays = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
+        $onTimeDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Present')->count();
+        $lateDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Late')->count();
+        $setting = Setting::with(['state', 'city'])->first();
+        $filename = 'Payslip_'.$salary->salary_month.'_'.$salary->salary_year.'_'.Str::slug($salary->name).'_'.$salary->emp_id.'.pdf';
+        $pdf = Pdf::loadView('salary_calculations.payslip_pdf', compact('salary', 'setting', 'totalDays', 'onTimeDays', 'lateDays'));
+        return $pdf->download($filename);
     }
     public function searchSalaryGeneration(Request $request)
     {
         $search = trim($request->search);
         $month = $request->month;
-        $date = Carbon::parse($month);
-        $year = $date->year;
-        $monthNumber = $date->month;
-        $startDate = $date->copy()->startOfMonth()->toDateString();
-        $endDate = $date->copy()->endOfMonth()->toDateString();
-        $totalDays = $date->daysInMonth;
+        $fromDate = $request->from_date;
+        $toDate = $request->to_date;
+        $type = $request->type ?: 'monthly';
+
+        if ($type === 'range' && $fromDate && $toDate) {
+            $startDate = Carbon::parse($fromDate)->toDateString();
+            $endDate = Carbon::parse($toDate)->toDateString();
+            $carbonStart = Carbon::parse($fromDate);
+            $carbonEnd = Carbon::parse($toDate);
+            $totalDays = $carbonStart->diffInDays($carbonEnd) + 1;
+            $monthNumber = $carbonStart->month;
+            $year = $carbonStart->year;
+        } else {
+            $date = Carbon::parse($month);
+            $year = $date->year;
+            $monthNumber = $date->month;
+            $startDate = $date->copy()->startOfMonth()->toDateString();
+            $endDate = $date->copy()->endOfMonth()->toDateString();
+            $totalDays = $date->daysInMonth;
+        }
+
         $sundays = 0;
-        for ($day = 1; $day <= $totalDays; $day++) {
-            $currentDate = Carbon::create($year, $monthNumber, $day);
+        for ($day = 0; $day < $totalDays; $day++) {
+            $currentDate = Carbon::parse($startDate)->addDays($day);
             if ($currentDate->isSunday()) {
                 $sundays++;
             }
         }
-        $holidays = DB::table('declared_holidays')
-            ->whereMonth('date', $monthNumber)
-            ->whereYear('date', $year)
-            ->count();
+        $holidays = DB::table('declared_holidays')->whereBetween('date', [$startDate, $endDate])->count();
         $totHolidays = $sundays + $holidays;
         $employees = DB::table('users')
             ->where('id', '!=', 1)
+            ->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($startDate, $endDate) {
+                $query->select(
+                    DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
+                )
+                ->from('salary_generations')
+                ->where('from_date', '<=', $endDate)
+                ->where('to_date', '>=', $startDate);
+            })
             ->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                 ->orWhere('emp_id', 'like', "%{$search}%");
@@ -640,16 +685,9 @@ class SalaryController extends Controller
             ->get();
         $payroll = [];
         foreach ($employees as $employee) {
-            $attendance = DB::table('attendances')
-                ->where('emp_code', $employee->emp_id)
-                ->whereBetween('date', [$startDate, $endDate])
-                ->get();
-            $presentDays = $attendance
-                ->whereIn('status', ['Present', 'Late', 'Overtime'])
-                ->count();
-            $absentDays = $attendance
-                ->where('status', 'Absent')
-                ->count();
+            $attendance = DB::table('attendances')->where('emp_code', $employee->emp_id)->whereBetween('date', [$startDate, $endDate])->get();
+            $presentDays = $attendance->whereIn('status', ['Present', 'Late', 'Overtime'])->count();
+            $absentDays = $attendance->where('status', 'Absent')->count();
             if ($presentDays == 0) {
                 $payroll[] = [
                     'employee_id'      => $employee->emp_id,
@@ -692,9 +730,7 @@ class SalaryController extends Controller
                     $outTime = Carbon::parse($att->out_time);
                     $workedHours = floor($inTime->diffInMinutes($outTime) / 60);
                     $isSunday = Carbon::parse($att->date)->isSunday();
-                    $isHoliday = DB::table('declared_holidays')
-                        ->whereDate('date', $att->date)
-                        ->exists();
+                    $isHoliday = DB::table('declared_holidays')->whereDate('date', $att->date)->exists();
                     if ($isSunday || $isHoliday) {
                         $otHours += $workedHours;
                     } else {
@@ -715,26 +751,16 @@ class SalaryController extends Controller
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
             $grossSalary = $fixedGross - $lopAmount;
-            $incentive = DB::table('task_assign_employees')
-                ->where('issued_to', $employee->id)
-                ->whereMonth('issue_date', $monthNumber)
-                ->whereYear('issue_date', $year)
-                ->sum('total_cost') ?? 0; 
-            $misc = $employee->bus_fare
-            ? $otDays * $employee->bus_fare
-            : 0;
+            $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)->whereBetween('issue_date', [$startDate, $endDate])->sum('total_cost') ?? 0; 
+            $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
             $otherDeduction = 0;
             $salaryAdvance = 0;
             $workingDays = $presentDays - $otDays;
-            $busFare = $employee->bus_fare
-                ? $workingDays * $employee->bus_fare
-                : 0;
+            $busFare = $employee->bus_fare ? $workingDays * $employee->bus_fare : 0;
             $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
             $wage = $basic + $da;
             $pf = ($wage * 12) / 100;
-            $esi = ($wage <= 21000)
-                ? ($wage * 0.75) / 100
-                : (21000 * 0.75) / 100;
+            $esi = ($wage <= 21000) ? ($wage * 0.75) / 100 : (21000 * 0.75) / 100;
             $totalPermissionHours = 0;
             foreach ($attendance as $att) {
                 if (!empty($att->permission_hours)) {
@@ -794,9 +820,7 @@ class SalaryController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('view monthly-payroll')) {
             return unauthorizedRedirect();
         }
-
         $month = $request->month;
-
         if (!$month) {
             return back()->with('error', 'Please select a month.');
         }

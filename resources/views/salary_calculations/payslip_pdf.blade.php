@@ -192,8 +192,16 @@
                     <div class="payslip-title">
                         Payslip
                         <br>
-                        {{ \Carbon\Carbon::create()->month($salary->salary_month)->format('F') }}
-                        {{ $salary->salary_year }}
+                        @if($salary->from_date && $salary->to_date)
+                            <span style="font-size: 13px; font-weight: normal;">
+                                {{ \Carbon\Carbon::parse($salary->from_date)->format('d M Y') }}
+                                &ndash;
+                                {{ \Carbon\Carbon::parse($salary->to_date)->format('d M Y') }}
+                            </span>
+                        @else
+                            {{ \Carbon\Carbon::create()->month($salary->salary_month)->format('F') }}
+                            {{ $salary->salary_year }}
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -226,17 +234,24 @@
             </tr>
             <tr>
                 <td>
+                    <b>Period: </b>
+                    @if($salary->from_date && $salary->to_date)
+                        {{ \Carbon\Carbon::parse($salary->from_date)->format('d M Y') }} &ndash; {{ \Carbon\Carbon::parse($salary->to_date)->format('d M Y') }}
+                    @else
+                        {{ \Carbon\Carbon::create()->month($salary->salary_month)->format('F') }} {{ $salary->salary_year }}
+                    @endif
+                </td>
+                <td>
                     <b>Total Days: </b> {{ $totalDays ?? '-' }}
                 </td>
                 <td>
-                    <b>Working Days: {{ $salary->present_days }}</b> 
-                </td>
-                <td>
-                    <b>Holidays: </b> {{ $salary->holidays }}
+                    <b>Working Days: {{ $salary->present_days }}</b>
                 </td>
             </tr>
             <tr>
                 <td>
+                    <b>Holidays: </b> {{ $salary->holidays }}
+                </td>
                     <b>LOP Days: {{ $salary->absent_days }}</b> 
                 </td>
                 <td>
@@ -334,48 +349,27 @@
                     <tbody>
                         <tr>
                             <td>PF</td>
-                            <td class="right">
-                                ₹ {{ number_format($salary->pf, 2) }}
-                            </td>
+                            <td class="right"> ₹ {{ number_format($salary->pf, 2) }}</td>
                         </tr>
                         <tr>
                             <td>ESI</td>
-                            <td class="right">
-                                ₹ {{ number_format($salary->esi, 2) }}
-                            </td>
+                            <td class="right"> ₹ {{ number_format($salary->esi, 2) }}</td>
                         </tr>
                         <tr>
                             <td>Other Deduction</td>
-                            <td class="right">
-                                ₹ 0.00
-                            </td>
+                            <td class="right"> ₹ 0.00</td>
                         </tr>
                         <tr>
                             <td>Sal Advance</td>
-                            <td class="right">
-                                ₹ {{ number_format($salary->salary_advance, 2) }}
-                            </td>
+                            <td class="right"> ₹ {{ number_format($salary->salary_advance, 2) }}</td>
                         </tr>
                         <tr>
                             <td>Late Fine</td>
-                            <td class="right">
-                                ₹ {{ number_format($salary->late_fine, 2) }}
-                            </td>
+                            <td class="right"> ₹ {{ number_format($salary->late_fine, 2) }}</td>
                         </tr>
                         <tr class="gross-row">
-                            <td>
-                                Total Deductions
-                            </td>
-                            <td class="right">
-                                ₹
-                                {{
-                                    number_format(
-                                        $salary->pf +
-                                        $salary->esi +
-                                        $salary->salary_advance + $salary->late_fine,
-                                        2
-                                    )
-                                }}
+                            <td>Total Deductions</td>
+                            <td class="right"> ₹ {{ number_format($salary->pf + $salary->esi + $salary->salary_advance + $salary->late_fine, 2) }}
                             </td>
                         </tr>
                     </tbody>
@@ -390,36 +384,16 @@
                 <td width="50%" valign="top">
                     <table width="100%">
                         <tr>
-                            <td>
-                                <b>Gross Pay:</b>
-                            </td>
-                            <td class="right">
-                                ₹ {{ number_format($salary->gross_salary, 2) }}
-                            </td>
+                            <td><b>Gross Pay:</b></td>
+                            <td class="right"> ₹ {{ number_format($salary->gross_salary, 2) }}</td>
                         </tr>
                         <tr>
-                            <td>
-                                <b>Total Deductions:</b>
-                            </td>
-                            <td class="right">
-                                ₹
-                                {{
-                                    number_format(
-                                        $salary->pf +
-                                        $salary->esi +
-                                        $salary->salary_advance,
-                                        2
-                                    )
-                                }}
-                            </td>
+                            <td><b>Total Deductions:</b></td>
+                            <td class="right"> ₹ {{ number_format($salary->pf + $salary->esi + $salary->salary_advance, 2)}}</td>
                         </tr>
                         <tr>
-                            <td style="padding-top:10px;border-top:1px dotted #808080;">
-                                <b>Net Pay: </b>
-                            </td>
-                            <td class="right" style="padding-top:10px;border-top:1px dotted #808080;">
-                                <b>₹ {{ number_format($salary->net_salary, 2) }}</b>
-                            </td>
+                            <td style="padding-top:10px;border-top:1px dotted #808080;"><b>Net Pay: </b></td>
+                            <td class="right" style="padding-top:10px;border-top:1px dotted #808080;"><b>₹ {{ number_format($salary->net_salary, 2) }}</b></td>
                         </tr>
                     </table>
                 </td>
@@ -429,19 +403,10 @@
                     <table width="100%">
                         {{-- TITLE --}}
                         <tr>
-                            <td colspan="2"
-                                style="
-                                    padding-bottom:10px;
-                                    font-weight:bold;
-                                    border-bottom:1px solid #dbe3f1;
-                                ">
-                                Company Contribution
-                            </td>
+                            <td colspan="2" style="padding-bottom:10px;font-weight:bold;border-bottom:1px solid #dbe3f1;">Company Contribution</td>
                         </tr>
                         <tr>
-                            <td style="padding-top:10px;">
-                                <b>PF:</b>
-                            </td>
+                            <td style="padding-top:10px;"><b>PF:</b></td>
                             <td class="right" style="padding-top:10px;">
                                 @php $company_pf = ($salary->pf / 12) * 12; @endphp
                                 ₹ {{ number_format($company_pf, 2) }}

@@ -3,3 +3,7 @@ ALTER TABLE sales_orders ADD COLUMN reason_for_delay TEXT NULL AFTER internal_re
 ALTER TABLE `sales_invoices` ADD COLUMN `delivery_status` VARCHAR(50) NOT NULL DEFAULT 'Pending' AFTER `invoice_status`;
 ALTER TABLE `sales_invoice_items` ADD COLUMN `scanned_qty` INT NOT NULL DEFAULT 0 AFTER `quantity`;
 ALTER TABLE `sales_invoices` ADD COLUMN `dispatch_completed_at` DATETIME NULL AFTER `delivery_status`;
+
+ALTER TABLE salary_generations 
+ADD COLUMN from_date DATE NULL,
+ADD COLUMN to_date DATE NULL;

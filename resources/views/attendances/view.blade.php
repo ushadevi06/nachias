@@ -9,8 +9,8 @@
                     <h4 class="mb-1">Attendance Management</h4>
                 </div>
                 <div>
-                    <button class="btn btn-outline-primary shadow-sm" id="exportCsvBtn">
-                        <i class="ri-file-excel-line me-1"></i> Export to CSV
+                    <button class="btn btn-outline-success shadow-sm" id="exportExcelBtn">
+                        <i class="menu-icon ri ri-file-excel-line me-1"></i> Export Excel
                     </button>
                 </div>
             </div>
@@ -329,11 +329,11 @@
                                 </div>
                                 <div class="col-sm-6 col-lg-2">
                                     <label class="form-label small fw-semibold">From Date</label>
-                                    <input type="text" class="form-control" id="staffReportFromDate" readonly>
+                                    <input type="date" class="form-control" id="staffReportFromDate">
                                 </div>
                                 <div class="col-sm-6 col-lg-2">
                                     <label class="form-label small fw-semibold">To Date</label>
-                                    <input type="text" class="form-control" id="staffReportToDate" readonly>
+                                    <input type="date" class="form-control" id="staffReportToDate">
                                 </div>
                                 <div class="col-sm-12 col-lg-2">
                                     <button type="button" class="btn btn-primary w-100" id="staffReportGenerateButton">Show Report</button>
@@ -700,7 +700,10 @@
                     staffReportEmployee.innerHTML = '<option>No employees found</option>';
                     return;
                 }
-                const options = ['<option value="">Choose employee</option>'];
+                const options = [
+                    '<option value="">Choose employee</option>',
+                    '<option value="all">All employees</option>'
+                ];
                 data.forEach(employee => {
                     options.push(
                         `<option value="${employee.code}">
@@ -717,19 +720,22 @@
         }
 
         function updateStaffReportRangeFields() {
-            const monthValue = staffReportMonth.value || attendanceDate.value.slice(0, 7);
-            if (!monthValue) {
-                staffReportFromDate.value = '';
-                staffReportToDate.value = '';
-                return;
+            const monthValue = staffReportMonth.value;
+            if (monthValue) {
+                const [year, month] = monthValue.split('-').map(Number);
+                const startDate = new Date(year, month - 1, 1);
+                const endDate = new Date(year, month, 0);
+                staffReportFromDate.value = formatDateKey(startDate);
+                staffReportToDate.value = formatDateKey(endDate);
             }
 
-            const [year, month] = monthValue.split('-').map(Number);
-            const startDate = new Date(year, month - 1, 1);
-            const endDate = new Date(year, month, 0);
-            staffReportFromDate.value = formatDate(startDate);
-            staffReportToDate.value = formatDate(endDate);
-            staffReportRangeLabel.textContent = `${formatDate(startDate)} to ${formatDate(endDate)}`;
+            const fromVal = staffReportFromDate.value;
+            const toVal = staffReportToDate.value;
+            if (fromVal && toVal) {
+                staffReportRangeLabel.textContent = `${formatDate(fromVal)} to ${formatDate(toVal)}`;
+            } else {
+                staffReportRangeLabel.textContent = 'Select a month/date range and employee to view report.';
+            }
         }
 
         function generateStaffReportRecords(employeeCode, monthValue) {
@@ -839,20 +845,21 @@
             const presentCount = records.filter(item => item.status === 'Present').length;
             const lateCount = records.filter(item => item.status === 'Late').length;
             const absentCount = records.filter(item => item.status === 'Absent').length;
-            // staffReportSummary.textContent = `${employee ? employee.name : employeeCode}: ${records.length} day(s), ${presentCount} present, ${lateCount} late, ${absentCount} absent.`;
         }
 
         function loadStaffReport() {
             const employeeCode = staffReportEmployee.value;
             const monthValue = staffReportMonth.value;
+            const fromDateValue = staffReportFromDate.value;
+            const toDateValue = staffReportToDate.value;
             updateStaffReportRangeFields();
-            if (!monthValue) {
+            if (!monthValue && (!fromDateValue || !toDateValue)) {
                 if ($.fn.DataTable.isDataTable('#staffReportTable')) {
                     $('#staffReportTable').DataTable().clear().destroy();
                 }
                 staffReportBody.innerHTML = '';
                 staffReportNoData.style.display = 'block';
-                staffReportSummary.textContent = 'Month not selected.';
+                staffReportSummary.textContent = 'Month or Date Range not selected.';
                 return;
             }
             staffReportGenerateButton.disabled = true;
@@ -867,11 +874,14 @@
                 },
                 body: JSON.stringify({
                     emp_code: employeeCode,
-                    month: monthValue
+                    month: monthValue,
+                    from_date: fromDateValue,
+                    to_date: toDateValue
                 })
             })
             .then(res => res.json())
             .then(data => {
+                staffReportRecords = data || [];
                 if ($.fn.DataTable.isDataTable('#staffReportTable')) {
                     $('#staffReportTable').DataTable().clear().destroy();
                 }
@@ -940,6 +950,9 @@
         function renderStaffReportPanel() {
             staffReportMonth.value = staffReportMonth.value || attendanceDate.value.slice(0, 7);
             updateStaffReportRangeFields();
+            if (staffReportFromDate.value) {
+                staffReportToDate.min = staffReportFromDate.value;
+            }
             loadStaffReport();
         }
         let selectedHolidayDates = [];
@@ -972,17 +985,32 @@
 
         function toggleHolidayDate(dateValue) {
             if (selectedHolidayDates.includes(dateValue)) {
-                selectedHolidayDates = selectedHolidayDates.filter(date => date !== dateValue);
-                delete selectedHolidayNames[dateValue];
+                const holidayName = selectedHolidayNames[dateValue] || 'Declared Holiday';
+                Swal.fire({
+                    title: "Confirm Remove",
+                    text: `Are you sure you want to remove the holiday "${holidayName}" on ${formatDate(dateValue)}?`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#8c57ff",
+                    cancelButtonColor: "#ff4c51",
+                    confirmButtonText: "Yes, remove it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        selectedHolidayDates = selectedHolidayDates.filter(date => date !== dateValue);
+                        delete selectedHolidayNames[dateValue];
+                        updateSelectedHolidayCount();
+                        renderSelectedHolidayTable();
+                        renderHolidayCalendar();
+                    }
+                });
             } else {
                 selectedHolidayDates.push(dateValue);
                 selectedHolidayDates.sort();
                 openHolidayEditModal(dateValue);
+                updateSelectedHolidayCount();
+                renderSelectedHolidayTable();
+                renderHolidayCalendar();
             }
-
-            updateSelectedHolidayCount();
-            renderSelectedHolidayTable();
-            renderHolidayCalendar();
         }
 
         function renderHolidayCalendar() {
@@ -1198,11 +1226,7 @@
                 $('#edit_in_time').addClass('is-invalid');
                 hasError = true;
             }
-            if (!outTime) {
-                $('#out_time_error').text('Out time is required');
-                $('#edit_out_time').addClass('is-invalid');
-                hasError = true;
-            }
+
             if (!status) {
                 $('#status_error').text('Status is required');
                 $('#edit_status').addClass('is-invalid');
@@ -1375,12 +1399,12 @@
                 'Showing staff wise attendance report' :
                 'Showing declared holiday settings';
                 
-            const exportCsvBtn = document.getElementById('exportCsvBtn');
-            if (exportCsvBtn) {
-                if (view === 'all') {
-                    exportCsvBtn.classList.remove('d-none');
+            const exportExcelBtn = document.getElementById('exportExcelBtn');
+            if (exportExcelBtn) {
+                if (view === 'all' || view === 'staff') {
+                    exportExcelBtn.classList.remove('d-none');
                 } else {
-                    exportCsvBtn.classList.add('d-none');
+                    exportExcelBtn.classList.add('d-none');
                 }
             }
             
@@ -1425,9 +1449,29 @@
             setActiveView('staff');
         });
 
-        const exportCsvBtn = document.getElementById('exportCsvBtn');
-        if (exportCsvBtn) {
-            exportCsvBtn.addEventListener('click', function() {
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
+        if (exportExcelBtn) {
+            exportExcelBtn.addEventListener('click', function() {
+                if (currentView === 'staff') {
+                    if (!staffReportRecords || staffReportRecords.length === 0) {
+                        showStatus('warning', 'No data available to export.');
+                        return;
+                    }
+                    
+                    const empCode = staffReportEmployee.value;
+                    const month = staffReportMonth.value;
+                    const fromDate = staffReportFromDate.value;
+                    const toDate = staffReportToDate.value;
+                    
+                    let url = `${APP_URL}/export-staff-report?emp_code=${empCode}`;
+                    if (month) url += `&month=${month}`;
+                    if (fromDate) url += `&from_date=${fromDate}`;
+                    if (toDate) url += `&to_date=${toDate}`;
+                    
+                    window.location.href = url;
+                    return;
+                }
+
                 if (!attendanceRecords || attendanceRecords.length === 0) {
                     showStatus('warning', 'No data available to export.');
                     return;
@@ -1439,8 +1483,7 @@
                     return;
                 }
 
-                let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += "S.No,Employee Name,Employee Code,Department,Date,In Time,Out Time,Hours,Status\n";
+                let csvContent = "S.No,Employee Name,Employee Code,Department,Date,In Time,Out Time,Hours,Status\n";
 
                 recordsToExport.forEach((item, index) => {
                     const rowDate = formatDate(item.date) || formatDate(attendanceDate.value);
@@ -1461,15 +1504,17 @@
                     csvContent += row + "\n";
                 });
 
-                const encodedUri = encodeURI(csvContent);
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
+                link.setAttribute("href", url);
                 link.setAttribute("download", `Attendance_Export_${attendanceDate.value}_${currentView}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             });
         }
+
 
         resetButton.addEventListener('click', resetAttendancePage);
 
@@ -1646,6 +1691,30 @@
             }
         });
 
+        staffReportFromDate.addEventListener('change', function() {
+            staffReportMonth.value = '';
+            if (staffReportFromDate.value) {
+                staffReportToDate.min = staffReportFromDate.value;
+                if (staffReportToDate.value && staffReportToDate.value < staffReportFromDate.value) {
+                    staffReportToDate.value = staffReportFromDate.value;
+                }
+            } else {
+                staffReportToDate.removeAttribute('min');
+            }
+            updateStaffReportRangeFields();
+            if (currentView === 'staff' && staffReportEmployee.value) {
+                loadStaffReport();
+            }
+        });
+
+        staffReportToDate.addEventListener('change', function() {
+            staffReportMonth.value = '';
+            updateStaffReportRangeFields();
+            if (currentView === 'staff' && staffReportEmployee.value) {
+                loadStaffReport();
+            }
+        });
+
         staffReportEmployee.addEventListener('change', function() {
             if (currentView === 'staff') {
                 loadStaffReport();
@@ -1676,7 +1745,7 @@
                     // Update Summary Cards
                     if (attendanceRecords.length > 0) {
                         document.getElementById('dailySummaryCards').style.display = 'flex';
-                        document.getElementById('summaryPresentCount').textContent = attendanceRecords.filter(r => r.status === 'Present').length;
+                        document.getElementById('summaryPresentCount').textContent = attendanceRecords.filter(r => r.status === 'Present' || r.status === 'Late' || r.status === 'Overtime').length;
                         document.getElementById('summaryAbsentCount').textContent = attendanceRecords.filter(r => r.status === 'Absent' || r.status === 'Missing Time Card').length;
                         document.getElementById('summaryLateCount').textContent = attendanceRecords.filter(r => r.status === 'Late').length;
                         document.getElementById('summaryOvertimeCount').textContent = attendanceRecords.filter(r => r.status === 'Overtime').length;

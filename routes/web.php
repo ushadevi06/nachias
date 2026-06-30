@@ -483,6 +483,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('sales_invoices/scan-items/{id}', [SalesInvoiceController::class, 'scanItems']);
     Route::post('sales_invoices/save-scan-progress/{id}', [SalesInvoiceController::class, 'saveScanProgress'])->name('sales_invoices.save_scan_progress');
     Route::post('sales_invoices/complete-dispatch/{id}', [SalesInvoiceController::class, 'completeDispatch'])->name('sales_invoices.complete_dispatch');
+    Route::post('sales_invoices/update_delivery_status', [SalesInvoiceController::class, 'updateDeliveryStatus'])->name('sales_invoices.update_delivery_status');
     Route::post('sales_invoices/generate-einvoice/{id}', [SalesInvoiceController::class, 'generateEInvoice']);
     Route::post('sales_invoices/generate-ewaybill/{id}', [SalesInvoiceController::class, 'generateEWayBill']);
     Route::post('sales_invoices/cancel-einvoice/{id}', [SalesInvoiceController::class, 'cancelEInvoice']);

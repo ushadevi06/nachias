@@ -6,42 +6,49 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Monthly Payroll</h4>
-                <div class="d-flex gap-2">
-                    <input type="month"
-                        id="filter_month"
-                        class="form-control">
-
-                    <button type="button"
-                            id="exportPayroll"
-                            class="btn btn-outline-success">
-                        <i class="ri ri-file-excel-2-line"></i> Export
-                    </button>
-                    <a class="btn btn-primary"
-                    href="{{ url('add_monthly_payroll') }}">
-                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                    </a>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="month" id="export_month" class="form-control" style="width: 180px;" title="Select month to export">
+                    <button type="button" id="exportPayroll" class="btn btn-outline-success"><i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Export</button>
+                    <a class="btn btn-primary" href="{{ url('add_monthly_payroll') }}"><i class="menu-icon icon-base ri ri-add-circle-line"></i> Add</a>
                 </div>
             </div>
             @if(request()->success)
-                <div class="alert alert-success alert-dismissible fade show"
-                    role="alert">
-                    {{ request()->success }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert">
-                    </button>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">{{ request()->success }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             @endif
             <div class="card">
                 <div class="card-body">
+                    <div class="filter-box mb-4">
+                        <div class="row g-3">
+                            <div class="col-lg-12">
+                                <h5>Filter</h5>
+                            </div>
+                            <div class="col-md-4 col-lg-3 status">
+                                <select name="status" id="status" class="form-select select2" data-placeholder="Select Status">
+                                    <option value="">Select Status</option>
+                                    <option value="Draft">Draft</option>
+                                    <option value="Paid">Paid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <input type="month" id="filter_month" class="form-control" placeholder="Select Month">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" id="filterBtn" class="btn btn-primary">FILTER</button>
+                                <button type="button" id="resetBtn" class="btn btn-secondary">RESET</button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="card-datatable">
                         <table class="table nowrap w-100" id="payrollTable">
                             <thead>
                                 <tr>
-                                    <th>
-                                        <input type="checkbox" id="selectAll">
-                                    </th>
+                                    <th><input type="checkbox" id="selectAll"></th>
                                     <th>#</th>
                                     <th>Month/Year</th>
                                     <th>Employee</th>
+                                    <th>Emp Code</th>
                                     <th>Gross</th>
                                     <th>Net Salary</th>
                                     <th>Status</th>
@@ -51,11 +58,8 @@
                             <tbody></tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="8" class="text-end">
-                                        <button class="btn btn-primary"
-                                                id="generatePdfBtn">
-                                            Generate PDF
-                                        </button>
+                                    <th colspan="9" class="text-end">
+                                        <button class="btn btn-primary" id="generatePdfBtn">Generate PDF</button>
                                     </th>
                                 </tr>
                             </tfoot>
@@ -88,16 +92,22 @@
         columns: [
             {
                 data: 'checkbox',
-                searchable: false
+                searchable: false,
+                orderable: false
             },
             {
-                data: 'DT_RowIndex'
+                data: 'DT_RowIndex',
+                searchable: false,
+                orderable: false
             },
             {
                 data: 'month_year'
             },
             {
-                data: 'employee'
+                data: 'employee_name'
+            },
+            {
+                data: 'emp_code'
             },
             {
                 data: 'gross'
@@ -117,7 +127,13 @@
             }
         ]
     });
-    $('#status, #filter_month').on('change', function () {
+    $('#filterBtn').click(function () {
+        table.ajax.reload();
+    });
+
+    $('#resetBtn').click(function () {
+        $('#status').val('').trigger('change');
+        $('#filter_month').val('');
         table.ajax.reload();
     });
     $(document).on('change', '.salaryStatus', function () {
@@ -172,9 +188,9 @@
         );
     });
     $('#exportPayroll').click(function () {
-        let month = $('#filter_month').val();
+        let month = $('#export_month').val();
         if (!month) {
-            alert('Please select Month/Year');
+            alert('Please select Month/Year to export');
             return;
         }
         window.location.href = "{{ route('monthly-payroll.export') }}?month=" + month;

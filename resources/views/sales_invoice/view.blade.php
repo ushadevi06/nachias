@@ -62,6 +62,7 @@
                                     <th>Total Items</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
+                                    <th>Delivery Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -69,6 +70,40 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delivery Status Modal -->
+<div class="modal fade" id="deliveryStatusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel2">Update Delivery Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col mb-2 mt-2">
+                        <input type="hidden" id="ds_invoice_id">
+                        <div class="form-floating form-floating-outline mb-2">
+                            <select id="ds_status" class="form-select">
+                                <option value="Pending">Pending</option>
+                                <option value="Dispatched">Dispatched</option>
+                                <option value="Partially Delivered">Partially Delivered</option>
+                                <option value="Delivered">Delivered</option>
+                                <option value="Cancel">Cancel</option>
+                            </select>
+                            <label for="ds_status">Status</label>
+                        </div>
+                        <div id="ds_status_msg" class="small fw-bold"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="saveDeliveryStatusBtn">Save changes</button>
             </div>
         </div>
     </div>
@@ -110,6 +145,24 @@
                             return row.status_text;
                         }
                         return data;
+                    }
+                },
+                {
+                    data: 'delivery_status',
+                    render: function(data, type, row) {
+                        let badgeClass = 'bg-secondary';
+                        let statusText = data || 'Pending';
+                        if (statusText === 'Delivered') badgeClass = 'bg-success';
+                        else if (statusText === 'Dispatched') badgeClass = 'bg-info';
+                        else if (statusText === 'Partially Delivered') badgeClass = 'bg-warning';
+                        else if (statusText === 'Pending') badgeClass = 'bg-secondary';
+                        else if (statusText === 'Cancel') badgeClass = 'bg-danger';
+
+                        let html = `<span class="badge ${badgeClass}">${statusText}</span>`;
+                        @if(auth()->id() == 1)
+                        html += ` <button class="btn btn-sm btn-icon btn-text-primary rounded-pill ms-1 edit-delivery-status" data-id="${row.id}" data-status="${statusText}" title="Update Delivery Status"><i class="ri ri-pencil-line"></i></button>`;
+                        @endif
+                        return html;
                     }
                 },
                 { data: 'action', orderable: false, searchable: false },
@@ -357,6 +410,64 @@
                 icon: 'error',
                 confirmButtonColor: '#3085d6',
                 confirmButtonText: 'OK'
+            });
+        });
+
+        $(document).on('click', '.edit-delivery-status', function() {
+            let id = $(this).data('id');
+            let status = $(this).data('status');
+            $('#ds_invoice_id').val(id);
+            $('#ds_status').val(status);
+            $('#ds_status_msg').html('');
+            
+            $('#ds_status option').prop('disabled', false);
+
+            if (status === 'Delivered') {
+                $('#ds_status option[value="Pending"]').prop('disabled', true);
+                $('#ds_status option[value="Dispatched"]').prop('disabled', true);
+            } else if (status === 'Cancel') {
+                $('#ds_status option:not([value="Cancel"])').prop('disabled', true);
+            } else if (status === 'Pending') {
+                $('#ds_status option[value="Delivered"]').prop('disabled', true);
+            }
+            
+            $('#deliveryStatusModal').modal('show');
+        });
+
+        $('#saveDeliveryStatusBtn').click(function() {
+            let id = $('#ds_invoice_id').val();
+            let status = $('#ds_status').val();
+            let btn = $(this);
+            let originalHtml = btn.html();
+            
+            $('#ds_status_msg').html('');
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+            
+            $.ajax({
+                url: '{{ url("sales_invoices/update_delivery_status") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    invoice_id: id,
+                    delivery_status: status
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html(originalHtml);
+                    if (response.success) {
+                        $('#deliveryStatusModal').modal('hide');
+                        table.ajax.reload(null, false);
+                    } else {
+                        $('#ds_status_msg').html('<span class="text-danger">' + response.message + '</span>');
+                    }
+                },
+                error: function(xhr) {
+                    btn.prop('disabled', false).html(originalHtml);
+                    let errorMsg = 'An error occurred while updating status.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    $('#ds_status_msg').html('<span class="text-danger">' + errorMsg + '</span>');
+                }
             });
         });
     });

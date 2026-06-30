@@ -247,7 +247,7 @@ class OvertimeController extends Controller
         $request->validate([
             'id' => 'required',
             'in_time' => 'required',
-            'out_time' => 'required'
+            'out_time' => 'nullable'
         ]);
         $attendance = Attendance::find($request->id);
         if (!$attendance) {

@@ -476,9 +476,13 @@
                             });
                         },
                         error: function(err) {
+                            let errorMsg = 'Error completing dispatch. Please try again.';
+                            if (err.responseJSON && err.responseJSON.message) {
+                                errorMsg = err.responseJSON.message;
+                            }
                             Swal.fire(
                                 'Error!',
-                                'Error completing dispatch. Please try again.',
+                                errorMsg,
                                 'error'
                             );
                         }

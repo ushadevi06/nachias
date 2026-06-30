@@ -24,6 +24,16 @@
     padding: 6px 8px;
     text-align: center;
 }
+.sticky-col-employee {
+    position: sticky !important;
+    left: 0 !important;
+    background-color: #fff !important;
+    z-index: 5;
+    min-width: 200px;
+}
+th.sticky-col-employee {
+    z-index: 15 !important;
+}
 </style>
 @section('content')
 <div class="container-xxl section-padding">
@@ -37,32 +47,43 @@
                         </div>
                         <div class="card">
                             <div class="d-flex justify-content-end mb-2">
-                                <input type="text"
-                                    id="employeeSearch"
-                                    class="form-control"
-                                    placeholder="Search Emp Name / Emp Code"
-                                    style="width:250px;">
+                                <input type="text" id="employeeSearch" class="form-control" placeholder="Search Emp Name / Emp Code" style="width:250px;">
                             </div>
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Monthly Salary Generation</h5>
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="fw-bold text-nowrap text-success">
-                                        Total Days: <span id="total_days">0</span>
+                                        Total Days: <span id="total_days">{{ isset($salary) ? $salary->total_days : 0 }}</span>
                                     </div>
-                                    <input type="month"
-                                        id="salary_month"
-                                        class="form-control"
-                                        max="{{ now()->subMonth()->format('Y-m') }}"
-                                        value="{{ isset($salary) ? $salary->salary_year.'-'.str_pad($salary->salary_month, 2, '0', STR_PAD_LEFT) : '' }}">
                                     @if(!isset($salary))
-                                        <button type="button"
-                                                id="generateSalary"
-                                                class="btn btn-primary">
+                                        <select id="payroll_type" class="form-select" style="width: auto;">
+                                            <option value="monthly">Monthly</option>
+                                            <option value="range">Date Range</option>
+                                        </select>
+                                        <div id="month_picker_wrapper">
+                                            <input type="month" id="salary_month" class="form-control"
+                                                max="{{ now()->format('Y-m') }}">
+                                        </div>
+                                        <div id="date_range_wrapper" style="display: none;" class="gap-2">
+                                            <input type="date" id="salary_from_date" class="form-control">
+                                            <input type="date" id="salary_to_date" class="form-control">
+                                        </div>
+                                        <button type="button" id="generateSalary" class="btn btn-primary">
                                             Generate
                                         </button>
+                                    @else
+                                        @if($salary->from_date && $salary->to_date)
+                                            <div class="d-flex gap-2">
+                                                <input type="text" class="form-control text-center" readonly style="width: 120px;" value="{{ date('d-m-Y', strtotime($salary->from_date)) }}">
+                                                <input type="text" class="form-control text-center" readonly style="width: 120px;" value="{{ date('d-m-Y', strtotime($salary->to_date)) }}">
+                                            </div>
+                                        @else
+                                            <div id="month_picker_wrapper">
+                                                <input type="month" id="salary_month" class="form-control" readonly value="{{ $salary->salary_year.'-'.str_pad($salary->salary_month, 2, '0', STR_PAD_LEFT) }}">
+                                            </div>
+                                        @endif
                                     @endif
-                                    <a href="{{ url()->previous() }}"
-                                    class="btn btn-secondary">
+                                    <a href="{{ url('monthly_payroll') }}" class="btn btn-secondary">
                                         <i class="fa fa-arrow-left"></i> Back
                                     </a>
                                 </div>
@@ -72,19 +93,13 @@
                                     <table class="table table-bordered">
                                         <thead>
                                             <tr>
-                                                <th width="80">
+                                                <th class="sticky-col-checkbox" width="80">
                                                     <div class="form-check">
-                                                        <input type="checkbox"
-                                                            class="form-check-input"
-                                                            id="checkAllEmployees">
-
-                                                        <label class="form-check-label"
-                                                            for="checkAllEmployees">
-                                                            Check All
-                                                        </label>
-                                                    </div>
+                                                        <input type="checkbox" class="form-check-input" id="checkAllEmployees">
+                                                        <label class="form-check-label" for="checkAllEmployees">Check All</label>
+                                                    </div>  
                                                 </th>
-                                                <th>Employee</th>
+                                                <th class="sticky-col-employee">Employee</th>
                                                 <th>Working Days</th>
                                                 <th>Lop Days</th>
                                                 <th>Holidays</th>
@@ -113,73 +128,62 @@
                                         <tbody id="salaryTableBody">
                                             @if(isset($salary))
                                                 <tr class="salary-row" data-index="0">
-                                                    <input type="hidden" class="salary_id" value="{{ $salary->id }}">
-                                                    <input type="hidden" class="employee_id" value="{{ $salary->employee_id }}">
-                                                    <input type="hidden" class="total_days" value="{{ $salary->total_days }}">
                                                     {{-- Checkbox --}}
-                                                    <td>
+                                                    <td class="sticky-col-checkbox">
+                                                        <input type="hidden" class="salary_id" value="{{ $salary->id }}">
+                                                        <input type="hidden" class="employee_id" value="{{ $salary->employee_id }}">
+                                                        <input type="hidden" class="total_days" value="{{ $salary->total_days }}">
                                                         <input type="checkbox" class="form-check-input employee_checkbox">
                                                     </td>
                                                     {{-- Employee --}}
-                                                    <td>
+                                                    <td class="sticky-col-employee">
                                                         {{ $salary->name }}
                                                         <br>
                                                         <span class="badge bg-primary mt-1">{{ $salary->emp_id }}</span>
                                                     </td>
                                                     {{-- Working Days --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control present_days"
-                                                            value="{{ $salary->present_days }}">
+                                                        <input type="text" readonly class="form-control present_days" value="{{ $salary->present_days }}">
                                                     </td>
                                                     {{-- Lop Days --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control absent_days"
-                                                            value="{{ $salary->absent_days }}">
+                                                        <input type="text" readonly class="form-control absent_days" value="{{ $salary->absent_days }}">
                                                     </td>
                                                     {{-- Holidays --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control holidays"
-                                                            value="{{ $salary->holidays }}">
+                                                        <input type="text" readonly class="form-control holidays" value="{{ $salary->holidays }}">
                                                     </td>
                                                     {{-- Fixed Gross --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control fixed_gross"
-                                                            value="{{ $salary->fixed_gross }}">
+                                                        <input type="text" readonly class="form-control fixed_gross" value="{{ $salary->fixed_gross }}">
                                                     </td>
                                                     {{-- Basic Pay --}}
                                                     <td>
-                                                        <input type="number" readonly class="form-control basic_salary"
-                                                            value="{{ $salary->basic_salary }}">
+                                                        <input type="number" readonly class="form-control basic_salary" value="{{ $salary->basic_salary }}">
                                                     </td>
                                                     {{-- HRA --}}
                                                     <td>
-                                                        <input type="number" readonly class="form-control hra"
-                                                            value="{{ $salary->hra }}">
+                                                        <input type="number" readonly class="form-control hra" value="{{ $salary->hra }}">
                                                     </td>
                                                     {{-- DA --}}
                                                     <td>
-                                                        <input type="number" readonly class="form-control da"
-                                                            value="{{ $salary->da }}">
+                                                        <input type="number" readonly class="form-control da" value="{{ $salary->da }}">
                                                     </td>
                                                     {{-- OA --}}
                                                     <td>
-                                                        <input type="number" readonly class="form-control oa"
-                                                            value="{{ $salary->oa }}">
+                                                        <input type="number" readonly class="form-control oa" value="{{ $salary->oa }}">
                                                     </td>
                                                     {{-- OT Hours --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control ot_hours"
-                                                            value="{{ $salary->ot_hours }}">
+                                                        <input type="text" readonly class="form-control ot_hours" value="{{ $salary->ot_hours }}">
                                                     </td>
                                                     {{-- OT Amount --}}
                                                     <td>
-                                                        <input type="text" readonly class="form-control overtime_amount"
-                                                            value="{{ $salary->overtime_amount }}">
+                                                        <input type="text" readonly class="form-control overtime_amount" value="{{ $salary->overtime_amount }}">
                                                     </td>
                                                     {{-- Incentive --}}
                                                     <td>
-                                                        <input type="number" class="form-control incentive"
-                                                            value="{{ $salary->incentive ?? 0 }}">
+                                                        <input type="number" class="form-control incentive" value="{{ $salary->incentive ?? 0 }}">
                                                     </td>
                                                     {{-- Misc --}}
                                                     <td>
@@ -270,13 +274,52 @@
         let allPayrollData = {!! isset($salary) ? '[' . json_encode($salary) . ']' : '[]' !!};
         let currentPage = 1;
         const perPage = 10;
+
+        $(document).on('change', '#payroll_type', function () {
+            let val = $(this).val();
+            if (val === 'monthly') {
+                $('#month_picker_wrapper').show();
+                $('#date_range_wrapper').hide();
+            } else {
+                $('#month_picker_wrapper').hide();
+                $('#date_range_wrapper').show().css('display', 'flex');
+            }
+            updateTotalDays();
+        });
+
+        $(document).on('change', '#salary_from_date, #salary_to_date', function () {
+            updateTotalDays();
+        });
+
         $('#generateSalary').click(function () {
+            let type = $('#payroll_type').val() || 'monthly';
             let month = $('#salary_month').val();
-            if(month == '') {
+            let fromDate = $('#salary_from_date').val();
+            let toDate = $('#salary_to_date').val();
+
+            if (type === 'monthly' && month == '') {
                 Swal.fire({
                     icon: 'error',
                     title: 'Failed',
                     text: 'Please select month',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            if (type === 'range' && (fromDate == '' || toDate == '')) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed',
+                    text: 'Please select both From and To dates',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            if (type === 'range' && fromDate > toDate) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed',
+                    text: 'From Date cannot be greater than To Date',
                     confirmButtonText: 'OK'
                 });
                 return;
@@ -293,7 +336,10 @@
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",
-                    month: month
+                    type: type,
+                    month: month,
+                    from_date: fromDate,
+                    to_date: toDate
                 },
                 success: function (response) {
                     allPayrollData = response.payroll;
@@ -324,184 +370,128 @@
             $.each(pageData, function(index, item) {
                 rows += `
                 <tr class="salary-row" data-index="${start + index}">
-                    <input type="hidden"
-                        class="employee_id"
-                        value="${item.employee_id}">
-                    <input type="hidden"
-                        class="total_days"
-                        value="${item.total_days}">
                     <!-- Checkbox -->
-                    <td class="text-center">
-                        <input type="checkbox"
-                            class="employee_checkbox"
-                            ${item.is_selected ?? true ? 'checked' : ''}>
+                    <td class="text-center sticky-col-checkbox">
+                        <input type="hidden" class="employee_id" value="${item.employee_id}">
+                        <input type="hidden" class="total_days" value="${item.total_days}">
+                        <input type="checkbox" class="employee_checkbox" ${item.is_selected ?? true ? 'checked' : ''}>
                     </td>
 
                     <!-- Employee -->
-                    <td>
-                        ${item.employee_name}
-                        <br>
-                        <span class="badge bg-primary mt-1">${item.emp_code}</span>
-                    </td>
+                    <td class="sticky-col-employee">${item.employee_name} <br><span class="badge bg-primary mt-1">${item.emp_code}</span></td>
 
                     <!-- Working Days -->
                     <td>
-                        <input type="text"
-                            class="form-control present_days"
-                            value="${item.present_days}" readonly>
+                        <input type="text" class="form-control present_days" value="${item.present_days}" readonly>
                     </td>
 
                     <!-- Lop Days -->
                     <td>
-                        <input type="text"
-                            class="form-control absent_days"
-                            value="${item.absent_days}" readonly>
+                        <input type="text" class="form-control absent_days" value="${item.absent_days}" readonly>
                     </td>
 
                     <!-- Holidays -->
                     <td>
-                        <input type="text"
-                            class="form-control holidays"
-                            value="${item.holidays}" readonly>
+                        <input type="text" class="form-control holidays" value="${item.holidays}" readonly>
                     </td>
 
                     <!-- Fixed Gross -->
                     <td>
-                        <input type="number"
-                            class="form-control fixed_gross"
-                            value="${item.fixed_gross}" readonly>
+                        <input type="number" class="form-control fixed_gross" value="${item.fixed_gross}" readonly>
                     </td>
 
                     <!-- Basic Pay -->
                     <td>
-                        <input type="number"
-                            class="form-control basic_salary"
-                            value="${item.basic_salary}" readonly>
+                        <input type="number" class="form-control basic_salary" value="${item.basic_salary}" readonly>
                     </td>
 
                     <!-- HRA -->
                     <td>
-                        <input type="number"
-                            class="form-control hra"
-                            value="${item.hra}" readonly>
+                        <input type="number" class="form-control hra" value="${item.hra}" readonly>
                     </td>
 
                     <!-- DA -->
                     <td>
-                        <input type="number"
-                            class="form-control da"
-                            value="${item.da}" readonly>
+                        <input type="number" class="form-control da" value="${item.da}" readonly>
                     </td>
 
                     <!-- OA -->
                     <td>
-                        <input type="number"
-                            class="form-control oa"
-                            value="${item.oa}" readonly>
+                        <input type="number" class="form-control oa" value="${item.oa}" readonly>
                     </td>
 
                     <!-- OT Hours -->
                     <td>
-                        <input type="number"
-                            class="form-control ot_hours"
-                            value="${item.ot_hours}">
+                        <input type="number" class="form-control ot_hours" value="${item.ot_hours}">
                     </td>
 
                     <!-- OT Amount -->
                     <td>
-                        <input type="text"
-                            class="form-control overtime_amount"
-                            value="${item.overtime_amount}" readonly>
+                        <input type="text" class="form-control overtime_amount" value="${item.overtime_amount}" readonly>
                     </td>
 
                     <!-- Incentive -->
                     <td>
-                        <input type="number"
-                            class="form-control incentive"
-                            value="${item.incentive}">
+                        <input type="number" class="form-control incentive" value="${item.incentive}">
                     </td>
 
                     <!-- Misc -->
                     <td>
-                        <input type="number"
-                            class="form-control misc"
-                            value="${item.misc}">
+                        <input type="number" class="form-control misc" value="${item.misc}">
                     </td>
 
                     <!-- Bus Fare -->
                     <td>
-                        <input type="number"
-                            class="form-control bus_fare"
-                            value="${item.bus_fare}" readonly>
+                        <input type="number" class="form-control bus_fare" value="${item.bus_fare}" readonly>
                     </td>
 
                     <!-- PF -->
                     <td>
-                        <input type="text"
-                            class="form-control pf"
-                            value="${item.pf}" readonly>
+                        <input type="text" class="form-control pf" value="${item.pf}" readonly>
                     </td>
 
                     <!-- ESI -->
                     <td>
-                        <input type="text"
-                            class="form-control esi"
-                            value="${item.esi}" readonly>
+                        <input type="text" class="form-control esi" value="${item.esi}" readonly>
                     </td>
 
                     <!-- ESI -->
                     <td>
-                        <input type="text"
-                            class="form-control lop_amount"
-                            value="${item.lop_amount}" readonly>
+                        <input type="text" class="form-control lop_amount" value="${item.lop_amount}" readonly>
                     </td>
 
                     <!-- Other Deduction -->
                     <td>
-                        <input type="number"
-                            class="form-control other_deduction"
-                            value="${item.other_deduction ?? 0}">
+                        <input type="number" class="form-control other_deduction" value="${item.other_deduction ?? 0}">
                     </td>
 
                     <!-- Salary Advance -->
                     <td>
-                        <input type="number"
-                            class="form-control salary_advance"
-                            value="${item.salary_advance}">
+                        <input type="number" class="form-control salary_advance" value="${item.salary_advance}">
                     </td>
                     <!-- Late Hours -->
                     <td>
-                        <input type="number"
-                            class="form-control late_hours"
-                            value="${item.late_hours ?? 0}">
+                        <input type="number" class="form-control late_hours" value="${item.late_hours ?? 0}">
                     </td>
 
                     <!-- Late Fine -->
                     <td>
-                        <input type="number"
-                            class="form-control late_fine"
-                            value="${item.late_fine ?? 0}" readonly>
+                        <input type="number" class="form-control late_fine" value="${item.late_fine ?? 0}" readonly>
                     </td>
 
                     <!-- Gross Pay -->
                     <td>
-                        <input type="text"
-                            class="form-control gross_salary"
-                            value="${item.gross_salary}" readonly>
+                        <input type="text" class="form-control gross_salary" value="${item.gross_salary}" readonly>
                     </td>
 
                     <!-- Total Deduction -->
                     <td>
-                        <input type="text"
-                            class="form-control total_deduction"
-                            value="${item.total_deduction}" readonly>
+                        <input type="text" class="form-control total_deduction" value="${item.total_deduction}" readonly>
                     </td>
 
                     <!-- Net Pay -->
                     <td>
-                        <input type="text"
-                            class="form-control net_salary"
-                            value="${item.net_salary}" readonly>
+                        <input type="text" class="form-control net_salary" value="${item.net_salary}" readonly>
                     </td>
 
                 </tr>
@@ -513,57 +503,27 @@
         function renderPagination() {
             let totalPages = Math.ceil(allPayrollData.length / perPage);
             let html = '';
-            html += `
-                <button type="button"
-                    class="btn btn-sm btn-light mx-1 page-btn"
-                    data-page="${currentPage - 1}"
-                    ${currentPage == 1 ? 'disabled' : ''}>
-                    Previous
-                </button>
-            `;
+            html += `<button type="button" class="btn btn-sm btn-light mx-1 page-btn" data-page="${currentPage - 1}" ${currentPage == 1 ? 'disabled' : ''}> Previous </button>`;
             let startPage = Math.max(1, currentPage - 2);
             let endPage = Math.min(totalPages, currentPage + 2);
             if(startPage > 1) {
-                html += `
-                    <button type="button"
-                        class="btn btn-sm btn-light mx-1 page-btn"
-                        data-page="1">
-                        1
-                    </button>
-                `;
+                html += `<button type="button" class="btn btn-sm btn-light mx-1 page-btn" data-page="1">1</button>`;
                 if(startPage > 2) {
                     html += `<span class="mx-1 align-self-center">...</span>`;
                 }
             }
             for(let i = startPage; i <= endPage; i++) {
                 html += `
-                    <button type="button"
-                        class="btn btn-sm ${i == currentPage ? 'btn-primary' : 'btn-light'} mx-1 page-btn"
-                        data-page="${i}">
-                        ${i}
-                    </button>
+                    <button type="button" class="btn btn-sm ${i == currentPage ? 'btn-primary' : 'btn-light'} mx-1 page-btn" data-page="${i}">${i}</button>
                 `;
             }
             if(endPage < totalPages) {
                 if(endPage < totalPages - 1) {
                     html += `<span class="mx-1 align-self-center">...</span>`;
                 }
-                html += `
-                    <button type="button"
-                        class="btn btn-sm btn-light mx-1 page-btn"
-                        data-page="${totalPages}">
-                        ${totalPages}
-                    </button>
-                `;
+                html += `<button type="button" class="btn btn-sm btn-light mx-1 page-btn" data-page="${totalPages}">${totalPages}</button>`;
             }
-            html += `
-                <button type="button"
-                    class="btn btn-sm btn-light mx-1 page-btn"
-                    data-page="${currentPage + 1}"
-                    ${currentPage == totalPages ? 'disabled' : ''}>
-                    Next
-                </button>
-            `;
+            html += `<button type="button" class="btn btn-sm btn-light mx-1 page-btn" data-page="${currentPage + 1}" ${currentPage == totalPages ? 'disabled' : ''}> Next </button>`;
             $('#paginationContainer').html(html);
         }
         $(document).on('click', '.page-btn', function () {
@@ -579,28 +539,17 @@
                 
                 allPayrollData[index].salary_id = row.find('.salary_id').val();
                 allPayrollData[index].is_selected = row.find('.employee_checkbox').is(':checked');
-                allPayrollData[index].basic_salary =
-                    parseFloat(row.find('.basic_salary').val()) || 0;
-                allPayrollData[index].hra =
-                    parseFloat(row.find('.hra').val()) || 0;
-                allPayrollData[index].da =
-                    parseFloat(row.find('.da').val()) || 0;
-                allPayrollData[index].oa =
-                    parseFloat(row.find('.oa').val()) || 0;
-                allPayrollData[index].misc =
-                    parseFloat(row.find('.misc').val()) || 0;
-                allPayrollData[index].incentive =
-                    parseFloat(row.find('.incentive').val()) || 0;
-                allPayrollData[index].salary_advance =
-                    parseFloat(row.find('.salary_advance').val()) || 0;
-                allPayrollData[index].net_salary =
-                    parseFloat(row.find('.net_salary').val()) || 0;
-                allPayrollData[index].gross_salary =
-                    parseFloat(row.find('.gross_salary').val()) || 0;
-                allPayrollData[index].total_deduction =
-                    parseFloat(row.find('.total_deduction').val()) || 0;
-                allPayrollData[index].lop_amount =
-                    parseFloat(row.find('.lop_amount').val()) || 0;
+                allPayrollData[index].basic_salary = parseFloat(row.find('.basic_salary').val()) || 0;
+                allPayrollData[index].hra = parseFloat(row.find('.hra').val()) || 0;
+                allPayrollData[index].da = parseFloat(row.find('.da').val()) || 0;
+                allPayrollData[index].oa = parseFloat(row.find('.oa').val()) || 0;
+                allPayrollData[index].misc = parseFloat(row.find('.misc').val()) || 0;
+                allPayrollData[index].incentive = parseFloat(row.find('.incentive').val()) || 0;
+                allPayrollData[index].salary_advance = parseFloat(row.find('.salary_advance').val()) || 0;
+                allPayrollData[index].net_salary = parseFloat(row.find('.net_salary').val()) || 0;
+                allPayrollData[index].gross_salary = parseFloat(row.find('.gross_salary').val()) || 0;
+                allPayrollData[index].total_deduction = parseFloat(row.find('.total_deduction').val()) || 0;
+                allPayrollData[index].lop_amount = parseFloat(row.find('.lop_amount').val()) || 0;
             });
         }
         $(document).on('change', '#checkAllEmployees', function () {
@@ -618,39 +567,27 @@
             allPayrollData[index].is_selected =
                 $(this).is(':checked');
         });
-        $(document).on('click', '#savePayroll', function () {
+        $('#savePayroll').click(function () {
             saveCurrentPageData();
             let month = $('#salary_month').val();
-            if(month == '') {
+            let type = $('#payroll_type').val() || 'monthly';
+            let fromDate = $('#salary_from_date').val();
+            let toDate = $('#salary_to_date').val();
+
+            if (type === 'monthly' && month == '') {
                 Swal.fire({
                     icon: 'error',
                     title: 'Failed',
-                    text: 'Please select salary month',
+                    text: 'Please select month',
                     confirmButtonText: 'OK'
                 });
                 return;
             }
-            let hasError = false;
-            $.each(allPayrollData, function(index, item) {
-                if(!item.is_selected) {
-                    return true;
-                }
-                if (
-                    parseFloat(item.basic_salary) <= 0 ||
-                    parseFloat(item.hra) <= 0 ||
-                    parseFloat(item.da) <= 0 ||
-                    parseFloat(item.gross_salary) <= 0 ||
-                    parseFloat(item.net_salary) <= 0
-                ) {
-                    hasError = true;
-                    return false;
-                }
-            });
-            if(hasError) {
+            if (type === 'range' && (fromDate == '' || toDate == '')) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Failed',
-                    text: 'Basic Pay, HRA, DA, Gross Salary and Net Salary cannot be empty or zero.',
+                    text: 'Please select dates',
                     confirmButtonText: 'OK'
                 });
                 return;
@@ -671,7 +608,10 @@
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",
+                    type: type,
                     month: month,
+                    from_date: fromDate,
+                    to_date: toDate,
                     payroll: selectedPayroll
                 },
                 success: function (response) {
@@ -713,12 +653,7 @@
             let absentDays = parseFloat(row.find('.absent_days').val()) || 0;
             let lopAmount = perDaySalary * absentDays;
             let grossSalary = fixed_gross - lopAmount;
-            let totalEarnings =
-                grossSalary +
-                incentive +
-                misc +
-                busFare +
-                otAmount;
+            let totalEarnings = grossSalary + incentive + misc + busFare + otAmount;
             row.find('.gross_salary').val(totalEarnings.toFixed(2));
             let pfWage = basic + da;
             let pf = (pfWage * 12) / 100;
@@ -730,12 +665,7 @@
                 esi = (21000 * 0.75) / 100;
             }
             row.find('.esi').val(esi.toFixed(2));
-            let totalDeduction =
-                pf +
-                esi +
-                salaryAdvance +
-                lateFine +
-                otherDeduction;
+            let totalDeduction = pf + esi + salaryAdvance + lateFine + otherDeduction;
 
             row.find('.total_deduction').val(totalDeduction.toFixed(2));
             let net = totalEarnings - totalDeduction;
@@ -747,25 +677,14 @@
         });
         $(document).on('keyup change','.salary_advance',function () {
             let row = $(this).closest('tr');
-            let gross =
-                parseFloat(row.find('.gross_salary').val()) || 0;
-            let pf =
-                parseFloat(row.find('.pf').val()) || 0;
-            let esi =
-                parseFloat(row.find('.esi').val()) || 0;
-            let ot =
-                parseFloat(row.find('.overtime_amount').val()) || 0;
-            let advance =
-                parseFloat($(this).val()) || 0;
+            let gross = parseFloat(row.find('.gross_salary').val()) || 0;
+            let pf = parseFloat(row.find('.pf').val()) || 0;
+            let esi = parseFloat(row.find('.esi').val()) || 0;
+            let ot = parseFloat(row.find('.overtime_amount').val()) || 0;
+            let advance = parseFloat($(this).val()) || 0;
             let lateFine = parseFloat(row.find('.late_fine').val()) || 0;
             let otherDeduction = parseFloat(row.find('.other_deduction').val()) || 0;
-            let net =
-                gross -
-                pf -
-                esi -
-                advance -
-                lateFine -
-                otherDeduction;
+            let net = gross - pf - esi - advance - lateFine - otherDeduction;
             row.find('.net_salary').val(net.toFixed(2));
         });
         $(document).on('keyup change', '.late_hours', function () {
@@ -789,29 +708,53 @@
             updateTotalDays();
         });
         function updateTotalDays() {
-            let monthValue = $('#salary_month').val();
-            if (!monthValue) {
-                $('#total_days').text('0');
+            if ($('.salary_id').length > 0) {
                 return;
             }
-            let parts = monthValue.split('-');
-            let year = parseInt(parts[0]);
-            let month = parseInt(parts[1]);
-            let totalDays = new Date(year, month, 0).getDate();
-            $('#total_days').text(totalDays);
+            let type = $('#payroll_type').val() || 'monthly';
+            if (type === 'monthly') {
+                let monthValue = $('#salary_month').val();
+                if (!monthValue) {
+                    $('#total_days').text('0');
+                    return;
+                }
+                let parts = monthValue.split('-');
+                let year = parseInt(parts[0]);
+                let month = parseInt(parts[1]);
+                let totalDays = new Date(year, month, 0).getDate();
+                $('#total_days').text(totalDays);
+            } else {
+                let fromDate = $('#salary_from_date').val();
+                let toDate = $('#salary_to_date').val();
+                if (!fromDate || !toDate) {
+                    $('#total_days').text('0');
+                    return;
+                }
+                let start = new Date(fromDate);
+                let end = new Date(toDate);
+                let diffTime = Math.abs(end - start);
+                let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                $('#total_days').text(diffDays);
+            }
         }
         let searchTimer;
         $('#employeeSearch').on('keyup', function () {
             clearTimeout(searchTimer);
             let search = $(this).val();
+            let type = $('#payroll_type').val() || 'monthly';
             let month = $('#salary_month').val();
+            let fromDate = $('#salary_from_date').val();
+            let toDate = $('#salary_to_date').val();
             searchTimer = setTimeout(function () {
                 $.ajax({
                     url: "{{ route('salary-generation.search') }}",
                     type: "GET",
                     data: {
                         search: search,
-                        month: month
+                        type: type,
+                        month: month,
+                        from_date: fromDate,
+                        to_date: toDate
                     },
                     success: function (response) {
                         allPayrollData = response.payroll;
