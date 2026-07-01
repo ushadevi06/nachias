@@ -154,7 +154,6 @@ class StateController extends Controller
             [City::class, 'state_id', 'Cities'],
             [Supplier::class, 'state_id', 'Suppliers'],
             [Customer::class, 'state_id', 'Customers'],
-            [Zone::class, 'state_id', 'Zones'],
             [SalesAgent::class, 'state_id', 'Sales Agents'],
             [PurchaseCommissionAgent::class, 'state_id', 'Purchase Commission Agents'],
             [ServiceProvider::class, 'state_id', 'Service Providers'],
@@ -168,6 +167,11 @@ class StateController extends Controller
                 session()->flash('danger', "This state is currently referenced in {$label} and cannot be deleted");
                 return redirect('states');
             }
+        }
+        
+        if (Zone::whereRaw("FIND_IN_SET(?, state_ids)", [$id])->exists()) {
+            session()->flash('danger', "This state is currently referenced in Zones and cannot be deleted");
+            return redirect('states');
         }
 
         $oldData = $state->toArray();

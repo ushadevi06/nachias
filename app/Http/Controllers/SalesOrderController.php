@@ -256,6 +256,16 @@ class SalesOrderController extends Controller
                     $finalTotal -= $roundOffAmount;
                 }
 
+                $agentCommValue = 0;
+                if ($request->agent_id && $request->order_type !== 'Discount Order') {
+                    $agent = \App\Models\SalesAgent::find($request->agent_id);
+                    if ($agent) {
+                        $agentCommValue = (float) ($agent->commission_value ?? 0);
+                    }
+                }
+                $totalQty = $request->total_qty ?? 0;
+                $commAmount = $totalQty * $agentCommValue;
+
                 $soData = [
                     'so_no' => $request->so_no,
                     'so_date' => Carbon::createFromFormat('d-m-Y', $request->so_date)->format('Y-m-d'),
@@ -272,10 +282,10 @@ class SalesOrderController extends Controller
                     'transport_mode_id' => $request->transport_mode_id,
                     'dispatch_from_id' => $request->dispatch_from_id,
                     'status' => $request->status,
-                    'total_qty' => $request->total_qty ?? 0,
+                    'total_qty' => $totalQty,
                     'sub_total_qty' => $request->sub_total_qty ?? 0,
-                    'commission_percent' => $request->commission_percent ?? 0,
-                    'commission_amount' => $request->commission_amount ?? 0,
+                    'commission_percent' => $agentCommValue,
+                    'commission_amount' => $commAmount,
                     'sales_discount_percent' => $request->sales_discount_percent ?? 0,
                     'box_discount_amount' => $request->box_discount_amount ?? 0,
                     'discount_amount' => $request->discount_amount ?? 0,
@@ -506,8 +516,8 @@ class SalesOrderController extends Controller
                         'qty' => $item['qty'],
                         'rate' => $item['rate'] ?? 0,
                         'mrp' => $item['mrp'] ?? 0,
-                        'commission_percent' => $item['commission_percent'] ?? 0,
-                        'commission_amount'  => $item['commission_amount'] ?? 0,
+                        'commission_percent' => $agentCommValue,
+                        'commission_amount'  => ($item['qty'] * $agentCommValue),
                         'amount' => $item['qty'] * ($item['rate'] ?? $item['mrp'] ?? 0),
                         'sleeve' => isset($item['sleeve']) ? (is_array($item['sleeve']) ? $item['sleeve'] : [$item['sleeve']]) : null,
                         'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? (int)$item['stock_entry_item_id'] : null,

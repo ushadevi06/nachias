@@ -245,8 +245,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" step="0.01" class="form-control @error('commission_value') is-invalid @enderror" id="commission_value" placeholder="Enter Commission Value" name="commission_value" value="{{ old('commission_value', $salesAgent->commission_value ?? '') }}">
-                                    <label for="commission_value">Commission Value</label>
+                                    <input type="number" step="0.01" class="form-control @error('commission_value') is-invalid @enderror" id="commission_value" placeholder="Enter Commission Amount (Per PCS)" name="commission_value" value="{{ old('commission_value', $salesAgent->commission_value ?? '') }}">
+                                    <label for="commission_value">Commission Amount (Per PCS)</label>
                                 </div>
                                 @error('commission_value')
                                 <div class="text-danger mt-1">{{ $message }}</div>

@@ -32,7 +32,7 @@
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <select id="order_type" name="order_type" class="select2 form-select">
-                                        @foreach(['Regular'=>'Regular Order','Sample'=>'Sample Order','Bulk'=>'Bulk/Export','Urgent'=>'Urgent Order','Special'=>'Special Order'] as $val=>$label)
+                                        @foreach(['Regular'=>'Regular Order','Urgent'=>'Urgent Order','Special'=>'Special Order','Discount'=>'Discount Order', 'Phone' => 'Phone Order', 'Open' => 'Open Order'] as $val=>$label)
                                         <option value="{{ $val }}" {{ old('order_type', $salesOrder->order_type ?? 'Regular') == $val ? 'selected' : '' }}>{{ $label }}</option>
                                         @endforeach
                                     </select>
@@ -119,15 +119,7 @@
                                     <label for="agent_id">Sales Executive</label>
                                 </div> 
                             </div>
-                            <div class="col-md-4">
-                                <div class="input-group input-group-merge">
-                                    <div class="form-floating form-floating-outline">
-                                        <input type="number" class="form-control" id="commission_percent" name="commission_percent" step="0.01" min="0" placeholder="0.00" value="{{ old('commission_percent', $salesOrder->commission_percent ?? '') }}">
-                                        <label for="commission_percent">Commission</label>
-                                    </div>
-                                    <span class="input-group-text">%</span>
-                                </div>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -259,8 +251,7 @@
                                         <th style="min-width: 120px;">Quantity *</th>
                                         <th style="min-width: 120px;">MRP *</th>
                                         <th style="min-width: 120px;">Selling Price *</th>
-                                        <th style="min-width: 100px;">Commission %</th>
-                                        <th style="min-width: 120px;">Commission Amt</th>
+
                                         <th style="min-width: 120px;">Amount</th>
                                         <th style="min-width: 50px;">Action</th>
                                     </tr>
@@ -347,16 +338,7 @@
                                                     </div>
                                                     @error("items.$index.rate")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                                 </td>
-                                                <td>
-                                                    <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][commission_percent]" class="form-control item-commission-percent" value="{{ old('items.'.$index.'.commission_percent', '') }}" min="0" step="0.01" placeholder="0.00" readonly>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div class="form-floating form-floating-outline">
-                                                        <input type="text" name="items[{{ $index }}][commission_amount]" class="form-control item-commission-amount" value="{{ old('items.'.$index.'.commission_amount', '0.00') }}" placeholder="0.00" readonly>
-                                                    </div>
-                                                </td>
+
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
                                                         <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format(($item['qty'] ?? 0) * ($item['rate'] ?? 0), 2, '.', '') }}" readonly>
@@ -447,22 +429,7 @@
                                                         <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input" value="{{ $item->rate }}" step="0.01">
                                                     </div>
                                                 </td>
-                                                <td>
-                                                    <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][commission_percent]" 
-                                                            class="form-control item-commission-percent" 
-                                                            value="{{ $item->commission_percent ?? '' }}"
-                                                            min="0" step="0.01" placeholder="0.00" readonly>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div class="form-floating form-floating-outline">
-                                                        <input type="text" name="items[{{ $index }}][commission_amount]" 
-                                                            class="form-control item-commission-amount" 
-                                                            value="{{ $item->commission_amount ?? '0.00' }}"
-                                                            placeholder="0.00" readonly>
-                                                    </div>
-                                                </td>
+
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
                                                         <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input" value="{{ number_format($item->qty * ($item->rate ?: 0), 2, '.', '') }}" readonly>
@@ -549,20 +516,7 @@
                                                 <input type="number" name="items[0][rate]" class="form-control rate-input" placeholder="0.00" step="0.01">
                                             </div>
                                         </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="number" name="items[0][commission_percent]" 
-                                                    class="form-control item-commission-percent" 
-                                                    min="0" step="0.01" placeholder="0.00" readonly>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="form-floating form-floating-outline">
-                                                <input type="text" name="items[0][commission_amount]" 
-                                                    class="form-control item-commission-amount" 
-                                                    placeholder="0.00" readonly>
-                                            </div>
-                                        </td>
+
                                         <td>
                                             <div class="form-floating form-floating-outline">
                                                 <input type="text" name="items[0][amount]" class="form-control amount-input" value="0.00" readonly>
@@ -819,15 +773,6 @@
                                             <label class="fw-medium">Discount Amount:</label>
                                             <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $salesOrder->discount_amount ?? '0.00') }}" readonly>
                                         </div>
-                                        <div class="mb-2 d-none" id="commission_row">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <label class="fw-medium">Commission Amount:</label>
-                                                <div class="text-end">
-                                                    <span id="commission_amount_display" class="fw-bold">0.00</span>
-                                                    <input type="hidden" id="commission_amount" name="commission_amount" value="{{ old('commission_amount', $salesOrder->commission_amount ?? '0.00') }}">
-                                                </div>
-                                            </div>
-                                        </div>
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <label class="fw-medium">Pre-GST Charges:</label>
                                             <input type="text" id="pre_gst_total_input" name="pre_gst_total" class="form-control-plaintext text-end w-50 fw-bold" value="0.00" readonly>
@@ -884,18 +829,16 @@
                                             <label class="fw-medium">Post-GST Charges:</label>
                                             <input type="text" id="other_charges_input" name="other_charges" class="form-control-plaintext text-end w-50 fw-bold" value="{{ old('other_charges', $salesOrder->other_charges ?? '0.00') }}" readonly>
                                         </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <label class="fw-medium">Total Before Round Off:</label>
+                                            <input type="text" id="total_before_round_off" class="form-control-plaintext text-end w-50 fw-bold" value="0.00" readonly>
+                                        </div>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <label class="fw-medium">Round Off:</label>
                                             <div class="d-flex align-items-center">
-                                                <div class="form-check form-check-inline me-2">
-                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', $salesOrder->round_off_type ?? 'Add') == 'Add' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="round_off_add">Add</label>
-                                                </div>
-                                                <div class="form-check form-check-inline me-2">
-                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', $salesOrder->round_off_type ?? 'Add') == 'Less' ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="round_off_less">Less</label>
-                                                </div>
-                                                <input type="number" class="form-control form-control-sm text-end" style="width:100px;" id="round_off" name="round_off" step="0.01" min="0" value="{{ old('round_off', $salesOrder->round_off ?? '0.00') }}" autocomplete="off">
+                                                <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', $salesOrder->round_off_type ?? 'Add') }}">
+                                                <input type="text" class="form-control-plaintext form-control-sm text-end fw-bold" style="width:100px;" id="round_off_display" value="0.00" readonly>
+                                                <input type="hidden" id="round_off" name="round_off" value="{{ old('round_off', $salesOrder->round_off ?? '0.00') }}">
                                             </div>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
@@ -1114,20 +1057,6 @@ $(document).ready(function () {
                 <td>
                     <div class="form-floating form-floating-outline">
                         <input type="number" name="items[${itemIndex}][rate]" class="form-control rate-input" min="0" step="0.01" placeholder="0.00">
-                    </div>
-                </td>
-                <td>
-                    <div class="form-floating form-floating-outline">
-                        <input type="number" name="items[${itemIndex}][commission_percent]" 
-                            class="form-control item-commission-percent" 
-                            min="0" step="0.01" placeholder="0.00" readonly>
-                    </div>
-                </td>
-                <td>
-                    <div class="form-floating form-floating-outline">
-                        <input type="text" name="items[${itemIndex}][commission_amount]" 
-                            class="form-control item-commission-amount" 
-                            placeholder="0.00" readonly>
                     </div>
                 </td>
                 <td>
@@ -1365,14 +1294,6 @@ $(document).ready(function () {
         if (typeof calculateTotals === 'function') {
             calculateTotals();
         }
-        let globalCommPercent = parseFloat($('#commission_percent').val()) || 0;
-        if (globalCommPercent > 0) {
-            let rate = parseFloat(res.price || 0);
-            let qty = parseFloat($row.find('.qty-input').val()) || 1;
-            let commAmt = (rate * qty * globalCommPercent) / 100;
-            $row.find('.item-commission-percent').val(globalCommPercent.toFixed(2));
-            $row.find('.item-commission-amount').val(commAmt.toFixed(2));
-        }
     }
 
     $(document).on('focus', '.stock-item-autocomplete', function() {
@@ -1445,15 +1366,6 @@ $(document).ready(function () {
             });
         }
     });
-
-    // $('#freight_type').on('change', function() {
-    //     if ($(this).val() === 'Paid') {
-    //         $('#freight_amount').prop('readonly', false);
-    //     } else {
-    //         $('#freight_amount').val('0').trigger('input').prop('readonly', true);
-    //     }
-    //     calculateTotals();
-    // });
 
     $('#freight_amount').on('input', function() {
         calculateTotals();
@@ -1543,9 +1455,7 @@ $(document).ready(function () {
         let $row = $(this).closest('.item-row');
         let qtyInput = $row.find('.qty-input');
         let qty = parseFloat(qtyInput.val()) || 0;
-        let mrp = parseFloat($row.find('.mrp-input').val()) || 0;
         let rate = parseFloat($row.find('.rate-input').val()) || 0;
-        let commPercent = parseFloat($row.find('.item-commission-percent').val()) || 0;
         let available = parseFloat($row.find('.available-stock-display').text()) || 0;
 
         let hasStockItem = !!$row.find('.stock-item-select').val();
@@ -1558,10 +1468,7 @@ $(document).ready(function () {
             $row.find('.stock-error-msg').hide();
         }
 
-        let price = rate;
-        let commAmt = (qty * rate * commPercent) / 100;
         $row.find('.amount-input').val((qty * rate).toFixed(2));
-        $row.find('.item-commission-amount').val(commAmt.toFixed(2));
         calculateTotals();
         validateSubmit();
     });
@@ -1623,53 +1530,34 @@ $(document).ready(function () {
 
         const taxAmount = (taxableAmount * taxPercent) / 100;
         $('#tax_amount').val(taxAmount.toFixed(2));
-        let totalCommissionAmount = 0;
-        $('.item-row').each(function() {
-            totalCommissionAmount += parseFloat($(this).find('.item-commission-amount').val()) || 0;
-        });
-
-        if (totalCommissionAmount > 0) {
-            $('#commission_amount_display').text(totalCommissionAmount.toFixed(2));
-            $('#commission_amount').val(totalCommissionAmount.toFixed(2));
-            $('#commission_row').removeClass('d-none');
-        } else {
-            $('#commission_amount_display').text('0.00');
-            $('#commission_amount').val('0.00');
-            $('#commission_row').addClass('d-none');
-        }
-        let finalTotal = taxableAmount + taxAmount + postGstCharges + totalCommissionAmount;
+        
+        let finalTotal = taxableAmount + taxAmount + postGstCharges;
         
         // if ($('#freight_type').val() === 'Paid') {
         //     finalTotal += parseFloat($('#freight_amount').val()) || 0;
         // }
 
-        const roundOffVal = parseFloat($('#round_off').val()) || 0;
-        const roundOffType = $('input[name="round_off_type"]:checked').val();
+        let roundedTotal = Math.round(finalTotal);
+        $('#total_before_round_off').val(finalTotal.toFixed(2));
         
-        if (roundOffType === 'Add') {
-            finalTotal += roundOffVal;
-        } else {
-            finalTotal -= roundOffVal;
-        }
+        let roundOffVal = Math.abs(roundedTotal - finalTotal);
+        let roundOffType = (roundedTotal >= finalTotal) ? 'Add' : 'Less';
+        
+        roundOffVal = parseFloat(roundOffVal.toFixed(2));
+        
+        $('#round_off_type').val(roundOffVal > 0 ? roundOffType : 'Add');
+        $('#round_off').val(roundOffVal.toFixed(2));
+        
+        let displayStr = (roundOffVal > 0) ? (roundOffType === 'Add' ? '+' : '-') + roundOffVal.toFixed(2) : '0.00';
+        $('#round_off_display').val(displayStr);
+        
+        finalTotal = roundedTotal;
 
         $('#total_amount').val(finalTotal.toFixed(2));
     }
 
-    $(document).on('input', '#box_discount_amount, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent, #round_off, #commission_percent', calculateTotals);
-    $(document).on('change', 'input[name="other_state"], input[name="round_off_type"]', calculateTotals);
-
-    $('#commission_percent').on('input', function() {
-        let percent = parseFloat($(this).val()) || 0;
-        $('.item-row').each(function() {
-            let $row = $(this);
-            let rate = parseFloat($row.find('.rate-input').val()) || 0;
-            let qty = parseFloat($row.find('.qty-input').val()) || 0;
-            let commAmt = (rate * qty * percent) / 100;
-            $row.find('.item-commission-percent').val(percent > 0 ? percent.toFixed(2) : '');
-            $row.find('.item-commission-amount').val(commAmt.toFixed(2));
-        });
-        calculateTotals();
-    });
+    $(document).on('input', '#box_discount_amount, #sales_discount_percent, #igst_percent, #cgst_percent, #sgst_percent', calculateTotals);
+    $(document).on('change', 'input[name="other_state"]', calculateTotals);
     function initDiscountState() {
         $('#box_discount_amount').prop('disabled', false);
     }

@@ -23,8 +23,8 @@
                 <div class="form-group">
                     <label>Label Format</label>
                     <select id="labelFormat" class="form-select">
-                        <option value="tag">Price Tag (45 x 85 mm)</option>
-                        <option value="sticker">Price Sticker (50 x 70 mm)</option>
+                        <option value="tag" {{ (request('format') ?? 'tag') === 'tag' ? 'selected' : '' }}>Price Tag (45 x 85 mm)</option>
+                        <option value="sticker" {{ request('format') === 'sticker' ? 'selected' : '' }}>Price Sticker (50 x 70 mm)</option>
                     </select>
                 </div>
             </div>

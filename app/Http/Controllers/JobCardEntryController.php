@@ -2447,10 +2447,17 @@ class JobCardEntryController extends Controller
         ])->findOrFail($id);
         $jobCard = $issueItem->jobCard;
         $colorName = $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-');
-        $orientation = $request->orientation ?? 'portrait';
-        $width = $request->width ?? 60;
-        $height = $request->height ?? 135;
         $format = $request->format ?? 'tag';
+        
+        if ($format === 'sticker') {
+            $width = $request->width ?? 70;
+            $height = $request->height ?? 50;
+        } else {
+            $width = $request->width ?? 45;
+            $height = $request->height ?? 85;
+        }
+        
+        $orientation = $request->orientation ?? 'portrait';
         $margin = $request->margin ?? 2;
         $bg_color = $request->bg_color ?? '#ffffff';
         $v_align = $request->v_align ?? 'top';
@@ -2526,7 +2533,18 @@ class JobCardEntryController extends Controller
                 }
             }
         } else {
-            $records[] = ['size' => $request->size ?? 'Bulk', 'sleeve' => $request->sleeve, 'qty' => $issueItem->qty_used];
+            $qty = $issueItem->qty_used;
+            if ($request->size && $request->sleeve && $issueItem->fabricDetail) {
+                $matrixQty = $issueItem->fabricDetail->quantities->where('size', $request->size)->first();
+                if ($matrixQty) {
+                    if ($request->sleeve == 'F/S') {
+                        $qty = $matrixQty->qty_fs > 0 ? $matrixQty->qty_fs : $qty;
+                    } elseif ($request->sleeve == 'H/S') {
+                        $qty = $matrixQty->qty_hs > 0 ? $matrixQty->qty_hs : $qty;
+                    }
+                }
+            }
+            $records[] = ['size' => $request->size ?? 'Bulk', 'sleeve' => $request->sleeve, 'qty' => $qty];
         }
 
         $labels = [];
@@ -2608,7 +2626,7 @@ class JobCardEntryController extends Controller
                 'mfg_date' => date('F Y'),
                 'lot_no' => $jobCard->job_card_no,
                 'sku' => $barcodeNo,
-                'quantity' => $record['qty'] . ' ' . ($issueItem->rawMaterial->uom->uom_code ?? '')
+                'quantity' => $record['qty'] . ' ' . ($record['size'] !== 'Bulk' ? 'Number' : ($issueItem->rawMaterial->uom->uom_code ?? ''))
             ];
 
             $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');
@@ -2638,7 +2656,8 @@ class JobCardEntryController extends Controller
 
         $labelData = count($labels) > 0 ? $labels[0] : [];
 
-        return view('labels.print_barcode', compact('labelData', 'labels', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order', 'format'));
+        $viewName = ($format === 'tag') ? 'labels.print_tag' : 'labels.print_sticker';
+        return view($viewName, compact('labelData', 'labels', 'orientation', 'width', 'height', 'margin', 'bg_color', 'v_align', 'order', 'format'));
     }
 
     public function barcodePreview($id, Request $request)
@@ -2650,7 +2669,6 @@ class JobCardEntryController extends Controller
 
         $artNo = $issueItem->job_card_article_matrix_id ? JobCardFabricDetail::find($issueItem->job_card_article_matrix_id)->art_no : ($issueItem->rawMaterial->code ?? '');
 
-        // Fetch size price if size is specific, otherwise check if there's any active price record
         $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
             ->where('art_no', $artNo)
             ->when(is_numeric($selectedSize), function($q) use ($selectedSize) {

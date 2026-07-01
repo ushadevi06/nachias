@@ -659,19 +659,15 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Overtime */
     Route::get('overtime', [OvertimeController::class, 'index']);
-    Route::get('edit_overtime/{date}', [OvertimeController::class, 'edit'])
-        ->name('edit_overtime');  /* {department} */
-    Route::get('view_overtime/{date}/{emp_code}', [OvertimeController::class, 'view'])
-        ->name('view_overtime');  /* {department} */
+    Route::get('edit_overtime/{date}', [OvertimeController::class, 'edit'])->name('edit_overtime');
+    Route::get('view_overtime/{date}/{emp_code}', [OvertimeController::class, 'view'])->name('view_overtime');
     Route::post('update-overtime', [OvertimeController::class, 'update'])->name('update_overtime');
 
     /* Salary Calculation */
     Route::get('monthly_payroll', [SalaryController::class, 'index']);
     Route::get('add_monthly_payroll/{id?}', [SalaryController::class, 'add']);
-    Route::post('/generate-payroll', [SalaryController::class, 'generatePayroll'])
-        ->name('generate.payroll');
-    Route::post('/save-payroll', [SalaryController::class, 'savePayroll'])
-        ->name('save.payroll');
+    Route::post('/generate-payroll', [SalaryController::class, 'generatePayroll'])->name('generate.payroll');
+    Route::post('/save-payroll', [SalaryController::class, 'savePayroll'])->name('save.payroll');
     Route::post('/update-payroll-status', [SalaryController::class, 'updatePayrollStatus'])->name('update.payroll.status');
     Route::post('/generate-payslip-pdf', [SalaryController::class, 'generatePayslipPdf'])->name('generate.payslip.pdf');
     Route::get('/view-payslip/{id}', [SalaryController::class, 'viewPayslip'])->name('view.payslip');
@@ -760,37 +756,3 @@ Route::get('/testaxe', function () {
     return $output;
 });
 
-Route::get('/update-invoice-colors', function () {
-    $invoiceItems = \App\Models\SalesInvoiceItem::whereNull('api_color')->with('salesInvoice')->get();
-    $count = 0;
-    foreach ($invoiceItems as $invItem) {
-        if (!$invItem->salesInvoice) continue;
-        
-        $soIds = $invItem->salesInvoice->so_ids;
-        if (empty($soIds) && !empty($invItem->salesInvoice->so_id)) {
-            $soIds = [$invItem->salesInvoice->so_id];
-        } else {
-            $soIds = is_string($soIds) ? json_decode($soIds, true) : $soIds;
-        }
-        
-        if (empty($soIds)) continue;
-
-        $query = \App\Models\SalesOrderItem::whereIn('sale_order_id', $soIds);
-        if (!empty($invItem->sku)) {
-            $query->where('sku', $invItem->sku);
-        } else {
-            $query->where('art_no', $invItem->art_no)
-                  ->where('color_id', $invItem->color_id)
-                  ->where('size', $invItem->size);
-        }
-
-        $soItem = $query->first();
-
-        if ($soItem && !empty($soItem->api_color)) {
-            $invItem->api_color = $soItem->api_color;
-            $invItem->save();
-            $count++;
-        }
-    }
-    return "Updated $count sales invoice items.";
-});

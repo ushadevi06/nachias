@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shipping Sticker - {{ $invoice->inv_no }}</title>
+    <title>Sticker - {{ $invoice->inv_no }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         @page {
             size: 100mm 150mm;
@@ -23,7 +26,7 @@
             padding: 0;
         }
         body {
-            font-family: 'Arial Narrow', Arial, sans-serif;
+            font-family: 'Montserrat', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             width: 100mm;
             height: 150mm;
             padding: 2mm;
@@ -31,174 +34,278 @@
             margin: 0;
         }
         .sticker {
-            border: 3px solid #000;
-            border-radius: 0px; /* Square/sharp corners to match original */
             width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
+            border-radius: 12px;
             overflow: hidden;
+            border: 1px solid #ccc;
+            background: #fff;
         }
-        .content {
-            padding: 10px 12px 6px 12px;
+        .ship-to-bar {
+            background: #f5a623;
+            color: #000;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+        }
+        .ship-to-bar::after {
+            content: "";
             flex: 1;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.15);
+            margin-left: 12px;
+        }
+        .address-section {
+            padding: 16px;
+        }
+        .company-heading {
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .customer-name {
+            font-size: 38px;
+            font-weight: normal;
+            font-family: 'Bebas Neue', 'Segoe UI', sans-serif;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            color: #000;
+            line-height: 1.1;
+            letter-spacing: 1px;
+        }
+        .customer-address {
+            font-size: 14px;
+            color: #444;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .city-badge {
+            background: #1a1a1a;
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .city-badge svg {
+            width: 14px;
+            height: 14px;
+            fill: #e74c3c;
+            margin-right: 6px;
+        }
+        .stats-section {
+            border-top: 2px dashed #eee;
+            border-bottom: 2px dashed #eee;
+            display: flex;
+            padding: 8px 16px;
+        }
+        .stat-box {
+            flex: 1;
+        }
+        .stat-label {
+            font-size: 10px;
+            color: #888;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        .stat-value.orange {
+            color: #f5a623;
+            font-size: 24px;
+        }
+        .disclaimer-section {
+            padding: 8px 16px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .disclaimer-section svg {
+            width: 20px;
+            height: 20px;
+            fill: #bbb;
+            margin-right: 10px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .disclaimer-text {
+            font-size: 12px;
+            color: #888;
+            line-height: 1.4;
+        }
+        .qr-section {
+            padding: 6px 16px;
+            margin-bottom: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .qr-text {
+            font-size: 10px;
+            color: #888;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        .header {
+            background-color: #1a1a1a;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-left {
             display: flex;
             flex-direction: column;
         }
-        .to {
-            font-size: 26px;
-            font-weight: bold;
-            margin-bottom: 8px;
+        .company-name {
+            color: #fff;
+            font-size: 24px;
+            font-weight: normal;
+            font-family: 'Bebas Neue', sans-serif;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        td {
-            padding: 4px 0;
-            vertical-align: top;
-            font-weight: bold;
-        }
-        .lbl {
-            font-size: 20px;
-            width: 120px;
-            white-space: nowrap;
-        }
-        .eq {
-            font-size: 20px;
-            width: 25px;
-            text-align: center;
-        }
-        .val {
-            font-size: 20px;
+        .company-sub {
+            color: #888;
+            font-size: 9px;
+            letter-spacing: 2px;
             text-transform: uppercase;
+            font-weight: 600;
         }
-        .val-party {
-            font-size: 22px;
-            text-transform: uppercase;
-        }
-        .val-place {
-            font-size: 40px;
-            font-family: 'Arial Black', Impact, sans-serif;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-        .val-inv {
-            font-size: 30px;
-            font-family: 'Arial Black', Impact, sans-serif;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-        .val-pcs {
-            font-size: 50px;
-            font-family: 'Arial Black', Impact, sans-serif;
-            line-height: 1;
-            text-align: center;
-            width: 100%;
-            display: inline-block;
-        }
-        .val-box {
-            font-size: 42px;
-            font-family: 'Arial Black', Impact, sans-serif;
-            line-height: 1;
-            text-align: center;
-            width: 100%;
-            display: inline-block;
-        }
-        .disclaimer {
-            font-size: 13px;
-            font-weight: bold;
-            text-transform: uppercase;
-            line-height: 1.3;
-            margin-top: auto;
-            padding-top: 6px;
-            text-align: left;
+        .logo-box {
+            background-color: #f5a623;
+            color: #1a1a1a;
+            font-size: 16px;
+            font-weight: 900;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
         }
         .footer {
-            flex-shrink: 0;
-            border-top: 2px solid #000;
-            padding: 6px 10px 8px;
-            text-align: center;
+            background: #1a1a1a;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
         }
-        .footer .f1 {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 2px;
-            text-align: left;
+        .footer-address {
+            color: #888;
+            font-size: 10px;
+            line-height: 1.5;
         }
-        .footer .f2 {
-            font-size: 18px;
+        .footer-phone {
+            color: #f5a623;
+            font-size: 13px;
             font-weight: bold;
-            font-family: 'Arial Black', sans-serif;
-            margin-bottom: 2px;
-        }
-        .footer .f3 {
-            font-size: 12px;
-            font-weight: bold;
-            line-height: 1.3;
+            text-align: right;
+            line-height: 1.5;
+            max-width: 40%;
         }
         @media print {
-            html, body {
-                width: 100mm;
-                height: 150mm;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
             .sticker {
-                width: 100%;
-                height: 100%;
-                padding: 2mm;
-                box-sizing: border-box;
+                border: none;
+                border-radius: 0;
             }
         }
     </style>
 </head>
 <body onload="{{ isset($is_print) && $is_print ? 'window.print()' : '' }}">
     <div class="sticker">
-        <div class="content">
-            <div class="to">TO :-</div>
-
-            <table>
-                <tr>
-                    <td class="lbl">PARTY</td>
-                    <td class="eq">=</td>
-                    <td class="val-party">{{ strtoupper($invoice->customer->name ?? 'N/A') }}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">ADDRESS</td>
-                    <td class="eq">=</td>
-                    <td class="val">{{ strtoupper(implode(', ', array_filter([$invoice->customer->address_line_1 ?? '', $invoice->customer->address_line_2 ?? '', $invoice->customer->address_line_3 ?? '']))) }}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">PLACE</td>
-                    <td class="eq">=</td>
-                    <td class="val-place">{{ strtoupper($invoice->customer->city->city_name ?? ($invoice->customer->place->place_name ?? 'N/A')) }}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">INV NO</td>
-                    <td class="eq">=</td>
-                    <td class="val-inv">{{ strtoupper($invoice->inv_no) }}</td>
-                </tr>
-                <tr>
-                    <td class="lbl" style="vertical-align: middle;">NO OF PCS</td>
-                    <td class="eq" style="vertical-align: middle;">=</td>
-                    <td style="vertical-align: middle;"><span class="val-pcs">{{ intval($totalPcs) }}</span></td>
-                </tr>
-                <tr>
-                    <td class="lbl" style="vertical-align: middle;">NO OF BOX</td>
-                    <td class="eq" style="vertical-align: middle;">=</td>
-                    <td style="vertical-align: middle;"><span class="val-box">{{ $boxCount }}</span></td>
-                </tr>
-            </table>
-
-            <div class="disclaimer">*THE ORIGINAL INVOICE FOR YOUR PURCHASE WILL BE SECURALY PLACED INSIDE THE CARTON IN A CASINO ENVELOPE</div>
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="company-name">NACHIAS FASHION</div>
+                <div class="company-sub">PVT LTD &bull; MADURAI</div>
+            </div>
+            <div class="header-right">
+                <div class="logo-box">N</div>
+            </div>
         </div>
 
+        <!-- Ship To Bar -->
+        <div class="ship-to-bar">SHIP TO</div>
+
+        <!-- Address Section -->
+        <div class="address-section">
+            <div class="customer-name">{{ $invoice->customer->name ?? 'N/A' }}</div>
+            <div class="customer-address">
+                {{ implode(', ', array_filter([$invoice->customer->address_line_1 ?? '', $invoice->customer->address_line_2 ?? '', $invoice->customer->address_line_3 ?? ''])) }}
+            </div>
+            <div class="city-badge">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                {{ $invoice->customer->city->city_name ?? ($invoice->customer->place->place_name ?? 'N/A') }}
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="stat-box" style="flex: 1.5;">
+                <div class="stat-label">INVOICE NO.</div>
+                <div class="stat-value">{{ strtoupper($invoice->inv_no) }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">PIECES</div>
+                <div class="stat-value orange">{{ intval($totalPcs) }}</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">BOXES</div>
+                <div class="stat-value orange">{{ $boxCount }}</div>
+            </div>
+        </div>
+
+        <!-- Disclaimer Section -->
+        <div class="disclaimer-section">
+            <svg viewBox="0 0 24 24">
+                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+            </svg>
+            <div class="disclaimer-text">
+                The original invoice for your purchase will be securely placed inside the carton in a Casino envelope.
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="qr-section">
+            {!! \SimpleSoftwareIO\QrCode\Facades\QrCode::size(70)->margin(0)->generate($invoice->qr_details ?? url('sales_invoices/view/' . $invoice->id)) !!}
+            <div class="qr-text">Scan for Details</div>
+        </div>
+
+        <!-- Footer -->
         <div class="footer">
-            <div class="f1">MANUFEDTURED &amp; MARKETED BY:-</div>
-            <div class="f2">NACHIAS FASHION PVT LTD</div>
-            <div class="f3">272/2, SOMUNAGAR, SRINGERI NAGAR,<br>BY-PASS ROAD, MADURAI - 625 016.<br>PNO:9443330774,8489938214</div>
+            <div class="footer-address">
+                <strong>NACHIAS FASHION PVT LTD</strong><br>
+                272/2, Somunagar, Sringeri Nagar,<br>
+                By-Pass Road, Madurai - 625 016.
+            </div>
+            <div class="footer-phone">
+                {{ $setting->phone_number ?? '' }}
+            </div>
         </div>
+
     </div>
 </body>
 </html>

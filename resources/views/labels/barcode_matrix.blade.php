@@ -48,9 +48,23 @@
                             </h5>
                         </div>
                         <div class="col-md-6 text-md-end">
-                            <a href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?bulk_print=1" target="_blank" class="btn btn-sm btn-dark me-2">
-                                <i class="ri ri-printer-line me-1"></i> Bulk Print All Sizes
-                            </a>
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-sm btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="ri ri-printer-line me-1"></i> Bulk Print
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?bulk_print=1&format=tag" target="_blank">
+                                            <i class="ri ri-price-tag-3-line me-2"></i> Price Tag
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?bulk_print=1&format=sticker" target="_blank">
+                                            <i class="ri ri-sticky-note-line me-2"></i> Price Sticker
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                             <span class="badge bg-label-info px-3 py-2 me-2">ART: {{ $issueItem->fabricDetail->art_no ?? $issueItem->rawMaterial->code ?? '-' }}</span>
                             <span class="badge bg-label-secondary px-3 py-2">COLOR: {{ $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-') }}</span>
                         </div>
@@ -85,11 +99,18 @@
                                     </td>
                                     <td class="text-center fw-bold text-dark">{{ number_format($record['qty'], 0) }}</td>
                                     <td class="text-end pe-4">
-                                        <a href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?size={{ urlencode($record['size']) }}&sleeve={{ urlencode($record['sleeve']) }}" 
-                                           target="_blank" 
-                                           class="btn btn-primary btn-sm px-4">
-                                            <i class="ri ri-eye-line me-1"></i> Preview & Design
-                                        </a>
+                                        <div class="btn-group">
+                                            <a href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?size={{ urlencode($record['size']) }}&sleeve={{ urlencode($record['sleeve']) }}&format=tag" 
+                                               target="_blank" 
+                                               class="btn btn-primary btn-sm">
+                                                <i class="ri ri-price-tag-3-line me-1"></i> Tag
+                                            </a>
+                                            <a href="{{ route('job_card_entries.barcode_preview', $issueItem->id) }}?size={{ urlencode($record['size']) }}&sleeve={{ urlencode($record['sleeve']) }}&format=sticker" 
+                                               target="_blank" 
+                                               class="btn btn-info btn-sm">
+                                                <i class="ri ri-sticky-note-line me-1"></i> Sticker
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                                 @endif

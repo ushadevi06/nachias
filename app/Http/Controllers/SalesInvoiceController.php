@@ -295,6 +295,17 @@ class SalesInvoiceController extends Controller
                     );
                 }
 
+                $invoice->load(['items', 'customer.city', 'customer.place']);
+                $totalPcs = (int) $invoice->items->sum('quantity');
+                $boxCount = (int) ($invoice->no_of_box ?: 1);
+                
+                $customerName = $invoice->customer->name ?? 'N/A';
+                $customerAddress = implode(', ', array_filter([$invoice->customer->address_line_1 ?? '', $invoice->customer->address_line_2 ?? '', $invoice->customer->address_line_3 ?? '']));
+                $location = $invoice->customer->city->city_name ?? ($invoice->customer->place->place_name ?? 'N/A');
+                
+                $qrDetails = "Customer: {$customerName}\nAddress: {$customerAddress}\nLocation: {$location}\nInvoice No: {$invoice->inv_no}\nPieces: {$totalPcs}\nBoxes: {$boxCount}";
+                $invoice->update(['qr_details' => $qrDetails]);
+
                 $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
                 if (in_array($invoice->invoice_status, $activeStatuses)) {
                     $invoice->load('items');
@@ -347,11 +358,7 @@ class SalesInvoiceController extends Controller
     
     private function getCustomerPendingItems($customerId, $currentInvoiceId = null)
     {
-        $allCustomerSOs = \App\Models\SalesOrder::with(['items'])
-            ->where('customer_id', $customerId)
-            ->whereIn('status', ['Approved', 'Dispatched'])
-            ->orderBy('id', 'asc')
-            ->get();
+        $allCustomerSOs = SalesOrder::with(['items'])->where('customer_id', $customerId)->whereIn('status', ['Approved', 'Dispatched'])->orderBy('id', 'asc')->get();
         
         $soItemOrdered = [];
         $soItemInvoiced = [];
@@ -1279,16 +1286,13 @@ class SalesInvoiceController extends Controller
     public function scanItems($id)
     {
         $invoice = SalesInvoice::with(['customer', 'items.item', 'items.stockEntryItem'])->findOrFail($id);
-        
-        $setting = \App\Models\Setting::first();
-        
+        $setting = Setting::first();
         return view('sales_invoice.scan_items', compact('invoice', 'setting'));
     }
 
     public function saveScanProgress(Request $request, $id)
     {
         $invoice = SalesInvoice::findOrFail($id);
-        
         if ($invoice->delivery_status === 'Dispatched') {
             return response()->json(['success' => false, 'message' => 'Invoice is already dispatched and locked.'], 400);
         }
@@ -1298,12 +1302,11 @@ class SalesInvoiceController extends Controller
         }
 
         $items = $request->input('items', []);
-        
         foreach ($items as $itemData) {
             $itemId = $itemData['id'];
             $scannedQty = $itemData['scanned_qty'];
             
-            $invoiceItem = \App\Models\SalesInvoiceItem::where('sales_invoice_id', $id)->where('id', $itemId)->first();
+            $invoiceItem = SalesInvoiceItem::where('sales_invoice_id', $id)->where('id', $itemId)->first();
             if ($invoiceItem) {
                 if ($scannedQty <= $invoiceItem->quantity) {
                     $invoiceItem->update(['scanned_qty' => $scannedQty]);
@@ -1317,21 +1320,17 @@ class SalesInvoiceController extends Controller
     public function completeDispatch($id)
     {
         $invoice = SalesInvoice::findOrFail($id);
-        
         if (strtolower($invoice->einvoice_status) === 'cancelled') {
             return response()->json(['success' => false, 'message' => 'Cannot dispatch a cancelled e-invoice.'], 400);
         }
-
-        $totalScanned = \App\Models\SalesInvoiceItem::where('sales_invoice_id', $id)->sum('scanned_qty');
+        $totalScanned = SalesInvoiceItem::where('sales_invoice_id', $id)->sum('scanned_qty');
         if ($totalScanned <= 0) {
             return response()->json(['success' => false, 'message' => 'Cannot dispatch! No items have been scanned yet. Please scan items first.'], 400);
         }
-
         $invoice->update([
             'delivery_status' => 'Dispatched',
             'dispatch_completed_at' => now()
         ]);
-        
         return response()->json(['success' => true, 'message' => 'Dispatch completed successfully']);
     }
 
@@ -1340,39 +1339,31 @@ class SalesInvoiceController extends Controller
         if (auth()->id() != 1 && !auth()->user()->can('edit sales-invoice')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
-
         $request->validate([
             'invoice_id' => 'required|exists:sales_invoices,id',
             'delivery_status' => 'required|in:Pending,Dispatched,Partially Delivered,Delivered,Cancel'
         ]);
-
         $invoice = SalesInvoice::findOrFail($request->invoice_id);
         $currentStatus = $invoice->delivery_status;
         $newStatus = $request->delivery_status;
-
         if ($currentStatus === 'Delivered' && in_array($newStatus, ['Pending', 'Dispatched'])) {
             return response()->json(['success' => false, 'message' => 'Cannot revert a Delivered invoice back to Pending or Dispatched.'], 400);
         }
-
         if ($currentStatus === 'Cancel' && $newStatus !== 'Cancel') {
             return response()->json(['success' => false, 'message' => 'Cannot change status of a Cancelled delivery.'], 400);
         }
-
         if ($currentStatus === 'Pending' && $newStatus === 'Delivered') {
             return response()->json(['success' => false, 'message' => 'Invoice must be Dispatched before it can be Delivered.'], 400);
         }
-
         if ($newStatus === 'Dispatched') {
-            $totalScanned = \App\Models\SalesInvoiceItem::where('sales_invoice_id', $request->invoice_id)->sum('scanned_qty');
+            $totalScanned = SalesInvoiceItem::where('sales_invoice_id', $request->invoice_id)->sum('scanned_qty');
             if ($totalScanned <= 0) {
                 return response()->json(['success' => false, 'message' => 'Cannot change status to Dispatched! No items have been scanned yet.'], 400);
             }
         }
-
         $invoice->update([
             'delivery_status' => $newStatus
         ]);
-
         return response()->json([
             'success' => true,
             'message' => 'Delivery Status updated successfully'

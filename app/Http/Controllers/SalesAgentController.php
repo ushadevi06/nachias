@@ -197,7 +197,7 @@ class SalesAgentController extends Controller
 
         if ($stateId) {
             $cities = City::active()->where('state_id', $stateId)->get();
-            $zones = \App\Models\Zone::active()->where('state_id', $stateId)->get();
+            $zones = \App\Models\Zone::active()->whereRaw('FIND_IN_SET(?, state_ids)', [$stateId])->get();
         }
         if ($cityId) {
             $places = Place::active()->where('city_id', $cityId)->get();

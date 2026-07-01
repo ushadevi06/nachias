@@ -183,9 +183,14 @@
                         <div class="card-body pt-4">
                             <div class="row g-4">
                                 <div class="col-md-6">
-                                    <div class="p-3 border rounded bg-light bg-opacity-50 text-center">
-                                        <span class="fw-bold d-block text-muted small text-uppercase mb-1">Commission Value</span>
-                                        <span class="text-primary fw-bold h5 mb-0">{{ $salesAgent->commission_value ? $salesAgent->commission_value . '%' : '0%' }}</span>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar avatar-md bg-label-primary rounded me-3">
+                                            <i class="ri-money-dollar-circle-line h4 mb-0"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-muted mb-0">Commission Amount (Per PCS)</p>
+                                            <span class="text-primary fw-bold h5 mb-0">₹{{ number_format($salesAgent->commission_value ?? 0, 2) }}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

@@ -84,6 +84,10 @@
             font-family: 'BebasNeue', sans-serif;
             font-weight: 400;
         }
+        .font-oswald {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+        }
         /* ---------------------------------------------------
            PRICE TAG STYLES (45 x 85 mm)
            --------------------------------------------------- */
@@ -172,7 +176,7 @@
         
         .tag-separator {
             border-top: 1px solid #221F1F;
-            margin: 1.5mm 0;
+            margin: 1.5mm -2mm;
         }
         
         .tag-footer-info {
@@ -199,66 +203,6 @@
             margin-bottom: 1mm;
         }
         
-        /* ---------------------------------------------------
-           PRICE STICKER STYLES (70 x 50 mm)
-           --------------------------------------------------- */
-        .sticker-container {
-            width: 100%;
-            height: 100%;
-            padding: 2mm 3mm;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .sticker-top-row {
-            display: flex;
-            justify-content: space-between;
-            flex: 1;
-        }
-        
-        .sticker-left-details {
-            width: 42mm;
-        }
-        
-        .sticker-right-details {
-            width: 20mm;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-        
-        .sticker-size-box {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-            width: 20mm;
-            height: 6mm;
-            padding: 0 2mm;
-            margin-bottom: 2mm;
-        }
-        
-        .sticker-qr {
-            margin-bottom: 2mm;
-            text-align: right;
-        }
-        .sticker-qr img, .sticker-qr svg {
-            width: 12mm;
-            height: 12mm;
-        }
-        
-        .sticker-mrp-section {
-            text-align: right;
-        }
-        
-        .sticker-footer-info {
-            border-top: 1px solid #000;
-            border-bottom: 1px solid #000;
-            padding: 1mm 0;
-            line-height: 1.1;
-            margin-bottom: 0.5mm;
-        }
-
     </style>
 </head>
 <body onload="window.print()">
@@ -287,11 +231,14 @@
 
             $brandText = ucwords(strtolower($labelData['brand_name'] ?? '-'));
             $companyName = ucwords(strtolower($labelData['company_name'] ?? 'Nachias Fashion Private Limited'));
+            
+            $emails = explode(',', $labelData['company_email'] ?? 'srinachias@yahoo.in');
+            $firstEmail = trim($emails[0]);
+            
+            $phones = str_replace(',', ' | ', $labelData['toll_free'] ?? '84899 38071 | 84899 38073');
         @endphp
 
         <div class="page-container" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
-            
-            @if($isTag)
                 <!-- PRICE TAG (45x85 mm) -->
                 <div class="tag-container">
                     <div class="tag-header-icons">
@@ -300,7 +247,7 @@
                     </div>
                     
                     <div class="size-banner" style="background-color: {{ $bgColor }};">
-                        <span class="f-8 fw-bold">Size</span>
+                        <span class="f-6  font-oswald">Size</span>
                         <span class="f-14 font-bebas" style="letter-spacing: 1px;">{{ $labelData['size'] ?? '-' }}</span>
                     </div>
                     
@@ -334,12 +281,12 @@
                             <tr>
                                 <td class="comp-lbl">Complaints</td>
                                 <td class="comp-col">:</td>
-                                <td class="comp-val fw-bold">{{ $labelData['toll_free'] ?? '84899 38071 | 84899 38073' }}</td>
+                                <td class="comp-val fw-bold">{{ $phones }}</td>
                             </tr>
                             <tr>
                                 <td class="comp-lbl">Email</td>
                                 <td class="comp-col">:</td>
-                                <td class="comp-val">{{ $labelData['company_email'] ?? 'srinachias@yahoo.in' }}</td>
+                                <td class="comp-val">{{ $firstEmail }}</td>
                             </tr>
                         </table>
                         <div class="tag-separator"></div>
@@ -351,54 +298,6 @@
                         <div class="f-5" style="color: #000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
                     </div>
                 </div>
-            @else
-                <!-- PRICE STICKER (50x70 mm) -> Landscape 70x50 -->
-                <div class="sticker-container">
-                    <div class="sticker-top-row">
-                        <div class="sticker-left-details">
-                            <table class="details-table">
-                                <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
-                                <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
-                                <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ $labelData['fit'] ?? 'Tailor Fit' }}</td></tr>
-                                <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
-                                <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
-                                <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
-                                <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
-                                <tr><td class="td-lbl" style="padding-top: 1mm;">Art No</td><td class="td-col" style="padding-top: 1mm;">:</td><td class="td-val fw-bold" style="padding-top: 1mm; font-size: 12pt;">{{ $labelData['design'] ?? '-' }}</td></tr>
-                            </table>
-                        </div>
-                        <div class="sticker-right-details">
-                            <div class="sticker-size-box" style="background-color: {{ $bgColor }};">
-                                <span class="f-7 fw-bold">Size</span>
-                                <span class="f-12 fw-bold font-impact">{{ $labelData['size'] ?? '-' }}</span>
-                            </div>
-                            <div class="sticker-qr">
-                                {!! QrCode::size(45)->generate($qrString) !!}
-                                <div class="f-5" style="color: #666; text-align: right; margin-top: 1mm;">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
-                            </div>
-                            <div class="sticker-mrp-section">
-                                <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
-                                <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
-                                <div class="f-5" style="color: #666;">MADE IN INDIA WITH PRIDE</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="sticker-footer-info f-5 mt-1">
-                        <span class="f-5" style="color: #444;">Mfr. & Mktd. by:</span> <span class="fw-bold" style="font-size: 4.5pt;">{{ $companyName }}</span><br>
-                        <span style="font-size: 4pt; line-height: 1.1;">{{ $labelData['company_address'] }}</span>
-                    </div>
-                    <table class="complaints-table" style="margin-bottom: 0;">
-                        <tr>
-                            <td class="comp-lbl">Complaints</td>
-                            <td class="comp-col">:</td>
-                            <td class="comp-val fw-bold">{{ $labelData['toll_free'] ?? '84899 38071 | 84899 38073' }}</td>
-                            <td style="text-align:right;">Email: {{ $labelData['company_email'] ?? 'srinachias@yahoo.in' }}</td>
-                        </tr>
-                    </table>
-                </div>
-            @endif
-
         </div>
     @endforeach
 </body>

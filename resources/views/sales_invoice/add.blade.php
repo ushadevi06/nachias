@@ -687,20 +687,20 @@
                                         <span class="fw-bold" id="tax_amount_val">{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="tax_amount" id="tax_amount" value="{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div class="row g-2 align-items-center mb-1 pb-1">
+                                        <div class="col-4"><span class="text-secondary fw-medium">Total Before Round Off:</span></div>
+                                        <div class="col-8 d-flex align-items-center justify-content-end">
+                                            <input type="text" id="total_before_round_off" class="form-control-plaintext form-control-sm text-end fw-bold" style="width: 100px;" value="0.00" readonly>
+                                        </div>
+                                    </div>
                                     <div class="row g-2 align-items-center mb-3 pb-3 border-bottom">
                                         <div class="col-4"><span class="text-secondary fw-medium">Round Off:</span></div>
                                         <div class="col-8 d-flex align-items-center justify-content-end">
                                             <div class="d-flex gap-3 me-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_add" value="Add" {{ old('round_off_type', isset($invoice) ? $invoice->round_off_type : 'Add') == 'Add' ? 'checked' : '' }}>
-                                                    <label class="form-check-label small fw-medium" for="round_off_add">Add</label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="radio" name="round_off_type" id="round_off_less" value="Less" {{ old('round_off_type', isset($invoice) ? $invoice->round_off_type : 'Add') == 'Less' ? 'checked' : '' }}>
-                                                    <label class="form-check-label small fw-medium" for="round_off_less">Less</label>
-                                                </div>
+                                                <input type="hidden" name="round_off_type" id="round_off_type" value="{{ old('round_off_type', isset($invoice) ? $invoice->round_off_type : 'Add') }}">
                                             </div>
-                                            <input type="number" step="any" name="round_off" id="round_off" class="form-control form-control-sm text-end" style="width: 100px;" value="{{ old('round_off', isset($invoice) ? number_format($invoice->round_off, 2, '.', '') : '0.00') }}">
+                                            <input type="text" id="round_off_display" class="form-control-plaintext form-control-sm text-end fw-bold" style="width: 100px;" value="0.00" readonly>
+                                            <input type="hidden" name="round_off" id="round_off" value="{{ old('round_off', isset($invoice) ? number_format($invoice->round_off, 2, '.', '') : '0.00') }}">
                                         </div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -1304,18 +1304,21 @@
             var otherCharges = parseFloat($('#other_charges').val()) || 0;
 
             var totalBeforeRoundOff = total + taxAmount + otherCharges;
+            $('#total_before_round_off').val(totalBeforeRoundOff.toFixed(2));
+            
             var nearestWhole = Math.round(totalBeforeRoundOff);
-            var roundOff = nearestWhole - totalBeforeRoundOff;
+            var roundOffAmount = Math.abs(nearestWhole - totalBeforeRoundOff);
+            var roundOffType = (nearestWhole >= totalBeforeRoundOff) ? 'Add' : 'Less';
+            
+            roundOffAmount = parseFloat(roundOffAmount.toFixed(2));
+            
+            $('#round_off_type').val(roundOffAmount > 0 ? roundOffType : 'Add');
+            $('#round_off').val(roundOffAmount.toFixed(2));
+            
+            var displayStr = (roundOffAmount > 0) ? (roundOffType === 'Add' ? '+' : '-') + roundOffAmount.toFixed(2) : '0.00';
+            $('#round_off_display').val(displayStr);
 
-            var roundOffType = $('input[name="round_off_type"]:checked').val();
-            var roundOffAmount = parseFloat($('#round_off').val()) || 0;
-
-            var grandTotal = totalBeforeRoundOff;
-            if (roundOffType == 'Add') {
-                grandTotal += roundOffAmount;
-            } else {
-                grandTotal -= roundOffAmount;
-            }
+            var grandTotal = nearestWhole;
 
             $('#grand_total_val').text(grandTotal.toFixed(2));
             $('#grand_total').val(grandTotal.toFixed(2));
@@ -1325,11 +1328,11 @@
 
 
 
-        $(document).on('input', '#discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #round_off, #received_amount', function() {
+        $(document).on('input', '#discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
             calculateTotals();
         });
 
-        $(document).on('change', 'input[name="other_state"], input[name="round_off_type"]', function() {
+        $(document).on('change', 'input[name="other_state"]', function() {
             calculateTotals();
         });
 

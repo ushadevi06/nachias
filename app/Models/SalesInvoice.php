@@ -71,6 +71,7 @@ class SalesInvoice extends Model
         'transporter_id',
         'transport_mode',
         'transport_distance',
+        'qr_details',
     ];
 
     protected $casts = [

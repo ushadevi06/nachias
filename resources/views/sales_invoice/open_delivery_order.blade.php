@@ -568,7 +568,8 @@
             </tr>
             <tr>
                 <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
-                    Prepared By
+                    Prepared By<br><br>
+                    <strong>{{ auth()->user()->name ?? '' }}</strong>
                 </td>
                 <td style="border: 1px solid #000000; width: 50%; height: 80px; text-align: center; vertical-align: middle; font-size: 13px;">
                     Checked By
