@@ -569,10 +569,15 @@ class ProductionReceiptController extends Controller
         };
 
 
+        $isCanvas = false;
+        if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+            $isCanvas = true;
+        }
+
         $allMaterials = $jobCard->fabricDetails->values();
-        $fabricDetails = $allMaterials->filter(function ($fd) use ($getStoreCategoryIdForArtNo) {
+        $fabricDetails = $allMaterials->filter(function ($fd) use ($getStoreCategoryIdForArtNo, $isCanvas) {
             $cat = $getStoreCategoryIdForArtNo($fd->art_no);
-            return $cat === null || (int)$cat === 1;
+            return $isCanvas || $cat === null || (int)$cat === 1;
         })->values();
         
         $articlePrices = [];
@@ -695,15 +700,22 @@ class ProductionReceiptController extends Controller
             }
         }
 
-        $calculateItemUnitPrice = function ($artNo, $size, $sleeve) use ($allMaterials, $articlePrices, $getStoreCategoryIdForArtNo, $jobCard) {
+        $calculateItemUnitPrice = function ($artNo, $size, $sleeve) use ($allMaterials, $articlePrices, $getStoreCategoryIdForArtNo, $jobCard, $isCanvas) {
             $totalCost = 0;
             $consumptionDetails = [];
             $normalizedArtNo = trim($artNo ?? '');
 
             foreach ($allMaterials as $fd) {
                 $fdCategoryId = $getStoreCategoryIdForArtNo($fd->art_no);
-                if (($fdCategoryId === null || (int)$fdCategoryId === 1) && $normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
-                    continue;
+                
+                if ($isCanvas) {
+                    if ($normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
+                        continue;
+                    }
+                } else {
+                    if (($fdCategoryId === null || (int)$fdCategoryId === 1) && $normalizedArtNo !== '' && trim($fd->art_no ?? '') !== $normalizedArtNo) {
+                        continue;
+                    }
                 }
                 $rate = 0;
                 $avgPrice = $articlePrices[$fd->id] ?? 0;
@@ -785,9 +797,9 @@ class ProductionReceiptController extends Controller
             'consumption_details' => $consumptionDetails
             ];
         };
-        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap) {
+        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap, $isCanvas) {
             if ($qty > 0) {
-                $sizeVariant = $size . ' - ' . $sleeve;
+                $sizeVariant = $sleeve ? $size . ' - ' . $sleeve : $size;
                 $itemKey = $jobCard->item_id ?? '0';
                 $normalizedArtNo = trim($artNo ?? '');
                 $resolvedColorId = $artColorMap[$normalizedArtNo]['color_id'] ?? $colorId;
@@ -826,19 +838,49 @@ class ProductionReceiptController extends Controller
                     $itemCode = $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : trim($brandCode.'-'.$styleCode.'-'.$sleeve,'-');
                     $itemName = $brandName . ' ' . $styleName . ' ' . $sleeve;
 
+                    if ($isCanvas) {
+                        $itemCode = $normalizedArtNo;
+                        $itemName = count($pricing['consumption_details']) > 0 ? $pricing['consumption_details'][0]['material_name'] : $normalizedArtNo;
+                    }
+
                     $itemPrice = \App\Models\ItemPrice::where('status', 'Active')->where('finished_item_code', $itemCode)->where('art_no', $normalizedArtNo)->where('size', $size)->whereDate('effective_from', '<=', now())->orderBy('effective_from', 'desc')->orderBy('id', 'desc')->first();
 
                     $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
                     $mrp = $itemPrice ? $itemPrice->selling_price : $pricing['total_cost'];
+
+                    if ($isCanvas && !$itemPrice) {
+                        $issueItem = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                            ->whereHas('fabricDetail', function($q) use ($normalizedArtNo) {
+                                $q->where('art_no', $normalizedArtNo);
+                            })->first();
+                        
+                        if (!$issueItem) {
+                            $issueItem = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)
+                                ->whereHas('rawMaterial', function($q) use ($normalizedArtNo) {
+                                    $q->where('code', $normalizedArtNo)->orWhere('name', $normalizedArtNo);
+                                })->first();
+                        }
+                        if ($issueItem) {
+                            $qtyPerPc = $issueItem->produced_qty > 0 ? ($issueItem->qty_used / $issueItem->produced_qty) : 0;
+                            $calculatedCost = $qtyPerPc > 0 ? ($qtyPerPc * $issueItem->unit_price) : 0;
+                            
+                            $cost = $calculatedCost > 0 ? $calculatedCost : ($issueItem->cost_per_pc > 0 ? $issueItem->cost_per_pc : $issueItem->unit_price);
+                            if ($cost > 0) {
+                                $unitPrice = $cost;
+                                $mrp = $cost;
+                            }
+                        }
+                    }
+
                     $tempGrouped[$key] = [
                         'item_id' => $jobCard->item_id ?? null,
-                        'item_code' => $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $itemCode,
+                        'item_code' => $isCanvas ? $itemCode : ($barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $itemCode),
                         'service_name' => $serviceName,
                         'sleeve' => $sleeve,
                         'size' => $size,
                         'item_name' => $itemName,
                         'art_no' => $normalizedArtNo ?: null,
-                        'description' => trim($barcodeMaster && $barcodeMaster->item_name ? $barcodeMaster->item_name : $itemName),
+                        'description' => $isCanvas ? $itemName : trim($barcodeMaster && $barcodeMaster->item_name ? $barcodeMaster->item_name : $itemName),
                         'size_variant' => $sizeVariant,
                         'unit_price' => floatval($unitPrice),
                         'mrp' => floatval($mrp),
@@ -860,8 +902,13 @@ class ProductionReceiptController extends Controller
             $matrixQtys = \App\Models\JobCardMatrixQuantity::with('colorRel')->where('job_card_fabric_detail_id', $fabDetail->id)->get();
             foreach ($matrixQtys as $mq) {
                 $colorToUse = $mq->color ?: ($mq->colorRel ? $mq->colorRel->color_name : null);
-                $processQty($fabDetail->art_no, 'F/S', $mq->size, $mq->qty_fs, $colorToUse, $mq->color_id);
-                $processQty($fabDetail->art_no, 'H/S', $mq->size, $mq->qty_hs, $colorToUse, $mq->color_id);
+                if ($isCanvas) {
+                    $qty = ($mq->qty_fs > 0) ? $mq->qty_fs : $mq->qty_hs;
+                    $processQty($fabDetail->art_no, '', $mq->size, $qty, $colorToUse, $mq->color_id);
+                } else {
+                    $processQty($fabDetail->art_no, 'F/S', $mq->size, $mq->qty_fs, $colorToUse, $mq->color_id);
+                    $processQty($fabDetail->art_no, 'H/S', $mq->size, $mq->qty_hs, $colorToUse, $mq->color_id);
+                }
             }
         }
 

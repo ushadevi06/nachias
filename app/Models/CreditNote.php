@@ -17,6 +17,7 @@ class CreditNote extends Model
         'sales_invoice_ids',
         'customer_id',
         'reason',
+        'fault',
         'reason_detail',
         'zone_id',
         'agent_id',

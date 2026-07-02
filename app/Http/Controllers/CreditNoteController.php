@@ -45,12 +45,11 @@ class CreditNoteController extends Controller
                 if(auth()->id() == 1 || auth()->user()->can('edit credit-notes')) {
                     $action .= '<a href="' . url('credit_notes/add/' . $note->id) . '" class="btn btn-edit" title="Edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
-                if(auth()->id() == 1 || auth()->user()->can('delete credit-notes')) {
-                    $action .= '<a href="javascript:;" class="btn btn-delete delete-btn" title="Delete" onclick="delete_data(\'' . url('credit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                }
+                // if(auth()->id() == 1 || auth()->user()->can('delete credit-notes')) {
+                //     $action .= '<a href="javascript:;" class="btn btn-delete delete-btn" title="Delete" onclick="delete_data(\'' . url('credit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                // }
                 $action .= '</div>';
 
-                // Handle sales invoice number display (multi-select)
                 $invoiceNos = '-';
                 if (!empty($note->sales_invoice_ids) && is_array($note->sales_invoice_ids)) {
                     $invoiceNos = SalesInvoice::whereIn('id', $note->sales_invoice_ids)->pluck('inv_no')->implode(', ');
@@ -180,6 +179,7 @@ class CreditNoteController extends Controller
                     'sales_invoice_ids' => $request->sales_invoice_ids,
                     'customer_id' => $request->customer_id,
                     'reason' => $request->reason,
+                    'fault' => $request->fault,
                     'reason_detail' => $request->reason_detail,
                     'zone_id' => $request->zone_id,
                     'agent_id' => $request->agent_id,
@@ -341,9 +341,7 @@ class CreditNoteController extends Controller
                     'invoice_id' => $invoice->id,
                     'invoice_no' => $invoice->inv_no,
                     'item_id' => $item->item_id,
-                    'item_name' => ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) 
-                                    ? $item->stockEntryItem->finished_item_code 
-                                    : ($item->item ? $item->item->name : '-'),
+                    'item_name' => ($item->stockEntryItem && $item->stockEntryItem->finished_item_code) ? $item->stockEntryItem->finished_item_code : ($item->item ? $item->item->name : '-'),
                     'item_code' => $item->item ? $item->item->code : '-',
                     'product_barcode' => $item->sku ?? '-',
                     'brand_category_id' => $item->brand_id,
@@ -528,7 +526,7 @@ class CreditNoteController extends Controller
             'totalInWords' => $totalInWords,
             'salesInvoices' => $salesInvoices
         ];
-
+        // return view('credit_notes.credit_note_pdf', $data);
         $pdf = Pdf::loadView('credit_notes.credit_note_pdf', $data);
         $pdf->setPaper('A4', 'portrait');
 

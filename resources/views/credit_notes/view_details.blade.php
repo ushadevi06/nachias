@@ -114,10 +114,13 @@
 
                                             // Item name
                                             $itemName = 'N/A';
+                                            $styleName = '';
                                             if ($invoiceItem) {
-                                                if ($invoiceItem->stockEntryItem && $invoiceItem->stockEntryItem->finished_item_code) {
+                                                if ($invoiceItem->stockEntryItem) {
+                                                    $styleName = $invoiceItem->stockEntryItem->style ? $invoiceItem->stockEntryItem->style->style_name : '';
                                                     $itemName = $invoiceItem->stockEntryItem->finished_item_code;
                                                 } elseif ($invoiceItem->item) {
+                                                    $styleName = $invoiceItem->item->style ? $invoiceItem->item->style->style_name : '';
                                                     $itemName = $invoiceItem->item->name;
                                                 }
                                             }
@@ -126,15 +129,39 @@
                                             $brandName = '';
                                             if ($invoiceItem && $invoiceItem->brandCategory) {
                                                 $brandName = $invoiceItem->brandCategory->name;
+                                            } else if ($invoiceItem && $invoiceItem->stockEntryItem) {
+                                                if ($invoiceItem->stockEntryItem->brand) {
+                                                    $brandName = $invoiceItem->stockEntryItem->brand->brand_name;
+                                                } else if ($invoiceItem->stockEntryItem->finished_item_code) {
+                                                    $parts = explode('-', $invoiceItem->stockEntryItem->finished_item_code);
+                                                    if (count($parts) > 0) {
+                                                        $brand = \App\Models\Brand::where('code', $parts[0])->first();
+                                                        if ($brand) {
+                                                            $brandName = $brand->brand_name;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            $fullItemName = trim(trim($brandName) . ' ' . trim($styleName));
+                                            if (!$fullItemName) {
+                                                $fullItemName = $itemName;
                                             }
 
                                             // Item code
                                             $itemCode = $invoiceItem && $invoiceItem->sku ? $invoiceItem->sku : '';
 
                                             // Sleeve
-                                            $sleeveShort = '';
+                                            $sleeveFull = '';
                                             if ($invoiceItem && $invoiceItem->sleeve_type) {
-                                                $sleeveShort = ' - ' . (strtolower($invoiceItem->sleeve_type) == 'full' ? 'F/S' : 'H/S');
+                                                $st = strtolower(trim($invoiceItem->sleeve_type));
+                                                if ($st == 'full' || $st == 'f/s') {
+                                                    $sleeveFull = ' Full Sleeve';
+                                                } elseif ($st == 'half' || $st == 'h/s') {
+                                                    $sleeveFull = ' Half Sleeve';
+                                                } else {
+                                                    $sleeveFull = ' ' . trim($invoiceItem->sleeve_type) . ' Sleeve';
+                                                }
                                             }
 
                                             // UOM
@@ -156,7 +183,7 @@
                                             <td class="ps-4 fw-bold">{{ sprintf('%02d', $index + 1) }}</td>
                                             <td>
                                                 <div class="fw-bold text-dark">
-                                                    {{ $brandName }} {{ $itemName }}
+                                                    {{ trim($fullItemName . $sleeveFull) }}
                                                 </div>
                                                 @if($itemCode)
                                                     <small class="text-primary fw-medium">{{ $itemCode }}</small>

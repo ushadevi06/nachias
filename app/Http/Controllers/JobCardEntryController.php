@@ -144,10 +144,19 @@ class JobCardEntryController extends Controller
             }
         }
         if ($request->isMethod('post')) {
+            $isCanvas = false;
+            if ($request->filled('brand_id')) {
+                $brand = \App\Models\Brand::find($request->input('brand_id'));
+                if ($brand && in_array(strtoupper(trim($brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+                    $isCanvas = true;
+                }
+            }
+
             $rules = [
                 'job_card_no' => 'required|string|min:5|max:50|unique:job_card_entries,job_card_no' . ($id ? ',' . $id : ''),
                 'purchase_order_id' => 'nullable|exists:purchase_orders,id',
                 'stock_entry_ids' => 'nullable|array',
+
                 'service_provider_id' => 'required|exists:service_providers,id',
                 'issue_store_id' => 'required|exists:store_types,id',
                 'issue_date' => 'required|date_format:d-m-Y',
@@ -174,10 +183,10 @@ class JobCardEntryController extends Controller
                 'bottom_cut_id' => 'nullable|exists:bottom_cuts,id',
                 'production_stages' => 'nullable|array',
                 'production_stages.*.stage_id' => 'required|exists:operation_stages,id',
-                'production_stages.*.service_provider_id' => 'required|exists:service_providers,id',
-                'production_stages.*.issue_date' => 'required|date_format:d-m-Y',
-                'production_stages.*.deadline_date' => 'required|date_format:d-m-Y',
-                'production_stages.*.rate' => 'required|numeric|min:0',
+                'production_stages.*.service_provider_id' => $isCanvas ? 'nullable|exists:service_providers,id' : 'required|exists:service_providers,id',
+                'production_stages.*.issue_date' => $isCanvas ? 'nullable|date_format:d-m-Y' : 'required|date_format:d-m-Y',
+                'production_stages.*.deadline_date' => $isCanvas ? 'nullable|date_format:d-m-Y' : 'required|date_format:d-m-Y',
+                'production_stages.*.rate' => $isCanvas ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
                 'stages' => 'nullable|array|min:1',
                 'fabrics.*.mtr' => 'nullable|numeric|min:0.01',
             ];
@@ -1318,6 +1327,14 @@ class JobCardEntryController extends Controller
     public function searchStockEntries(Request $request)
     {
         $term = $request->input('q', '');
+        $isCanvas = false;
+        
+        if ($request->has('brand_id')) {
+            $brand = \App\Models\Brand::find($request->input('brand_id'));
+            if ($brand && strtoupper(trim($brand->brand_name)) === 'CANVAS ACCESSORIES') {
+                $isCanvas = true;
+            }
+        }
 
         $entries = StockEntry::with(['stockEntryItems.rawMaterial', 'stockEntryItems.uom'])
             ->where(function ($q) use ($term) {
@@ -1336,6 +1353,10 @@ class JobCardEntryController extends Controller
             foreach ($entry->stockEntryItems as $item) {
                 if (!$item->raw_material_id || !$item->rawMaterial) {
                     continue;
+                }
+
+                if ($isCanvas && $item->rawMaterial->store_category_id != 2) {
+                    continue; // Skip non-accessories for Canvas Accessories brand
                 }
 
                 $name = $item->rawMaterial->name;
@@ -1906,10 +1927,7 @@ class JobCardEntryController extends Controller
                     }
                 }
                 if (!empty($seIds)) {
-                    $finalPrice = \App\Models\StockEntryItem::whereIn('stock_entry_id', $seIds)
-                        ->where('art_no', $artNo)
-                        ->where('price', '>', 0)
-                        ->value('price') ?? 0;
+                    $finalPrice = \App\Models\StockEntryItem::whereIn('stock_entry_id', $seIds)->where('art_no', $artNo)->where('price', '>', 0)->value('price') ?? 0;
                 }
                 if ($finalPrice <= 0 && $jobCard->purchase_order_id) {
                     $invoiceIds = \App\Models\PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
@@ -2025,10 +2043,7 @@ class JobCardEntryController extends Controller
                     }
                 }
                 if (!empty($seIds)) {
-                    $finalPrice = \App\Models\StockEntryItem::whereIn('stock_entry_id', $seIds)
-                        ->where('art_no', $artNo)
-                        ->where('price', '>', 0)
-                        ->value('price') ?? 0;
+                    $finalPrice = \App\Models\StockEntryItem::whereIn('stock_entry_id', $seIds)->where('art_no', $artNo)->where('price', '>', 0)->value('price') ?? 0;
                 }
                 if ($finalPrice <= 0 && $jobCard->purchase_order_id) {
                     $invoiceIds = \App\Models\PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
@@ -2105,7 +2120,8 @@ class JobCardEntryController extends Controller
             'purchaseOrder.items.uom',
             'purchaseOrder.items.style',
             'season',
-            'processGroup'
+            'processGroup',
+            'issueItems.rawMaterial'
         ])->findOrFail($id);
 
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
@@ -2123,8 +2139,37 @@ class JobCardEntryController extends Controller
 
         $maps = $this->getJobCardMaps($jobCard);
         $artCategoryMap = $maps['artCategoryMap'];
+        $artMaterialMap = $maps['artMaterialMap'];
+        
+        foreach ($jobCard->issueItems as $issueItem) {
+            $artNo = trim($issueItem->fabricDetail->art_no ?? ($issueItem->rawMaterial?->code ?? ''));
+            if ($artNo && $issueItem->rawMaterial) {
+                $artMaterialMap[$artNo] = $issueItem->rawMaterial->name;
+            }
+        }
 
-        $pdf = Pdf::loadView('job_card_entry.work_order_pdf', compact('jobCard', 'artUomMap', 'artCategoryMap'));
+        $seIds = [];
+        if ($jobCard->stock_entry_ids) {
+            $ids = json_decode($jobCard->stock_entry_ids, true);
+            if ($ids) {
+                foreach ($ids as $idStr) {
+                    $seIds[] = strpos($idStr, '::') !== false ? explode('::', $idStr)[0] : $idStr;
+                }
+            }
+        }
+
+        if (!empty($seIds)) {
+            $stockItems = \App\Models\StockEntryItem::whereIn('stock_entry_id', $seIds)->with(['rawMaterial', 'item'])->get();
+            foreach ($stockItems as $si) {
+                if ($si->rawMaterial && $si->rawMaterial->name) {
+                    $artMaterialMap[$si->art_no] = $si->rawMaterial->name;
+                } elseif ($si->item && $si->item->name) {
+                    $artMaterialMap[$si->art_no] = $si->item->name;
+                }
+            }
+        }
+
+        $pdf = Pdf::loadView('job_card_entry.work_order_pdf', compact('jobCard', 'artUomMap', 'artCategoryMap', 'artMaterialMap'));
         $pdf->setPaper('A4', 'landscape');
 
         $filename = 'Work_Order_' . str_replace(['/', '\\'], '_', $jobCard->job_card_no) . '.pdf';

@@ -75,6 +75,11 @@
 </head>
 <body>
     @php
+        $isCanvas = false;
+        if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+            $isCanvas = true;
+        }
+
         $allSizes = [];
         if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
             $allSizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
@@ -180,8 +185,11 @@
             }
         }
 
-        $fabricDetails = $jobCard->fabricDetails->filter(function ($detail) use ($artCategoryMap) {
+        $fabricDetails = $jobCard->fabricDetails->filter(function ($detail) use ($artCategoryMap, $isCanvas) {
             $trimmedArt = trim($detail->art_no);
+            if ($isCanvas) {
+                return true;
+            }
             return ($artCategoryMap[$trimmedArt] ?? 1) == 1;
         });
 
@@ -321,7 +329,7 @@
             <td style="width: 12%; font-size: 7px;">{{ $jobCard->no_of_days ?? '' }}</td>
             <td colspan="{{ count($allSizes) + 1 }}" class="text-center fw-bold bg-light" style="width: 40%;">CUTTING SIZE RATIO
             </td>
-            <td colspan="3" class="text-center fw-bold bg-light" style="width: 28%;">CUTTING MARK</td>
+            <td colspan="3" class="text-center fw-bold bg-light" style="width: 28%;">{{ $isCanvas ? '' : 'CUTTING MARK' }}</td>
             <td class="fw-bold text-end" style="width: 12%;">H.O / D.C /DATE</td>
         </tr>
         @php 
@@ -336,9 +344,9 @@
             @foreach($allSizes as $s)
                 <td class="text-center fw-bold" style="width: {{ 32 / (count($allSizes) ?: 1) }}%;">{{ $s }}</td>
             @endforeach
-            <td class="text-center fw-bold bg-light" style="width: 10%;">SIZE</td>
-            <td class="text-center fw-bold bg-light" style="width: 8%;">S.TYPE</td>
-            <td class="text-center fw-bold bg-light" style="width: 10%;">MARK</td>
+            <td class="text-center fw-bold bg-light" style="width: 10%;">{{ $isCanvas ? '' : 'SIZE' }}</td>
+            <td class="text-center fw-bold bg-light" style="width: 8%;">{{ $isCanvas ? '' : 'S.TYPE' }}</td>
+            <td class="text-center fw-bold bg-light" style="width: 10%;">{{ $isCanvas ? '' : 'MARK' }}</td>
             @php $currentRow++; @endphp
             <td class="text-center">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
         </tr>
@@ -350,7 +358,7 @@
                     <td class="fw-bold" rowspan="{{ count($fsRows) }}"></td>
                     <td rowspan="{{ count($fsRows) }}" class="text-center">&nbsp;</td>
                 @endif
-                <td class="text-center fw-bold bg-light">QTY - F/S</td>
+                <td class="text-center fw-bold bg-light">{{ $isCanvas ? 'QUANTITY' : 'QTY - F/S' }}</td>
                 @foreach($allSizes as $s)
                     <td class="text-center">
                         {{ (isset($row['values'][$s]) && $row['values'][$s] != '' && $row['values'][$s] != '-') ? (int) $row['values'][$s] : '-' }}
@@ -359,6 +367,7 @@
                 @if($index === 0)
                     <td rowspan="{{ $totalRatioRows }}" colspan="3" style="padding: 0; vertical-align:top;">
                         <table class="table table-bordered mb-0" style="border: none;">
+                            @if(!$isCanvas)
                             @for($i = 0; $i < count($allLayMarks); $i++)
                                 @php $lm = $allLayMarks[$i] ?? null; @endphp
                                 @if($lm)
@@ -375,6 +384,7 @@
                                     </tr>
                                 @endif
                             @endfor
+                            @endif
                         </table>
                     </td>
                 @endif
@@ -386,13 +396,14 @@
             <tr>
                 <td class="fw-bold"></td>
                 <td class="text-center">&nbsp;</td>
-                <td class="text-center fw-bold bg-light">QTY - F/S</td>
+                <td class="text-center fw-bold bg-light">{{ $isCanvas ? 'QUANTITY' : 'QTY - F/S' }}</td>
                 @foreach($allSizes as $s)
                     @php $ratio = $jobCard->cuttingSizeRatios->where('size', $s)->first(); @endphp
                     <td class="text-center">{{ $ratio ? (int) $ratio->qty_fs : '-' }}</td>
                 @endforeach
                 <td rowspan="{{ $totalRatioRows }}" colspan="3" style="padding: 0; vertical-align:top;">
                     <table class="table table-bordered mb-0 w-100" style="border:none;height:100%;">
+                        @if(!$isCanvas)
                         @for($i = 0; $i < count($allLayMarks); $i++)
                             @php $lm = $allLayMarks[$i] ?? null; @endphp
                             @if($lm)
@@ -409,6 +420,7 @@
                                 </tr>
                             @endif
                         @endfor
+                        @endif
                     </table>
                 </td>
                 @php $currentRow++; @endphp
@@ -416,6 +428,7 @@
             </tr>
         @endif
 
+        @if(!$isCanvas)
         @if(count($hsRows) > 0)
             @foreach($hsRows as $index => $row)
             <tr>
@@ -445,6 +458,7 @@
                 @php $currentRow++; @endphp
                 <td class="text-center fw-bold" style="font-size: 7px;">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
             </tr>
+        @endif
         @endif
 
         @php 
@@ -499,7 +513,7 @@
                 <td class="text-center fw-bold">
                     {{ $detail->art_no }}
                     @if($detail->item_name)
-                        <br><span style="font-size: 5pt; font-weight: normal;">{{ $detail->item_name }}</span>
+                        {{-- <br><span style="font-size: 5pt; font-weight: normal;">{{ $detail->item_name }}</span> --}}
                     @endif
                 </td>
             @endforeach
@@ -533,6 +547,13 @@
     {{-- Quantity Summary --}}
     <table class="table table-bordered" style="margin-top: 3pt;">
         <thead>
+            @if($isCanvas)
+            <tr class="bg-light text-center">
+                <th>ART NO</th>
+                @foreach($allSizes as $s) <th>{{ $s }}</th> @endforeach
+                <th>TOTAL</th>
+            </tr>
+            @else
             <tr class="bg-light text-center">
                 <th rowspan="2" style="width: 10%;">ART NO</th>
                 <th colspan="{{ count($allSizes) }}">F/S</th>
@@ -540,9 +561,10 @@
                 <th rowspan="2" style="width: 8%;">TOTAL</th>
             </tr>
             <tr class="bg-light text-center">
-                @foreach($allSizes as $s) <th style="width: {{ 40 / count($allSizes) }}%;">{{ $s }}</th> @endforeach
-                @foreach($allSizes as $s) <th style="width: {{ 40 / count($allSizes) }}%;">{{ $s }}</th> @endforeach
+                @foreach($allSizes as $s) <th style="width: {{ 40 / (count($allSizes) ?: 1) }}%;">{{ $s }}</th> @endforeach
+                @foreach($allSizes as $s) <th style="width: {{ 40 / (count($allSizes) ?: 1) }}%;">{{ $s }}</th> @endforeach
             </tr>
+            @endif
         </thead>
         <tbody>
             @php $grandTotal = 0; @endphp
@@ -557,10 +579,12 @@
                         @php $q = $detail->quantities->where('size', $s)->first(); @endphp
                         <td>{{ $q ? (int) $q->qty_fs : '-' }}</td>
                     @endforeach
+                    @if(!$isCanvas)
                     @foreach($allSizes as $s)
                         @php $q = $detail->quantities->where('size', $s)->first(); @endphp
                         <td>{{ $q ? (int) $q->qty_hs : '-' }}</td>
                     @endforeach
+                    @endif
                     <td class="fw-bold">{{ (int) $rowTotal }}</td>
                 </tr>
             @endforeach
@@ -571,7 +595,7 @@
                         @php
     $sumFs = 0;
     foreach ($fabricDetails as $detail) {
-        if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+        if ($isCanvas || ($artCategoryMap[$detail->art_no] ?? 1) == 1) {
             $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
         }
     }
@@ -579,6 +603,7 @@
                         {{ $sumFs ?: '-' }}
                     </td>
                 @endforeach
+                @if(!$isCanvas)
                 @foreach($allSizes as $s)
                     <td>
                         @php
@@ -592,6 +617,7 @@
                         {{ $sumHs ?: '-' }}
                     </td>
                 @endforeach
+                @endif
                 <td>{{ (int) $grandTotal }}</td>
             </tr>
         </tbody>

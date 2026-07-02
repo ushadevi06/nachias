@@ -81,13 +81,21 @@
                                 <div class="form-floating form-floating-outline">
                                     <select class="select2 form-select" name="reason" id="reason" data-placeholder="Select Reason">
                                         <option value="">Select Reason</option>
-                                        <option value="Return" {{ old('reason', $creditNote->reason ?? '') == 'Return' ? 'selected' : '' }}>Return</option>
-                                        <option value="Excess Billing" {{ old('reason', $creditNote->reason ?? '') == 'Excess Billing' ? 'selected' : '' }}>Excess Billing</option>
-                                        <option value="Short Supply" {{ old('reason', $creditNote->reason ?? '') == 'Short Supply' ? 'selected' : '' }}>Short Supply</option>
-                                        <option value="Rate Correction" {{ old('reason', $creditNote->reason ?? '') == 'Rate Correction' ? 'selected' : '' }}>Rate Correction</option>
+                                        <option value="Invoice Mistake" {{ old('reason', $creditNote->reason ?? '') == 'Invoice Mistake' ? 'selected' : '' }}>Invoice Mistake</option>
+                                        <option value="Unorder PCS" {{ old('reason', $creditNote->reason ?? '') == 'Unorder PCS' ? 'selected' : '' }}>Unorder PCS</option>
+                                        <option value="Customer Non Moving" {{ old('reason', $creditNote->reason ?? '') == 'Customer Non Moving' ? 'selected' : '' }}>Customer Non Moving</option>
+                                        <option value="Delay Despatch" {{ old('reason', $creditNote->reason ?? '') == 'Delay Despatch' ? 'selected' : '' }}>Delay Despatch</option>
+                                        <option value="Damage" {{ old('reason', $creditNote->reason ?? '') == 'Damage' ? 'selected' : '' }}>Damage</option>
                                     </select>
                                     <label for="reason">Reason *</label>
                                     @error('reason') <small class="text-danger">{{ $message }}</small> @enderror
+                                </div>
+                            </div>
+                            <!-- Fault Field -->
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" name="fault" id="fault" placeholder="Fault" value="{{ old('fault', $creditNote->fault ?? '') }}" readonly>
+                                    <label for="fault">Fault</label>
                                 </div>
                             </div>
                             <!-- Zone -->
@@ -676,8 +684,6 @@ $(document).ready(function() {
             qtyInput.focus().select();
             return;
         }
-
-        // Remove empty row message if it exists
         $('#item-rows .empty-row').remove();
 
         let index = $('#item-rows .item-row').length;
@@ -695,10 +701,9 @@ $(document).ready(function() {
                     <input type="hidden" name="items[${index}][sales_invoice_item_id]" value="${item.id}">
                     <input type="hidden" name="items[${index}][item_id]" value="${item.item_id}">
                     <input type="hidden" name="items[${index}][sleeve_type]" value="${item.sleeve_type || ''}">
-                    <span class="d-block fw-bold" style="font-size: 13px;">${item.item_name}</span>
+                    <span class="d-block fw-bold" style="font-size: 13px;">${item.item_name}${item.sleeve_type ? '-' + item.sleeve_type : ''}</span>
                     <small class="text-muted">
-                        Code: 
-                        ${item.product_barcode ? ' | <i class="ri-barcode-line"></i> ' + item.product_barcode : ''}
+                        ${item.product_barcode ? '<i class="ri-barcode-line"></i> ' + item.product_barcode : ''}
                     </small>
                 </td>
                 <td>
@@ -1191,6 +1196,28 @@ $(document).ready(function() {
             });
         }
     });
+
+    // Reason -> Fault Mapping
+    const faultMapping = {
+        'Invoice Mistake': 'Warehouse Fault',
+        'Unorder PCS': 'Executive Fault',
+        'Customer Non Moving': 'Executive Fault',
+        'Delay Despatch': 'Company Fault',
+        'Damage': 'Company Fault'
+    };
+
+    $('#reason').on('change', function() {
+        let reason = $(this).val();
+        if (reason && faultMapping[reason]) {
+            $('#fault').val(faultMapping[reason]);
+        } else {
+            $('#fault').val('');
+        }
+    });
+
+    if ($('#reason').val()) {
+        $('#reason').trigger('change');
+    }
 });
 </script>
 @endsection

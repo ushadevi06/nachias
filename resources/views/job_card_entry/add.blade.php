@@ -716,8 +716,7 @@
                                         <div class="d-flex flex-wrap gap-2" id="size-selector">
                                             @foreach(['36','38','40','42','44','46','48','50'] as $sz)
                                                 <label class="btn btn-sm btn-outline-primary size-toggle-btn {{ in_array($sz, $sizes) ? 'active' : '' }}" style="cursor: pointer;">
-                                                    <input type="checkbox" class="size-checkbox d-none" value="{{ $sz }}" 
-                                                            {{ in_array($sz, $sizes) ? 'checked' : '' }}> {{ $sz }}
+                                                    <input type="checkbox" class="size-checkbox d-none" value="{{ $sz }}" {{ in_array($sz, $sizes) ? 'checked' : '' }}> {{ $sz }}
                                                 </label>
                                             @endforeach
                                         </div>
@@ -1685,7 +1684,10 @@
                         });
                     }
 
-                    if (!hasFabric) {
+                    let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
+                    let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+
+                    if (!hasFabric && !isCanvas) {
                         $('#fabric-validation-error').hide();
                         Swal.fire({
                             icon: 'error',
@@ -1724,7 +1726,7 @@
             var $ac = $input.autocomplete({
                 disabled: hasTasks,
                 source: function (request, response) {
-                    $.get(searchUrl, { q: request.term }, function (data) {
+                    $.get(searchUrl, { q: request.term, brand_id: $('#brand').val() }, function (data) {
                         const mappedResults = data.results.map(function(item) {
                             return {
                                 label: item.text,
@@ -1900,7 +1902,15 @@
 
             if (!artNumbers || artNumbers.length === 0) return;
 
-            const headHtml = `
+            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
+            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+
+            const headHtml = isCanvas ? `
+                <tr class="size-headers">
+                    <th class="align-middle" style="min-width: 150px;">ART NO / MATERIAL</th>
+                    ${activeFsSizes.map(s => `<th class="mat-fs-head">${s}</th>`).join('')}
+                    <th class="align-middle">TOTAL</th>
+                </tr>` : `
                 <tr>
                     <th rowspan="2" class="align-middle" style="min-width: 150px;">ART NO / MATERIAL</th>
                     ${activeFsSizes.length > 0 ? `<th colspan="${activeFsSizes.length}">F/S</th>` : ''}
@@ -1953,7 +1963,7 @@
                 const widthDisplay = artWidth ? artWidth : '-';
 
                 const isFabric = (catId == 1);
-                if (!isFabric) return;
+                if (!isFabric && !isCanvas) return;
 
                 let hasAutoCons = false;
                 if (currentArtData && currentArtData.length > 0) {
@@ -1964,9 +1974,9 @@
                 }
 
                 const isTaskReadOnly = hasTasks ? 'readonly tabindex="-1"' : '';
-                const readonlyAttr = (!isFabric && !hasAutoCons) ? '' : (isFabric ? isTaskReadOnly : 'readonly tabindex="-1"');
-                const rowClass = isFabric ? 'cat1-row' : (hasAutoCons ? 'cat2-row-auto' : 'cat2-row-manual');
-                const styleAttr = (isFabric || hasAutoCons) ? '' : 'style="display: none;"';
+                const readonlyAttr = (!isFabric && !hasAutoCons && !isCanvas) ? '' : ((isFabric || isCanvas) ? isTaskReadOnly : 'readonly tabindex="-1"');
+                const rowClass = (isFabric || isCanvas) ? 'cat1-row' : (hasAutoCons ? 'cat2-row-auto' : 'cat2-row-manual');
+                const styleAttr = (isFabric || hasAutoCons || isCanvas) ? '' : 'style="display: none;"';
 
                 let rowHtml = `<tr class="${rowClass}" data-uom="${uom}" data-art="${art}" data-category="${catId}" data-index="${index}" ${styleAttr}>
                                 <td>
@@ -1982,7 +1992,7 @@
                         fsVal = capturedMatrix[art][key];
                     } else if (oldRow && oldRow[key] !== undefined) {
                         fsVal = oldRow[key];
-                                            } else if (existingRow && existingRow.quantities) {
+                    } else if (existingRow && existingRow.quantities) {
                         const q = existingRow.quantities.find(q => String(q.size) === String(s));
                         fsVal = (q && q.qty_fs != null) ? parseFloat(q.qty_fs) : '';
                     }
@@ -2072,7 +2082,10 @@
                         const val = parseFloat($(this).val()) || 0;
                         const rowCatId = $row.data('category');
 
-                        if (rowCatId == 1) {
+                        let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
+                        let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+                        
+                        if (rowCatId == 1 || isCanvas) {
                             cat1ColSums[col] = (cat1ColSums[col] || 0) + val;
                         }
 
@@ -2456,6 +2469,9 @@
             let nPattiRow = '<tr>';
             let sleeveQtyRow = '<tr>';
 
+            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
+            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+
             currentArtNumbers.forEach((art, index) => {
                 let uom = '';
                 let catId = 0;
@@ -2478,8 +2494,7 @@
                     }
                 }
 
-                const isAllowed = (catId == 1) || 
-                                    (artName && /BUTTONS|LABEL/i.test(artName));
+                const isAllowed = (catId == 1) || (artName && /BUTTONS|LABEL/i.test(artName)) || isCanvas;
                 const currentArtInfo = currentArtData.find(d => String(d.art_no || '').trim() === String(art || '').trim());
                 const grnImageName = currentArtInfo?.grn_image || (grnImageMap[String(art || '').trim()] ? grnImageMap[String(art || '').trim()].image : '');
                 if (!isAllowed) {
@@ -2614,7 +2629,7 @@
                                 <tr class="text-center">
                                     <th style="width: 8%;">MARK</th>
                                     <th style="width: 32%;">SIZE</th>
-                                    <th style="width: 15%;">SLEEVE</th>
+                                    ${isCanvas ? '' : '<th style="width: 15%;">SLEEVE</th>'}
                                     <th style="width: 20%;">LAY MARK METER</th>
                                     <th style="width: 15%;">No.of Lay</th>
                                     <th style="width: 10%;"><i class="ri ri-settings-4-line"></i></th>
@@ -2675,12 +2690,13 @@
                                             ${sizes.map(sz => `<option value="${sz}" ${savedSizes.includes(String(sz)) ? 'selected' : ''}>${sz}</option>`).join('')}
                                         </select>
                                     </td>
+                                    ${isCanvas ? `<input type="hidden" name="fabrics[${index}][lay_marks][${lmIndex}][sleeve]" value="F/S">` : `
                                     <td>
                                         <select class="form-select form-select-sm" name="fabrics[${index}][lay_marks][${lmIndex}][sleeve]">
                                             <option value="F/S" ${savedSleeve === 'F/S' ? 'selected' : ''}>F/S</option>
                                             <option value="H/S" ${savedSleeve === 'H/S' ? 'selected' : ''}>H/S</option>
                                         </select>
-                                    </td>
+                                    </td>`}
                                     <td>
                                         <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${lmIndex}][meter]" placeholder="0.00" value="${savedMeter}" ${isTaskReadOnly}>
                                     </td>
@@ -2758,7 +2774,9 @@
             $tbody.append(mtrRow + '</tr>');
             $tbody.append(inOutRow + '</tr>');
             $tbody.append(nPattiRow + '</tr>');
-            $tbody.append(sleeveQtyRow + '</tr>');
+            if (!isCanvas) {
+                $tbody.append(sleeveQtyRow + '</tr>');
+            }
             $('.select2-size-multi').select2({ placeholder: 'Select sizes', allowClear: true });
         }
 
@@ -2783,6 +2801,10 @@
             if (!$table.length) return;
             const rowCount = $table.find('tr.lay-mark-row').length;
             const newIndex = rowCount;
+            
+            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
+            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+
 
             let rowHtml = `
                 <tr class="lay-mark-row">
@@ -2792,12 +2814,13 @@
                             ${sizes.map(sz => `<option value="${sz}">${sz}</option>`).join('')}
                         </select>
                     </td>
+                    ${isCanvas ? `<input type="hidden" name="fabrics[${index}][lay_marks][${newIndex}][sleeve]" value="F/S">` : `
                     <td>
                         <select class="form-select form-select-sm" name="fabrics[${index}][lay_marks][${newIndex}][sleeve]">
                             <option value="F/S">F/S</option>
                             <option value="H/S">H/S</option>
                         </select>
-                    </td>
+                    </td>`}
                     <td>
                         <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${newIndex}][meter]" placeholder="0.00">
                     </td>
@@ -3143,6 +3166,9 @@
                     globalActiveSizes = { fs: activeFsSizes, hs: activeHsSizes };
                 }
             } finally {
+                if (typeof applyCanvasLogic === 'function') {
+                    applyCanvasLogic();
+                }
                 isSyncing = false;
             }
 
@@ -3682,6 +3708,83 @@
                 $itemInput.val(val.toFixed(2)).trigger('input');
             }
         });
+
+        function applyCanvasLogic() {
+            let selectedBrandText = $('#brand option:selected').text().toUpperCase().trim();
+            let isCanvas = selectedBrandText === 'CANVAS ACCESSORIES' || selectedBrandText === 'CANVAS ACCESSORIES (CAS)';
+            
+            if (isCanvas) {
+                // Production Stages
+                $('#production-stages-table tbody tr').each(function() {
+                    let $row = $(this);
+                    let stageText = $row.find('.stage-select option:selected').text().toUpperCase();
+                    if(stageText && stageText.trim() !== '' && !stageText.includes('CUTTING')) {
+                        $row.remove();
+                    }
+                });
+                
+                if($('#production-stages-table tbody tr').length === 0 && typeof window.addStageRow === 'function') {
+                    window.addStageRow();
+                    setTimeout(() => {
+                        let $lastRow = $('#production-stages-table tbody tr').last();
+                        let $stageSelect = $lastRow.find('.stage-select');
+                        $stageSelect.find('option').filter(function() {
+                            return $(this).text().toUpperCase().includes('CUTTING');
+                        }).prop('selected', true).trigger('change');
+                    }, 200);
+                } else if ($('#production-stages-table tbody tr').length === 0) {
+                     $('#add-stage-row').click();
+                     setTimeout(() => {
+                        let $lastRow = $('#production-stages-table tbody tr').last();
+                        let $stageSelect = $lastRow.find('.stage-select');
+                        $stageSelect.find('option').filter(function() {
+                            return $(this).text().toUpperCase().includes('CUTTING');
+                        }).prop('selected', true).trigger('change');
+                    }, 200);
+                }
+                
+                $('#add-stage-row').hide();
+                
+                // Size Ratio
+                $('#cutting-size-table tr.qty-hs-row').hide();
+                $('#cutting-size-table tr.qty-fs-row td:first').html('<strong>QUANTITY</strong>');
+                $('select[name="sleeve_types[]"]').closest('.col-md-6').hide();
+                
+                $('#sleeve-instance-manager').hide();
+                if (typeof sleeveInstances !== 'undefined' && sleeveInstances.length === 0) {
+                     sleeveInstances.push({ id: 1, type: 'fs' });
+                     if (typeof renderSleeveInstanceList === 'function') renderSleeveInstanceList();
+                }
+                $('#cutting-size-table-wrapper').show();
+                
+                // Remove required asterisks from production stages headers
+                $('#production-stages-table thead th').each(function() {
+                    $(this).html($(this).html().replace(' *', ''));
+                });
+            } else {
+                $('#add-stage-row').show();
+                $('#cutting-size-table tr.qty-hs-row').show();
+                $('#cutting-size-table tr.qty-fs-row td:first').html('<strong>QTY - F/S</strong>');
+                $('#process_group_display').closest('.col-md-6').show();
+                $('select[name="sleeve_types[]"]').closest('.col-md-6').show();
+                $('#sleeve-instance-manager').show();
+                
+                // Restore required asterisks in production stages headers
+                $('#production-stages-table thead th').each(function() {
+                    let text = $(this).text().trim();
+                    if (['STAGE', 'ISSUE UNIT (PLANT)', 'RATE', 'ISSUE DATE', 'DEADLINE DATE'].includes(text) && !text.includes('*')) {
+                        $(this).html(text + ' *');
+                    }
+                });
+            }
+        }
+        
+        $('#brand').on('change', function() {
+            applyCanvasLogic();
+        });
+        
+        setTimeout(applyCanvasLogic, 500);
+
     });
 </script>
 <style>

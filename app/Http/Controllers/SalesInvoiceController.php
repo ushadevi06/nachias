@@ -267,6 +267,16 @@ class SalesInvoiceController extends Controller
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
                     $invoice->update($invoiceData);                     
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
+                    
+                    $deletedItems = $invoice->items()->whereNotIn('id', $itemIds)->get();
+                    foreach ($deletedItems as $dItem) {
+                        if ($dItem->is_extra && $dItem->stock_entry_item_id) {
+                            \App\Models\StockEntryItem::where('id', $dItem->stock_entry_item_id)
+                                ->where('qty_out', '>=', $dItem->quantity)
+                                ->decrement('qty_out', $dItem->quantity);
+                        }
+                    }
+                    
                     $invoice->items()->whereNotIn('id', $itemIds)->forceDelete();
                 } else {
                     $invoiceData['received_amount'] = (float)$request->received_amount;
@@ -274,6 +284,17 @@ class SalesInvoiceController extends Controller
                 }
                 $invoiceId = $invoice->id;
                 foreach ($request->items as $item) {
+                    $isExtra = !empty($item['is_extra']);
+                    
+                    if (!empty($item['id'])) {
+                        $existingItem = SalesInvoiceItem::find($item['id']);
+                        if ($existingItem && $existingItem->is_extra && $existingItem->stock_entry_item_id) {
+                            \App\Models\StockEntryItem::where('id', $existingItem->stock_entry_item_id)
+                                ->where('qty_out', '>=', $existingItem->quantity)
+                                ->decrement('qty_out', $existingItem->quantity);
+                        }
+                    }
+
                     SalesInvoiceItem::updateOrCreate(
                         ['id' => $item['id'] ?? null],
                         [
@@ -291,8 +312,14 @@ class SalesInvoiceController extends Controller
                             'api_color' => $item['api_color'] ?? null,
                             'sleeve_type' => $item['sleeve_type'] ?? null,
                             'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
+                            'is_extra' => $isExtra,
                         ]
                     );
+
+                    if ($isExtra && !empty($item['stock_entry_item_id'])) {
+                        \App\Models\StockEntryItem::where('id', $item['stock_entry_item_id'])
+                            ->increment('qty_out', $item['quantity']);
+                    }
                 }
 
                 $invoice->load(['items', 'customer.city', 'customer.place']);
@@ -1368,5 +1395,64 @@ class SalesInvoiceController extends Controller
             'success' => true,
             'message' => 'Delivery Status updated successfully'
         ]);
+    }
+    public function getFinishedGoodsStock(Request $request)
+    {
+        $search = $request->get('q');
+        
+        $storeCategory = \App\Models\StoreCategory::where('name', 'like', '%Finished Goods%')->first();
+        $storeCategoryId = $storeCategory ? $storeCategory->id : 4;
+        
+        $query = \App\Models\StockEntryItem::select(
+            'stock_entry_items.id', 
+            'stock_entry_items.art_no', 
+            'stock_entry_items.size', 
+            'stock_entry_items.color_id',
+            'stock_entry_items.sleeve_type',
+            'stock_entry_items.price',
+            'stock_entry_items.mrp',
+            'stock_entry_items.sku',
+            'colors.name as color_name',
+            \DB::raw('(stock_entry_items.qty_in - COALESCE(stock_entry_items.qty_out, 0)) as available_qty')
+        )
+        ->join('stock_entries', 'stock_entry_items.stock_entry_id', '=', 'stock_entries.id')
+        ->leftJoin('colors', 'stock_entry_items.color_id', '=', 'colors.id')
+        ->where('stock_entries.store_category_id', $storeCategoryId)
+        ->having('available_qty', '>', 0);
+        
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('stock_entry_items.art_no', 'like', "%{$search}%")
+                  ->orWhere('stock_entry_items.sku', 'like', "%{$search}%")
+                  ->orWhere('stock_entry_items.size', 'like', "%{$search}%")
+                  ->orWhere('colors.name', 'like', "%{$search}%");
+            });
+        }
+        
+        $items = $query->limit(50)->get();
+        
+        $results = [];
+        foreach ($items as $item) {
+            $displayName = $item->art_no;
+            if ($item->color_name) $displayName .= " - " . $item->color_name;
+            if ($item->size) $displayName .= " - " . $item->size;
+            if ($item->sleeve_type) $displayName .= " - " . $item->sleeve_type;
+            
+            $results[] = [
+                'id' => $item->id,
+                'text' => $displayName . " (Stock: {$item->available_qty})",
+                'art_no' => $item->art_no,
+                'size' => $item->size,
+                'color_id' => $item->color_id,
+                'color_name' => $item->color_name,
+                'sleeve_type' => $item->sleeve_type,
+                'price' => $item->price,
+                'mrp' => $item->mrp,
+                'sku' => $item->sku,
+                'available_qty' => $item->available_qty,
+            ];
+        }
+        
+        return response()->json(['results' => $results]);
     }
 }

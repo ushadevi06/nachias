@@ -3,6 +3,11 @@
 @section('content')
         <div class="container-xxl section-padding">
             @php
+                $isCanvas = false;
+                if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+                    $isCanvas = true;
+                }
+                
                 $allSizes = [];
                 if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
                     $allSizes = array_values(array_filter(array_map('trim', explode(',', $jobCard->sizeRatio->size))));
@@ -30,8 +35,11 @@
                     $activeFs = $allSizes;
                 }
 
-                $fabricDetails = $jobCard->fabricDetails->filter(function ($detail) use ($artCategoryMap) {
+                $fabricDetails = $jobCard->fabricDetails->filter(function ($detail) use ($artCategoryMap, $isCanvas) {
                     $trimmedArt = trim($detail->art_no);
+                    if ($isCanvas) {
+                        return true;
+                    }
                     return ($artCategoryMap[$trimmedArt] ?? 1) == 1;
                 });
                 $fabricImageMap = [];
@@ -267,7 +275,11 @@
                                         <td class="fw-bold p-3">WITHIN DAYS</td>
                                         <td class="p-3">{{ $withinDays ?? '' }}</td>
                                         <td colspan="4" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING SIZE RATIO</td>
+                                        @if(!$isCanvas)
                                         <td colspan="2" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">CUTTING MARK</td>  
+                                        @else
+                                        <td colspan="2" class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;"></td>  
+                                        @endif
                                         <td class="text-center fw-bold p-3" style="font-size: 0.9rem; border-bottom: 2px solid #eeeeee;">H.O / D.C /DATE</td>
                                     </tr>
 
@@ -286,6 +298,7 @@
                                                 </tr>
                                             </table>
                                         </td>
+                                        @if(!$isCanvas)
                                         <td class="p-0" colspan="2">
                                             <table class="table mb-0 job-card-table" style="border: none;">
                                                 <tr class="text-center fw-bold" style="font-size: 0.7rem;">
@@ -295,6 +308,9 @@
                                                 </tr>
                                             </table>
                                         </td>
+                                        @else
+                                        <td class="p-0" colspan="2"></td>
+                                        @endif
                                         @php $currentRow = 1; @endphp
                                         <td class="text-center">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                     </tr>
@@ -396,7 +412,7 @@
                                                 @else
                                                     <td colspan="2" style="border: none;"></td>
                                                 @endif
-                                                <td class="fw-bold py-1 text-center">QTY - F/S</td>
+                                                <td class="fw-bold py-1 text-center">{{ $isCanvas ? 'QUANTITY' : 'QTY - F/S' }}</td>
                                                 <td colspan="3" class="p-0">
                                                     <table class="table table-bordered mb-0 job-card-table" style="border: none;">
                                                         <tr class="text-center" style="font-size: 0.8rem;">
@@ -413,7 +429,7 @@
                                                 </td>
                                                 <td class="py-1" colspan="2">
                                                     @php $lm = $allLayMarks[$index] ?? null; @endphp
-                                                    @if($lm)
+                                                    @if(!$isCanvas && $lm)
                                                         <table class="table mb-0 job-card-table" style="border: none;">
                                                             <tr class="text-center" style="font-size: 0.75rem;">
                                                                 <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
@@ -437,7 +453,7 @@
                                         <tr>
                                             <td class="fw-bold py-1"></td>
                                             <td class="py-1"></td>
-                                            <td class="fw-bold py-1 text-center">QTY - F/S</td>
+                                            <td class="fw-bold py-1 text-center">{{ $isCanvas ? 'QUANTITY' : 'QTY - F/S' }}</td>
                                             <td colspan="3" class="p-0">
                                                 <table class="table table-bordered mb-0 job-card-table" style="border: none;">
                                                     <tr class="text-center" style="font-size: 0.8rem;">
@@ -452,7 +468,7 @@
                                             </td>
                                             <td class="py-1" colspan="2">
                                                 @php $lm = $allLayMarks[0] ?? null; @endphp
-                                                @if($lm)
+                                                @if(!$isCanvas && $lm)
                                                     <table class="table mb-0 job-card-table" style="border: none;">
                                                         <tr class="text-center" style="font-size: 0.75rem;">
                                                             <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
@@ -474,32 +490,74 @@
                                     @endif
 
                                     {{-- Row 7 - QTY H/S --}}
-                                    @if(count($hsRows) > 0)
-                                        @foreach($hsRows as $index => $row)
+                                    @if(!$isCanvas)
+                                        @if(count($hsRows) > 0)
+                                            @foreach($hsRows as $index => $row)
+                                                <tr>
+                                                    @if($index === 0)
+                                                        <td class="fw-bold py-1"></td>
+                                                        <td class="py-1"></td>
+                                                    @else
+                                                        <td colspan="2" style="border: none;"></td>
+                                                    @endif
+                                                    <td class="fw-bold py-1 text-center">QTY - H/S</td>
+                                                    <td colspan="3" class="p-0">
+                                                        <table class="table table-bordered mb-0 job-card-table" style="border: none;">
+                                                            <tr class="text-center" style="font-size: 0.8rem;">
+                                                                @foreach($sizes as $size)
+                                                                    @php 
+                                                                        $val = $row['values'][$size] ?? '-';
+                                                                    @endphp
+                                                                    <td class="py-1" style="width: 14.28%; border: 1px solid #fff; border-right: 1px solid #eeeeee;">
+                                                                        {{ $val != '' && $val != '-' ? (int) $val : '-' }}
+                                                                    </td>
+                                                                @endforeach
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                    <td class="py-1" colspan="2">
+                                                        @php $lmIndex = count($fsRows) + $index; @endphp
+                                                        @php $lm = $allLayMarks[$lmIndex] ?? null; @endphp
+                                                        @if($lm)
+                                                            <table class="table mb-0 job-card-table" style="border: none;">
+                                                                <tr class="text-center" style="font-size: 0.75rem;">
+                                                                    <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                        {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
+                                                                    </td>
+                                                                    <td style="width: 25%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
+                                                                        {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
+                                                                    </td>
+                                                                    <td style="width: 35%; border-bottom: none !important;">
+                                                                        {{ $lm->lay_mark_meter }}
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        @endif
+                                                    </td>
+                                                    @php $currentRow++; @endphp
+                                                    <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        @else
                                             <tr>
-                                                @if($index === 0)
-                                                    <td class="fw-bold py-1"></td>
-                                                    <td class="py-1"></td>
-                                                @else
-                                                    <td colspan="2" style="border: none;"></td>
-                                                @endif
+                                                <td class="fw-bold py-1"></td>
+                                                <td class="py-1"></td>
                                                 <td class="fw-bold py-1 text-center">QTY - H/S</td>
                                                 <td colspan="3" class="p-0">
                                                     <table class="table table-bordered mb-0 job-card-table" style="border: none;">
                                                         <tr class="text-center" style="font-size: 0.8rem;">
                                                             @foreach($sizes as $size)
-                                                                @php 
-                                                                    $val = $row['values'][$size] ?? '-';
-                                                                @endphp
+                                                                @php $ratio = $jobCard->cuttingSizeRatios->where('size', $size)->first(); @endphp
                                                                 <td class="py-1" style="width: 14.28%; border: 1px solid #fff; border-right: 1px solid #eeeeee;">
-                                                                    {{ $val != '' && $val != '-' ? (int) $val : '-' }}
+                                                                    {{ ($ratio && $ratio->qty_hs > 0) ? (int) $ratio->qty_hs : '-' }}
                                                                 </td>
                                                             @endforeach
                                                         </tr>
                                                     </table>
                                                 </td>
                                                 <td class="py-1" colspan="2">
-                                                    @php $lmIndex = count($fsRows) + $index; @endphp
+                                                    {{-- If no fsRows, we use index 1 (0 was used by fs fallback) --}}
+                                                    @php $lmIndex = (count($fsRows) > 0) ? count($fsRows) : 1; @endphp
                                                     @php $lm = $allLayMarks[$lmIndex] ?? null; @endphp
                                                     @if($lm)
                                                         <table class="table mb-0 job-card-table" style="border: none;">
@@ -520,47 +578,7 @@
                                                 @php $currentRow++; @endphp
                                                 <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
                                             </tr>
-                                        @endforeach
-                                    @else
-                                        <tr>
-                                            <td class="fw-bold py-1"></td>
-                                            <td class="py-1"></td>
-                                            <td class="fw-bold py-1 text-center">QTY - H/S</td>
-                                            <td colspan="3" class="p-0">
-                                                <table class="table table-bordered mb-0 job-card-table" style="border: none;">
-                                                    <tr class="text-center" style="font-size: 0.8rem;">
-                                                        @foreach($sizes as $size)
-                                                            @php $ratio = $jobCard->cuttingSizeRatios->where('size', $size)->first(); @endphp
-                                                            <td class="py-1" style="width: 14.28%; border: 1px solid #fff; border-right: 1px solid #eeeeee;">
-                                                                {{ ($ratio && $ratio->qty_hs > 0) ? (int) $ratio->qty_hs : '-' }}
-                                                            </td>
-                                                        @endforeach
-                                                    </tr>
-                                                </table>
-                                            </td>
-                                            <td class="py-1" colspan="2">
-                                                {{-- If no fsRows, we use index 1 (0 was used by fs fallback) --}}
-                                                @php $lmIndex = (count($fsRows) > 0) ? count($fsRows) : 1; @endphp
-                                                @php $lm = $allLayMarks[$lmIndex] ?? null; @endphp
-                                                @if($lm)
-                                                    <table class="table mb-0 job-card-table" style="border: none;">
-                                                        <tr class="text-center" style="font-size: 0.75rem;">
-                                                            <td style="width: 40%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
-                                                                {{ is_array($lm->sizes) ? implode(',', $lm->sizes) : $lm->sizes }}
-                                                            </td>
-                                                            <td style="width: 25%; border-right: 1px solid #eeeeee; border-bottom: none !important;">
-                                                                {{ $lm->sleeve_type ?? $lm->sleeve ?? 'F/S' }}
-                                                            </td>
-                                                            <td style="width: 35%; border-bottom: none !important;">
-                                                                {{ $lm->lay_mark_meter }}
-                                                            </td>
-                                                        </tr>
-                                                    </table>
-                                                @endif
-                                            </td>
-                                            @php $currentRow++; @endphp
-                                            <td class="py-1 text-center fw-bold">{{ $currentRow === 3 ? 'UNIT D.C NO' : '' }}</td>
-                                        </tr>
+                                        @endif
                                     @endif
 
                                     @php 
@@ -579,6 +597,7 @@
                                     @endfor
 
                                     {{-- Row 8 --}}
+                                    @if(!$isCanvas)
                                     <tr>
                                         <td class="fw-bold py-1"></td>
                                         <td class="py-1"></td>
@@ -605,6 +624,7 @@
                                         <td class="py-1" colspan="2"></td>
                                          <td class="py-1"></td>
                                     </tr>
+                                    @endif
                                 </tbody>
                             </table>
 
@@ -647,9 +667,9 @@
                                             @endphp
                                             <td>
                                                 {{ $detail->art_no }}
-                                                @if($materialName)
+                                                {{-- @if($materialName)
                                                     <br><small class="text-muted" style="font-size: 0.7rem;">{{ $materialName }}</small>
-                                                @endif
+                                                @endif --}}
                                             </td>
                                         @endforeach
                                     </tr>
@@ -682,9 +702,18 @@
 
                             <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                                 <thead>
+                                    @if($isCanvas)
+                                    <tr class="text-center">
+                                        <th>ART NO</th>
+                                        @foreach($activeFs as $s)
+                                            <th>{{ $s }}</th>
+                                        @endforeach
+                                        <th>TOTAL</th>
+                                    </tr>
+                                    @else
                                     <tr class="text-center">
                                         <th rowspan="2">ART NO</th>
-                                        @if(count($activeFs) > 0)
+                                        @if(!$isCanvas && count($activeFs) > 0)
                                             @php
                                                 $fsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Full Sleeve')->first()->meter ?? null;
                                             @endphp
@@ -692,7 +721,7 @@
                                                 F/S @if($fsMeter) <br><small>({{ $fsMeter }} Mtr)</small> @endif
                                             </th>
                                         @endif
-                                        @if(count($activeHs) > 0)
+                                        @if(!$isCanvas && count($activeHs) > 0)
                                             @php
                                              $hsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Half Sleeve')->first()->meter ?? null;
                                             @endphp
@@ -706,10 +735,13 @@
                                         @foreach($activeFs as $s)
                                             <th>{{ $s }}</th>
                                         @endforeach
-                                        @foreach($activeHs as $s)
-                                            <th>{{ $s }}</th>
-                                        @endforeach
+                                        @if(!$isCanvas)
+                                            @foreach($activeHs as $s)
+                                                <th>{{ $s }}</th>
+                                            @endforeach
+                                        @endif
                                     </tr>
+                                    @endif
                                 </thead>
                                 <tbody>
                                     @php
@@ -737,9 +769,9 @@
                                                     $materialName = $artMaterialMap[$detail->art_no] ?? '';
                                                 @endphp
                                                 {{ $detail->art_no }}
-                                                @if($materialName)
+                                                {{-- @if($materialName)
                                                     <br><small class="text-muted" style="font-size: 0.65rem;">{{ $materialName }}</small>
-                                                @endif
+                                                @endif --}}
                                             </td>
                                             @foreach($activeFs as $s)
                                                 @php 
@@ -749,14 +781,16 @@
                                                     {{ ($q && $q->qty_fs > 0) ? (int) $q->qty_fs : '-' }}
                                                 </td>
                                             @endforeach
-                                            @foreach($activeHs as $s)
-                                                @php 
-                                                    $q = $detail->quantities->where('size', $s)->first(); 
-                                                @endphp
-                                                <td>
-                                                    {{ ($q && $q->qty_hs > 0) ? (int) $q->qty_hs : '-' }}
-                                                </td>
-                                            @endforeach
+                                            @if(!$isCanvas)
+                                                @foreach($activeHs as $s)
+                                                    @php 
+                                                        $q = $detail->quantities->where('size', $s)->first(); 
+                                                    @endphp
+                                                    <td>
+                                                        {{ ($q && $q->qty_hs > 0) ? (int) $q->qty_hs : '-' }}
+                                                    </td>
+                                                @endforeach
+                                            @endif
                                             <td class="fw-bold">{{ $row_total ?: '-' }}</td>
                                         </tr>
                                     @endforeach
@@ -767,9 +801,11 @@
                                         @foreach($activeFs as $s)
                                             <td>{{ $fs_summary[$s] ?: '-' }}</td>
                                         @endforeach
-                                        @foreach($activeHs as $s)
-                                            <td>{{ $hs_summary[$s] ?: '-' }}</td>
-                                        @endforeach
+                                        @if(!$isCanvas)
+                                            @foreach($activeHs as $s)
+                                                <td>{{ $hs_summary[$s] ?: '-' }}</td>
+                                            @endforeach
+                                        @endif
                                         <td class="fw-bold">{{ $grand_total ?: '-' }}</td>
                                     </tr>
                                 </tfoot>

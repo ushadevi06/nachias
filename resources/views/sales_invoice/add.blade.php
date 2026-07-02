@@ -138,11 +138,18 @@
                 </div>
                 <div class="card mb-4">
                     <div class="card-body">
-                        <div class="card-header-box">
-                            <h5>Item Details *</h5>
-                            @error('items')
-                                <div class="text-danger small mb-2">{{ $message }}</div>
-                            @enderror
+                        <div class="card-header-box d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5>Item Details *</h5>
+                                @error('items')
+                                    <div class="text-danger small mb-2">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            @if(!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
+                            <button type="button" class="btn btn-primary btn-sm" id="btn_toggle_open_order">
+                                <i class="ri ri-add-line"></i> Add Open Order Items
+                            </button>
+                            @endif
                         </div>
                         @if(!(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')))
                         <div class="row mb-4">
@@ -153,16 +160,13 @@
                                         <label for="barcode_scanner" class="text-primary fw-bold">SCAN BARCODE</label>
                                     </div>
                                     <button class="btn btn-outline-primary px-4" type="button" id="btn_camera_scan" style="border-width: 2px; border-left: none; border-top-left-radius: 0; border-bottom-left-radius: 0;">
-                                        <i class="ri-camera-line me-1"></i> CAMERA
+                                        <i class="ri ri-camera-line me-1"></i> CAMERA
                                     </button>
                                 </div>
                                 <div id="reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
                                 <div id="scan_alert" class="alert alert-danger mt-3 mx-auto" style="display: none; max-width: 500px; text-align: left;">
                                     <span id="scan_msg"></span>
                                 </div>
-                            </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <small class="text-muted"><i class="ri-information-line me-1"></i> Tip: Scan a barcode or type item code to quickly add it to the order.</small>
                             </div>
                         </div>
                         @endif
@@ -289,16 +293,46 @@
                                                     'amount' => $item->amount,
                                                     'sku' => $item->sku,
                                                     'stock_entry_item_id' => $item->stock_entry_item_id,
+                                                    'is_extra' => $item->is_extra,
                                                     'id' => $item->id,
                                                 ];
                                             })->toArray();
                                         }
                                     @endphp
-                                    @if($items)
-                                        @foreach($items as $index => $row)
+                                    @php
+                                        $mainItems = [];
+                                        $openOrderItems = [];
+                                        if ($items) {
+                                            foreach ($items as $index => $row) {
+                                                $rowObj = (object) $row;
+                                                if (isset($rowObj->is_extra) && $rowObj->is_extra == 1) {
+                                                    if (empty($rowObj->brand_name) && !empty($rowObj->stock_entry_item_id)) {
+                                                        $stockItem = \App\Models\StockEntryItem::with(['brand', 'item', 'color'])->find($rowObj->stock_entry_item_id);
+                                                        if ($stockItem) {
+                                                            $rowObj->finished_item_code = $stockItem->finished_item_code ?? '';
+                                                            $rowObj->brand_name = $stockItem->brand->brand_name ?? ($stockItem->item->brand->brand_name ?? '');
+                                                            $rowObj->item_name = $stockItem->item->name ?? '';
+                                                            $rowObj->sleeve_type = $stockItem->sleeve_type ?? '';
+                                                            $rowObj->sku = $stockItem->sku ?? '';
+                                                            $rowObj->api_color = $stockItem->api_color ?? '';
+                                                            $rowObj->color_name = $stockItem->color->color_name ?? '';
+                                                            $rowObj->art_no = $stockItem->art_no ?? '';
+                                                            $rowObj->size_name = $stockItem->size;
+                                                            $rowObj->stock_qty = $stockItem->qty_in - ($stockItem->qty_out ?? 0);
+                                                        }
+                                                    }
+                                                    $openOrderItems[$index] = $rowObj;
+                                                } else {
+                                                    $mainItems[$index] = $rowObj;
+                                                }
+                                            }
+                                        }
+                                    @endphp
+                                    @if($mainItems)
+                                        @foreach($mainItems as $index => $row)
                                         @php $row = (object) $row; @endphp
                                         <tr class="item-row">
-                                            <td class="s-no text-center">{{ $index + 1 }}</td>
+                                            <td class="s-no text-center">{{ $loop->iteration }}</td>
                                             <td>
                                                 <div class="fw-bold text-dark">{{ $row->brand_name ?? '' }}</div>
                                                 <div class="small text-muted">{{ $row->item_name ?? '' }} ({{ $row->sleeve_type ?? '' }})</div>
@@ -306,17 +340,18 @@
                                                     <div class="small text-primary">Barcode: {{ $row->sku }}</div>
                                                 @endif
                                                 <input type="hidden" name="items[{{ $index }}][id]" value="{{ $row->id ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id }}">
+                                                <input type="hidden" name="items[{{ $index }}][brand_id]" class="brand-id" value="{{ $row->brand_id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][brand_name]" class="brand-name" value="{{ $row->brand_name ?? '' }}">
-                                                <input type="hidden" name="items[{{ $index }}][item_id]" class="item-id" value="{{ $row->item_id }}">
+                                                <input type="hidden" name="items[{{ $index }}][item_id]" class="item-id" value="{{ $row->item_id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][item_name]" class="item-name" value="{{ $row->item_name ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][sleeve_type]" class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][sku]" class="sku" value="{{ $row->sku ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                <input type="hidden" name="items[{{ $index }}][is_extra]" class="is-extra" value="{{ $row->is_extra ?? '' }}">
                                             </td>
                                             <td>
-                                                <span class="color-text">{{ $row->api_color ?: ($row->color_name ?? '-') }}</span>
-                                                <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id" value="{{ $row->color_id }}">
+                                                <span class="color-text">{{ !empty($row->api_color) ? $row->api_color : ($row->color_name ?? '-') }}</span>
+                                                <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id" value="{{ $row->color_id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][api_color]" class="api-color" value="{{ $row->api_color ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][color_name]" class="color-name" value="{{ $row->color_name ?? '' }}">
                                             </td>
@@ -326,12 +361,12 @@
                                             </td>
                                             <td>
                                                 <span class="uom-text">{{ $row->uom_code ?? '' }}</span>
-                                                <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id }}">
+                                                <input type="hidden" name="items[{{ $index }}][uom_id]" class="uom-id" value="{{ $row->uom_id ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][uom_code]" class="uom-code" value="{{ $row->uom_code ?? '' }}">
                                             </td>
                                             <td>
                                                 <span class="size-text">{{ $row->size_name ?? '' }}</span>
-                                                <input type="hidden" name="items[{{ $index }}][size]" class="size-id" value="{{ $row->size }}">
+                                                <input type="hidden" name="items[{{ $index }}][size]" class="size-id" value="{{ $row->size ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][size_name]" class="size-name" value="{{ $row->size_name ?? '' }}">
                                             </td>
                                             <td>
@@ -384,6 +419,144 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Open Order Items Section -->
+                <div class="card mb-4" id="open_order_section" style="display: {{ !empty($openOrderItems) ? 'block' : 'none' }}; border-left: 3px solid #00bcd4;">
+                    <div class="card-header">
+                        <h5 class="mb-0 text-primary">Open Order Item Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6 text-center">
+                                <div class="input-group mb-2 mx-auto">
+                                    <div class="form-floating form-floating-outline flex-grow-1">
+                                        <input type="text" id="open_order_barcode_scanner" class="form-control border-primary" placeholder="Scan Barcode" autocomplete="off" style="border-width: 2px; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0;">
+                                        <label for="open_order_barcode_scanner" class="text-primary fw-bold">SCAN BARCODE</label>
+                                    </div>
+                                    <button class="btn btn-outline-primary px-4" type="button" id="btn_open_order_camera_scan" style="border-width: 2px; border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                                        <i class="ri ri-camera-line me-1"></i> CAMERA
+                                    </button>
+                                </div>
+                                <div id="open_order_reader" class="rounded overflow-hidden mb-3 mx-auto" style="display: none; width: 100%; border: 1px solid #00bcd4;"></div>
+                                <div id="open_order_scan_alert" class="alert alert-danger mt-3 mx-auto" style="display: none; max-width: 500px; text-align: left;">
+                                    <span id="open_order_scan_msg"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center">
+                                <small class="text-muted">Tip: Scan a barcode or type item code to quickly add it to the open order.</small>
+                            </div>
+                        </div>
+                        <div class="table-responsive text-nowrap">
+                            <table class="table table-bordered align-middle" id="open-order-item-rows">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 250px;">Stock Item *</th>
+                                        <th style="min-width: 150px;">SKU</th>
+                                        <th style="min-width: 150px;">Color</th>
+                                        <th style="min-width: 100px;">Sleeve</th>
+                                        <th style="min-width: 150px;">Art No *</th>
+                                        <th style="min-width: 100px;">UOM *</th>
+                                        <th style="min-width: 120px;">Size *</th>
+                                        <th style="min-width: 120px;">Quantity *</th>
+                                        <th style="min-width: 120px;">MRP</th>
+                                        <th style="min-width: 120px;">Selling Price *</th>
+                                        <th style="min-width: 120px;">Amount</th>
+                                        <th style="min-width: 50px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if(!empty($openOrderItems))
+                                        @foreach($openOrderItems as $index => $row)
+                                            @php
+                                                $displayName = !empty($row->finished_item_code) ? $row->finished_item_code : ($row->sku ?? '');
+                                                if (!empty($row->item_name)) {
+                                                    $displayName .= ' - ' . $row->item_name;
+                                                }
+                                            @endphp
+                                            <tr class="item-row">
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" class="form-control" value="{{ $displayName }}" readonly tabindex="-1">
+                                                        <label>Stock Item*</label>
+                                                    </div>
+                                                    <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $row->item_id ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $row->brand_cat_id ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][is_extra]" value="1">
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][sku]" class="form-control sku-input" value="{{ $row->sku ?? '' }}" readonly tabindex="-1">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][api_color]" class="form-control" value="{{ !empty($row->api_color) ? $row->api_color : ($row->color_name ?? '') }}">
+                                                        <input type="hidden" name="items[{{ $index }}][color_id]" class="color-id-input" value="{{ $row->color_id ?? '' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][color_name]" value="{{ $row->color_name ?? '' }}">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][sleeve_type]" class="form-control" value="{{ $row->sleeve_type ?? '' }}" readonly tabindex="-1">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control" value="{{ $row->art_no ?? '' }}" readonly tabindex="-1">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" class="form-control" value="{{ !empty($row->uom_code) ? $row->uom_code : 'PCS' }}" readonly tabindex="-1">
+                                                        <input type="hidden" name="items[{{ $index }}][uom_id]" value="{{ !empty($row->uom_id) ? $row->uom_id : 'PCS' }}">
+                                                        <input type="hidden" name="items[{{ $index }}][uom_code]" value="{{ !empty($row->uom_code) ? $row->uom_code : 'PCS' }}">
+                                                        <label>UOM</label>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][size_name]" class="form-control size-input" value="{{ $row->size_name ?? '' }}" readonly tabindex="-1">
+                                                        <input type="hidden" name="items[{{ $index }}][size]" value="{{ $row->size_name ?? '' }}">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" min="0.01" step="0.01">
+                                                        <div class="stock-info-wrapper mt-1">
+                                                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format($row->stock_qty ?? 0, 2) }}</span></small>
+                                                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $row->mrp ?? '' }}" readonly tabindex="-1">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="number" name="items[{{ $index }}][rate]" class="form-control rate-input open-rate" value="{{ $row->rate ?? '' }}" step="0.01">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-floating form-floating-outline">
+                                                        <input type="text" name="items[{{ $index }}][amount]" class="form-control amount-input amount open-amount" value="{{ $row->amount ?? '' }}" readonly tabindex="-1">
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @endif
+                                </tbody>
+                            </table>
+                            <input type="hidden" id="openOrderItemIndex" value="0">
+                        </div>
+                    </div>
+                </div>
+                <!-- End Open Order Items Section -->
                 <div class="row g-4">
                     <!-- Invoice Details Card -->
                     <div class="col-md-12 col-lg-6">
@@ -985,6 +1158,7 @@
                         <input type="hidden" name="items[${index}][sleeve_type]" class="sleeve-type" value="${matchedItem.sleeve || ''}">
                         <input type="hidden" name="items[${index}][sku]" class="sku" value="${matchedItem.sku || ''}">
                         <input type="hidden" name="items[${index}][stock_entry_item_id]" class="stock-entry-item-id" value="${matchedItem.stock_entry_item_id || ''}">
+                        <input type="hidden" name="items[${index}][is_extra]" class="is-extra" value="${matchedItem.is_extra || ''}">
                     </td>
                     <td>
                         <span class="color-text">${matchedItem.api_color || matchedItem.color_name || '-'}</span>
@@ -1252,7 +1426,7 @@
 
         function calculateTotals() {
             var subTotal = 0;
-            $('.amount').each(function() {
+            $('.amount, .open-amount').each(function() {
                 subTotal += parseFloat($(this).val()) || 0;
             });
             $('#sub_total_val').text(subTotal.toFixed(2));
@@ -1471,7 +1645,6 @@
         });
     });
 
-    // Camera scanning logic
     let html5QrCode = null;
     let isCameraOpen = false;
 
@@ -1480,7 +1653,7 @@
             html5QrCode.stop().then((ignore) => {
                 $('#reader').hide();
                 isCameraOpen = false;
-                $(this).html('<i class="ri-camera-line me-1"></i> CAMERA');
+                $(this).html('<i class="ri ri-camera-line me-1"></i> CAMERA');
                 $('#barcode_scanner').focus();
             }).catch((err) => {
                 console.error("Failed to stop camera:", err);
@@ -1506,7 +1679,7 @@
                     html5QrCode.stop().then((ignore) => {
                         $('#reader').hide();
                         isCameraOpen = false;
-                        $('#btn_camera_scan').html('<i class="ri-camera-line me-1"></i> CAMERA');
+                        $('#btn_camera_scan').html('<i class="ri ri-camera-line me-1"></i> CAMERA');
                         
                         var e = $.Event("keypress");
                         e.which = 13;
@@ -1519,7 +1692,7 @@
                 }
             ).then(() => {
                 isCameraOpen = true;
-                $(this).html('<i class="ri-close-line me-1"></i> CLOSE CAMERA');
+                $(this).html('<i class="ri ri-close-line me-1"></i> CLOSE CAMERA');
             }).catch((err) => {
                 console.error("Error starting camera", err);
                 $('#scan_alert').removeClass('alert-success').addClass('alert-danger').show();
@@ -1527,6 +1700,368 @@
                 $('#reader').hide();
             });
         }
+
+        $(function() {
+            $('#btn_add_extra_item').click(function() {
+                if (window.einvoiceStatus === 'generated' || window.isDispatched === 'true') {
+                    Swal.fire('Error', 'Cannot modify items. Invoice is either dispatched or e-invoice generated.', 'error');
+                    return;
+                }
+                $('#extra_item_select').val(null).trigger('change');
+                $('#extra_item_qty').val('');
+                $('#extra_item_available_qty_text').text('');
+                $('#extraItemsModal').modal('show');
+            });
+
+            $('#extra_item_select').select2({
+                dropdownParent: $('#extraItemsModal'),
+                placeholder: 'Search by Art No, SKU, Color...',
+                allowClear: true,
+                ajax: {
+                    url: "{{ url('sales_invoices/finished-goods-stock') }}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            q: params.term
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.results
+                        };
+                    },
+                    cache: true
+                }
+            }).on('select2:select', function (e) {
+                var data = e.params.data;
+                $('#extra_item_qty').attr('max', data.available_qty);
+                $('#extra_item_available_qty_text').text('Available Stock: ' + data.available_qty);
+            });
+
+            $('#btn_confirm_extra_item').click(function() {
+                var data = $('#extra_item_select').select2('data')[0];
+                if (!data) {
+                    Swal.fire('Error', 'Please select a finished good.', 'error');
+                    return;
+                }
+                var qty = parseFloat($('#extra_item_qty').val());
+                if (!qty || qty <= 0) {
+                    Swal.fire('Error', 'Please enter a valid quantity.', 'error');
+                    return;
+                }
+                if (qty > data.available_qty) {
+                    Swal.fire('Error', 'Quantity exceeds available stock (' + data.available_qty + ').', 'error');
+                    return;
+                }
+
+                var matchedItem = {
+                    brand_name: 'Extra Finished Good',
+                    item_name: data.art_no,
+                    sleeve: data.sleeve_type,
+                    sku: data.sku,
+                    stock_entry_item_id: data.id,
+                    api_color: data.color_name,
+                    color_name: data.color_name,
+                    color_id: data.color_id,
+                    art_no: data.art_no,
+                    uom_code: 'PCS',
+                    uom_id: 1, 
+                    size_id: data.size,
+                    size_name: data.size,
+                    stock_qty: data.available_qty,
+                    mrp: data.mrp,
+                    rate: data.price,
+                    is_extra: 1
+                };
+
+                addInvoiceItem(matchedItem, qty, null);
+                $('#extraItemsModal').modal('hide');
+            });
+        });
     });
+        // Open Order Logic
+        $('#btn_toggle_open_order').on('click', function() {
+            $('#open_order_section').toggle();
+        });
+
+        $('#open_order_barcode_scanner').autocomplete({
+            source: function(request, response) {
+                let codeToSearch = request.term;
+                if (codeToSearch) {
+                    codeToSearch = codeToSearch.split('|')[0].trim();
+                }
+                $.getJSON("{{ url('sales_orders/search-stock-items') }}", {
+                    term: codeToSearch
+                }, function(data) {
+                    const results = Array.isArray(data) ? data : [];
+                    if (request.term && results.length === 0) {
+                        response([{
+                            label: 'Barcode not found',
+                            value: '',
+                            noResult: true
+                        }]);
+                        return;
+                    }
+                    response(results);
+                });
+            },
+            minLength: 1,
+            select: function(event, ui) {
+                let $this = $(this);
+                if (ui.item && ui.item.noResult) {
+                    event.preventDefault();
+                    return false;
+                }
+                
+                if (ui.item) {
+                    $.ajax({
+                        url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}`,
+                        type: 'GET',
+                        success: function(res) {
+                            if (res.success) {
+                                handleOpenOrderScan(res);
+                                $this.val('').focus();
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
+                                $this.val('').focus();
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                        }
+                    });
+                }
+                return false;
+            }
+        }).autocomplete("instance")._renderItem = function(ul, item) {
+            if (item.noResult) {
+                return $("<li>")
+                    .append(`<div class="ui-menu-item-wrapper text-danger fw-bold">Barcode not found</div>`)
+                    .appendTo(ul);
+            }
+
+            let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
+            return $("<li>")
+                .append(`<div class="ui-menu-item-wrapper">
+                    <span class="search-item-title">${item.label}</span>
+                    <span class="search-item-balance">Stock: ${parseFloat(item.balance).toFixed(2)}</span>
+                    <div class="search-item-info">
+                        Art No: ${item.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(item.price).toFixed(2)}
+                    </div>
+                </div>`)
+                .appendTo(ul);
+        };
+
+        $('#open_order_barcode_scanner').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                let val = $(this).val();
+                if (val) {
+                    let codeToSearch = val.split('|')[0].trim();
+                    $.ajax({
+                        url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(codeToSearch)}`,
+                        type: 'GET',
+                        success: function(res) {
+                            if (res.success) {
+                                handleOpenOrderScan(res);
+                                $('#open_order_barcode_scanner').val('').focus();
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
+                                $('#open_order_barcode_scanner').val('').focus();
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                        }
+                    });
+                }
+            }
+        });
+
+        function handleOpenOrderScan(res) {
+            let $existing = $('#open-order-item-rows .item-row').filter(function() {
+                return $(this).find('.sku-input').val() === res.sku &&
+                    $(this).find('.size-input').val() == res.size &&
+                    $(this).find('.color-id-input').val() == res.color_id;
+            }).first();
+
+            if ($existing.length) {
+                let $qty = $existing.find('.qty-input');
+                let newQty = parseFloat($qty.val()) + 1;
+                $qty.val(newQty).trigger('input');
+                return;
+            }
+
+            let index = parseInt($('#openOrderItemIndex').val()) || 0;
+            let displayName = res.finished_item_code || res.sku || '';
+            if (res.item_name) displayName += ' - ' + res.item_name;
+
+            let mrp = parseFloat(res.mrp || 0).toFixed(2);
+            let price = parseFloat(res.price || 0).toFixed(2);
+            let qty = 1;
+            let amount = (qty * price).toFixed(2);
+
+            let rowHtml = `
+            <tr class="item-row">
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" class="form-control" value="${displayName}" readonly tabindex="-1">
+                        <label>Stock Item*</label>
+                    </div>
+                    <input type="hidden" name="items[open_${index}][stock_entry_item_id]" value="${res.stock_entry_item_id || ''}">
+                    <input type="hidden" name="items[open_${index}][item_id]" value="${res.item_id || ''}">
+                    <input type="hidden" name="items[open_${index}][brand_cat_id]" value="${res.brand_cat_id || ''}">
+                    <input type="hidden" name="items[open_${index}][is_extra]" value="1">
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[open_${index}][sku]" class="form-control sku-input" value="${res.sku || ''}" readonly tabindex="-1">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[open_${index}][api_color]" class="form-control" value="${res.color_name || ''}">
+                        <input type="hidden" name="items[open_${index}][color_id]" class="color-id-input" value="${res.color_id || ''}">
+                        <input type="hidden" name="items[open_${index}][color_name]" value="${res.color_name || ''}">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[open_${index}][sleeve_type]" class="form-control" value="${res.sleeve_type || ''}" readonly tabindex="-1">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[open_${index}][art_no]" class="form-control" value="${res.art_no || ''}" readonly tabindex="-1">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" class="form-control" value="PCS" readonly tabindex="-1">
+                        <input type="hidden" name="items[open_${index}][uom_id]" value="PCS">
+                        <input type="hidden" name="items[open_${index}][uom_code]" value="PCS">
+                        <label>UOM</label>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[open_${index}][size_name]" class="form-control size-input" value="${res.size || ''}" readonly tabindex="-1">
+                        <input type="hidden" name="items[open_${index}][size]" value="${res.size || ''}">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" min="0.01" step="0.01">
+                        <div class="stock-info-wrapper mt-1">
+                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">${parseFloat(res.balance || 0).toFixed(2)}</span></small>
+                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[open_${index}][mrp]" class="form-control mrp-input" value="${mrp}" readonly tabindex="-1">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="number" name="items[open_${index}][rate]" class="form-control rate-input open-rate" value="${price}" step="0.01">
+                    </div>
+                </td>
+                <td>
+                    <div class="form-floating form-floating-outline">
+                        <input type="text" name="items[open_${index}][amount]" class="form-control amount-input amount open-amount" value="${amount}" readonly tabindex="-1">
+                    </div>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm open_delete_row"><i class="ri ri-delete-bin-line"></i></button>
+                </td>
+            </tr>`;
+
+            $('#open-order-item-rows tbody').append(rowHtml);
+            $('#openOrderItemIndex').val(index + 1);
+            calculateTotals();
+        }
+
+        $(document).on('input', '.open-qty, .open-rate', function() {
+            let $row = $(this).closest('.item-row');
+            let qtyInput = $row.find('.open-qty');
+            let qty = parseFloat(qtyInput.val()) || 0;
+            let rate = parseFloat($row.find('.open-rate').val()) || 0;
+            let available = parseFloat($row.find('.available-stock-display').text()) || 0;
+
+            if (qty > available) {
+                qtyInput.addClass('is-invalid');
+                $row.find('.stock-error-msg').show();
+            } else {
+                qtyInput.removeClass('is-invalid');
+                $row.find('.stock-error-msg').hide();
+            }
+
+            $row.find('.open-amount').val((qty * rate).toFixed(2));
+            calculateTotals();
+        });
+
+        $(document).on('click', '.open_delete_row', function() {
+            $(this).closest('.item-row').remove();
+            calculateTotals();
+        });
+
+        let openOrderHtml5QrCode = null;
+        let isOpenOrderCameraOpen = false;
+
+        $('#btn_open_order_camera_scan').click(function() {
+            if (isOpenOrderCameraOpen && openOrderHtml5QrCode) {
+                openOrderHtml5QrCode.stop().then((ignore) => {
+                    $('#open_order_reader').hide();
+                    isOpenOrderCameraOpen = false;
+                    $(this).html('<i class="ri ri-camera-line me-1"></i> CAMERA');
+                    $('#open_order_barcode_scanner').focus();
+                }).catch((err) => {
+                    console.error("Failed to stop camera:", err);
+                });
+            } else {
+                $('#open_order_reader').show();
+                openOrderHtml5QrCode = new Html5Qrcode("open_order_reader");
+                
+                openOrderHtml5QrCode.start(
+                    { facingMode: "environment" }, 
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 100 },
+                        aspectRatio: 1.0
+                    },
+                    (decodedText, decodedResult) => {
+                        let cleanedText = decodedText;
+                        if (cleanedText && cleanedText.includes('|')) {
+                            cleanedText = cleanedText.split('|')[0].trim();
+                        }
+                        $('#open_order_barcode_scanner').val(cleanedText);
+                        
+                        openOrderHtml5QrCode.stop().then((ignore) => {
+                            $('#open_order_reader').hide();
+                            isOpenOrderCameraOpen = false;
+                            $('#btn_open_order_camera_scan').html('<i class="ri ri-camera-line me-1"></i> CAMERA');
+                            
+                            var e = $.Event("keypress");
+                            e.which = 13;
+                            $('#open_order_barcode_scanner').trigger(e);
+                        }).catch((err) => {
+                            console.error("Failed to stop camera after scan:", err);
+                        });
+                    },
+                    (errorMessage) => {}
+                ).then(() => {
+                    isOpenOrderCameraOpen = true;
+                    $(this).html('<i class="ri ri-close-line me-1"></i> CLOSE CAMERA');
+                }).catch((err) => {
+                    console.error("Error starting camera", err);
+                    $('#open_order_scan_alert').removeClass('alert-success').addClass('alert-danger').show();
+                    $('#open_order_scan_msg').html('<strong>Error:</strong> Could not start camera. Please ensure camera permissions are granted.');
+                    $('#open_order_reader').hide();
+                });
+            }
+        });
 </script>
 @endsection

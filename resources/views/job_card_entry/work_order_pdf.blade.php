@@ -107,6 +107,11 @@
     </div>
 
     @php
+        $isCanvas = false;
+        if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+            $isCanvas = true;
+        }
+
         $defaultSizes = [];
         $sizes = $defaultSizes;
         if ($jobCard->sizeRatio && $jobCard->sizeRatio->size) {
@@ -147,7 +152,7 @@
 
                 foreach($jobCard->fabricDetails as $detail) {
                     $trimmedArt = trim($detail->art_no ?? '');
-                    if (($artCategoryMap[$trimmedArt] ?? 1) != 1) {
+                    if (!$isCanvas && ($artCategoryMap[$trimmedArt] ?? 1) != 1) {
                         continue;
                     }
 
@@ -195,8 +200,8 @@
 
                     if ($hasValue('fs')) {
                         $fullSleeveRows[] = [
-                            'item_no' => trim($brandCode . '-' . $displayStyle . '-F/S', '-'),
-                            'description' => trim($brandName . ' ' . $style . ' F/S'),
+                            'item_no' => $isCanvas ? $detail->art_no : trim($brandCode . '-' . $displayStyle . '-F/S', '-'),
+                            'description' => $isCanvas ? ($artMaterialMap[$artNo] ?? $detail->item_name ?: 'CANVAS ACCESSORIES') : trim($brandName . ' ' . $style . ' F/S'),
                             'uom' => $uom,
                             'art' => $artNo,
                             'sizes' => $getSizesArray('fs')

@@ -3,6 +3,12 @@
 @section('content')
 
 <div class="container-xxl section-padding">
+    @php
+        $isCanvas = false;
+        if ($jobCard->brand && in_array(strtoupper(trim($jobCard->brand->brand_name)), ['CANVAS ACCESSORIES', 'CANVAS ACCESSORIES (CAS)'])) {
+            $isCanvas = true;
+        }
+    @endphp
     <div class="row g-4">
         <div class="col-lg-12 text-end">
             @if(auth()->id() == 1 || auth()->user()->can('fabric-consumption-pdf job-card'))
@@ -41,12 +47,14 @@
                 <div class="badge bg-label-info px-3 py-2 border border-info">
                     <i class="ri-t-shirt-line me-1"></i> <span class="fw-semibold">Total Qty:</span> {{ number_format($jobCard->grand_total_qty, 0) }}
                 </div>
+                @if(!$isCanvas)
                 <div class="badge bg-label-primary px-3 py-2 border border-primary">
                     <i class="ri-t-shirt-2-line me-1"></i> <span class="fw-semibold">F/S Qty:</span> {{ number_format($jobCard->total_qty_fs, 0) }}
                 </div>
                 <div class="badge bg-label-success px-3 py-2 border border-success">
                     <i class="ri-shirt-line me-1"></i> <span class="fw-semibold">H/S Qty:</span> {{ number_format($jobCard->total_qty_hs, 0) }}
                 </div>
+                @endif
             </div>
         </div>
 
@@ -180,13 +188,18 @@
                                                 $displayItems = [];
                                                 $displayDescriptions = [];
 
-                                                if ($hasFs) {
-                                                    $displayItems[] = trim($brandCode . '-' . $displayStyle . '-F/S', '-');
-                                                    $displayDescriptions[] = trim($brandName . ' ' . $style . ' F/S');
-                                                }
-                                                if ($hasHs) {
-                                                    $displayItems[] = trim($brandCode . '-' . $displayStyle . '-H/S', '-');
-                                                    $displayDescriptions[] = trim($brandName . ' ' . $style . ' H/S');
+                                                if ($isCanvas) {
+                                                    $displayItems[] = trim($brandCode . '-' . $displayStyle, '-');
+                                                    $displayDescriptions[] = trim($brandName . ' ' . $style);
+                                                } else {
+                                                    if ($hasFs) {
+                                                        $displayItems[] = trim($brandCode . '-' . $displayStyle . '-F/S', '-');
+                                                        $displayDescriptions[] = trim($brandName . ' ' . $style . ' F/S');
+                                                    }
+                                                    if ($hasHs) {
+                                                        $displayItems[] = trim($brandCode . '-' . $displayStyle . '-H/S', '-');
+                                                        $displayDescriptions[] = trim($brandName . ' ' . $style . ' H/S');
+                                                    }
                                                 }
 
                                                 if (empty($displayItems)) {
@@ -634,7 +647,6 @@ $(document).ready(function() {
             const use = $('#modal_qty_used').val();
             const pro = $('#modal_produced_qty').val();
 
-            // Validation for empty or 0 Used qty
             if (use.trim() === '' || parseFloat(use) <= 0) {
                 $('#modal_qty_used').addClass('is-invalid');
                 $('#qty-used-required-warning').remove();
@@ -642,7 +654,6 @@ $(document).ready(function() {
                 return false;
             }
 
-            // Validation for Used greater than Issued
             const qtyIssue = parseFloat($('#modal_qty_issue').val()) || 0;
             if (parseFloat(use) > qtyIssue) {
                 $('#modal_qty_used').addClass('is-invalid');
@@ -658,7 +669,6 @@ $(document).ready(function() {
                 return false;
             }
 
-            // Strict Validation for Standard Consumption
             const $btnRef = $('.edit-item-btn').filter(function() { return $(this).attr('data-matrix-id') == matrixId; });
             const calcQty = parseFloat($btnRef.attr('data-calc-qty')) || 0;
 
