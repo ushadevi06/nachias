@@ -107,7 +107,7 @@ class EInvoiceService
                 "Addr1" => substr($setting->address, 0, 100),
                 "Loc" => $setting->city->city_name,
                 "Pin" => (int) $setting->zip_code,
-                "Stcd" => $setting->state->state_code,
+                "Stcd" => substr(env('EINV_GSTIN'), 0, 2),
             ],
             "BuyerDtls" => [
                 "Gstin" => $invoice->customer->gst_no,
@@ -179,8 +179,21 @@ class EInvoiceService
         }
     
         $errorMessage = 'Failed to generate E-Invoice';
-        if (isset($apiData['ErrorDetails'][0]['ErrorMessage'])) {
-            $errorMessage = $apiData['ErrorDetails'][0]['ErrorMessage'];
+        
+        \Log::error('E-Invoice Failure', [
+            'response' => $apiData
+        ]);
+
+        if (isset($apiData['ErrorDetails']) && is_array($apiData['ErrorDetails'])) {
+            $errs = [];
+            foreach ($apiData['ErrorDetails'] as $err) {
+                if (isset($err['ErrorMessage'])) {
+                    $errs[] = $err['ErrorMessage'];
+                }
+            }
+            if (count($errs) > 0) {
+                $errorMessage = implode(" | ", $errs);
+            }
         } elseif (isset($apiData['message'])) {
             $errorMessage = $apiData['message'];
         }
@@ -556,5 +569,264 @@ class EInvoiceService
             'message' => 'API Error: ' . $errorMessage,
             'response' => $apiData
         ];
+    }
+    public function generateCreditNoteEInvoice(\App\Models\CreditNote $creditNote, array $transporterData = [])
+    {
+        $creditNote->load(['customer.state', 'customer.city', 'items.uom', 'items.item', 'items.salesInvoiceItem.stockEntryItem']);
+
+        if (empty($creditNote->customer->gst_no)) {
+            return [
+                'success' => false,
+                'message' => 'E-Invoice can only be generated for registered GST customers (B2B). This customer does not have a GSTIN.'
+            ];
+        }
+
+        $setting = Setting::first();
+        $sellerStateCode = substr(env('EINV_GSTIN'), 0, 2);
+        $buyerStateCode = $creditNote->customer->state->state_code ?? "33";
+        $isInterState = $sellerStateCode !== $buyerStateCode;
+
+        $rndOff = (float) ($creditNote->round_off ?? 0);
+        if (strtolower($creditNote->round_off_type ?? '') === 'less') {
+            $rndOff = -$rndOff;
+        }
+
+        $itemList = [];
+        $totalAssVal = 0.00;
+        $totalCgstVal = 0.00;
+        $totalSgstVal = 0.00;
+        $totalIgstVal = 0.00;
+
+        $slNo = 1;
+
+        foreach ($creditNote->items as $item) {
+            $taxRate = $isInterState ? (float) $creditNote->igst_percent : (float) ($creditNote->cgst_percent + $creditNote->sgst_percent);
+
+            $totAmt = (float) number_format((float) $item->amount, 2, '.', '');
+            $itemDiscount = (float) number_format(($totAmt * (float) ($creditNote->discount_percent ?? 0)) / 100, 2, '.', '');
+            $assAmt = (float) number_format($totAmt - $itemDiscount, 2, '.', '');
+            
+            $cgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $creditNote->cgst_percent) / 100, 2, '.', '');
+            $sgstAmt = $isInterState ? 0.00 : (float) number_format(($assAmt * (float) $creditNote->sgst_percent) / 100, 2, '.', '');
+            $igstAmt = $isInterState ? (float) number_format(($assAmt * (float) $creditNote->igst_percent) / 100, 2, '.', '') : 0.00;
+            $totItemVal = (float) number_format($assAmt + $cgstAmt + $sgstAmt + $igstAmt, 2, '.', '');
+
+            $totalAssVal += $assAmt;
+            $totalCgstVal += $cgstAmt;
+            $totalSgstVal += $sgstAmt;
+            $totalIgstVal += $igstAmt;
+
+            $prdDesc = substr(
+                $item->salesInvoiceItem->stockEntryItem->finished_item_code ??
+                $item->item->code ??
+                $item->item->name ??
+                'Product',
+                0,
+                30
+            );
+
+            $itemList[] = [
+                "SlNo" => (string) $slNo++,
+                "PrdDesc" => $prdDesc,
+                "IsServc" => "N",
+                "HsnCd" => (string) ($item->hsn_sac ?? "61099090"),
+                "Qty" => (float) number_format((float) $item->quantity, 2, '.', ''),
+                "Unit" => "PCS",
+                "UnitPrice" => (float) number_format((float) $item->rate, 2, '.', ''),
+                "TotAmt" => $totAmt,
+                "Discount" => $itemDiscount,
+                "AssAmt" => $assAmt,
+                "GstRt" => (float) number_format($taxRate, 2, '.', ''),
+                "IgstAmt" => $igstAmt,
+                "CgstAmt" => $cgstAmt,
+                "SgstAmt" => $sgstAmt,
+                "TotItemVal" => $totItemVal,
+            ];
+        }
+
+        $othChrg = (float) number_format((float) ($creditNote->other_charges ?? 0.00), 2, '.', '');
+        $rndOffAmt = (float) number_format((float) $rndOff, 2, '.', '');
+        $totInvVal = $totalAssVal + $totalCgstVal + $totalSgstVal + $totalIgstVal + $othChrg + $rndOffAmt;
+
+        $precDocDtls = [];
+        if ($creditNote->sales_invoice_id) {
+            $originalInvoice = \App\Models\SalesInvoice::find($creditNote->sales_invoice_id);
+            if ($originalInvoice) {
+                $precDocDtls[] = [
+                    "InvNo" => $originalInvoice->inv_no,
+                    "InvDt" => $originalInvoice->inv_date->format('d/m/Y'),
+                ];
+            }
+        }
+
+        $payload = [
+            "Version" => "1.1",
+            "TranDtls" => [
+                "TaxSch" => "GST",
+                "SupTyp" => "B2B",
+                "RegRev" => "N",
+                "IgstOnIntra" => "N"
+            ],
+            "DocDtls" => [
+                "Typ" => "CRN",
+                "No" => $creditNote->note_no,
+                "Dt" => $creditNote->note_date->format('d/m/Y')
+            ],
+            "SellerDtls" => [
+                "Gstin" => env('EINV_GSTIN'),
+                "LglNm" => $setting->company_name,
+                "Addr1" => substr($setting->address, 0, 100),
+                "Loc" => $setting->city->city_name,
+                "Pin" => (int) $setting->zip_code,
+                "Stcd" => substr(env('EINV_GSTIN'), 0, 2),
+            ],
+            "BuyerDtls" => [
+                "Gstin" => $creditNote->customer->gst_no,
+                "LglNm" => $creditNote->customer->name,
+                "Pos" => $creditNote->customer->state->state_code ?? "33",
+                "Addr1" => substr($creditNote->customer->address ?? "Buyer Address", 0, 100),
+                "Loc" => $creditNote->customer->city->city_name ?? "Buyer City",
+                "Pin" => (int) ($creditNote->customer->zip_code ?? 600001),
+                "Stcd" => $creditNote->customer->state->state_code ?? "33"
+            ],
+            "ItemList" => $itemList,
+            "ValDtls" => [
+                "AssVal" => (float) number_format($totalAssVal, 2, '.', ''),
+                "CgstVal" => (float) number_format($totalCgstVal, 2, '.', ''),
+                "SgstVal" => (float) number_format($totalSgstVal, 2, '.', ''),
+                "IgstVal" => (float) number_format($totalIgstVal, 2, '.', ''),
+                "OthChrg" => $othChrg,
+                "RndOffAmt" => $rndOffAmt,
+                "TotInvVal" => (float) number_format($totInvVal, 2, '.', ''),
+            ]
+        ];
+
+        if (!empty($precDocDtls)) {
+            $payload["PrecDocDtls"] = $precDocDtls;
+        }
+
+        $authData = $this->authenticate($setting);
+        if (!$authData['success']) {
+            return $authData;
+        }
+
+        $response = Http::withHeaders([
+            'aspid' => env('EINV_ASP_ID'),
+            'password' => env('EINV_ASP_PASSWORD'),
+            'Gstin' => env('EINV_GSTIN'),
+            'User_Name' => env('EINV_USERNAME'),
+            'AuthToken' => $authData['token'],
+            'Content-Type' => 'application/json',
+        ])->post(env('EINV_API_URL'), $payload);
+
+        $apiData = $response->json();
+
+        if ($response->successful() && (isset($apiData['Status']) && $apiData['Status'] == 1 || isset($apiData['Irn']))) {
+
+            $responseData = is_string($apiData['Data']) ? json_decode($apiData['Data'], true) : ($apiData['Data'] ?? $apiData);
+
+            \DB::table('credit_notes')->where('id', $creditNote->id)->update([
+                'irn' => $responseData['Irn'] ?? null,
+                'ack_no' => $responseData['AckNo'] ?? null,
+                'ack_date' => $responseData['AckDt'] ?? \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+                'signed_qr_code' => $responseData['SignedQRCode'] ?? null,
+                'einvoice_status' => 'generated',
+            ]);
+            $creditNote->refresh();
+            
+            $ewayBillResult = ['success' => false, 'message' => 'E-Way Bill generation is typically handled for Sales Invoices.'];
+
+            return [
+                'success' => true,
+                'message' => 'Credit Note E-Invoice generated successfully',
+                'data' => $apiData,
+                'eway_bill' => $ewayBillResult
+            ];
+        }
+    
+        $errorMessage = 'Failed to generate Credit Note E-Invoice';
+        
+        \Log::error('Credit Note E-Invoice Failure', [
+            'response' => $apiData
+        ]);
+
+        if (isset($apiData['ErrorDetails']) && is_array($apiData['ErrorDetails'])) {
+            $errs = [];
+            foreach ($apiData['ErrorDetails'] as $err) {
+                if (isset($err['ErrorMessage'])) {
+                    $errs[] = $err['ErrorMessage'];
+                }
+            }
+            if (count($errs) > 0) {
+                $errorMessage = implode(" | ", $errs);
+            }
+        } elseif (isset($apiData['message'])) {
+            $errorMessage = $apiData['message'];
+        }
+
+        return ['success' => false, 'message' => 'API Error: ' . $errorMessage, 'response' => $apiData];
+    }
+
+    public function cancelCreditNoteEInvoice(\App\Models\CreditNote $creditNote, $cancelReason = '2', $cancelRemarks = 'Data Entry Mistake')
+    {
+        if (empty($creditNote->irn)) {
+            return [
+                'success' => false,
+                'message' => 'No IRN found for this credit note.'
+            ];
+        }
+
+        $setting = Setting::first();
+        $authData = $this->authenticate($setting);
+        if (!$authData['success']) {
+            return $authData;
+        }
+
+        $payload = [
+            "Irn" => $creditNote->irn,
+            "CnlRsn" => (string)$cancelReason,
+            "CnlRem" => substr(trim($cancelRemarks), 0, 100)
+        ];
+
+        $cancelUrl = env('EINV_API_URL') . '/Cancel';
+
+        $response = Http::withHeaders([
+            'aspid' => env('EINV_ASP_ID'),
+            'password' => env('EINV_ASP_PASSWORD'),
+            'Gstin' => env('EINV_GSTIN'),
+            'User_Name' => env('EINV_USERNAME'),
+            'AuthToken' => $authData['token'],
+            'Content-Type' => 'application/json',
+        ])->post($cancelUrl, $payload);
+
+        $apiData = $response->json();
+
+        if ($response->successful() && (isset($apiData['Status']) && $apiData['Status'] == 1 || isset($apiData['CancelDate']))) {
+            \DB::table('credit_notes')->where('id', $creditNote->id)->update([
+                'irn' => null,
+                'ack_no' => null,
+                'ack_date' => null,
+                'signed_qr_code' => null,
+                'eway_bill_no' => null,
+                'eway_bill_date' => null,
+                'eway_bill_valid_till' => null,
+                'einvoice_status' => 'cancelled',
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Credit Note E-Invoice cancelled successfully',
+                'data' => $apiData
+            ];
+        }
+
+        $errorMessage = 'Failed to cancel Credit Note E-Invoice';
+        if (isset($apiData['ErrorDetails'][0]['ErrorMessage'])) {
+            $errorMessage = $apiData['ErrorDetails'][0]['ErrorMessage'];
+        } elseif (isset($apiData['message'])) {
+            $errorMessage = $apiData['message'];
+        }
+
+        return ['success' => false, 'message' => 'API Error: ' . $errorMessage, 'response' => $apiData];
     }
 }

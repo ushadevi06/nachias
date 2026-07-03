@@ -508,6 +508,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::post('credit_notes/status/{id}', [CreditNoteController::class, 'updateStatus']);
     Route::get('credit_notes/print/{id}', [CreditNoteController::class, 'print']);
     Route::get('credit_notes/download/{id}', [CreditNoteController::class, 'download']);
+    Route::post('credit_notes/generate-einvoice/{id}', [CreditNoteController::class, 'generateEInvoice']);
+    Route::post('credit_notes/cancel-einvoice/{id}', [CreditNoteController::class, 'cancelEInvoice']);
 
     /* Debit Notes */
     Route::get('debit_notes', [DebitNoteController::class, 'index']);

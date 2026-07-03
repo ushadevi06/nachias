@@ -7,7 +7,63 @@ ALTER TABLE `sales_invoices` ADD COLUMN `dispatch_completed_at` DATETIME NULL AF
 ALTER TABLE salary_generations ADD COLUMN from_date DATE NULL, ADD COLUMN to_date DATE NULL;
 ALTER TABLE barcode_masters ADD COLUMN job_card_entry_id BIGINT UNSIGNED NULL AFTER id;
 
+-- 03/07/2026:
 
-ALTER TABLE `sales_invoice_items`
-ADD COLUMN `is_extra` TINYINT(1) NOT NULL DEFAULT 0
-AFTER `scanned_qty`;
+ALTER TABLE `sales_invoice_items` ADD COLUMN `is_extra` TINYINT(1) NOT NULL DEFAULT 0 AFTER `scanned_qty`;
+
+-- 1. Add E-Invoice fields to credit_notes
+ALTER TABLE `credit_notes`
+ADD COLUMN `irn` VARCHAR(255) NULL AFTER `grand_total`,
+ADD COLUMN `ack_no` VARCHAR(255) NULL AFTER `irn`,
+ADD COLUMN `ack_date` DATETIME NULL AFTER `ack_no`,
+ADD COLUMN `signed_qr_code` TEXT NULL AFTER `ack_date`,
+ADD COLUMN `einvoice_status` VARCHAR(255) NULL AFTER `signed_qr_code`,
+ADD COLUMN `eway_bill_no` VARCHAR(255) NULL AFTER `einvoice_status`,
+ADD COLUMN `eway_bill_date` DATETIME NULL AFTER `eway_bill_no`,
+ADD COLUMN `eway_bill_valid_till` DATETIME NULL AFTER `eway_bill_date`;
+
+-- 2. Add fault column to credit_notes
+ALTER TABLE `credit_notes`
+ADD COLUMN `fault` VARCHAR(255) NULL AFTER `reason`;
+
+-- 3. Add qr_details to sales_invoices
+ALTER TABLE `sales_invoices`
+ADD COLUMN `qr_details` TEXT NULL AFTER `due_amount`;
+
+-- 4. Rename discount_percent to box_discount_amount in sales_orders
+ALTER TABLE `sales_orders`
+CHANGE `discount_percent` `box_discount_amount` DECIMAL(10,2) NULL DEFAULT 0.00;
+
+-- 5. Rename box_discount to box_discount_amount in customers
+ALTER TABLE `customers`
+CHANGE `box_discount` `box_discount_amount` DECIMAL(10,2) NULL DEFAULT 0.00;
+
+-- 6. Rename state_id to state_ids in zones
+ALTER TABLE `zones`
+CHANGE `state_id` `state_ids` VARCHAR(255) NULL;
+
+DROP TABLE IF EXISTS `raw_material_art_nos`;
+CREATE TABLE `raw_material_art_nos` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `raw_material_id` bigint(20) unsigned NOT NULL,
+  `art_no` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `raw_material_art_nos_raw_material_id_foreign` (`raw_material_id`),
+  CONSTRAINT `raw_material_art_nos_raw_material_id_foreign` FOREIGN KEY (`raw_material_id`) REFERENCES `raw_materials` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS `fg_min_stocks`;
+CREATE TABLE `fg_min_stocks` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `stock_entry_item_id` bigint(20) unsigned NOT NULL,
+  `min_stock` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `status` enum('Active','Inactive') NOT NULL DEFAULT 'Active',
+  `created_by` bigint(20) unsigned DEFAULT NULL,
+  `updated_by` bigint(20) unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

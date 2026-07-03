@@ -89,6 +89,14 @@ class OrderaxeService
 
             if (!$orderNo) return false;
 
+            // Skip orders created before July 2, 2026
+            if (isset($orderData['created_at'])) {
+                $orderDate = date('Y-m-d', (int)($orderData['created_at'] / 1000));
+                if ($orderDate < '2026-07-02') {
+                    return false;
+                }
+            }
+
             $existingOrder = null;
             if ($orderAxeId) {
                 $existingOrder = SalesOrder::where('orderaxe_id', $orderAxeId)->first();

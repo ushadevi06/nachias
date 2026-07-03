@@ -11,6 +11,24 @@
                     <h3 class="fw-bold text-primary mb-1">Credit Note Details</h3>
                 </div>
                 <div class="d-flex gap-2">
+                    @php
+                        $multiSalesInvoices = !empty($creditNote->sales_invoice_ids) && count($creditNote->sales_invoice_ids) > 1;
+                    @endphp
+                    @if($creditNote->einvoice_status == 'generated')
+                        <button type="button" class="btn btn-danger d-flex align-items-center" id="einvoice-cancel">
+                            <i class="ri ri-close-circle-line me-1"></i> Cancel E-Invoice
+                        </button>
+                    @else
+                        @if($multiSalesInvoices)
+                            <button type="button" class="btn btn-info d-flex align-items-center text-white" disabled title="E-Invoice generation is allowed only for Credit Notes linked to a single Sales Invoice. Multiple Sales Invoices are not supported.">
+                                <i class="ri ri-receipt-line me-1"></i> Generate E-Invoice
+                            </button>
+                        @else
+                            <button type="button" class="btn btn-info d-flex align-items-center text-white" id="einvoice-generate">
+                                <i class="ri ri-receipt-line me-1"></i> Generate E-Invoice
+                            </button>
+                        @endif
+                    @endif
                     <a href="{{ url('credit_notes/download/' . $creditNote->id) }}" target="_blank" class="btn btn-primary d-flex align-items-center">
                         <i class="ri ri-download-line me-1"></i> Download
                     </a>
@@ -82,6 +100,38 @@
                     </div>
                 </div>
             </div>
+
+            <!-- E-Invoice Segment -->
+            @if($creditNote->einvoice_status == 'generated' || $creditNote->irn)
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+                <div class="card-header bg-light py-3" style="border-radius: 12px 12px 0 0;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="ri ri-receipt-line me-2"></i> E-Invoice Details</h5>
+                        <span class="badge {{ $creditNote->einvoice_status == 'generated' ? 'bg-success' : 'bg-danger' }} px-3 py-2">
+                            {{ ucfirst($creditNote->einvoice_status) }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">IRN Number</div>
+                            <div class="fw-bold text-dark text-break" style="font-family: monospace;">{{ $creditNote->irn ?: '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Ack No</div>
+                            <div class="fw-bold text-dark">{{ $creditNote->ack_no ?: '-' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-1 text-muted text-uppercase small fw-bold">Ack Date</div>
+                            <div class="fw-bold text-dark">
+                                {{ $creditNote->ack_date ? \Carbon\Carbon::parse($creditNote->ack_date)->format('d M, Y h:i A') : '-' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
 
             <!-- Item Details Table -->
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
@@ -155,12 +205,12 @@
                                             $sleeveFull = '';
                                             if ($invoiceItem && $invoiceItem->sleeve_type) {
                                                 $st = strtolower(trim($invoiceItem->sleeve_type));
-                                                if ($st == 'full' || $st == 'f/s') {
-                                                    $sleeveFull = ' Full Sleeve';
-                                                } elseif ($st == 'half' || $st == 'h/s') {
-                                                    $sleeveFull = ' Half Sleeve';
+                                                if ($st == 'full' || $st == 'f/s' || $st == 'fs') {
+                                                    $sleeveFull = ' FULL SLEEVE';
+                                                } elseif ($st == 'half' || $st == 'h/s' || $st == 'hs') {
+                                                    $sleeveFull = ' HALF SLEEVE';
                                                 } else {
-                                                    $sleeveFull = ' ' . trim($invoiceItem->sleeve_type) . ' Sleeve';
+                                                    $sleeveFull = ' ' . strtoupper(trim($invoiceItem->sleeve_type));
                                                 }
                                             }
 
@@ -168,7 +218,7 @@
                                             $uomCode = $invoiceItem && $invoiceItem->uom ? $invoiceItem->uom->uom_code : 'PCS';
 
                                             // Color
-                                            $colorName = $invoiceItem && $invoiceItem->color ? $invoiceItem->color->color_name : '';
+                                            $colorName = $invoiceItem ? $invoiceItem->api_color : '';
 
                                             // Size
                                             $sizeName = '';
@@ -335,4 +385,122 @@
         </div>
     </div>
 </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+    $(document).ready(function() {
+        var creditNoteId = "{{ $creditNote->id }}";
+        
+        $('#einvoice-generate').on('click', function() {
+            var btn = $(this);
+            Swal.fire({
+                title: 'Generate E-Invoice?',
+                text: "Do you want to generate an E-Invoice for this Credit Note?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, generate it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> Generating...');
+                    
+                    Swal.fire({
+                        title: 'Generating...',
+                        text: 'Please wait while we generate the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('credit_notes/generate-einvoice') }}/" + creditNoteId,
+                        type: 'POST',
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire('Success', response.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                                btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
+                            }
+                        },
+                        error: function(xhr) {
+                            var errMsg = 'An error occurred';
+                            if(xhr.responseJSON && xhr.responseJSON.message) {
+                                errMsg = xhr.responseJSON.message;
+                            }
+                            Swal.fire('Error', errMsg, 'error');
+                            btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i> Generate E-Invoice');
+                        }
+                    });
+                }
+            });
+        });
+
+        $('#einvoice-cancel').on('click', function() {
+            var btn = $(this);
+            Swal.fire({
+                title: 'Cancel E-Invoice',
+                html: `
+                    <div class="text-start">
+                        <p class="text-danger fw-bold mb-2">Warning: This action cannot be undone.</p>
+                        <p class="mb-2">Are you sure you want to cancel the E-Invoice?</p>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, cancel it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> Cancelling...');
+                    
+                    Swal.fire({
+                        title: 'Cancelling...',
+                        text: 'Please wait while we cancel the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('credit_notes/cancel-einvoice') }}/" + creditNoteId,
+                        type: 'POST',
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire('Success', response.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                                btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i> Cancel E-Invoice');
+                            }
+                        },
+                        error: function(xhr) {
+                            var errMsg = 'An error occurred';
+                            if(xhr.responseJSON && xhr.responseJSON.message) {
+                                errMsg = xhr.responseJSON.message;
+                            }
+                            Swal.fire('Error', errMsg, 'error');
+                            btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i> Cancel E-Invoice');
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
 @endsection

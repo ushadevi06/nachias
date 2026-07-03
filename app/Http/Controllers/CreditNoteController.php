@@ -48,6 +48,21 @@ class CreditNoteController extends Controller
                 // if(auth()->id() == 1 || auth()->user()->can('delete credit-notes')) {
                 //     $action .= '<a href="javascript:;" class="btn btn-delete delete-btn" title="Delete" onclick="delete_data(\'' . url('credit_notes/delete/' . $note->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 // }
+                
+                $multiSalesInvoices = !empty($note->sales_invoice_ids) && count($note->sales_invoice_ids) > 1;
+                $eInvoiceBtn = '';
+
+                if ($note->einvoice_status == 'generated') {
+                    $eInvoiceBtn = '<button type="button" class="btn btn-danger einvoice-cancel-btn" data-id="' . $note->id . '" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-close-circle-line"></i></button>';
+                } else {
+                    if ($multiSalesInvoices) {
+                        $eInvoiceBtn = '<button type="button" class="btn btn-info text-white" disabled style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
+                    } else {
+                        $eInvoiceBtn = '<button type="button" class="btn btn-info text-white einvoice-generate-btn" data-id="' . $note->id . '" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; border-radius: 4px; margin-left: 5px;"><i class="ri ri-receipt-line"></i></button>';
+                    }
+                }
+
+                $action .= $eInvoiceBtn;
                 $action .= '</div>';
 
                 $invoiceNos = '-';
@@ -125,7 +140,6 @@ class CreditNoteController extends Controller
                 '*.max' => 'This field should not be more than :max characters.',
             ]);
 
-            // Validate that at least one item has quantity > 0
             $hasSelected = false;
             foreach ($request->items as $item) {
                 if (($item['quantity'] ?? 0) > 0) {
@@ -256,7 +270,6 @@ class CreditNoteController extends Controller
             }
         }
 
-        // GET logic
         $customers = Customer::whereHas('salesInvoices', function($q) {
             $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
         })->get();
@@ -264,7 +277,6 @@ class CreditNoteController extends Controller
         $sales_agent = \App\Models\SalesAgent::active()->get();
         $charges = \App\Models\Charge::where('status', 'Active')->orderBy('charge_name')->get();
         
-        // If editing, load invoices for this customer
         $salesInvoices = [];
         $creditNoteCharges = collect();
         if ($creditNote) {
@@ -275,7 +287,6 @@ class CreditNoteController extends Controller
                 ->latest()->get();
             $creditNoteCharges = $creditNote->charges;
         } elseif (old('customer_id') && old('sales_invoice_ids')) {
-            // Restore invoices for old() repopulation after validation failure
             $salesInvoices = SalesInvoice::where('customer_id', old('customer_id'))
                 ->where(function($q) {
                     $q->whereNull('einvoice_status')->orWhere('einvoice_status', '!=', 'cancelled');
@@ -285,13 +296,27 @@ class CreditNoteController extends Controller
 
         $nextNoteNo = '';
         if (!$id) {
-            $lastNote = CreditNote::withTrashed()->orderBy('id', 'desc')->first();
-            if ($lastNote && preg_match('/CN-(\d+)/', $lastNote->note_no, $matches)) {
+            $currentMonth = date('n');
+            $currentYear = date('Y');
+            if ($currentMonth >= 4) {
+                $fyYear = $currentYear;
+            } else {
+                $fyYear = $currentYear - 1;
+            }
+            $fySuffix = substr($fyYear, -2);
+            $prefix = 'CN' . $fySuffix . '-';
+
+            $lastNote = CreditNote::withTrashed()
+                ->where('note_no', 'like', $prefix . '%')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if ($lastNote && preg_match('/' . $prefix . '(\d+)/', $lastNote->note_no, $matches)) {
                 $number = intval($matches[1]) + 1;
-                $nextNoteNo = 'CN-' . str_pad($number, 3, '0', STR_PAD_LEFT);
+                $nextNoteNo = $prefix . str_pad($number, 3, '0', STR_PAD_LEFT);
             }
             else {
-                $nextNoteNo = 'CN-001';
+                $nextNoteNo = $prefix . '001';
             }
         }
 
@@ -330,8 +355,7 @@ class CreditNoteController extends Controller
                 $balanceQty = max(0, $item->quantity - $alreadyReturned);
                 $uomCode = 'PCS';
                 if ($item->stockEntryItem) {
-                    $soItem = \App\Models\SalesOrderItem::where('stock_entry_item_id', $item->stock_entry_item_id)
-                        ->first();
+                    $soItem = \App\Models\SalesOrderItem::where('stock_entry_item_id', $item->stock_entry_item_id)->first();
                     if ($soItem && $soItem->uom_id) {
                         $uomCode = $soItem->uom_id;
                     }
@@ -531,5 +555,62 @@ class CreditNoteController extends Controller
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->stream('CreditNote_' . $creditNote->note_no . '.pdf');
+    }
+
+    public function generateEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $creditNote = CreditNote::findOrFail($id);
+
+        if (!empty($creditNote->sales_invoice_ids) && count($creditNote->sales_invoice_ids) > 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'E-Invoice generation is allowed only for Credit Notes linked to a single Sales Invoice. Multiple Sales Invoices are not supported.'
+            ], 400);
+        }
+
+        if ($creditNote->einvoice_status === 'generated') {
+            return response()->json([
+                'success' => false,
+                'message' => 'E-Invoice is already generated for this Credit Note.'
+            ], 400);
+        }
+
+        $result = $eInvoiceService->generateCreditNoteEInvoice($creditNote);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result['data'] ?? [],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $result['message']
+        ], 400);
+    }
+
+    public function cancelEInvoice(Request $request, $id, \App\Services\EInvoiceService $eInvoiceService)
+    {
+        $creditNote = CreditNote::findOrFail($id);
+        
+        $cancelReason = $request->input('cancel_reason', '2');
+        $cancelRemarks = $request->input('cancel_remarks', 'Data Entry Mistake');
+
+        $result = $eInvoiceService->cancelCreditNoteEInvoice($creditNote, $cancelReason, $cancelRemarks);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result['data'] ?? [],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $result['message']
+        ], 400);
     }
 }

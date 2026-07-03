@@ -42,6 +42,14 @@ class CreditNote extends Model
         'show_fields',
         'created_by',
         'updated_by',
+        'irn',
+        'ack_no',
+        'ack_date',
+        'signed_qr_code',
+        'einvoice_status',
+        'eway_bill_no',
+        'eway_bill_date',
+        'eway_bill_valid_till',
     ];
 
     protected $casts = [

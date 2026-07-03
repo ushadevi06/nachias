@@ -82,6 +82,119 @@
                 }
             });
         });
+
+        // E-Invoice Generation
+        $(document).on('click', '.einvoice-generate-btn', function() {
+            var id = $(this).data('id');
+            var btn = $(this);
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to generate an E-Invoice for this Credit Note?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, generate it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i>');
+                    
+                    Swal.fire({
+                        title: 'Generating...',
+                        text: 'Please wait while we generate the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('credit_notes/generate-einvoice') }}/" + id,
+                        type: 'POST',
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire('Success', response.message, 'success').then(() => {
+                                    table.ajax.reload(null, false);
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                                btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i>');
+                            }
+                        },
+                        error: function(xhr) {
+                            var errMsg = 'An error occurred';
+                            if(xhr.responseJSON && xhr.responseJSON.message) {
+                                errMsg = xhr.responseJSON.message;
+                            }
+                            Swal.fire('Error', errMsg, 'error');
+                            btn.prop('disabled', false).html('<i class="ri ri-receipt-line"></i>');
+                        }
+                    });
+                }
+            });
+        });
+
+        // E-Invoice Cancellation
+        $(document).on('click', '.einvoice-cancel-btn', function() {
+            var id = $(this).data('id');
+            var btn = $(this);
+            Swal.fire({
+                title: 'Cancel E-Invoice',
+                html: `
+                    <div class="text-start">
+                        <p class="text-danger fw-bold mb-2">Warning: This action cannot be undone.</p>
+                        <p class="mb-2">Are you sure you want to cancel the E-Invoice?</p>
+                    </div>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, cancel it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i>');
+                    
+                    Swal.fire({
+                        title: 'Cancelling...',
+                        text: 'Please wait while we cancel the E-Invoice.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    $.ajax({
+                        url: "{{ url('credit_notes/cancel-einvoice') }}/" + id,
+                        type: 'POST',
+                        data: {
+                            _token: "{{ csrf_token() }}"
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire('Success', response.message, 'success').then(() => {
+                                    table.ajax.reload(null, false);
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                                btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i>');
+                            }
+                        },
+                        error: function(xhr) {
+                            var errMsg = 'An error occurred';
+                            if(xhr.responseJSON && xhr.responseJSON.message) {
+                                errMsg = xhr.responseJSON.message;
+                            }
+                            Swal.fire('Error', errMsg, 'error');
+                            btn.prop('disabled', false).html('<i class="ri ri-close-circle-line"></i>');
+                        }
+                    });
+                }
+            });
+        });
     });
 </script>
 @endsection
