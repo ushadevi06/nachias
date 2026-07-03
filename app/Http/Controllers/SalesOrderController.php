@@ -500,7 +500,7 @@ class SalesOrderController extends Controller
                             }
                         }
                     }
-
+                    
                     SalesOrderItem::create([
                         'sale_order_id' => $salesOrder->id,
                         'brand_cat_id' => $item['brand_cat_id'] ?? null,

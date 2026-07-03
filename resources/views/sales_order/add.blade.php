@@ -770,7 +770,15 @@
                                             <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="sub_total_qty" name="sub_total_qty" value="{{ old('sub_total_qty', $salesOrder->sub_total_qty ?? '0.00') }}" readonly>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <label class="fw-medium">Discount Amount:</label>
+                                            <label class="fw-medium">Sales Disc Amount:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50" id="calculated_sales_discount" value="0.00" readonly>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Box Disc Amount:</label>
+                                            <input type="text" class="form-control-plaintext text-end w-50" id="calculated_box_discount" value="0.00" readonly>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <label class="fw-medium">Total Discount:</label>
                                             <input type="text" class="form-control-plaintext text-end w-50 fw-bold" id="discount_amount" name="discount_amount" value="{{ old('discount_amount', $salesOrder->discount_amount ?? '0.00') }}" readonly>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1495,6 +1503,8 @@ $(document).ready(function () {
         const salesDiscountValue = (subTotal * salesDiscPercent) / 100;
         const discountAmount = boxDiscountValue + salesDiscountValue;
         
+        $('#calculated_sales_discount').val(salesDiscountValue.toFixed(2));
+        $('#calculated_box_discount').val(boxDiscountValue.toFixed(2));
         $('#discount_amount').val(discountAmount.toFixed(2));
 
         let preGstCharges = 0;

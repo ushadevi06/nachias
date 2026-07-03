@@ -285,6 +285,21 @@ class SalesInvoiceController extends Controller
                 $invoiceId = $invoice->id;
                 foreach ($request->items as $item) {
                     $isExtra = !empty($item['is_extra']);
+
+                    $apiColor = $item['api_color'] ?? null;
+                    if (empty($apiColor)) {
+                        $artNo = $item['art_no'] ?? '';
+                        if (!empty($artNo) && strpos($artNo, '-') !== false) {
+                            $parts = explode('-', $artNo);
+                            $lastPart = trim(end($parts));
+                            if (is_numeric($lastPart)) {
+                                $apiColor = $lastPart;
+                            }
+                        }
+                    }
+                    if (empty($apiColor)) {
+                        $apiColor = 'A';
+                    }
                     
                     if (!empty($item['id'])) {
                         $existingItem = SalesInvoiceItem::find($item['id']);
@@ -309,7 +324,7 @@ class SalesInvoiceController extends Controller
                             'art_no' => $item['art_no'] ?? null,
                             'size' => $item['size'] ?? null,
                             'color_id' => $item['color_id'] ?? null,
-                            'api_color' => $item['api_color'] ?? null,
+                            'api_color' => $apiColor,
                             'sleeve_type' => $item['sleeve_type'] ?? null,
                             'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
                             'is_extra' => $isExtra,
