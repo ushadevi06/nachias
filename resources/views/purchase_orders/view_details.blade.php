@@ -120,6 +120,18 @@
                                     <th class="text-center text-uppercase small fw-bold">UOM</th>
                                     <th class="text-center text-uppercase small fw-bold">Qty</th>
                                     <th class="text-end text-uppercase small fw-bold">Rate</th>
+                                    @php $isAccessories = $purchaseOrder->storeType && strtolower($purchaseOrder->storeType->store_type_name) == 'accessories'; $isOtherState = $purchaseOrder->other_state == 'yes'; @endphp
+                                    @if($isAccessories)
+                                        @if($isOtherState)
+                                            <th class="text-end text-uppercase small fw-bold">IGST %</th>
+                                            <th class="text-end text-uppercase small fw-bold">IGST Amt</th>
+                                        @else
+                                            <th class="text-end text-uppercase small fw-bold">CGST %</th>
+                                            <th class="text-end text-uppercase small fw-bold">CGST Amt</th>
+                                            <th class="text-end text-uppercase small fw-bold">SGST %</th>
+                                            <th class="text-end text-uppercase small fw-bold">SGST Amt</th>
+                                        @endif
+                                    @endif
                                     <th class="text-end text-uppercase small fw-bold">Amount</th>
                                     <th class="text-uppercase small fw-bold">Remarks</th>
                                     <th class="text-center text-uppercase small fw-bold pe-4">Action</th>
@@ -159,6 +171,17 @@
                                     </td>
                                     <td class="text-center fw-bold">{{ number_format($item->quantity, 2) }}</td>
                                     <td class="text-end fw-semibold text-dark">₹{{ number_format($item->rate, 2) }}</td>
+                                    @if($isAccessories)
+                                        @if($isOtherState)
+                                            <td class="text-end">{{ number_format($item->igst_percent ?? 0, 2) }}%</td>
+                                            <td class="text-end fw-semibold">₹{{ number_format($item->igst_amount ?? 0, 2) }}</td>
+                                        @else
+                                            <td class="text-end">{{ number_format($item->cgst_percent ?? 0, 2) }}%</td>
+                                            <td class="text-end fw-semibold">₹{{ number_format($item->cgst_amount ?? 0, 2) }}</td>
+                                            <td class="text-end">{{ number_format($item->sgst_percent ?? 0, 2) }}%</td>
+                                            <td class="text-end fw-semibold">₹{{ number_format($item->sgst_amount ?? 0, 2) }}</td>
+                                        @endif
+                                    @endif
                                     <td class="text-end fw-bold text-primary">₹{{ number_format($item->amount, 2) }}</td>
                                     <td class="small text-dark">{{ $item->remarks ?? '-' }}</td>
                                     <td class="text-center pe-4">

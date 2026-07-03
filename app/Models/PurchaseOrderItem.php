@@ -26,12 +26,24 @@ class PurchaseOrderItem extends Model
         'attached_file',
         'fabric_width_id',
         'fabric_type_id',
+        'cgst_percent',
+        'cgst_amount',
+        'sgst_percent',
+        'sgst_amount',
+        'igst_percent',
+        'igst_amount',
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:2',
-        'rate' => 'decimal:2',
-        'amount' => 'decimal:2',
+        'quantity'     => 'decimal:2',
+        'rate'         => 'decimal:2',
+        'amount'       => 'decimal:2',
+        'cgst_percent' => 'decimal:2',
+        'cgst_amount'  => 'decimal:2',
+        'sgst_percent' => 'decimal:2',
+        'sgst_amount'  => 'decimal:2',
+        'igst_percent' => 'decimal:2',
+        'igst_amount'  => 'decimal:2',
     ];
 
     public function purchaseOrder()

@@ -221,6 +221,12 @@ class PurchaseOrderController extends Controller
                 'items.*.fabric_width_id' => 'nullable|exists:fabric_sizes,id',
                 'items.*.fabric_type_id' => 'nullable|exists:fabric_types,id',
                 'items.*.style_id' => 'required_if:items.*.store_category_id,1|nullable|exists:styles,id',
+                'items.*.cgst_percent' => 'nullable|numeric|min:0',
+                'items.*.cgst_amount' => 'nullable|numeric|min:0',
+                'items.*.sgst_percent' => 'nullable|numeric|min:0',
+                'items.*.sgst_amount' => 'nullable|numeric|min:0',
+                'items.*.igst_percent' => 'nullable|numeric|min:0',
+                'items.*.igst_amount' => 'nullable|numeric|min:0',
                 'discount_percent' => 'nullable',
                 'additional_attachments' => 'nullable|array|max:5',
                 'additional_attachments.*' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp',
@@ -367,6 +373,12 @@ class PurchaseOrderController extends Controller
                         'fabric_width_id' => $item['fabric_width_id'] ?? null,
                         'fabric_type_id' => $item['fabric_type_id'] ?? null,
                         'attached_file' => $item['existing_file'] ?? null,
+                        'cgst_percent' => $item['cgst_percent'] ?? 0,
+                        'cgst_amount' => $item['cgst_amount'] ?? 0,
+                        'sgst_percent' => $item['sgst_percent'] ?? 0,
+                        'sgst_amount' => $item['sgst_amount'] ?? 0,
+                        'igst_percent' => $item['igst_percent'] ?? 0,
+                        'igst_amount' => $item['igst_amount'] ?? 0,
                     ];
 
                     if ($request->hasFile("items.{$index}.attached_file")) {
