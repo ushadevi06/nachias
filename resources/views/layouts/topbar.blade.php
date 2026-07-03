@@ -522,7 +522,7 @@ $isSuper = $user->id == 1;
                                                                 </a>
                                                             </li>
                                                         @endif
-                                                        @if($isSuper || $user->can('view fg min stocks'))
+                                                        @if($isSuper || $user->can('view fg-min-stocks'))
                                                             <li class="menu-item {{ request()->is('fg-min-stocks*') ? 'active' : '' }}">
                                                                 <a href="{{ url('fg-min-stocks') }}" class="menu-link">
                                                                     <div>FG Minimum Stocks</div>

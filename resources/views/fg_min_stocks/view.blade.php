@@ -6,7 +6,7 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Finished Goods Minimum Stocks</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create fg min stocks'))
+                @if(auth()->id() == 1 || auth()->user()->can('create fg-min-stocks'))
                 <a class="btn btn-primary" href="{{ url('fg-min-stocks/add') }}">
                     <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                 </a>

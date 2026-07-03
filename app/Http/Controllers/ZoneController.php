@@ -7,7 +7,7 @@ use App\Models\State;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\SalesAgent;
-use App\Models\SaleOrder;
+use App\Models\SalesOrder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 

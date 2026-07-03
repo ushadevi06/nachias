@@ -11,7 +11,7 @@ class FgMinStockController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view fg min stocks')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view fg-min-stocks')) {
             return unauthorizedRedirect();
         }
 
@@ -35,11 +35,11 @@ class FgMinStockController extends Controller
 
                 $action = '<div class="button-box">';
 
-                if (auth()->id() == 1 || auth()->user()->can('edit fg min stocks')) {
+                if (auth()->id() == 1 || auth()->user()->can('edit fg-min-stocks')) {
                     $action .= '<a href="' . url('fg-min-stocks/add/' . $row->id) . '" class="btn btn-edit"><i class="icon-base ri ri-edit-box-line"></i></a>';
                 }
 
-                if (auth()->id() == 1 || auth()->user()->can('delete fg min stocks')) {
+                if (auth()->id() == 1 || auth()->user()->can('delete fg-min-stocks')) {
                     $action .= '<a href="javascript:;" class="btn btn-delete" onclick="delete_data(\'' . url('fg-min-stocks/delete/' . $row->id) . '\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
                 }
 
@@ -63,17 +63,17 @@ class FgMinStockController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        return view('masters.fg_min_stocks.view');
+        return view('fg_min_stocks.view');
     }
 
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit fg min stocks')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit fg-min-stocks')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create fg min stocks')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create fg-min-stocks')) {
                 return unauthorizedRedirect();
             }
         }
@@ -110,12 +110,12 @@ class FgMinStockController extends Controller
             return redirect('fg-min-stocks')->with('success', $msg);
         }
 
-        return view('masters.fg_min_stocks.add', compact('fgMinStock'));
+        return view('fg_min_stocks.add', compact('fgMinStock'));
     }
 
     public function destroy($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('delete fg min stocks')) {
+        if (auth()->id() != 1 && !auth()->user()->can('delete fg-min-stocks')) {
             return unauthorizedRedirect();
         }
         $fgMinStock = FgMinStock::findOrFail($id);

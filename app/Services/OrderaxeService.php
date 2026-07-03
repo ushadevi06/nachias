@@ -89,6 +89,8 @@ class OrderaxeService
 
             if (!$orderNo) return false;
 
+            if ($orderNo == '100008782') return false;
+
             if (isset($orderData['created_at'])) {
                 $orderDate = date('Y-m-d', (int)($orderData['created_at'] / 1000));
                 if ($orderDate < '2026-07-02') {

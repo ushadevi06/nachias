@@ -255,7 +255,7 @@ class PurchaseReportController extends Controller
 
     private function getStockData($storeCategoryId, Request $request, $isStockReport = false, $isMinStock = false)
     {
-        $query = \App\Models\StockEntryItem::with(['rawMaterial', 'item.brand', 'brand', 'style', 'color', 'fabricType', 'fabricWidth'])->where('store_category_id', $storeCategoryId);
+        $query = \App\Models\StockEntryItem::with(['rawMaterial.artNos', 'item.brand', 'brand', 'style', 'color', 'fabricType', 'fabricWidth'])->where('store_category_id', $storeCategoryId);
 
         if ($request->supplier_id) {
             $query->whereHas('grnEntryItem.grnEntry', function($q) use ($request) {
@@ -373,6 +373,7 @@ class PurchaseReportController extends Controller
 
                 $grouped[$key] = [
                     'raw_material_id' => $item->raw_material_id ?: 0,
+                    'art_no' => ($item->rawMaterial && $item->rawMaterial->artNos->count() > 0) ? $item->rawMaterial->artNos->pluck('art_no')->implode(', ') : 'N/A',
                     'brand' => $brandName,
                     'item_name' => $itemName,
                     'style' => $item->style ? $item->style->style_name : 'N/A',
@@ -435,7 +436,7 @@ class PurchaseReportController extends Controller
 
     private function getStockAgeingData($storeCategoryId, Request $request)
     {
-        $query = \App\Models\StockEntryItem::with(['rawMaterial', 'item.brand', 'brand', 'style', 'color', 'fabricType', 'fabricWidth'])
+        $query = \App\Models\StockEntryItem::with(['rawMaterial.artNos', 'item.brand', 'brand', 'style', 'color', 'fabricType', 'fabricWidth'])
             ->where('store_category_id', $storeCategoryId);
 
         if ($request->supplier_id) {
@@ -470,6 +471,7 @@ class PurchaseReportController extends Controller
                 }
 
                 $grouped[$key] = [
+                    'art_no' => ($item->rawMaterial && $item->rawMaterial->artNos->count() > 0) ? $item->rawMaterial->artNos->pluck('art_no')->implode(', ') : 'N/A',
                     'brand' => $brandName,
                     'item_name' => $itemName,
                     'style' => $item->style ? $item->style->style_name : 'N/A',
@@ -981,6 +983,7 @@ class PurchaseReportController extends Controller
                     if ($isFabric) {
                         $data[] = [
                             'DT_RowIndex' => $count++,
+                            'art_no' => $row['art_no'] ?? 'N/A',
                             'item_name' => $row['item_name'],
                             'brand' => $row['brand'],
                             'style' => $row['style'],

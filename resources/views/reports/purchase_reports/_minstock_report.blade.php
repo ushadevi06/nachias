@@ -4,6 +4,7 @@
         <thead>
             <tr>
                 <th>#</th>
+                <th>ART NO</th>
                 <th>MATERIAL NAME</th>
                 <th>BRAND</th>
                 <th>STYLE</th>
@@ -44,6 +45,7 @@
         const isFabric = {{ $isFabric ? 'true' : 'false' }};
         const columns = isFabric ? [
             { data: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'art_no' },
             { data: 'item_name' },
             { data: 'brand' },
             { data: 'style' },
