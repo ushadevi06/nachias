@@ -62,4 +62,24 @@ class SalesInvoiceItem extends Model
     {
         return $this->belongsTo(StockEntryItem::class);
     }
+
+    public function getArtNoAttribute($value)
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('stockEntryItem') && $this->stockEntryItem) {
+            return $this->stockEntryItem->art_no;
+        }
+
+        if ($this->stock_entry_item_id) {
+            $stockItem = $this->stockEntryItem;
+            if ($stockItem && !empty($stockItem->art_no)) {
+                return $stockItem->art_no;
+            }
+        }
+
+        return $value;
+    }
 }

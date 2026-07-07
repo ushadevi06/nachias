@@ -480,7 +480,7 @@
                     <th rowspan="2" style="width: 28%; text-align: left; padding-left: 6px;">Description</th>
                     <th rowspan="2" style="width: 8%;">UOM</th>
                     @if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
-                    <th rowspan="2" style="width: 12%;">Art</th>
+                    <th rowspan="2" style="width: 16%;">Art</th>
                     @endif
                     @if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
                     <th rowspan="2" style="width: 10%; text-align: right; padding-right: 6px;">Retail Price</th>
@@ -489,7 +489,7 @@
                     <th rowspan="2" style="width: 10%; text-align: right; padding-right: 6px;">Unit Price</th>
                     @endif
                     <th colspan="{{ count($allSizes) }}">Size</th>
-                    <th rowspan="2" style="width: 10%;">Total</th>
+                    <th rowspan="2" style="width: 6%;">Total</th>
                 </tr>
                 <tr>
                     @foreach($allSizes as $size)

@@ -44,8 +44,8 @@
             background: #fff;
         }
         .ship-to-bar {
-            background: #f5a623;
-            color: #000;
+            background: #000;
+            color: #fff;
             padding: 8px 16px;
             font-size: 13px;
             font-weight: 600;
@@ -57,7 +57,7 @@
             content: "";
             flex: 1;
             height: 1px;
-            background: rgba(0, 0, 0, 0.15);
+            background: #fff;
             margin-left: 12px;
         }
         .address-section {
@@ -66,7 +66,7 @@
         .company-heading {
             font-size: 14px;
             font-weight: bold;
-            color: #555;
+            color: #000;
             margin-bottom: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -83,7 +83,7 @@
         }
         .customer-address {
             font-size: 14px;
-            color: #444;
+            color: #000;
             margin-bottom: 8px;
             line-height: 1.4;
         }
@@ -102,12 +102,12 @@
         .city-badge svg {
             width: 14px;
             height: 14px;
-            fill: #e74c3c;
+            fill: #fff;
             margin-right: 6px;
         }
         .stats-section {
-            border-top: 2px dashed #eee;
-            border-bottom: 2px dashed #eee;
+            border-top: 2px dashed #000;
+            border-bottom: 2px dashed #000;
             display: flex;
             padding: 8px 16px;
         }
@@ -116,7 +116,7 @@
         }
         .stat-label {
             font-size: 10px;
-            color: #888;
+            color: #000;
             letter-spacing: 1px;
             margin-bottom: 4px;
             text-transform: uppercase;
@@ -128,7 +128,7 @@
             color: #1a1a1a;
         }
         .stat-value.orange {
-            color: #f5a623;
+            color: #000;
             font-size: 24px;
         }
         .disclaimer-section {
@@ -139,14 +139,14 @@
         .disclaimer-section svg {
             width: 20px;
             height: 20px;
-            fill: #bbb;
+            fill: #000;
             margin-right: 10px;
             flex-shrink: 0;
             margin-top: 2px;
         }
         .disclaimer-text {
             font-size: 12px;
-            color: #888;
+            color: #000;
             line-height: 1.4;
         }
         .qr-section {
@@ -159,7 +159,7 @@
         }
         .qr-text {
             font-size: 10px;
-            color: #888;
+            color: #000;
             margin-top: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -185,14 +185,14 @@
             margin-bottom: 4px;
         }
         .company-sub {
-            color: #888;
+            color: #fff;
             font-size: 9px;
             letter-spacing: 2px;
             text-transform: uppercase;
             font-weight: 600;
         }
         .logo-box {
-            background-color: #f5a623;
+            background-color: #fff;
             color: #1a1a1a;
             font-size: 16px;
             font-weight: 900;
@@ -211,12 +211,12 @@
             align-items: flex-end;
         }
         .footer-address {
-            color: #888;
+            color: #fff;
             font-size: 10px;
             line-height: 1.5;
         }
         .footer-phone {
-            color: #f5a623;
+            color: #fff;
             font-size: 13px;
             font-weight: bold;
             text-align: right;

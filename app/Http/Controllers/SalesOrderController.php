@@ -828,7 +828,10 @@ class SalesOrderController extends Controller
 
                 if ($matchedStockItem) {
                     $stockEntryItemId = $matchedStockItem->id;
-                    $item->update(['stock_entry_item_id' => $stockEntryItemId]);
+                    $item->update([
+                        'stock_entry_item_id' => $stockEntryItemId,
+                        'art_no' => $matchedStockItem->art_no ?? $item->art_no
+                    ]);
                 }
             }
 

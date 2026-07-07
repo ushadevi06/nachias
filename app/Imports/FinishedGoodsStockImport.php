@@ -56,11 +56,25 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
         $price = $this->parseNumber($this->getRowValue($row, ['price']), 'Price is required.');
         $remarks = trim((string) ($this->getRowValue($row, ['remarks']) ?? ''));
         $color = $this->resolveColor($this->getRowValue($row, ['color_id', 'colorid', 'color']));
-        $style = $this->resolveStyle($this->getRowValue($row, ['style_id', 'styleid', 'style']));
+        
+        $styleVal = $this->getRowValue($row, ['style_id', 'styleid', 'style']);
+        if ($styleVal === null || trim((string)$styleVal) === '') {
+            throw new \Exception('Style is required.');
+        }
+        $style = $this->resolveStyle($styleVal);
         $sku = $this->nullableTrim($this->getRowValue($row, ['sku', 'sku_barcode', 'skubarcode', 'sku_barcode_', 'sku_barco']));
 
         if (!$finishedItemCode) {
             throw new \Exception('Product Code is required.');
+        }
+
+        if (!$artNo) {
+            throw new \Exception('Art No is required.');
+        }
+
+        $size = $this->nullableTrim($this->getRowValue($row, ['size']));
+        if (!$size) {
+            throw new \Exception('Size is required.');
         }
 
         $entryKey = implode('|', [
@@ -92,7 +106,7 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             'item_id' => null,
             'art_no' => $artNo,
             'finished_item_code' => $finishedItemCode,
-            'size' => $this->nullableTrim($this->getRowValue($row, ['size'])),
+            'size' => $size,
             'color_id' => $color?->id,
             'style_id' => $style?->id,
             'sleeve_type' => $this->nullableTrim($this->getRowValue($row, ['sleeve_type', 'sleevetype', 'sleeve_typ'])),

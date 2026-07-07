@@ -489,9 +489,9 @@
                     <th rowspan="2" style="width: 10%;">Unit Price</th>
                     @endif
                     <th colspan="{{ count($allSizes) }}">Size</th>
-                    <th rowspan="2" style="width: 8%;">Total</th>
+                    <th rowspan="2" style="width: 4%;">Total</th>
                     @if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
-                    <th rowspan="2" style="width: 15%;">Art</th>
+                    <th rowspan="2" style="width: 19%;">Art</th>
                     @endif
                 </tr>
                 <tr>

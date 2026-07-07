@@ -795,6 +795,11 @@
                                 </div>
                                 <div class="summary-box px-2">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Total Quantity:</span>
+                                        <span class="fw-bold h5 mb-0" id="total_qty_val">{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="total_qty" id="total_qty" value="{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="text-secondary fw-medium">Sub total:</span>
                                         <span class="fw-bold h5 mb-0" id="sub_total_val">{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="sub_total" id="sub_total" value="{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}">
@@ -1131,7 +1136,11 @@
             var existingRow = null;
             $('#item-rows .item-row').each(function() {
                 var rowArtNo = $(this).find('.art-no').val();
-                if (rowArtNo == matchedItem.art_no && $(this).find('.size-id').val() == matchedItem.size_id && $(this).find('.color-id').val() == matchedItem.color_id) {
+                if (rowArtNo == matchedItem.art_no && 
+                    $(this).find('.size-id').val() == matchedItem.size_id && 
+                    $(this).find('.color-id').val() == matchedItem.color_id &&
+                    $(this).find('.sleeve-type').val() == matchedItem.sleeve &&
+                    $(this).find('.sku').val() == matchedItem.sku) {
                     existingRow = $(this);
                 }
             });
@@ -1448,6 +1457,13 @@
             });
             $('#sub_total_val').text(subTotal.toFixed(2));
             $('#sub_total').val(subTotal.toFixed(2));
+
+            var totalQty = 0;
+            $('.qty, .open-qty').each(function() {
+                totalQty += parseFloat($(this).val()) || 0;
+            });
+            $('#total_qty_val').text(totalQty.toFixed(2));
+            $('#total_qty').val(totalQty.toFixed(2));
 
             var discPercent = parseFloat($('#discount_percent').val()) || 0;
             var discount = (subTotal * discPercent) / 100;
