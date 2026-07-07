@@ -227,7 +227,7 @@
         }
         .footer-phone {
             color: #f5a623;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: bold;
             text-align: right;
             line-height: 1.5;
@@ -245,7 +245,7 @@
     <div class="sticker">
         
         <!-- Header -->
-        <div class="header">
+        <!-- <div class="header">
             <div class="header-left">
                 <div class="company-name">NACHIAS FASHION</div>
                 <div class="company-sub">PVT LTD &bull; MADURAI</div>
@@ -253,7 +253,7 @@
             <div class="header-right">
                 <div class="logo-box">N</div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Ship To Bar -->
         <div class="ship-to-bar">SHIP TO</div>
@@ -263,6 +263,7 @@
             <div class="customer-name">{{ $invoice->customer->name ?? 'N/A' }}</div>
             <div class="customer-address">
                 {{ implode(', ', array_filter([$invoice->customer->address_line_1 ?? '', $invoice->customer->address_line_2 ?? '', $invoice->customer->address_line_3 ?? ''])) }}
+                <p>{{ $invoice->customer->mobile_no }}</p>
             </div>
             <div class="city-badge">
                 <svg viewBox="0 0 24 24">
@@ -312,7 +313,7 @@
                 By-Pass Road, Madurai - 625 016.
             </div>
             <div class="footer-phone">
-                {{ $setting->phone_number ?? '' }}
+                {{ $setting->toll_free_no ?? '' }}
             </div>
         </div>
 

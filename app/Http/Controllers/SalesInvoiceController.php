@@ -304,9 +304,7 @@ class SalesInvoiceController extends Controller
                     if (!empty($item['id'])) {
                         $existingItem = SalesInvoiceItem::find($item['id']);
                         if ($existingItem && $existingItem->is_extra && $existingItem->stock_entry_item_id) {
-                            \App\Models\StockEntryItem::where('id', $existingItem->stock_entry_item_id)
-                                ->where('qty_out', '>=', $existingItem->quantity)
-                                ->decrement('qty_out', $existingItem->quantity);
+                            \App\Models\StockEntryItem::where('id', $existingItem->stock_entry_item_id)->where('qty_out', '>=', $existingItem->quantity)->decrement('qty_out', $existingItem->quantity);
                         }
                     }
 
@@ -572,10 +570,7 @@ class SalesInvoiceController extends Controller
 
                     $stockQty = 0;
                     if ($item->stock_entry_item_id) {
-                        $stockQty = DB::table('stock_entry_items')
-                            ->where('id', $item->stock_entry_item_id)
-                            ->whereNull('deleted_at')
-                            ->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                        $stockQty = DB::table('stock_entry_items')->where('id', $item->stock_entry_item_id)->whereNull('deleted_at')->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
                     }
 
                     $itemData = [
