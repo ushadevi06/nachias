@@ -152,8 +152,6 @@
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Qty/UOM</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">MRP</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-center">Selling Price</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Commission %</th>
-                                    <th class="py-3 text-muted text-uppercase small fw-bold text-end">Commission Amount</th>
                                     <th class="py-3 text-muted text-uppercase small fw-bold text-end">Amount</th>
                                 </tr>
                             </thead>
@@ -292,17 +290,11 @@
                                         <td class="text-end">
                                             <div>₹{{ number_format($item->mrp, 2) }}</div>
                                         </td>
-                                        <td class="text-end">
-                                            <div>₹{{ number_format($item->commission_percent, 2) }}</div>
-                                        </td>
-                                        <td class="text-end">
-                                            <div>₹{{ number_format($item->commission_amount, 2) }}</div>
-                                        </td>
                                         <td class="text-end fw-bold text-dark pe-4">₹{{ number_format($item->amount, 2) }}</td>
                                     </tr>
                                     @endforeach
                                 @else
-                                    <tr><td colspan="6" class="text-center py-5 text-muted">No items found</td></tr>
+                                    <tr><td colspan="8" class="text-center py-5 text-muted">No items found</td></tr>
                                 @endif
                             </tbody>
                         </table>

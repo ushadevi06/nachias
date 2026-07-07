@@ -181,6 +181,14 @@ class SalesInvoiceController extends Controller
 
         // Find the maximum running number
         $maxRunningNo = 0;
+        if ($financialYear === '26-27') {
+            if ($brandCode === 'CW') {
+                $maxRunningNo = 1157;
+            } elseif ($brandCode === 'CDS') {
+                $maxRunningNo = 722;
+            }
+        }
+
         $invoices = SalesInvoice::where('brand_id', $brandId)
             ->where('inv_no', 'like', "%/%/{$financialYear}")
             ->get(['inv_no']);
@@ -262,6 +270,14 @@ class SalesInvoiceController extends Controller
                             $financialYear = substr($startFY, -2) . '-' . substr($endFY, -2);
 
                             $maxRunningNo = 0;
+                            if ($financialYear === '26-27') {
+                                if ($brandCode === 'CW') {
+                                    $maxRunningNo = 1157;
+                                } elseif ($brandCode === 'CDS') {
+                                    $maxRunningNo = 722;
+                                }
+                            }
+
                             $invoices = SalesInvoice::where('brand_id', $selectedBrandId)
                                 ->where('inv_no', 'like', "%/%/{$financialYear}")
                                 ->when($id, function($q) use ($id) {

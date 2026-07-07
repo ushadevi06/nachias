@@ -95,6 +95,66 @@ Route::get('/update_page', function () {
     return view('update_page');
 });
 
+Route::get('/fix-orderaxe-customers', function () {
+    $service = new \App\Services\OrderaxeService();
+    $apiOrders = $service->fetchOrders(0, 100);
+
+    if (!$apiOrders) {
+        return response()->json(['status' => 'error', 'message' => 'Could not fetch orders from Orderaxe API.']);
+    }
+
+    $apiOrdersMap = [];
+    foreach ($apiOrders as $order) {
+        if (!empty($order['order_no'])) {
+            $apiOrdersMap[$order['order_no']] = $order;
+        }
+        if (!empty($order['_id'])) {
+            $apiOrdersMap[$order['_id']] = $order;
+        }
+    }
+
+    $localOrders = \App\Models\SalesOrder::whereNotNull('orderaxe_id')
+        ->orWhereNotNull('order_no')
+        ->get();
+
+    $output = [];
+    $mismatches = 0;
+
+    foreach ($localOrders as $so) {
+        $apiOrder = $apiOrdersMap[$so->order_no] ?? ($apiOrdersMap[$so->orderaxe_id] ?? null);
+        if (!$apiOrder) {
+            $output[] = "Order {$so->so_no} (#{$so->order_no}): API order not found in current page.";
+            continue;
+        }
+
+        $refId = $apiOrder['retailer']['reference_id'] ?? null;
+        if (empty($refId)) {
+            $output[] = "Order {$so->so_no} (#{$so->order_no}): API order has no reference_id.";
+            continue;
+        }
+
+        $correctCustomer = \App\Models\Customer::where('code', $refId)->first();
+        if (!$correctCustomer) {
+            $output[] = "Order {$so->so_no} (#{$so->order_no}): Reference ID '{$refId}' does not match any Customer in database.";
+            continue;
+        }
+
+        $currentCustomer = $so->customer;
+        if (!$currentCustomer || $currentCustomer->id !== $correctCustomer->id) {
+            $currentName = $currentCustomer ? $currentCustomer->name : 'None';
+            $currentCode = $currentCustomer ? $currentCustomer->code : 'None';
+            $output[] = "<strong>MISMATCH FIXED:</strong> Order {$so->so_no} (#{$so->order_no}) updated from customer [{$currentName} (Code: {$currentCode})] to [{$correctCustomer->name} (Code: {$correctCustomer->code})].";
+            $so->update(['customer_id' => $correctCustomer->id]);
+            $mismatches++;
+        } else {
+            $output[] = "OK: Order {$so->so_no} (#{$so->order_no}) matches Customer: {$currentCustomer->name} (Code: {$currentCustomer->code})";
+        }
+    }
+
+    $outputHtml = implode("<br>", $output);
+    return "<h3>Checked " . $localOrders->count() . " local orders. Mismatches fixed: $mismatches</h3><br>" . $outputHtml;
+});
+
 
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {

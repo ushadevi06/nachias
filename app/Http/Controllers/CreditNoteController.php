@@ -304,7 +304,7 @@ class CreditNoteController extends Controller
                 $fyYear = $currentYear - 1;
             }
             $fySuffix = substr($fyYear, -2);
-            $prefix = 'CN' . $fySuffix . '-';
+            $prefix = 'RCN' . $fySuffix . '-';
 
             $lastNote = CreditNote::withTrashed()
                 ->where('note_no', 'like', $prefix . '%')

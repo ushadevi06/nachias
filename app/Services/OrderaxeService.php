@@ -89,7 +89,7 @@ class OrderaxeService
 
             if (!$orderNo) return false;
 
-            if ($orderNo == '100008782') return false;
+            if (in_array($orderNo, ['100008782', '100008821'])) return false;
 
             if (isset($orderData['created_at'])) {
                 $orderDate = date('Y-m-d', (int)($orderData['created_at'] / 1000));
@@ -107,12 +107,24 @@ class OrderaxeService
             }
 
             $customerData = $orderData['retailer'] ?? [];
-            $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? 'Unknown Orderaxe Customer');
-            $cleanedCustomerName = trim(preg_replace('/\s*\(.*\)/', '', $customerName));
-            $customer = Customer::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cleanedCustomerName) . '%'])->first();
+            $referenceId = $customerData['reference_id'] ?? null;
+            $customer = null;
+
+            if (!empty($referenceId)) {
+                $customer = Customer::where('code', $referenceId)->first();
+            }
+
             if (!$customer) {
+                $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? 'Unknown Orderaxe Customer');
+                $cleanedCustomerName = trim(preg_replace('/\s*\(.*\)/', '', $customerName));
+                $customer = Customer::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($cleanedCustomerName) . '%'])->first();
+            }
+
+            if (!$customer) {
+                $customerName = $customerData['alias']['name'] ?? ($customerData['org']['name'] ?? 'Unknown Orderaxe Customer');
                 Log::warning('Orderaxe Sync: Customer not found. Skipping order.', [
                     'customer_name' => $customerName,
+                    'reference_id' => $referenceId,
                     'order_no' => $orderNo
                 ]);
                 return false;
@@ -155,6 +167,9 @@ class OrderaxeService
 
             if ($existingOrder) {
                 $updateData = [];
+                if ($existingOrder->customer_id != $customer->id) {
+                    $updateData['customer_id'] = $customer->id;
+                }
                 if (is_null($existingOrder->agent_id) && $agentId) {
                     $updateData['agent_id'] = $agentId;
                 }
