@@ -17,7 +17,7 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : $nextInvNumber) }}">
+                                    <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}" readonly>
                                     <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
                                     @error('inv_no')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -29,6 +29,23 @@
                                     <input type="text" class="form-control form-control inv_date @error('inv_date') is-invalid @enderror" name="inv_date" placeholder="Enter Invoice Date" value="{{ old('inv_date', isset($invoice) ? $invoice->inv_date->format('d-m-Y') : date('d-m-Y')) }}" />
                                     <label for="inv_date">Invoice Date <span class="text-danger">*</span> </label>
                                     @error('inv_date')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <select id="brand_id" name="brand_id" class="select2 form-select @error('brand_id') is-invalid @enderror" data-placeholder="Select Brand" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'disabled' : '' }}>
+                                        <option value="">Select Brand</option>
+                                        @foreach($brands as $brand)
+                                            <option value="{{ $brand->id }}" {{ (old('brand_id', isset($invoice) ? $invoice->brand_id : '') == $brand->id) ? 'selected' : '' }}>{{ $brand->brand_name }} ({{ $brand->code }})</option>
+                                        @endforeach
+                                    </select>
+                                    @if(isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched'))
+                                        <input type="hidden" name="brand_id" value="{{ $invoice->brand_id }}">
+                                    @endif
+                                    <label for="brand_id">Brand <span class="text-danger">*</span></label>
+                                    @error('brand_id')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -2063,5 +2080,78 @@
                 });
             }
         });
+
+        let originalBrandId = "{{ isset($invoice) ? $invoice->brand_id : '' }}";
+        let originalInvNo = "{{ isset($invoice) ? $invoice->inv_no : '' }}";
+        let originalInvDate = "{{ isset($invoice) ? $invoice->inv_date->format('d-m-Y') : '' }}";
+
+        function getFinancialYearStart(dateStr) {
+            if (!dateStr) return null;
+            let parts = dateStr.split('-');
+            let year, month;
+            if (parts[0].length === 4) {
+                year = parseInt(parts[0]);
+                month = parseInt(parts[1]);
+            } else {
+                year = parseInt(parts[2]);
+                month = parseInt(parts[1]);
+            }
+            return (month >= 4) ? year : (year - 1);
+        }
+
+        function updateInvoiceNo() {
+            let brandId = $('#brand_id').val();
+            let invDate = $('input[name="inv_date"]').val();
+
+            if (!brandId || !invDate) {
+                $('#inv_no').val('');
+                return;
+            }
+
+            if (originalInvNo && brandId == originalBrandId && getFinancialYearStart(invDate) === getFinancialYearStart(originalInvDate)) {
+                $('#inv_no').val(originalInvNo);
+                return;
+            }
+
+            $.ajax({
+                url: '{{ url("sales_invoices/get_next_invoice_no") }}',
+                method: 'GET',
+                data: {
+                    brand_id: brandId,
+                    inv_date: invDate
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#inv_no').val(response.inv_no);
+                    } else {
+                        console.error(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('AJAX error fetching invoice number');
+                }
+            });
+        }
+
+        $('#brand_id').on('change', function() {
+            updateInvoiceNo();
+        });
+
+        $('input[name="inv_date"]').on('change input', function() {
+            updateInvoiceNo();
+        });
+
+        setTimeout(function() {
+            let fp = document.querySelector('input[name="inv_date"]');
+            if (fp && fp._flatpickr) {
+                fp._flatpickr.config.onChange.push(function(selectedDates, dateStr, instance) {
+                    updateInvoiceNo();
+                });
+            }
+        }, 1000);
+
+        if ($('#brand_id').val()) {
+            updateInvoiceNo();
+        }
 </script>
 @endsection

@@ -143,6 +143,67 @@ class SalesInvoiceController extends Controller
         return view('sales_invoice.view', compact('customers'));
     }
 
+    public function getNextInvoiceNo(Request $request)
+    {
+        $brandId = $request->brand_id;
+        $invDateStr = $request->inv_date; // e.g. "07-07-2026"
+        
+        if (!$brandId || !$invDateStr) {
+            return response()->json(['success' => false, 'message' => 'Brand ID and Invoice Date are required.']);
+        }
+
+        try {
+            $date = Carbon::createFromFormat('d-m-Y', $invDateStr);
+        } catch (\Exception $e) {
+            try {
+                $date = Carbon::createFromFormat('Y-m-d', $invDateStr);
+            } catch (\Exception $ex) {
+                return response()->json(['success' => false, 'message' => 'Invalid date format.']);
+            }
+        }
+
+        $brand = \App\Models\Brand::find($brandId);
+        if (!$brand) {
+            return response()->json(['success' => false, 'message' => 'Brand not found.']);
+        }
+
+        $brandCode = trim($brand->code);
+        if (empty($brandCode)) {
+            $brandCode = strtoupper(substr($brand->brand_name, 0, 2));
+        }
+
+        // Calculate Financial Year (April to March)
+        $year = (int)$date->format('Y');
+        $month = (int)$date->format('m');
+        $startYear = ($month >= 4) ? $year : ($year - 1);
+        $endYear = $startYear + 1;
+        $financialYear = substr($startYear, -2) . '-' . substr($endYear, -2);
+
+        // Find the maximum running number
+        $maxRunningNo = 0;
+        $invoices = SalesInvoice::where('brand_id', $brandId)
+            ->where('inv_no', 'like', "%/%/{$financialYear}")
+            ->get(['inv_no']);
+
+        foreach ($invoices as $inv) {
+            $parts = explode('/', $inv->inv_no);
+            if (count($parts) === 3) {
+                $runningNo = (int)$parts[1];
+                if ($runningNo > $maxRunningNo) {
+                    $maxRunningNo = $runningNo;
+                }
+            }
+        }
+
+        $nextRunningNo = $maxRunningNo + 1;
+        $generatedInvNo = "{$brandCode}/{$nextRunningNo}/{$financialYear}";
+
+        return response()->json([
+            'success' => true,
+            'inv_no' => $generatedInvNo
+        ]);
+    }
+
     public function add(Request $request, $id = null)
     {
         if ($id) {
@@ -156,7 +217,80 @@ class SalesInvoiceController extends Controller
         }
 
         if ($request->isMethod('post')) {
+            $selectedBrandId = $request->brand_id;
+            if ($selectedBrandId && $request->inv_date) {
+                try {
+                    $selectedDate = null;
+                    try {
+                        $selectedDate = Carbon::createFromFormat('d-m-Y', $request->inv_date);
+                    } catch (\Exception $e) {
+                        $selectedDate = Carbon::createFromFormat('Y-m-d', $request->inv_date);
+                    }
+
+                    $regenerate = false;
+                    if (!$id) {
+                        $regenerate = true;
+                    } else {
+                        $invoice = SalesInvoice::findOrFail($id);
+                        $origDate = Carbon::parse($invoice->inv_date);
+                        $origYear = (int)$origDate->format('Y');
+                        $origMonth = (int)$origDate->format('m');
+                        $origFYStart = ($origMonth >= 4) ? $origYear : ($origYear - 1);
+                        
+                        $selYear = (int)$selectedDate->format('Y');
+                        $selMonth = (int)$selectedDate->format('m');
+                        $selFYStart = ($selMonth >= 4) ? $selYear : ($selYear - 1);
+
+                        if ($invoice->brand_id != $selectedBrandId || $origFYStart != $selFYStart) {
+                            $regenerate = true;
+                        } else {
+                            $request->merge(['inv_no' => $invoice->inv_no]);
+                        }
+                    }
+
+                    if ($regenerate) {
+                        $brand = \App\Models\Brand::find($selectedBrandId);
+                        if ($brand) {
+                            $brandCode = trim($brand->code);
+                            if (empty($brandCode)) {
+                                $brandCode = strtoupper(substr($brand->brand_name, 0, 2));
+                            }
+                            $selYear = (int)$selectedDate->format('Y');
+                            $selMonth = (int)$selectedDate->format('m');
+                            $startFY = ($selMonth >= 4) ? $selYear : ($selYear - 1);
+                            $endFY = $startFY + 1;
+                            $financialYear = substr($startFY, -2) . '-' . substr($endFY, -2);
+
+                            $maxRunningNo = 0;
+                            $invoices = SalesInvoice::where('brand_id', $selectedBrandId)
+                                ->where('inv_no', 'like', "%/%/{$financialYear}")
+                                ->when($id, function($q) use ($id) {
+                                    $q->where('id', '!=', $id);
+                                })
+                                ->get(['inv_no']);
+
+                            foreach ($invoices as $inv) {
+                                $parts = explode('/', $inv->inv_no);
+                                if (count($parts) === 3) {
+                                    $runningNo = (int)$parts[1];
+                                    if ($runningNo > $maxRunningNo) {
+                                        $maxRunningNo = $runningNo;
+                                    }
+                                }
+                            }
+
+                            $nextRunningNo = $maxRunningNo + 1;
+                            $generatedInvNo = "{$brandCode}/{$nextRunningNo}/{$financialYear}";
+                            $request->merge(['inv_no' => $generatedInvNo]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Fail gracefully and let validation handle format
+                }
+            }
+
             $request->validate([
+                'brand_id' => 'required|exists:brands,id',
                 'inv_no' => 'required|min:3|max:50|unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'inv_date' => 'required|date',
                 'so_ids' => 'required|array',
@@ -214,7 +348,7 @@ class SalesInvoiceController extends Controller
             DB::beginTransaction();
             try {
                 $invoiceData = $request->only([
-                    'inv_no', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
+                    'inv_no', 'brand_id', 'customer_id', 'store_id', 'agent_id', 'delivery_address', 'remarks',
                     'invoice_status', 'payment_mode', 'extra_input', 'due_date',
                     'notes', 'transporter_name', 'transporter_id', 'transport_mode',
                     'vehicle_no', 'veh_type', 'transport_distance', 'tran_doc_no', 'tran_doc_date',
@@ -377,6 +511,8 @@ class SalesInvoiceController extends Controller
             $nextInvNumber = 'SV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
         }
 
+        $brands = \App\Models\Brand::active()->orderBy('brand_name', 'asc')->get();
+
         if ($invoice) {
             $soIds = $invoice->so_ids ? json_decode($invoice->so_ids, true) : ($invoice->so_id ? [$invoice->so_id] : []);
             $saleOrders = SalesOrder::whereIn('id', $soIds)->orderBy('id', 'desc')->get();
@@ -384,7 +520,7 @@ class SalesInvoiceController extends Controller
             $saleOrders = collect(); 
         }
 
-        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent'));
+        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent', 'brands'));
     }
 
     public function view($id)

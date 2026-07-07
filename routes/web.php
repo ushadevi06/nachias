@@ -473,6 +473,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Sales Invoice */
     Route::get('sales_invoices', [SalesInvoiceController::class, 'index']);
+    Route::get('sales_invoices/get_next_invoice_no', [SalesInvoiceController::class, 'getNextInvoiceNo']);
     Route::match(['GET', 'POST'], 'sales_invoices/add/{id?}', [SalesInvoiceController::class, 'add']);
     Route::get('sales_invoices/view/{id}', [SalesInvoiceController::class, 'view']);
     Route::get('sales_invoices/download-pdf/{id}', [SalesInvoiceController::class, 'downloadPdf']);

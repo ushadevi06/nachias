@@ -12,6 +12,7 @@ class SalesInvoice extends Model
 
     protected $fillable = [
         'inv_no',
+        'brand_id',
         'inv_date',
         'so_id',
         'so_ids',
@@ -94,6 +95,11 @@ class SalesInvoice extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
     }
 
     public function items()
