@@ -735,9 +735,9 @@ class SalesOrderController extends Controller
                         foreach ($sleeves as $sleeve) {
                             $sleeveUpper = strtoupper(trim($sleeve));
                             if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                                $sleeveDbValues = array_merge($sleeveDbValues, ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve']);
+                                $sleeveDbValues = array_merge($sleeveDbValues, ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS']);
                             } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                                $sleeveDbValues = array_merge($sleeveDbValues, ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve']);
+                                $sleeveDbValues = array_merge($sleeveDbValues, ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS']);
                             } else {
                                 $sleeveDbValues[] = $sleeve;
                             }
@@ -765,7 +765,9 @@ class SalesOrderController extends Controller
                             ->where('finished_item_code', $finishedItemCode);
 
                         if ($colorId) {
-                            $stockQuery2->where('color_id', $colorId);
+                            $stockQuery2->where(function ($q) use ($colorId) {
+                                $q->where('color_id', $colorId)->orWhereNull('color_id');
+                            });
                         }
                         if ($size) {
                             $stockQuery2->where('size', $size);
@@ -773,9 +775,9 @@ class SalesOrderController extends Controller
                         if ($sleeve) {
                             $sleeveUpper = strtoupper(trim($sleeve));
                             if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                                $sleeveDbValues = ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve'];
+                                $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
                             } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                                $sleeveDbValues = ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve'];
+                                $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
                             } else {
                                 $sleeveDbValues = [$sleeve];
                             }
@@ -799,7 +801,9 @@ class SalesOrderController extends Controller
                             });
 
                         if (!empty($item->color_id)) {
-                            $stockQuery3->where('color_id', $item->color_id);
+                            $stockQuery3->where(function ($q) use ($item) {
+                                $q->where('color_id', $item->color_id)->orWhereNull('color_id');
+                            });
                         }
                         if (!empty($item->size_id)) {
                             $stockQuery3->where('size', $item->size_id);
@@ -810,9 +814,9 @@ class SalesOrderController extends Controller
                             foreach ($sleeves as $sl) {
                                 $sleeveUpper = strtoupper(trim($sl));
                                 if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                                    $sleeveDbValues = array_merge($sleeveDbValues, ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve']);
+                                    $sleeveDbValues = array_merge($sleeveDbValues, ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS']);
                                 } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                                    $sleeveDbValues = array_merge($sleeveDbValues, ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve']);
+                                    $sleeveDbValues = array_merge($sleeveDbValues, ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS']);
                                 } else {
                                     $sleeveDbValues[] = $sl;
                                 }
@@ -1229,7 +1233,9 @@ class SalesOrderController extends Controller
             }
 
             if (!empty($item->color_id)) {
-                $stockQuery->where('color_id', $item->color_id);
+                $stockQuery->where(function ($q) use ($item) {
+                    $q->where('color_id', $item->color_id)->orWhereNull('color_id');
+                });
             }
 
             if (!empty($item->size_id)) {
@@ -1242,9 +1248,9 @@ class SalesOrderController extends Controller
                 foreach ($sleeves as $sleeve) {
                     $sleeveUpper = strtoupper(trim($sleeve));
                     if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                        $sleeveDbValues = array_merge($sleeveDbValues, ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve']);
+                        $sleeveDbValues = array_merge($sleeveDbValues, ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS']);
                     } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                        $sleeveDbValues = array_merge($sleeveDbValues, ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve']);
+                        $sleeveDbValues = array_merge($sleeveDbValues, ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS']);
                     } else {
                         $sleeveDbValues[] = $sleeve;
                     }
