@@ -515,6 +515,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('stock_consumables_returns/view/{id}', [StockConsumableReturnController::class, 'view']);
 
     /* Sales Order */
+    Route::get('sales_orders/fix-old-items', [SalesOrderController::class, 'fixOldItems']);
     Route::get('sales_orders', [SalesOrderController::class, 'index']);
     Route::match(['GET', 'POST'], 'sales_orders/add/{id?}', [SalesOrderController::class, 'add']);
     Route::get('sales_orders/view/{id}', [SalesOrderController::class, 'view']);

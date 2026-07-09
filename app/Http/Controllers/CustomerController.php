@@ -107,7 +107,7 @@ class CustomerController extends Controller
                 'category' => 'required|in:Retailer,Wholesaler',
                 'name' => 'required|string|min:3|max:50',
                 'code' => 'required|string|min:3|max:20|alpha_num|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|numeric|digits_between:10,15|unique:customers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no' => 'required|numeric|digits_between:10,15',
                 'email' => 'nullable|email|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
                 'transport_name' => 'nullable|string|min:3|max:50',
@@ -129,8 +129,8 @@ class CustomerController extends Controller
                 'tax_type_id' => 'nullable|exists:taxes,id',
                 'gst_no' => [
                     'nullable',
+                    'string',
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
-                    'unique:customers,gst_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'pan_no' => [
                     'nullable',

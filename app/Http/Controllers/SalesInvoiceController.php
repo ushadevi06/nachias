@@ -361,6 +361,13 @@ class SalesInvoiceController extends Controller
                     ]);
                 }
             }
+
+            try {
+                $this->validateStockAvailability($request->items, $id);
+            } catch (\Exception $e) {
+                return back()->withInput()->withErrors(['error' => $e->getMessage()]);
+            }
+
             DB::beginTransaction();
             try {
                 $invoiceData = $request->only([
@@ -413,20 +420,11 @@ class SalesInvoiceController extends Controller
 
                 if ($id) {
                     $invoice = SalesInvoice::with('items')->findOrFail($id);
+                    $this->adjustStock($id, true); // Revert existing stock before updating
                     $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
                     $invoice->update($invoiceData);                     
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
-                    
-                    $deletedItems = $invoice->items()->whereNotIn('id', $itemIds)->get();
-                    foreach ($deletedItems as $dItem) {
-                        if ($dItem->is_extra && $dItem->stock_entry_item_id) {
-                            \App\Models\StockEntryItem::where('id', $dItem->stock_entry_item_id)
-                                ->where('qty_out', '>=', $dItem->quantity)
-                                ->decrement('qty_out', $dItem->quantity);
-                        }
-                    }
-                    
                     $invoice->items()->whereNotIn('id', $itemIds)->forceDelete();
                 } else {
                     $invoiceData['received_amount'] = (float)$request->received_amount;
@@ -450,13 +448,6 @@ class SalesInvoiceController extends Controller
                     if (empty($apiColor)) {
                         $apiColor = 'A';
                     }
-                    
-                    if (!empty($item['id'])) {
-                        $existingItem = SalesInvoiceItem::find($item['id']);
-                        if ($existingItem && $existingItem->is_extra && $existingItem->stock_entry_item_id) {
-                            \App\Models\StockEntryItem::where('id', $existingItem->stock_entry_item_id)->where('qty_out', '>=', $existingItem->quantity)->decrement('qty_out', $existingItem->quantity);
-                        }
-                    }
 
                     SalesInvoiceItem::updateOrCreate(
                         ['id' => $item['id'] ?? null],
@@ -478,12 +469,9 @@ class SalesInvoiceController extends Controller
                             'is_extra' => $isExtra,
                         ]
                     );
-
-                    if ($isExtra && !empty($item['stock_entry_item_id'])) {
-                        \App\Models\StockEntryItem::where('id', $item['stock_entry_item_id'])
-                            ->increment('qty_out', $item['quantity']);
-                    }
                 }
+                
+                $this->adjustStock($invoiceId);
 
                 $invoice->load(['items', 'customer.city', 'customer.place']);
                 $totalPcs = (int) $invoice->items->sum('quantity');
@@ -718,11 +706,28 @@ class SalesInvoiceController extends Controller
                         if (empty($sleeveType)) $sleeveType = $item->stockEntryItem->sleeve_type;
                     } elseif ($item->brandCategory) {
                         $brandName = $item->brandCategory->name;
-                    }
+                    } 
 
                     $stockQty = 0;
-                    if ($item->stock_entry_item_id) {
+                    if ($item->sku) {
+                        $stockQtyQuery = DB::table('stock_entry_items')
+                            ->where(function($q) use($item) {
+                                $q->where('sku', $item->sku)
+                                  ->orWhere('barcode', $item->sku);
+                            })
+                            ->where('stock_type', 'finished_goods')
+                            ->whereNull('deleted_at');
+                        if ($item->size_id) {
+                            $stockQtyQuery->where('size', $item->size_id);
+                        }
+                        $stockQty = $stockQtyQuery->sum(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                    } elseif ($item->stock_entry_item_id) {
                         $stockQty = DB::table('stock_entry_items')->where('id', $item->stock_entry_item_id)->whereNull('deleted_at')->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                    }
+
+                    if (empty($brandName)) {
+                        $brandName = $item->item_name;
+                        $itemName = '';
                     }
 
                     $itemData = [
@@ -861,11 +866,28 @@ class SalesInvoiceController extends Controller
             }
 
             $stockQty = 0;
-            if ($item->stock_entry_item_id) {
+            if ($item->sku) {
+                $stockQtyQuery = DB::table('stock_entry_items')
+                    ->where(function($q) use($item) {
+                        $q->where('sku', $item->sku)
+                          ->orWhere('barcode', $item->sku);
+                    })
+                    ->where('stock_type', 'finished_goods')
+                    ->whereNull('deleted_at');
+                if ($item->size_id) {
+                    $stockQtyQuery->where('size', $item->size_id);
+                }
+                $stockQty = $stockQtyQuery->sum(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+            } elseif ($item->stock_entry_item_id) {
                 $stockQty = DB::table('stock_entry_items')
                     ->where('id', $item->stock_entry_item_id)
                     ->whereNull('deleted_at')
                     ->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+            }
+
+            if (empty($brandName)) {
+                $brandName = $item->item_name;
+                $itemName = '';
             }
 
             return [
@@ -973,6 +995,7 @@ class SalesInvoiceController extends Controller
         
         DB::beginTransaction();
         try {
+            $this->adjustStock($id, true);
             addLog('delete', 'Sales Invoice', 'sales_invoices', $id, $invoice->toArray(), null);
             $invoice->delete();
             
@@ -1616,5 +1639,178 @@ class SalesInvoiceController extends Controller
         }
         
         return response()->json(['results' => $results]);
+    }
+    private function validateStockAvailability($items, $invoiceId = null)
+    {
+        $existingInvoiceItems = [];
+        if ($invoiceId) {
+            $existingInvoiceItems = SalesInvoiceItem::where('sales_invoice_id', $invoiceId)->get();
+        }
+
+        $requiredQuantities = [];
+        foreach ($items as $item) {
+            $sku = $item['sku'] ?? null;
+            $size = $item['size'] ?? null;
+            $identifier = $sku ? $sku . '_' . $size : ($item['item_name'] ?? $item['art_no'] ?? 'unknown');
+            
+            if (!isset($requiredQuantities[$identifier])) {
+                $requiredQuantities[$identifier] = [
+                    'sku' => $sku,
+                    'size' => $size,
+                    'qty' => 0,
+                    'display' => $sku ?: $identifier
+                ];
+            }
+            $requiredQuantities[$identifier]['qty'] += (float)($item['quantity'] ?? 0);
+
+            // We still need to ensure stock_entry_item_id is somewhat valid to avoid the "Could not find matching stock" exception below
+            $stockEntryItemId = $item['stock_entry_item_id'] ?? null;
+            if (!$stockEntryItemId) {
+                $stockQuery = clone StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at');
+                if (!empty($item['sku'])) {
+                    $stockQuery->where(function ($q) use ($item) {
+                        $q->where('sku', $item['sku'])->orWhere('barcode', $item['sku']);
+                    });
+                } else {
+                    $stockQuery->where(function ($q) use ($item) {
+                        $finishedItemCode = $item['item_name'] ?? ($item['art_no'] ?? '');
+                        $q->where('finished_item_code', $finishedItemCode)
+                          ->orWhere('art_no', $finishedItemCode);
+                    });
+                }
+                if (!empty($item['size'])) {
+                    $stockQuery->where('size', $item['size']);
+                }
+                $matchedStockItem = $stockQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')->orderBy('id', 'desc')->first();
+                if ($matchedStockItem) {
+                    $stockEntryItemId = $matchedStockItem->id;
+                }
+            }
+
+            if (!$stockEntryItemId && $sku) {
+                throw new \Exception("Could not find matching stock for item: " . ($sku ?: ($item['item_name'] ?? 'Unknown Item')));
+            }
+        }
+
+        foreach ($requiredQuantities as $req) {
+            if (!$req['sku']) continue;
+
+            $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
+                ->whereNull('deleted_at')
+                ->where(function ($q) use ($req) {
+                    $q->where('sku', $req['sku'])->orWhere('barcode', $req['sku']);
+                });
+            if ($req['size']) {
+                $stockQuery->where('size', $req['size']);
+            }
+            
+            $totalIn = (clone $stockQuery)->sum('qty_in');
+            $totalOut = (clone $stockQuery)->sum('qty_out');
+            
+            $alreadyDeducted = 0;
+            if ($invoiceId) {
+                foreach ($existingInvoiceItems as $ei) {
+                    if ($ei->sku === $req['sku'] && $ei->size_id == $req['size']) {
+                        $alreadyDeducted += $ei->quantity;
+                    }
+                }
+            }
+            $effectiveAvailable = ($totalIn - $totalOut) + $alreadyDeducted;
+
+            if ($effectiveAvailable < $req['qty']) {
+                throw new \Exception("Insufficient stock for " . $req['display'] . " (Available: " . $effectiveAvailable . ", Required: " . $req['qty'] . ")");
+            }
+        }
+    }
+
+    private function adjustStock($salesInvoiceId, $revert = false)
+    {
+        $items = SalesInvoiceItem::where('sales_invoice_id', $salesInvoiceId)->get();
+        foreach ($items as $item) {
+            $stockEntryItemId = $item->stock_entry_item_id;
+
+            if (!$stockEntryItemId && !$revert) {
+                $matchedStockItem = null;
+                if (!empty($item->sku)) {
+                    $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
+                        ->whereNull('deleted_at')
+                        ->where(function ($q) use ($item) {
+                            $q->where('sku', $item->sku)
+                              ->orWhere('barcode', $item->sku);
+                        });
+
+                    if (!empty($item->size)) {
+                        $stockQuery->where('size', $item->size);
+                    }
+
+                    if (!empty($item->sleeve_type)) {
+                        $sleeveUpper = strtoupper(trim($item->sleeve_type));
+                        if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
+                            $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
+                        } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
+                            $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
+                        } else {
+                            $sleeveDbValues = [$item->sleeve_type];
+                        }
+                        $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
+                    }
+
+                    $matchedStockItem = $stockQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')->orderBy('id', 'desc')->first();
+                }
+
+                if (!$matchedStockItem) {
+                    $finishedItemCode = $item->item_name ?? $item->art_no;
+                    if ($finishedItemCode) {
+                        $stockQuery3 = StockEntryItem::where('stock_type', 'finished_goods')
+                            ->whereNull('deleted_at')
+                            ->where(function ($q) use ($finishedItemCode) {
+                                $q->where('finished_item_code', $finishedItemCode)
+                                  ->orWhere('art_no', $finishedItemCode);
+                            });
+
+                        if (!empty($item->color_id)) {
+                            $stockQuery3->where(function ($q) use ($item) {
+                                $q->where('color_id', $item->color_id)->orWhereNull('color_id');
+                            });
+                        }
+                        if (!empty($item->size)) {
+                            $stockQuery3->where('size', $item->size);
+                        }
+                        if (!empty($item->sleeve_type)) {
+                            $sleeveUpper = strtoupper(trim($item->sleeve_type));
+                            if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
+                                $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
+                            } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
+                                $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
+                            } else {
+                                $sleeveDbValues = [$item->sleeve_type];
+                            }
+                            $stockQuery3->whereIn('sleeve_type', $sleeveDbValues);
+                        }
+
+                        $matchedStockItem = $stockQuery3->orderByRaw('(qty_in - qty_out) > 0 DESC')->orderBy('id', 'desc')->first();
+                    }
+                }
+
+                if ($matchedStockItem) {
+                    $stockEntryItemId = $matchedStockItem->id;
+                    $item->update([
+                        'stock_entry_item_id' => $stockEntryItemId,
+                        'art_no' => $matchedStockItem->art_no ?? $item->art_no
+                    ]);
+                }
+            }
+
+            if ($stockEntryItemId) {
+                if ($revert) {
+                    StockEntryItem::where('id', $stockEntryItemId)
+                        ->where('qty_out', '>=', $item->quantity)
+                        ->decrement('qty_out', $item->quantity);
+                } else {
+                    StockEntryItem::where('id', $stockEntryItemId)
+                        ->increment('qty_out', $item->quantity);
+                }
+            }
+        }
     }
 }

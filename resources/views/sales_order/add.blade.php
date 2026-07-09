@@ -278,14 +278,9 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <select name="items[{{ $index }}][color_id]" class="select2 form-select @error("items.$index.color_id") is-invalid @enderror" data-placeholder="Color">
-                                                            <option value="">Select Color</option>
-                                                            @foreach($colors as $col)
-                                                                <option value="{{ $col->id }}" {{ ($item['color_id'] ?? '') == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                        <input type="text" name="items[{{ $index }}][api_color]" class="form-control color-input @error("items.$index.api_color") is-invalid @enderror" placeholder="Color" value="{{ $item['api_color'] ?? '' }}">
                                                     </div>
-                                                    @error("items.$index.color_id")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
+                                                    @error("items.$index.api_color")<div class="text-danger mt-1" style="font-size: 0.75rem;">{{ $message }}</div>@enderror
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
@@ -357,7 +352,13 @@
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
                                                         @php 
-                                                            $itemFinishedCode = $item->stockEntryItem ? $item->stockEntryItem->finished_item_code : ($item->item->code ?? '');
+                                                            if ($item->stockEntryItem) {
+                                                                $itemFinishedCode = $item->stockEntryItem->finished_item_code;
+                                                            } elseif (!empty($item->item_name)) {
+                                                                $itemFinishedCode = formatStockItemName($item->item_name);
+                                                            } else {
+                                                                $itemFinishedCode = $item->item->code ?? '';
+                                                            }
                                                             $stockItemKey = $item->sku ?: $itemFinishedCode;
                                                         @endphp
                                                         <input type="text" class="form-control stock-item-autocomplete" placeholder="Stock Item" value="{{ $itemFinishedCode }}" autocomplete="off">
@@ -375,12 +376,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <select name="items[{{ $index }}][color_id]" class="select2 form-select" data-placeholder="Color">
-                                                            <option value="">Select Color</option>
-                                                            @foreach($colors as $col)
-                                                                <option value="{{ $col->id }}" {{ $item->color_id == $col->id ? 'selected' : '' }}>{{ $col->color_name }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                        <input type="text" name="items[{{ $index }}][api_color]" class="form-control color-input" placeholder="Color" value="{{ $item->api_color }}">
                                                     </div>
                                                 </td>
                                                 <td>
@@ -412,9 +408,26 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
+                                                        @php
+                                                            $availableStock = 0;
+                                                            if (!empty($item->sku) || !empty($itemFinishedCode)) {
+                                                                $sQuery = \App\Models\StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at');
+                                                                if (!empty($item->sku)) {
+                                                                    $sQuery->where(function($q) use ($item) {
+                                                                        $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
+                                                                    });
+                                                                } else {
+                                                                    $sQuery->where('finished_item_code', $itemFinishedCode);
+                                                                }
+                                                                if (!empty($item->size_id)) {
+                                                                    $sQuery->where('size', $item->size_id);
+                                                                }
+                                                                $availableStock = $sQuery->sum('qty_in') - $sQuery->sum('qty_out');
+                                                            }
+                                                        @endphp
                                                         <input type="number" name="items[{{ $index }}][qty]" class="form-control qty-input" value="{{ $item->qty }}" min="0.01" step="0.01">
                                                         <div class="stock-info-wrapper mt-1">
-                                                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">0.00</span></small>
+                                                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format($availableStock, 2) }}</span></small>
                                                             <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
                                                         </div>
                                                     </div>
@@ -462,12 +475,7 @@
                                         </td>
                                         <td>
                                             <div class="form-floating form-floating-outline">
-                                                <select name="items[0][color_id]" class="select2 form-select" data-placeholder="Color">
-                                                    <option value="">Select Color</option>
-                                                    @foreach($colors as $col)
-                                                        <option value="{{ $col->id }}">{{ $col->color_name }}</option>
-                                                    @endforeach
-                                                </select>
+                                                <input type="text" name="items[0][api_color]" class="form-control color-input" placeholder="Color">
                                             </div>
                                         </td>
                                         <td>
@@ -1016,7 +1024,7 @@ $(document).ready(function () {
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <select name="items[${itemIndex}][color_id]" class="select2 form-select color-select" data-placeholder="Color">${colorOpts}</select>
+                        <input type="text" name="items[${itemIndex}][api_color]" class="form-control color-input" placeholder="Color">
                     </div>
                 </td>
                 <td>
@@ -1222,7 +1230,7 @@ $(document).ready(function () {
         let $existing = $('.item-row').filter(function() {
             return $(this).find('.sku-input').val() === res.sku &&
                 $(this).find('.size-select').val() == res.size &&
-                $(this).find('select[name*="[color_id]"]').val() == res.color_id;
+                $(this).find('.color-input').val() == (res.api_color || res.color_name || '');
         }).first();
 
         if ($existing.length) {
@@ -1262,8 +1270,8 @@ $(document).ready(function () {
         $row.find('.stock-entry-item-id').val(res.stock_entry_item_id);
         $row.find('.sku-input').val(res.sku);
         
-        if ($row.find('select[name*="[color_id]"]').val() != res.color_id) {
-            $row.find('select[name*="[color_id]"]').val(res.color_id).trigger('change');
+        if (res.api_color || res.color_name) {
+            $row.find('.color-input').val(res.api_color || res.color_name);
         }
         
         $row.find('.sleeve-input').val(res.sleeve_type);
@@ -1405,7 +1413,7 @@ $(document).ready(function () {
         } else {
             $row.find('input[name*="[item_id]"]').val('');
             $row.find('input[name*="[brand_cat_id]"]').val('');
-            $row.find('select[name*="[color_id]"]').val('').trigger('change');
+            $row.find('.color-input').val('');
             $row.find('.sku-input').val('');
             $row.find('.sleeve-input').val('');
             $row.find('.art-no-input').val('');
@@ -1439,7 +1447,7 @@ $(document).ready(function () {
         $row.find('.qty-input').trigger('input');
     }
 
-    $(document).on('change', '.size-select, select[name*="[color_id]"]', function() {
+    $(document).on('change', '.size-select, .color-input', function() {
         updateStockAndRate($(this).closest('.item-row'));
     });
 
@@ -1483,7 +1491,8 @@ $(document).ready(function () {
 
     function validateSubmit() {
         let hasError = $('.qty-input.is-invalid').length > 0;
-        $('button[type="submit"]').prop('disabled', hasError);
+        // submit button is kept enabled regardless of stock error
+        $('button[type="submit"]').prop('disabled', false);
     }
 
     function calculateTotals() {

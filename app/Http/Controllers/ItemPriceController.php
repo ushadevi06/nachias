@@ -240,6 +240,7 @@ class ItemPriceController extends Controller
                         ];
 
                         $existing = ItemPrice::where('finished_item_code', $finishedItemCode)
+                            ->where('art_no', $artNo)
                             ->where('size', $sz)
                             ->whereDate('effective_from', $effectiveFrom)
                             ->first();
@@ -278,6 +279,7 @@ class ItemPriceController extends Controller
                         ];
 
                         $existing = ItemPrice::where('finished_item_code', $finishedItemCode)
+                            ->where('art_no', $artNo)
                             ->where('size', $sz)
                             ->whereDate('effective_from', $effectiveFrom)
                             ->first();

@@ -207,19 +207,75 @@ class OrderaxeService
 
                         $attributes = $itemData['attributes'] ?? [];
                         $apiColor = null;
+                        $apiSize = null;
+                        $apiFit = null;
                         foreach ($attributes as $attr) {
                             $attrId = $attr['attr_id'] ?? null;
                             $attrName = strtolower($attr['name'] ?? $attr['key'] ?? '');
+                            $attrVal = $attr['value'] ?? $attr['val'] ?? null;
                             if ($attrId === '672d9a34a4af6e35050547fe' || $attrName === 'color') {
-                                $apiColor = $attr['value'] ?? $attr['val'] ?? null;
-                                break;
+                                $apiColor = $attrVal;
+                            } elseif ($attrId === '672d9a34a4af6e35050547fd' || $attrName === 'size') {
+                                $apiSize = $attrVal;
+                            } elseif ($attrId === '672d9a34a4af6e35050547ff' || $attrName === 'fit' || $attrName === 'sleeve') {
+                                $apiFit = $attrVal;
                             }
                         }
 
+                        $orderaxeItemName = $product['name'] ?? $product['title'] ?? $product['product_name'] ?? $itemData['name'] ?? $itemData['title'] ?? $itemData['variationDescription'] ?? null;
+
+                        $sleeveDbValues = [];
+                        if ($apiFit) {
+                            $apiFitUpper = strtoupper(trim($apiFit));
+                            if ($apiFitUpper === 'FS' || $apiFitUpper === 'F/S' || $apiFitUpper === 'FULL') {
+                                $sleeveDbValues = ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve'];
+                            } elseif ($apiFitUpper === 'HS' || $apiFitUpper === 'H/S' || $apiFitUpper === 'HALF') {
+                                $sleeveDbValues = ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve'];
+                            } else {
+                                $sleeveDbValues = [$apiFit];
+                            }
+                        }
+
+                        $stockEntryItemQuery = StockEntryItem::where(function ($q) use ($barcode) {
+                                $q->where('sku', $barcode)
+                                  ->orWhere('barcode', $barcode);
+                            })
+                            ->where('stock_type', 'finished_goods');
+
+                        if (!empty($apiSize)) {
+                            $stockEntryItemQuery->where('size', $apiSize);
+                        }
+
+                        if (!empty($sleeveDbValues)) {
+                            $stockEntryItemQuery->whereIn('sleeve_type', $sleeveDbValues);
+                        }
+
+                        $stockEntryItem = $stockEntryItemQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')
+                            ->orderBy('id', 'desc')
+                            ->first();
+
+                        $updateItemData = [];
+                        
                         if ($apiColor) {
+                            $updateItemData['api_color'] = $apiColor;
+                        }
+
+                        if ($orderaxeItemName) {
+                            $updateItemData['item_name'] = $orderaxeItemName;
+                        }
+
+                        if ($stockEntryItem) {
+                            $updateItemData['art_no'] = $stockEntryItem->art_no;
+                        } else {
+                            if ($orderaxeItemName) {
+                                $updateItemData['art_no'] = strtoupper(trim(str_ireplace('Aero Cut', '', $orderaxeItemName)));
+                            }
+                        }
+
+                        if (!empty($updateItemData)) {
                             SalesOrderItem::where('sale_order_id', $existingOrder->id)
                                 ->where('sku', $barcode)
-                                ->update(['api_color' => $apiColor]);
+                                ->update($updateItemData);
                         }
                     }
                 }
@@ -306,7 +362,6 @@ class OrderaxeService
                             }
                         }
 
-                        // Query StockEntryItem matching barcode, size, and sleeve
                         $stockEntryItemQuery = StockEntryItem::where(function ($q) use ($barcode) {
                                 $q->where('sku', $barcode)
                                   ->orWhere('barcode', $barcode);
@@ -333,41 +388,17 @@ class OrderaxeService
                             $sizeId = $stockEntryItem->size ?? $apiSize;
                             $sleeveType = $stockEntryItem->sleeve_type;
                         } else {
-                            Log::warning('Orderaxe Sync: Exact StockEntryItem match failed (barcode + size + sleeve).', [
+                            $artNo = null;
+                            if ($orderaxeItemName) {
+                                $artNo = strtoupper(trim(str_ireplace('Aero Cut', '', $orderaxeItemName)));
+                            }
+                            
+                            Log::warning('Orderaxe Sync: Exact StockEntryItem match failed (barcode + size + sleeve). Using Orderaxe name and generated Art No.', [
                                 'barcode' => $barcode,
                                 'size' => $apiSize,
                                 'sleeve' => $apiFit,
                                 'order_no' => $orderNo
                             ]);
-                            $barcodeMaster = \App\Models\BarcodeMaster::where('barcode_no', $barcode)->orderBy('id', 'desc')->first();
-                            if ($barcodeMaster) {
-                                $artNo = $barcodeMaster->art_no;
-                                $finishedItemCode = $barcodeMaster->item_code;
-                                $colorId = $barcodeMaster->color_id;
-                                $sizeId = $barcodeMaster->size ?? $apiSize;
-                                $sleeveType = $barcodeMaster->sleeve_type;
-
-                                if ($sleeveType === 'F/S') {
-                                    $sleeveType = 'Full';
-                                } elseif ($sleeveType === 'H/S') {
-                                    $sleeveType = 'Half';
-                                }
-                            }
-                            if (!$artNo && !empty($orderaxeItemName)) {
-                                $fallbackStock = StockEntryItem::where('finished_item_code', $orderaxeItemName)->whereNotNull('art_no')->first();
-                                if ($fallbackStock) {
-                                    $artNo = $fallbackStock->art_no;
-                                    $finishedItemCode = $fallbackStock->finished_item_code;
-                                } else {
-                                    $fallbackBarcode = \App\Models\BarcodeMaster::where('item_code', $orderaxeItemName)
-                                        ->whereNotNull('art_no')
-                                        ->first();
-                                    if ($fallbackBarcode) {
-                                        $artNo = $fallbackBarcode->art_no;
-                                        $finishedItemCode = $fallbackBarcode->item_code;
-                                    }
-                                }
-                            }
                         }
 
                         if (!$sizeId) {

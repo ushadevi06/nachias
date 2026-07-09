@@ -280,7 +280,19 @@
                                                 }
 
                                                 $stockQty = 0;
-                                                if ($item->stock_entry_item_id) {
+                                                if (isset($item->sku) && $item->sku) {
+                                                    $stockQtyQuery = \Illuminate\Support\Facades\DB::table('stock_entry_items')
+                                                        ->where(function($q) use($item) {
+                                                            $q->where('sku', $item->sku)
+                                                              ->orWhere('barcode', $item->sku);
+                                                        })
+                                                        ->where('stock_type', 'finished_goods')
+                                                        ->whereNull('deleted_at');
+                                                    if (isset($item->size) && $item->size) {
+                                                        $stockQtyQuery->where('size', $item->size);
+                                                    }
+                                                    $stockQty = $stockQtyQuery->sum(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                                                } elseif (isset($item->stock_entry_item_id) && $item->stock_entry_item_id) {
                                                     $stockQty = \Illuminate\Support\Facades\DB::table('stock_entry_items')
                                                         ->where('id', $item->stock_entry_item_id)
                                                         ->whereNull('deleted_at')
@@ -352,7 +364,9 @@
                                             <td class="s-no text-center">{{ $loop->iteration }}</td>
                                             <td>
                                                 <div class="fw-bold text-dark">{{ $row->brand_name ?? '' }}</div>
-                                                <div class="small text-muted">{{ $row->item_name ?? '' }} ({{ $row->sleeve_type ?? '' }})</div>
+                                                @if(!empty($row->item_name) && $row->item_name !== ($row->brand_name ?? ''))
+                                                    <div class="small text-muted">{{ $row->item_name }} ({{ $row->sleeve_type ?? '' }})</div>
+                                                @endif
                                                 @if(!empty($row->sku))
                                                     <div class="small text-primary">Barcode: {{ $row->sku }}</div>
                                                 @endif
@@ -364,6 +378,8 @@
                                                 <input type="hidden" name="items[{{ $index }}][sleeve_type]" class="sleeve-type" value="{{ $row->sleeve_type ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][sku]" class="sku" value="{{ $row->sku ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                <input type="hidden" name="items[{{ $index }}][max_qty]" class="max-qty" value="{{ $row->max_qty ?? '' }}">
+                                                <input type="hidden" name="items[{{ $index }}][stock_qty]" class="stock-qty" value="{{ $row->stock_qty ?? '' }}">
                                                 <input type="hidden" name="items[{{ $index }}][is_extra]" class="is-extra" value="{{ $row->is_extra ?? '' }}">
                                             </td>
                                             <td>
@@ -395,9 +411,9 @@
                                                 @if(isset($row->max_qty) && $row->max_qty !== '')
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif
-                                                {{-- @if(isset($row->stock_qty) && $row->stock_qty !== '')
-                                                    <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-warning' : 'text-success' }} d-block">In Stock: {{ $row->stock_qty }}</small>
-                                                @endif --}}
+                                                @if(isset($row->stock_qty) && $row->stock_qty !== '')
+                                                    <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block" style="font-weight: 500;">Stock: {{ $row->stock_qty }}</small>
+                                                @endif
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
@@ -1175,7 +1191,7 @@
                     <td class="s-no text-center">${index + 1}</td>
                     <td>
                         <div class="fw-bold text-dark">${matchedItem.brand_name || ''}</div>
-                        <div class="small text-muted">${matchedItem.item_name || ''} (${matchedItem.sleeve || ''})</div>
+                        ${(matchedItem.item_name && matchedItem.item_name !== matchedItem.brand_name) ? `<div class="small text-muted">${matchedItem.item_name} (${matchedItem.sleeve || ''})</div>` : ''}
                         ${matchedItem.sku ? `<div class="small text-primary">Barcode: ${matchedItem.sku}</div>` : ''}
                         <input type="hidden" name="items[${index}][brand_id]" class="brand-id" value="${matchedItem.brand_id}">
                         <input type="hidden" name="items[${index}][brand_name]" class="brand-name" value="${matchedItem.brand_name || ''}">
@@ -1213,7 +1229,7 @@
                         </div>
                         <div class="qty-error text-danger small" style="display:none;"></div>
                         ${maxQty ? `<small class="text-info d-block">Ordered: ${maxQty}</small>` : ''}
-                        ${matchedItem.stock_qty !== undefined ? `<!-- <small class="${matchedItem.stock_qty < (maxQty || Infinity) ? 'text-warning' : 'text-success'} d-block">In Stock: ${matchedItem.stock_qty}</small> -->` : ''}
+                        ${matchedItem.stock_qty !== undefined ? `<small class="${matchedItem.stock_qty < (maxQty || Infinity) ? 'text-danger' : 'text-muted'} d-block" style="font-weight: 500;">Stock: ${matchedItem.stock_qty}</small>` : ''}
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">

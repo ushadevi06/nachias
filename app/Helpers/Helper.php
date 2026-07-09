@@ -126,3 +126,37 @@ if (!function_exists('formatIndianCurrency')) {
         return $isNegative ? '-' . $formatted : $formatted;
     }
 }
+
+if (!function_exists('formatStockItemName')) {
+    function formatStockItemName($categoryName)
+    {
+        if (empty($categoryName)) {
+            return '';
+        }
+
+        $formatted = strtoupper(trim($categoryName));
+
+        // Use cache to avoid querying styles on every call if this is in a loop
+        $styles = \Illuminate\Support\Facades\Cache::remember('active_styles_for_formatting', 3600, function () {
+            return \App\Models\Style::active()->whereNotNull('code')->get();
+        });
+
+        foreach ($styles as $style) {
+            if (empty($style->style_name) || empty($style->code)) {
+                continue;
+            }
+            $styleNameUpper = strtoupper($style->style_name);
+            $styleCodeUpper = strtoupper($style->code);
+            // Replace the full word style name with the code
+            $formatted = str_replace($styleNameUpper, $styleCodeUpper, $formatted);
+        }
+
+        // Replace spaces with hyphens (e.g., CW-WHT H/S -> CW-WHT-H/S)
+        $formatted = str_replace(' ', '-', $formatted);
+        // Clean up any double hyphens if they occur
+        $formatted = str_replace('--', '-', $formatted);
+
+        return $formatted;
+    }
+}
+

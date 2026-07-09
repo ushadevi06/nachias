@@ -162,7 +162,14 @@
                                         <td class="ps-4 fw-bold">{{ sprintf('%02d', $idx + 1) }}</td>
                                         <td>
                                             @php
-                                                $codeToParse = $item->getAttributes()['item_name'] ?? $item->item_name ?? $item->finished_item_code ?? '';
+                                                $codeToParse = '';
+                                                if ($item->stockEntryItem) {
+                                                    $codeToParse = $item->stockEntryItem->finished_item_code;
+                                                } elseif (!empty($item->getAttributes()['item_name']) || !empty($item->item_name)) {
+                                                    $codeToParse = formatStockItemName($item->getAttributes()['item_name'] ?? $item->item_name);
+                                                } else {
+                                                    $codeToParse = $item->finished_item_code ?? '';
+                                                }
                                                 
                                                 $brandName = '';
                                                 $styleName = '';
