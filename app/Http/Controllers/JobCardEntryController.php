@@ -2491,7 +2491,7 @@ class JobCardEntryController extends Controller
             'stockEntryItem.grnEntryItem.color'
         ])->findOrFail($id);
         $jobCard = $issueItem->jobCard;
-        $colorName = $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-');
+        $colorName = $request->custom_color ?: ($issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-'));
         $format = $request->format ?? 'tag';
         
         if ($format === 'sticker') {
@@ -2671,7 +2671,7 @@ class JobCardEntryController extends Controller
                 'mfg_date' => date('F Y'),
                 'lot_no' => $jobCard->job_card_no,
                 'sku' => $barcodeNo,
-                'quantity' => $record['qty'] . ' ' . ($record['size'] !== 'Bulk' ? 'Number' : ($issueItem->rawMaterial->uom->uom_code ?? ''))
+                'quantity' => '1 ' . ($record['size'] !== 'Bulk' ? 'Number' : ($issueItem->rawMaterial->uom->uom_code ?? ''))
             ];
 
             $sleeveShort = ($selectedSleeve == 'F/S' || $selectedSleeve == 'Full Sleeve') ? 'F/S' : (($selectedSleeve == 'H/S' || $selectedSleeve == 'Half Sleeve') ? 'H/S' : '');

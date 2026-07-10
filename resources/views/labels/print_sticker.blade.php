@@ -132,10 +132,11 @@
         .details-table {
             border-collapse: collapse;
             width: 100%;
+            height: 100%;
         }
         .details-table td {
             padding: 0.6mm 0;
-            vertical-align: top;
+            vertical-align: middle;
             font-size: 4.7pt;
             line-height: 1.15;
             font-weight: 500;
@@ -273,7 +274,7 @@
                     
                     <div class="right-col">
                         <div class="size-wrapper">
-                            <div class="size-box" style="background-color: {{ $bgColor }};">
+                            <div class="size-box" style="background-color: {{ $bgColor }}; display: none;">
                                 <span class="f-6 font-oswald">Size</span>
                                 <span class="font-bebas" style="font-size: 16pt;">{{ $labelData['size'] ?? '-' }}</span>
                             </div>
@@ -288,7 +289,7 @@
                     </div>
                 </div>
                 
-                <div class="footer-boxes">
+                <div class="footer-boxes" style="display: none;">
                     <div class="footer-row">
                         <div>
                             <span class="f-5" style="color: #333;">Manufactured & Marketed by:</span> <span class="fw-bold" style="font-size: 7pt;">{{ $companyName }}</span>

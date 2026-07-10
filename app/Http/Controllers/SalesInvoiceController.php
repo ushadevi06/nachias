@@ -128,6 +128,7 @@ class SalesInvoiceController extends Controller
                     'customer_name' => ($inv->customer ? $inv->customer->name : 'N/A') . ($inv->customer ? ' <span  class="mini-title">(' . $inv->customer->code . ')</span>' : ''),
                     'so_no' => ($inv->salesOrder ? $inv->salesOrder->so_no : 'N/A') . ($inv->salesOrder && $inv->salesOrder->order_no ? '<br><span class="badge bg-label-info mt-1" style="font-size:10px;">' . $inv->salesOrder->order_no . '</span>' : ''),
                     'total_items' => $inv->items->count(),
+                    'total_qty' => $inv->items->sum('quantity'),
                     'grand_total' => '₹' . number_format($inv->grand_total, 2),
                     'status' => $statusDropdown,
                     'status_text' => $inv->invoice_status,
@@ -146,7 +147,7 @@ class SalesInvoiceController extends Controller
     public function getNextInvoiceNo(Request $request)
     {
         $brandId = $request->brand_id;
-        $invDateStr = $request->inv_date; // e.g. "07-07-2026"
+        $invDateStr = $request->inv_date;
         
         if (!$brandId || !$invDateStr) {
             return response()->json(['success' => false, 'message' => 'Brand ID and Invoice Date are required.']);
@@ -172,14 +173,12 @@ class SalesInvoiceController extends Controller
             $brandCode = strtoupper(substr($brand->brand_name, 0, 2));
         }
 
-        // Calculate Financial Year (April to March)
         $year = (int)$date->format('Y');
         $month = (int)$date->format('m');
         $startYear = ($month >= 4) ? $year : ($year - 1);
         $endYear = $startYear + 1;
         $financialYear = substr($startYear, -2) . '-' . substr($endYear, -2);
 
-        // Find the maximum running number
         $maxRunningNo = 0;
         if ($financialYear === '26-27') {
             if ($brandCode === 'CW') {
@@ -189,9 +188,7 @@ class SalesInvoiceController extends Controller
             }
         }
 
-        $invoices = SalesInvoice::where('brand_id', $brandId)
-            ->where('inv_no', 'like', "%/%/{$financialYear}")
-            ->get(['inv_no']);
+        $invoices = SalesInvoice::where('brand_id', $brandId)->where('inv_no', 'like', "%/%/{$financialYear}")->get(['inv_no']);
 
         foreach ($invoices as $inv) {
             $parts = explode('/', $inv->inv_no);
@@ -375,7 +372,7 @@ class SalesInvoiceController extends Controller
                     'invoice_status', 'payment_mode', 'extra_input', 'due_date',
                     'notes', 'transporter_name', 'transporter_id', 'transport_mode',
                     'vehicle_no', 'veh_type', 'transport_distance', 'tran_doc_no', 'tran_doc_date',
-                    'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'discount_percent', 'discount', 
+                    'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'sales_discount', 'box_discount_amount', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
                     'other_charges', 'round_off_type', 'round_off',
@@ -783,7 +780,6 @@ class SalesInvoiceController extends Controller
             $totalDiscountAmount += $so->discount_amount ?? 0;
         }
         $weightedDiscountPercent = $totalSubTotal > 0 ? round(($totalDiscountAmount / $totalSubTotal) * 100, 2) : ($firstSo->discount_percent ?? 0);
-
         return response()->json([
             'success' => true,
             'customer_id' => $firstSo->customer_id,
@@ -800,6 +796,8 @@ class SalesInvoiceController extends Controller
             'transporter_name' => $transporterName,
             'transport_gst_no' => $firstSo->transport_gst_no,
             'transport_mode_id' => $transportModeId,
+            'sales_discount' => (!empty($firstSo->sales_discount_percent) && (float)$firstSo->sales_discount_percent > 0) ? $firstSo->sales_discount_percent : ($firstSo->customer->sales_discount ?? 0),
+            'box_discount_amount' => (!empty($firstSo->box_discount_amount) && (float)$firstSo->box_discount_amount > 0) ? $firstSo->box_discount_amount : ($firstSo->customer->box_discount_amount ?? 0),
             'items' => $allItems->values()
         ]);
     }
@@ -879,10 +877,7 @@ class SalesInvoiceController extends Controller
                 }
                 $stockQty = $stockQtyQuery->sum(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
             } elseif ($item->stock_entry_item_id) {
-                $stockQty = DB::table('stock_entry_items')
-                    ->where('id', $item->stock_entry_item_id)
-                    ->whereNull('deleted_at')
-                    ->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
+                $stockQty = DB::table('stock_entry_items')->where('id', $item->stock_entry_item_id)->whereNull('deleted_at')->value(DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
             }
 
             if (empty($brandName)) {
@@ -938,6 +933,8 @@ class SalesInvoiceController extends Controller
             'transporter_name' => $so->transporter_name,
             'transport_gst_no' => $so->transport_gst_no,
             'transport_mode_id' => $so->transport_mode_id,
+            'sales_discount' => $so->sales_discount_percent ?? ($so->customer->sales_discount ?? 0),
+            'box_discount_amount' => $so->box_discount_amount ?? ($so->customer->box_discount_amount ?? 0),
             'items' => $items
         ]);
     }

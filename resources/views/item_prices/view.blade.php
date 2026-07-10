@@ -34,8 +34,8 @@
                                     <th>#</th>
                                     <th>Item Name</th>
                                     <th>Art No</th>
+                                    <th>MRP</th>
                                     <th>Selling Price</th>
-                                    <th>Unit Price</th>
                                     <th>Effective From</th>
                                     <th>Status</th>
                                     <th>Actions</th>

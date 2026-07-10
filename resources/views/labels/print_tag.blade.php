@@ -138,10 +138,11 @@
         .details-table {
             border-collapse: collapse;
             width: 100%;
+            height: 100%;
         }
         .details-table td {
             padding: 0.1mm 0;
-            vertical-align: top;
+            vertical-align: middle;
             font-size: 5pt;
             line-height: 1.1;
             font-weight: semi-bold;
@@ -246,7 +247,7 @@
                         <div class="tag-hole"></div>
                     </div>
                     
-                    <div class="size-banner" style="background-color: {{ $bgColor }};">
+                    <div class="size-banner" style="background-color: {{ $bgColor }}; display: none;">
                         <span class="f-6  font-oswald">Size</span>
                         <span class="f-14 font-bebas" style="letter-spacing: 1px;">{{ $labelData['size'] ?? '-' }}</span>
                     </div>
@@ -268,29 +269,7 @@
                     </div>
                     <div class="lot-vertical">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
                     
-                    <div class="tag-footer-info f-6">
-                        <div class="f-5" style="color: #000000; margin-bottom: 0.5mm;">Manufactured & Marketed by:</div>
-                        <div class="fw-bold" style="font-size: 5pt; margin-bottom: 0.5mm;">{{ $companyName }}</div>
-                        <div style="font-size: 4pt; line-height: 1.2;">
-                            {{ $labelData['company_address'] }}
-                        </div>
-                        
-                        <div class="tag-separator"></div>
-                        
-                        <table class="complaints-table">
-                            <tr>
-                                <td class="comp-lbl">Complaints</td>
-                                <td class="comp-col">:</td>
-                                <td class="comp-val fw-bold">{{ $phones }}</td>
-                            </tr>
-                            <tr>
-                                <td class="comp-lbl">Email</td>
-                                <td class="comp-col">:</td>
-                                <td class="comp-val">{{ $firstEmail }}</td>
-                            </tr>
-                        </table>
-                        <div class="tag-separator"></div>
-                    </div>
+                    <div class="tag-footer-info f-6" style="display: none;">
                     
                     <div class="mrp-section">
                         <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>

@@ -33,6 +33,8 @@ class SalesInvoice extends Model
         'show_fields',
         'delivery_show_fields',
         'sub_total',
+        'sales_discount',
+        'box_discount_amount',
         'discount_percent',
         'discount',
         'transporter_name',

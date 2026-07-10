@@ -304,7 +304,7 @@
                                                     <div class="form-floating form-floating-outline">
                                                         <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select @error("items.$index.size_id") is-invalid @enderror" data-selected="{{ $item['size_id'] ?? '' }}">
                                                             <option value="">Select Size</option>
-                                                            @foreach(['36','38','40','42','44'] as $s)
+                                                            @foreach(['36','38','40','42','44', '46','48','50'] as $s)
                                                                 <option value="{{ $s }}" {{ ($item['size_id'] ?? '') == $s ? 'selected' : '' }}>{{ $s }}</option>
                                                             @endforeach
                                                         </select>
@@ -400,7 +400,7 @@
                                                     <div class="form-floating form-floating-outline">
                                                         <select name="items[{{ $index }}][size_id]" class="form-select select2 size-select" data-selected="{{ $item->size_id }}">
                                                             <option value="">Select Size</option>
-                                                            @foreach(['36','38','40','42','44'] as $s)
+                                                            @foreach(['36','38','40','42','44','46','48','50'] as $s)
                                                                 <option value="{{ $s }}" {{ $item->size_id == $s ? 'selected' : '' }}>{{ $s }}</option>
                                                             @endforeach
                                                         </select>
@@ -499,7 +499,7 @@
                                             <div class="form-floating form-floating-outline">
                                                 <select name="items[0][size_id]" class="form-select select2 size-select">
                                                     <option value="">Select Size</option>
-                                                    @foreach(['36','38','40','42','44'] as $s)
+                                                    @foreach(['36','38','40','42','44','46','48','50'] as $s)
                                                         <option value="{{ $s }}">{{ $s }}</option>
                                                     @endforeach
                                                 </select>
@@ -1053,6 +1053,9 @@ $(document).ready(function () {
                             <option value="40">40</option>
                             <option value="42">42</option>
                             <option value="44">44</option>
+                            <option value="46">46</option>
+                            <option value="48">48</option>
+                            <option value="50">50</option>
                         </select>
                     </div>
                 </td>
@@ -1291,7 +1294,7 @@ $(document).ready(function () {
             $row.find('.rate-input').val(price.toFixed(2));
         }
         
-        const sizeList = ['36', '38', '40', '42', '44'];
+        const sizeList = ['36', '38', '40', '42', '44','46','48','50'];
         let sizeOpts = `<option value="">Select Size</option>`;
         sizeList.forEach(s => {
             sizeOpts += `<option value="${s}">${s}</option>`;
@@ -1362,7 +1365,7 @@ $(document).ready(function () {
 
                         let customerStateId = c.state_id;
                         let companyStateId = "{{ $web_settings->state_id ?? '' }}";
-
+                        console.log(customerStateId,companyStateId);
                         if (customerStateId && companyStateId) {
                             if (customerStateId == companyStateId) {
                                 $('#other_state_no').prop('checked', true).trigger('change');

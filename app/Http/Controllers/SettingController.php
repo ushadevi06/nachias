@@ -41,9 +41,9 @@ class SettingController extends Controller
             'city_id' => 'required|exists:cities,id',
             'address' => 'required|string|max:1000',
             'zip_code' => 'required|string|max:6|min:6',
-            'cgst' => 'required|integer|min:0|max:100',
-            'sgst' => 'required|integer|min:0|max:100',
-            'igst' => 'required|integer|min:0|max:100',
+            'cgst' => 'required|numeric|min:0|max:100',
+            'sgst' => 'required|numeric|min:0|max:100',
+            'igst' => 'required|numeric|min:0|max:100',
             'pan_no' => [
                 'nullable',
                 'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',

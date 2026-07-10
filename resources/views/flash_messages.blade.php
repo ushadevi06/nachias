@@ -23,7 +23,7 @@
 </div>
 @endif
 
-{{-- @if ($errors->any())
+@if ($errors->any())
 <div class="alert alert-danger alert-dismissible fade show mb-5" role="alert">
     <strong>Please fix the following:</strong>
     <ul class="mb-0">
@@ -33,4 +33,4 @@
     </ul>
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
-@endif --}}
+@endif 

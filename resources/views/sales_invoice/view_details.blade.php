@@ -340,6 +340,14 @@
                                                 </div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
+                                                <label class="detail-title">Sales Discount (Reference):</label>
+                                                <div class="text-muted">{{ number_format($invoice->sales_discount, 2) }}%</div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <label class="detail-title">Box Discount Amount (Reference):</label>
+                                                <div class="text-muted">₹{{ number_format($invoice->box_discount_amount, 2) }}</div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
                                                 <label class="detail-title">Discount
                                                     ({{ number_format($invoice->discount_percent, 2) }}%):</label>
                                                 <div class="text-muted">₹{{ number_format($invoice->discount, 2) }}</div>

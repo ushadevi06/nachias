@@ -37,7 +37,7 @@
                 <div class="sortable-item" data-id="product"><span class="field-key">PRODUCT:</span> <span class="field-val">{{ $labelData['product_name'] }}</span></div>
                 <div class="sortable-item" data-id="brand"><span class="field-key">BRAND NAME:</span> <span class="field-val">{{ $labelData['brand_name'] }}</span></div>
                 <div class="sortable-item" data-id="art"><span class="field-key">ART NO:</span> <span class="field-val">{{ $labelData['design'] }}</span></div>
-                <div class="sortable-item" data-id="color"><span class="field-key">COLOUR:</span> <span class="field-val">{{ $labelData['color'] }}</span></div>
+                <div class="sortable-item" data-id="color"><span class="field-key">COLOUR:</span> <span class="field-val"><input type="text" id="customColorInput" value="{{ $labelData['color'] }}" class="form-control form-control-sm d-inline-block" style="width: auto; height: 26px; font-weight: bold; padding: 2px 8px;" onclick="event.stopPropagation();"></span></div>
                 <div class="sortable-item" data-id="fabric"><span class="field-key">FABRIC:</span> <span class="field-val">{{ $labelData['fabric'] }}</span></div>
                 <div class="sortable-item" data-id="size"><span class="field-key">SIZE:</span> <span class="field-val">{{ $labelData['size'] }}</span></div>
                 <div class="sortable-item" data-id="mrp"><span class="field-key">MRP:</span> <span class="field-val">₹ {{ $labelData['price'] }}</span></div>
@@ -235,7 +235,9 @@
         // Initialize Sortable
         new Sortable(sortableContainer, {
             animation: 150,
-            ghostClass: 'sortable-ghost'
+            ghostClass: 'sortable-ghost',
+            filter: 'input',
+            preventOnFilter: false
         });
 
         // Final Print Logic
@@ -256,6 +258,8 @@
             const vAlign = 'top'; 
             const order = Array.from(sortableContainer.children).map(child => child.dataset.id).join(',');
 
+            const customColor = document.getElementById('customColorInput') ? document.getElementById('customColorInput').value : '';
+
             let baseUrl = format === 'tag' 
                 ? `{{ route('job_card_entries.print_label_tag', $labelData['id']) }}` 
                 : `{{ route('job_card_entries.print_label_sticker', $labelData['id']) }}`;
@@ -271,7 +275,8 @@
                 `margin=${margin}&` +
                 `bg_color=${bgColor}&` +
                 `v_align=${vAlign}&` +
-                `order=${order}`;
+                `order=${order}&` +
+                `custom_color=${encodeURIComponent(customColor)}`;
 
             window.open(printUrl, '_blank');
         });

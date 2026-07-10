@@ -41,9 +41,9 @@ class Setting extends Model
     ];
 
     protected $casts = [
-        'cgst' => 'integer',
-        'sgst' => 'integer',
-        'igst' => 'integer',
+        'cgst' => 'float',
+        'sgst' => 'float',
+        'igst' => 'float',
     ];
 
     /**

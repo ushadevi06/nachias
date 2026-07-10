@@ -250,18 +250,17 @@ $copies = ['ORIGINAL', 'DUPLICATE', 'TRIPLICATE'];
 
 $colWidths = [
     'sno' => 4,
-    'desc' => $showAmount ? 22 : 28,
-    'color' => 10,
-    'art' => 10,
+    'desc' => $showAmount ? 30 : 42,
+    'art' => 18,
     'uom' => 6,
-    'size' => 8,
+    'size' => 6,
     'qty' => 8,
 ];
 if ($showMrp) {
-    $colWidths['mrp'] = 10;
+    $colWidths['mrp'] = 8;
 }
 if ($showPrice) {
-    $colWidths['price'] = 10;
+    $colWidths['price'] = 8;
 }
 if ($showAmount) {
     $colWidths['amount'] = 12;
@@ -272,11 +271,11 @@ foreach ($colWidths as $key => $w) {
     $colWidths[$key] = round(($w / $totalW) * 100, 4);
 }
 
-$w_1_6 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['color'] + $colWidths['art'] + $colWidths['uom'] + $colWidths['size'];
-$w1_7 = $w_1_6 + $colWidths['qty'];
+$w_1_5 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['art'] + $colWidths['uom'] + $colWidths['size'];
+$w1_6 = $w_1_5 + $colWidths['qty'];
 
-$w_1_5 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['color'] + $colWidths['art'] + $colWidths['uom'];
-$w_6_7 = $colWidths['size'] + $colWidths['qty'];
+$w_1_4 = $colWidths['sno'] + $colWidths['desc'] + $colWidths['art'] + $colWidths['uom'];
+$w_5_6 = $colWidths['size'] + $colWidths['qty'];
 
 $w_colsAfterQty = 0;
 if ($showMrp) $w_colsAfterQty += $colWidths['mrp'];
@@ -293,6 +292,14 @@ if ($showPrice) $colsAfterQty++;
 </div>
 
 @foreach($copies as $index => $copyLabel)
+    @php
+        $chunks = collect($invoice->items)->chunk(10);
+        $totalChunks = $chunks->count();
+    @endphp
+    @foreach($chunks as $chunkIndex => $chunk)
+        @php
+            $isLastChunk = ($chunkIndex == $totalChunks - 1);
+        @endphp
     @php
     $logoPath = public_path('assets/images/jc_logo.png');
     $logoBase64 = '';
@@ -326,7 +333,7 @@ if ($showPrice) $colsAfterQty++;
         }
     }
     @endphp
-    <div class="container" style="{{ $index < 2 ? 'page-break-after: always;' : '' }}">
+    <div class="container" style="{{ ($index < count($copies) - 1) || !$isLastChunk ? 'page-break-after: always;' : '' }}">
         <div style="position: relative;">
             <div style="position: absolute; right: 0; top: 0; text-align: right; width: 100px; z-index: 10;">
                 <div style="font-weight: bold; font-size: 14px;">{{ $copyLabel }}</div>
@@ -491,17 +498,16 @@ if ($showPrice) $colsAfterQty++;
             <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
                     <th width="4%">S.No</th>
-                    <th width="{{ $showAmount ? '22%' : '28%' }}">Description</th>
-                    <th width="10%">Art</th>
-                    <th width="10%">Color</th>
+                    <th width="{{ $showAmount ? '30%' : '42%' }}">Description</th>
+                    <th width="18%">Art</th>
                     <th width="6%">UOM</th>
-                    <th width="8%">Size</th>
+                    <th width="6%">Size</th>
                     <th width="8%">Qty</th>
                     @if($showMrp)
-                    <th width="10%">MRP</th>
+                    <th width="8%">MRP</th>
                     @endif
                     @if($showPrice)
-                    <th width="10%">Price</th>
+                    <th width="8%">Price</th>
                     @endif
                     @if($showAmount)
                     <th width="12%">Amount</th>
@@ -509,9 +515,9 @@ if ($showPrice) $colsAfterQty++;
                 </tr>
             </thead>
             <tbody>
-                @foreach($invoice->items as $index => $item)
+                @foreach($chunk as $itemIndex => $item)
                     <tr>
-                        <td class="text-center">{{ $index + 1 }}</td>
+                        <td class="text-center">{{ $chunkIndex * 10 + $loop->iteration }}</td>
                         <td>
                             @php
                                 $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
@@ -673,7 +679,6 @@ if ($showPrice) $colsAfterQty++;
                             <div class="bold">{{ $itemName }}</div>
                         </td>
                         <td class="text-center">{{ $item->art_no }}</td>
-                        <td class="text-center">{{ $item->api_color ?: ($item->color ? $item->color->color_name : '-') }}</td>
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>
@@ -688,10 +693,9 @@ if ($showPrice) $colsAfterQty++;
                         @endif
                     </tr>
                 @endforeach
-                @for($i = count($invoice->items); $i < 10; $i++)
+                @for($i = $chunk->count(); $i < 10; $i++)
                 <tr>
                     <td style="height: 15px;">&nbsp;</td>
-                    <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
@@ -703,13 +707,13 @@ if ($showPrice) $colsAfterQty++;
                 </tr>
                 @endfor
             </tbody>
+            @if($isLastChunk)
             <tfoot>
                 <tr>
                     <td style="border-top: none;"></td>
                     <td style="border-top: none;"></td> 
                     <td style="border-top: none;"></td> 
                     <td style="border-top: none;"></td>
-                    <td style="border-top: none;"></td> 
                     <td style="border-top: none;"></td> 
                     <td class="text-center bold" style="border-top: 1px solid #000000;">{{ number_format($invoice->items->sum('quantity'), 2) }}</td>
                     
@@ -728,7 +732,7 @@ if ($showPrice) $colsAfterQty++;
             <tbody>
                 <tr style="border-top: 1px solid #000000;">
                     <!-- Left Side (IRN + Bank + UPI) in a nested table to ensure borders join edge-to-edge -->
-                    <td colspan="7" style="width: {{ $w1_7 }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
+                    <td colspan="6" style="width: {{ $w1_6 }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
                         <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
                             <tr>
                                 <td colspan="2" style="padding: 4px; vertical-align: top; border: none; border-bottom: 1px solid #000000;">
@@ -739,7 +743,7 @@ if ($showPrice) $colsAfterQty++;
                                 </td>
                             </tr>
                             <tr>
-                                <td style="width: {{ ($w_1_5 / $w1_7) * 100 }}%; padding: 4px; vertical-align: top; border: none; border-right: 1px solid #000000;">
+                                <td style="width: {{ ($w_1_4 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; border: none; border-right: 1px solid #000000;">
                                     <div style="font-size: 12px;">
                                         <b>Company's Bank Details :</b><br>
                                         Bank Name : {{ $setting->bank_name ?? '' }}, {{ $setting->branch_location ? $setting->branch_location . ', ' : '' }}<br>
@@ -748,7 +752,7 @@ if ($showPrice) $colsAfterQty++;
                                         {!! $invoice->notes ?? '' !!}
                                     </div>
                                 </td>
-                                <td style="width: {{ ($w_6_7 / $w1_7) * 100 }}%; padding: 4px; vertical-align: top; text-align: center; border: none;">
+                                <td style="width: {{ ($w_5_6 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; text-align: center; border: none;">
                                     <div style="font-size: 11px; min-height: 85px;">
                                         <span style="font-weight: bold;">For UPI Payment</span><br>
                                         @if($qrBase64)
@@ -804,7 +808,7 @@ if ($showPrice) $colsAfterQty++;
                 </tr>
                 @if($showGrandTotal)
                 <tr>
-                    <td colspan="7" style="padding: 8px; border-right: none; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
+                    <td colspan="6" style="padding: 8px; border-right: none; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
                         Rupees &nbsp;&nbsp;&nbsp;: {{ strtoupper($totalInWords) }}
                     </td>
                     <td colspan="{{ $colsAfterQty }}" style="padding: 4px; font-weight: bold; text-align: right; border-right: 1px solid #000000; border-top: 1px solid #000000; border-bottom: 1px solid #000000;">
@@ -816,7 +820,9 @@ if ($showPrice) $colsAfterQty++;
                 </tr>
                 @endif
             </tbody>
+            @endif
         </table>
+        @if($isLastChunk)
         <div class="bold" style="margin-top: 5px; display: none;">Amount of Tax(in words) : {{ $totalTaxInWords }}</div>
         @if($showTax)
         <table class="item-table" style="margin-top: 5px; border-bottom: none; border-top: 1px solid #000;">
@@ -892,6 +898,13 @@ if ($showPrice) $colsAfterQty++;
             </tfoot>
         </table>
         @endif
+        @endif
+        @if(!$isLastChunk)
+        <div style="text-align: right; padding: 10px; font-weight: bold; font-size: 13px;">
+            Continue to Page No. {{ $chunkIndex + 2 }}
+        </div>
+        @endif
+        @if($isLastChunk)
         <table class="no-border" style="margin-top: 15px; width: 100%;">
             <tr>
                 <td width="60%" style="vertical-align: top; padding-left: 4px;">
@@ -919,7 +932,9 @@ if ($showPrice) $colsAfterQty++;
                 </td>
             </tr>
         </table>
+        @endif
     </div>
+    @endforeach
 @endforeach
     @if(isset($is_print) && $is_print)
     <script>

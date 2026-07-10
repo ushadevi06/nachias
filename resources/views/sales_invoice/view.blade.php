@@ -60,6 +60,7 @@
                                     <th>Customer Name / Buyer </th>
                                     <th>Linked SO No.</th>
                                     <th>Total Items</th>
+                                    <th>Total Qty</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
                                     <th>Delivery Status</th>
@@ -136,6 +137,7 @@
                 { data: 'customer_name' },
                 { data: 'so_no' },
                 { data: 'total_items' },
+                { data: 'total_qty' },
                 { data: 'grand_total' },
                 { 
                     data: 'status',

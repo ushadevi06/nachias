@@ -810,35 +810,38 @@
                                     <h5 class="mb-0">Invoice Summary</h5>
                                 </div>
                                 <div class="summary-box px-2">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-5">
                                         <span class="text-secondary fw-medium">Total Quantity:</span>
-                                        <span class="fw-bold h5 mb-0" id="total_qty_val">{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}</span>
+                                        <span class="fw-bold mb-0" id="total_qty_val">{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="total_qty" id="total_qty" value="{{ old('total_qty', isset($invoice) && isset($invoice->items) ? number_format($invoice->items->sum('quantity'), 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-5">
                                         <span class="text-secondary fw-medium">Sub total:</span>
-                                        <span class="fw-bold h5 mb-0" id="sub_total_val">{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}</span>
+                                        <span class="fw-bold mb-0" id="sub_total_val">{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="sub_total" id="sub_total" value="{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="row g-2 align-items-center mb-3 pb-3 border-bottom">
-                                        <div class="col-4">
-                                            <span class="text-secondary fw-medium">Discount:</span>
-                                        </div>
-                                        <div class="col-8 d-flex align-items-center">
-                                            <div class="input-group input-group-sm ms-auto" style="width: 140px;">
-                                                <input type="number" step="any" name="discount_percent" id="discount_percent" class="form-control text-end" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}" {{ (isset($invoice) && $invoice->einvoice_status === 'generated') ? 'readonly' : '' }}>
-                                                <span class="input-group-text bg-white">%</span>
-                                            </div>
-                                            <span class="fw-bold ms-3" style="text-align: right;" id="discount_val">{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}</span>
-                                            <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
-                                        </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Sales Discount (<span id="sales_discount_label">{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount, 2, '.', '') : '0.00') }}</span>%):</span>
+                                        <span class="fw-bold mb-0" id="sales_discount_amount_val">₹0.00</span>
+                                        <input type="hidden" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount, 2, '.', '') : '0.00') }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                                        <span class="text-secondary fw-medium">Box Discount (₹<span id="box_discount_label">{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}</span>/pc):</span>
+                                        <span class="fw-bold mb-0" id="box_discount_amount_val">₹0.00</span>
+                                        <input type="hidden" name="box_discount_amount" id="box_discount_amount" value="{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Total Discount Amount:</span>
+                                        <span class="fw-bold mb-0 text-danger" id="discount_val">₹0.00</span>
+                                        <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
+                                        <input type="hidden" name="discount_percent" id="discount_percent" value="0">
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <span class="text-secondary fw-medium">Total:</span>
+                                        <span class="text-secondary fw-medium">Taxable Amount:</span>
                                         <span class="fw-bold h5 mb-0" id="total_val">{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="total" id="total" value="{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-5">
                                         <span class="text-secondary fw-medium">Commission Amount:</span>
                                         <span class="fw-bold" id="commission_amount_val">{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="commission_amount" id="commission_amount" value="{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}">
@@ -1116,6 +1119,14 @@
 
                             if (!$('#discount_percent').val() || $('#discount_percent').val() == '0.00') {
                                 $('#discount_percent').val(data.discount_percent || 0);
+                            }
+                            if (data.sales_discount !== undefined) {
+                                $('#sales_discount_val').text(parseFloat(data.sales_discount).toFixed(2) + '%');
+                                $('#sales_discount').val(parseFloat(data.sales_discount).toFixed(2));
+                            }
+                            if (data.box_discount_amount !== undefined) {
+                                $('#box_discount_amount_val').text('₹' + parseFloat(data.box_discount_amount).toFixed(2));
+                                $('#box_discount_amount').val(parseFloat(data.box_discount_amount).toFixed(2));
                             }
                             if (!$('#igst_percent').val() || $('#igst_percent').val() == '18.00') $('#igst_percent').val(data.igst_percent || 18);
                             if (!$('#cgst_percent').val() || $('#cgst_percent').val() == '9.00') $('#cgst_percent').val(data.cgst_percent || 9);
@@ -1459,8 +1470,7 @@
                         }
                     });
                 } else {
-                    $('#transport_distance').removeAttr('readonly')
-                        .val('');
+                    $('#transport_distance').removeAttr('readonly').val('');
                 }
                 calculateTotals();
             }
@@ -1481,9 +1491,18 @@
             $('#total_qty_val').text(totalQty.toFixed(2));
             $('#total_qty').val(totalQty.toFixed(2));
 
-            var discPercent = parseFloat($('#discount_percent').val()) || 0;
-            var discount = (subTotal * discPercent) / 100;
-            $('#discount_val').text(discount.toFixed(2));
+            var salesDiscPercent = parseFloat($('#sales_discount').val()) || 0;
+            var boxDiscountPerPc = parseFloat($('#box_discount_amount').val()) || 0;
+
+            var salesDiscountValue = (subTotal * salesDiscPercent) / 100;
+            var boxDiscountValue = totalQty * boxDiscountPerPc;
+            var discount = salesDiscountValue + boxDiscountValue;
+            
+            $('#sales_discount_label').text(salesDiscPercent.toFixed(2));
+            $('#box_discount_label').text(boxDiscountPerPc.toFixed(2));
+            $('#sales_discount_amount_val').text('₹' + salesDiscountValue.toFixed(2));
+            $('#box_discount_amount_val').text('₹' + boxDiscountValue.toFixed(2));
+            $('#discount_val').text('- ₹' + discount.toFixed(2));
             $('#discount').val(discount.toFixed(2));
 
             var total = subTotal - discount;

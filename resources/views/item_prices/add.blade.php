@@ -79,8 +79,8 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th>Size</th>
-                                            <th>Selling Price <span class="text-danger">*</span></th>
-                                            <th>Unit Price (Auto)</th>
+                                            <th>MRP <span class="text-danger">*</span></th>
+                                            <th>Selling Price (Auto)</th>
                                             <th class="text-center" style="width: 80px;">Action</th>
                                         </tr>
                                     </thead>

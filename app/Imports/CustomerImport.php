@@ -30,63 +30,52 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            // ── State: find or create ──────────────────────────────
             $stateId = null;
             if (!empty($row['state'])) {
-                $state = State::firstOrCreate(
-					['state_name' => trim($row['state'])],
-					[
-						'state_code'  => strtoupper(substr(trim($row['state']), 0, 3)),
-						'status'      => 'Active',
-						'created_by'  => auth()->id() ?? 1,
-					]
-				);
+                $state = State::where('state_name', trim($row['state']))->first();
+                if (!$state) {
+                    $errors[] = "Row {$rowNumber}: State ({$row['state']}) does not exist. Please create it first.";
+                    continue;
+                }
                 $stateId = $state->id;
             }
 
-            // ── City: find or create ───────────────────────────────
             $cityId = null;
             if (!empty($row['city']) && $stateId) {
-                $city = City::firstOrCreate(
-                    ['city_name' => trim($row['city']), 'state_id' => $stateId],
-                    ['status' => 'Active', 'created_by' => auth()->id() ?? 1]
-                );
+                $city = City::where('city_name', trim($row['city']))->where('state_id', $stateId)->first();
+                if (!$city) {
+                    $errors[] = "Row {$rowNumber}: City ({$row['city']}) does not exist in the specified state. Please create it first.";
+                    continue;
+                }
                 $cityId = $city->id;
             }
 
-            // ── Place: find or create ──────────────────────────────
             $placeId = null;
             if (!empty($row['place']) && $cityId && $stateId) {
-                $place = Place::firstOrCreate(
-                    ['place_name' => trim($row['place']), 'city_id' => $cityId, 'state_id' => $stateId],
-                    ['place_type' => 'Commercial', 'status' => 'Active', 'created_by' => auth()->id() ?? 1]
-                );
+                $place = Place::where('place_name', trim($row['place']))->where('city_id', $cityId)->where('state_id', $stateId)->first();
+                if (!$place) {
+                    $errors[] = "Row {$rowNumber}: Place ({$row['place']}) does not exist. Please create it first.";
+                    continue;
+                }
                 $placeId = $place->id;
             }
 
-            // ── Auto-fill Place from City if place column empty ────
             if ($cityId && !$placeId) {
                 $firstPlace = Place::where('city_id', $cityId)->first();
                 if ($firstPlace) {
                     $placeId = $firstPlace->id;
                 } else {
-                    // Create a default place using city name
-                    $newPlace = Place::firstOrCreate(
-                        ['place_name' => trim($row['city']), 'city_id' => $cityId, 'state_id' => $stateId],
-                        ['place_type' => 'Commercial', 'status' => 'Active', 'created_by' => auth()->id() ?? 1]
-                    );
-                    $placeId = $newPlace->id;
+                    $errors[] = "Row {$rowNumber}: No default Place found for the specified City. Please create one first.";
+                    continue;
                 }
             }
 
-            // ── Zone: find or auto-assign from city ───────────────
             $zoneId = null;
             if (!empty($row['zone'])) {
                 $zone = Zone::where('zone_name', trim($row['zone']))->first();
                 if ($zone) {
                     $zoneId = $zone->id;
                 }
-                // Zone not found → silently skip, auto-assign below
             }
 
             if (!$zoneId && $cityId) {
@@ -94,21 +83,18 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 $zoneId = $firstZone ? $firstZone->id : null;
             }
 
-            // ── Store ──────────────────────────────────────────────
             $storeId = null;
             if (!empty($row['store'])) {
                 $store = StoreType::where('store_type_name', trim($row['store']))->first();
                 $storeId = $store ? $store->id : null;
             }
 
-            // ── Tax ────────────────────────────────────────────────
             $taxId = null;
             if (!empty($row['tax_type'])) {
                 $tax = Tax::where('item_name', trim($row['tax_type']))->first();
                 $taxId = $tax ? $tax->id : null;
             }
 
-            // ── Name & Code ────────────────────────────────────────
             $name = $row['name'] ?? null;
             $code = isset($row['code']) ? (string) $row['code'] : null;
 
@@ -121,7 +107,6 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 }
             }
 
-            // ── Mobile ─────────────────────────────────────────────
             $mobileNo = null;
             if (!empty($row['mobile_number'])) {
                 $mobileNo = preg_replace('/[^0-9]/', '', (string) $row['mobile_number']);
@@ -129,7 +114,6 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 $mobileNo = preg_replace('/[^0-9]/', '', (string) $row['phone']);
             }
 			
-            // ── Data Array ─────────────────────────────────────────
             $data = [
                 'category'            => $row['category'] ?? 'Retailer',
                 'name'                => $name,
@@ -159,14 +143,13 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 'payment_terms'       => $row['payment_term'] ?? ($row['payment_terms'] ?? null),
                 'credit_limit'        => $row['credit_limit'] ?? 0,
                 'sales_discount'      => $row['sales_discount'] ?? 0,
-                'box_discount'        => $row['box_discount'] ?? 0,
+                'box_discount_amount' => $row['box_discount_amountper_pcs'] ?? ($row['box_discount_amount_per_pcs'] ?? ($row['box_discount_amount'] ?? ($row['box_discount'] ?? 0))),
                 'bank_name'           => $row['bank_name'] ?? null,
                 'branch'              => $row['branch'] ?? null,
                 'account_number'      => $row['account_number'] ?? null,
                 'ifsc_code'           => $row['ifsc_code'] ?? null,
             ];
 
-            // ── Duplicate code check within file ───────────────────
             if (!empty($data['code'])) {
                 if (in_array($data['code'], $seenCodes)) {
                     $errors[] = "Row {$rowNumber}: Duplicate Code ({$data['code']}) found in the Excel file.";
@@ -175,19 +158,22 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 $seenCodes[] = $data['code'];
             }
 
-            // ── Existing customer for unique-ignore ────────────────
             $customerId = null;
             if (!empty($data['code'])) {
                 $existing = Customer::where('code', $data['code'])->first();
                 $customerId = $existing ? $existing->id : null;
             }
 
-            // ── Validation ─────────────────────────────────────────
+            if (!$customerId) {
+                $errors[] = "Row {$rowNumber}: Customer with Code ({$data['code']}) does not exist. Only updates are allowed.";
+                continue;
+            }
+
             $validator = Validator::make($data, [
                 'category'       => 'required|in:Retailer,Wholesaler',
                 'name'           => 'required|string|min:2|max:100',
                 'code'           => 'required|string|min:2|max:50|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no'      => 'required|numeric|digits_between:10,15|unique:customers,mobile_no,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no'      => 'required|numeric|digits_between:10,15',
                 'email'          => 'nullable|email|max:128|unique:customers,email,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'zone_id'        => 'nullable',
                 'status'         => 'required|in:Active,Inactive',
@@ -208,27 +194,23 @@ class CustomerImport implements ToCollection, WithHeadingRow
             throw new \Exception(implode('<br>', $errors));
         }
 
-        // ── Persist ────────────────────────────────────────────────
         DB::beginTransaction();
 		try {
 			foreach ($validData as $d) {
 				$d['created_by'] = auth()->id() ?? 1;
 
-				// Remove null zone_id so DB default/existing value is used
 				if (is_null($d['zone_id'])) {
 					unset($d['zone_id']);
 				}
 
-				$existing = Customer::where('code', $d['code'])->first();
-				$oldData  = $existing ? $existing->toArray() : null;
-				$action   = $existing ? 'update' : 'create';
-
-				$customer = Customer::updateOrCreate(
-					['code' => $d['code']],
-					$d
-				);
-
-				addLog($action, 'Customer via Import', 'customers', $customer->id, $oldData, $customer->toArray());
+				$existing = Customer::where('code', $d['code'])->first();   
+				if ($existing) {
+					$oldData  = $existing->toArray();
+					$action   = 'update';
+					$existing->update($d);
+					$customer = $existing;
+					addLog($action, 'Customer via Import', 'customers', $customer->id, $oldData, $customer->toArray());
+				}
 			}
 			DB::commit();
 		} catch (\Exception $e) {

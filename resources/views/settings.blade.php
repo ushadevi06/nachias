@@ -175,7 +175,7 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input class="form-control @error('cgst') is-invalid @enderror" id="cgst" name="cgst" type="number" min="0" max="100" placeholder="Enter CGST (%)" value="{{ old('cgst', $setting->cgst ?? '') }}" />
+                                    <input class="form-control @error('cgst') is-invalid @enderror" id="cgst" name="cgst" type="number" step="any" placeholder="Enter CGST (%)" value="{{ old('cgst', $setting->cgst ?? '') }}" />
                                     <label for="cgst">CGST (%) *</label>
                                     @error('cgst')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -185,7 +185,7 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input class="form-control @error('sgst') is-invalid @enderror" id="sgst" name="sgst" type="number" min="0" max="100" placeholder="Enter SGST (%)" value="{{ old('sgst', $setting->sgst ?? '') }}" />
+                                    <input class="form-control @error('sgst') is-invalid @enderror" id="sgst" name="sgst" type="number" step="any" placeholder="Enter SGST (%)" value="{{ old('sgst', $setting->sgst ?? '') }}" />
                                     <label for="sgst">SGST (%) *</label>
                                     @error('sgst')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -195,7 +195,7 @@
 
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input class="form-control @error('igst') is-invalid @enderror" id="igst" name="igst" type="number" min="0" max="100" placeholder="Enter IGST (%)" value="{{ old('igst', $setting->igst ?? '') }}" />
+                                    <input class="form-control @error('igst') is-invalid @enderror" id="igst" name="igst" type="number" step="any" placeholder="Enter IGST (%)" value="{{ old('igst', $setting->igst ?? '') }}" />
                                     <label for="igst">IGST (%) *</label>
                                     @error('igst')
                                     <div class="invalid-feedback">{{ $message }}</div>
