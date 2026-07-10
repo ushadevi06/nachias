@@ -824,7 +824,7 @@ $isSuper = $user->id == 1;
                                             </a>
                                         </li>
                                         @endif
-                                        @if($isSuper || true)
+                                        @if($isSuper || $user->can('view purchase-report'))
                                         <li class="menu-item {{ request()->is('purchase_reports*') ? 'active' : '' }}">
                                             <a href="javascript:void(0)" class="menu-link menu-toggle">
                                                 <div>Purchase Reports</div>

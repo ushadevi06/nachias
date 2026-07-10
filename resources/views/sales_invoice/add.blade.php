@@ -417,13 +417,13 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control mrp" name="items[{{ $index }}][mrp]" value="{{ $row->mrp ?? '' }}" placeholder="MRP" readonly>
+                                                    <input type="number" step="any" class="form-control mrp" name="items[{{ $index }}][mrp]" value="{{ $row->mrp ?? '' }}" placeholder="MRP">
                                                     <label>MRP</label>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price" readonly>
+                                                    <input type="number" step="any" class="form-control rate" name="items[{{ $index }}][rate]" value="{{ $row->rate ?? '' }}" placeholder="Price">
                                                     <label>Price *</label>
                                                 </div>
                                             </td>
@@ -564,7 +564,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $row->mrp ?? '' }}" readonly tabindex="-1">
+                                                        <input type="number" name="items[{{ $index }}][mrp]" class="form-control mrp-input" value="{{ $row->mrp ?? '' }}">
                                                     </div>
                                                 </td>
                                                 <td>

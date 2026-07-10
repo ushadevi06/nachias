@@ -116,6 +116,7 @@ class PermissionSeeder extends Seeder
             'sales-marketing-report' => ['view'],
             'warehouse-report' => ['view'],
             'production-report' => ['view'],
+            'purchase-report' => ['view'],
 
             /* Ticket Management */
             'ticket-management' => ['create', 'edit', 'delete', 'view'],

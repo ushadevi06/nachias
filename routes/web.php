@@ -820,3 +820,54 @@ Route::get('/testaxe', function () {
     return $output;
 });
 
+Route::get('/update-item-names', function () {
+    $jsonPath = base_path('orderaxe_all_responses.json');
+    if (!file_exists($jsonPath)) {
+        return "JSON file not found at " . $jsonPath;
+    }
+
+    $json = file_get_contents($jsonPath);
+    $orders = json_decode($json, true);
+
+    if (!$orders) {
+        return "Invalid JSON";
+    }
+
+    $updatedCount = 0;
+    foreach ($orders as $orderData) {
+        $orderNo = $orderData['order_no'] ?? null;
+        if (!$orderNo) continue;
+
+        $existingOrder = \App\Models\SalesOrder::where('order_no', $orderNo)->first();
+        if (!$existingOrder) continue;
+
+        $products = $orderData['products'] ?? [];
+        foreach ($products as $product) {
+            $orderaxeItemName = $product['name'] ?? $product['title'] ?? $product['product_name'] ?? null;
+            
+            $combinations = $product['combinations'] ?? [];
+            foreach ($combinations as $itemData) {
+                $barcode = $itemData['sku'] ?? $itemData['barcode'] ?? null;
+                if (!$barcode) continue;
+                
+                // Fallback for item name if not at product level
+                if (!$orderaxeItemName) {
+                    $orderaxeItemName = $itemData['name'] ?? $itemData['title'] ?? $itemData['variationDescription'] ?? null;
+                }
+
+                if ($orderaxeItemName) {
+                    $updated = \App\Models\SalesOrderItem::where('sale_order_id', $existingOrder->id)
+                        ->where('sku', $barcode)
+                        ->update(['item_name' => $orderaxeItemName]); // This updates the item_name
+                        
+                    if ($updated) {
+                        $updatedCount++;
+                    }
+                }
+            }
+        }
+    }
+
+    return "Successfully updated item_name for {$updatedCount} items based on the JSON file.";
+});
+

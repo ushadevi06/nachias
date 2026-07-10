@@ -224,9 +224,9 @@ class SalesOrderController extends Controller
         $charges = collect();
         if ($id) {
             $salesOrder = SalesOrder::with(['items', 'charges'])->findOrFail($id);
-            if ($salesOrder->status !== 'Draft' && $salesOrder->status !== 'Pending') {
-                return redirect('sales_orders')->with('error', 'Only Draft or Pending Sales Orders can be edited.');
-            }
+            // if ($salesOrder->status !== 'Draft' && $salesOrder->status !== 'Pending') {
+            //     return redirect('sales_orders')->with('error', 'Only Draft or Pending Sales Orders can be edited.');
+            // }
             $charges = $salesOrder->charges;
         }
 
@@ -477,7 +477,7 @@ class SalesOrderController extends Controller
                         $seItem = \App\Models\StockEntryItem::where('sku', $item['sku'])->orWhere('barcode', $item['sku'])->first();
                     }
                     $styleId = $seItem ? $seItem->style_id : null;
-
+            
                     $categoryName = null;
                     $categoriesPathVal = null;
 
@@ -485,7 +485,6 @@ class SalesOrderController extends Controller
                         $styleModel = \App\Models\Style::find($styleId);
                         if ($styleModel) {
                             $baseCategory = $styleModel->style_name;
-                            
                             $sleeveSuffix = '';
                             $itemNameUpper = strtoupper($itemName);
                             if (str_ends_with($itemNameUpper, 'F/S') || str_ends_with($itemNameUpper, ' FS') || str_ends_with($itemNameUpper, ' FULL')) {
@@ -535,7 +534,6 @@ class SalesOrderController extends Controller
                             }
                         }
                     }
-                    
                     SalesOrderItem::create([
                         'sale_order_id' => $salesOrder->id,
                         'brand_cat_id' => $item['brand_cat_id'] ?? null,

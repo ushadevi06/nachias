@@ -89,11 +89,12 @@
             $minRate = $item->rate;
             $mrp = $item->mrp;
             
-            $groupKey = $productName . '|' . $fullCatPath . '|' . $colorName . '|' . $fit . '|' . $minRate . '|' . $mrp;
+            $groupKey = $productName . '|' . ($item->art_no ?? '-') . '|' . $fullCatPath . '|' . $colorName . '|' . $fit . '|' . $minRate . '|' . $mrp;
             
             if (!isset($groupedItems[$groupKey])) {
                 $groupedItems[$groupKey] = [
                     'product' => $productName,
+                    'art_no' => $item->art_no ?? '-',
                     'category_path' => $fullCatPath,
                     'category_name' => $categoryName,
                     'color' => $colorName,
@@ -202,7 +203,8 @@
             <thead class="dark-header">
                 <tr>
                     <th style="width: 5%;">S No.</th>
-                    <th style="width: 25%;">Product</th>
+                    <th style="width: 15%;">Product</th>
+                    <th style="width: 10%;">Art No</th>
                     <th style="width: 18%;">Category</th>
                     <th style="width: 8%;">Color</th>
                     <th style="width: 8%;">Fit</th>
@@ -225,6 +227,7 @@
                     <tr>
                         <td class="text-center">{{ $sn++ }}</td>
                         <td class="bold">{{ $group['product'] }}</td>
+                        <td class="text-center">{{ $group['art_no'] }}</td>
                         <td>{{ $group['category_name'] }}</td>
                         <td class="text-center">{{ $group['color'] }}</td>
                         <td class="text-center">{{ $group['fit'] }}</td>
@@ -247,7 +250,7 @@
             </tbody>
             <tfoot>
                 <tr class="dark-header">
-                    <th colspan="5" class="text-right" style="padding-right: 15px;">Total</th>
+                    <th colspan="6" class="text-right" style="padding-right: 15px;">Total</th>
                     @foreach($sizeColumns as $sz)
                         <th class="text-center">{{ $colTotals[$sz] > 0 ? $colTotals[$sz] : '' }}</th>
                     @endforeach
