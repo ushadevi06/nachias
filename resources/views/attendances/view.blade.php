@@ -62,7 +62,18 @@
                     </form>
 
                     <div class="row mt-4 g-3" id="dailySummaryCards" style="display: none;">
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-sm-6 col-lg">
+                            <div class="card bg-secondary text-white h-100">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-white mb-1 opacity-75">Total Employees</h6>
+                                        <h3 class="card-text text-white mb-0 fw-bold" id="summaryTotalCount">0</h3>
+                                    </div>
+                                    <div class="fs-1 opacity-50"><i class="ri-group-line"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg">
                             <div class="card bg-success text-white h-100">
                                 <div class="card-body d-flex justify-content-between align-items-center">
                                     <div>
@@ -73,7 +84,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-sm-6 col-lg">
                             <div class="card bg-danger text-white h-100">
                                 <div class="card-body d-flex justify-content-between align-items-center">
                                     <div>
@@ -84,7 +95,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-sm-6 col-lg">
                             <div class="card bg-warning text-dark h-100">
                                 <div class="card-body d-flex justify-content-between align-items-center">
                                     <div>
@@ -95,7 +106,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-sm-6 col-lg">
                             <div class="card bg-info text-white h-100">
                                 <div class="card-body d-flex justify-content-between align-items-center">
                                     <div>
@@ -928,12 +939,14 @@
                 `).join('');
                 initStaffReportDataTable();
                 const present =
-                    data.filter(x => x.status === 'Present').length;
+                    data.filter(x => x.status === 'Present' || x.status === 'Overtime').length;
                 const late =
                     data.filter(x => x.status === 'Late').length;
                 const absent =
                     data.filter(x => x.status === 'Absent' || x.status === 'Missing Time Card').length;
-                staffReportSummary.innerHTML = `<span class="badge bg-success me-1">${present} Present</span> <span class="badge bg-warning text-dark me-1">${late} Late</span> <span class="badge bg-danger">${absent} Absent</span>`;
+                const overtime =
+                    data.filter(x => x.status === 'Overtime').length;
+                staffReportSummary.innerHTML = `<span class="badge bg-success me-1">${present} Present</span> <span class="badge bg-warning text-dark me-1">${late} Late</span> <span class="badge bg-danger me-1">${absent} Absent</span> <span class="badge bg-info me-1">${overtime} Overtime</span>`;
             })
             .catch(err => {
                 console.error(err);
@@ -1745,6 +1758,7 @@
                     // Update Summary Cards
                     if (attendanceRecords.length > 0) {
                         document.getElementById('dailySummaryCards').style.display = 'flex';
+                        document.getElementById('summaryTotalCount').textContent = attendanceRecords.length;
                         document.getElementById('summaryPresentCount').textContent = attendanceRecords.filter(r => r.status === 'Present' || r.status === 'Late' || r.status === 'Overtime').length;
                         document.getElementById('summaryAbsentCount').textContent = attendanceRecords.filter(r => r.status === 'Absent' || r.status === 'Missing Time Card').length;
                         document.getElementById('summaryLateCount').textContent = attendanceRecords.filter(r => r.status === 'Late').length;
