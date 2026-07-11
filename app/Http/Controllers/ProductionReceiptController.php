@@ -71,8 +71,8 @@ class ProductionReceiptController extends Controller
                     $action .= '<a href="' . url('production_receipts/view/' . $row->id) . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                 }
                 /* if (auth()->id() == 1 || auth()->user()->can('delete production')) {
-                 $action .= '<a href="' . url('production_receipts/delete/' . $row->id) . '" class="btn btn-delete ps-2" onclick="return confirm(\'Are you sure you want to delete this receipt?\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
-                 } */
+                    $action .= '<a href="' . url('production_receipts/delete/' . $row->id) . '" class="btn btn-delete ps-2" onclick="return confirm(\'Are you sure you want to delete this receipt?\')"><i class="icon-base ri ri-delete-bin-line"></i></a>';
+                } */
                 $action .= '</div>';
 
                 $statusBadge = $row->status == 'Posted'
@@ -256,8 +256,6 @@ class ProductionReceiptController extends Controller
                     addLog('create', 'Production Receipt', 'production_receipts', $receipt->id, null, $newData);
                 }
 
-
-
                 if ($newData['status'] == 'Posted') {
                     $this->createStockEntry($receipt, $request->store_location_id);
                     $this->updateActualConsumables($receipt);
@@ -345,14 +343,10 @@ class ProductionReceiptController extends Controller
 
     private function createStockEntry($receipt, $storeLocationId)
     {
-        $stockEntry = StockEntry::where('reference_document', $receipt->receipt_no)
-            ->where('entry_type', 'Finished Goods')
-            ->first();
+        $stockEntry = StockEntry::where('reference_document', $receipt->receipt_no)->where('entry_type', 'Finished Goods')->first();
 
         if ($stockEntry) {
-            $hasIssuedStock = StockEntryItem::where('stock_entry_id', $stockEntry->id)
-                ->where('qty_out', '>', 0)
-                ->exists();
+            $hasIssuedStock = StockEntryItem::where('stock_entry_id', $stockEntry->id)->where('qty_out', '>', 0)->exists();
 
             if ($hasIssuedStock) {
                 throw new \Exception('Cannot update Stock Entry because some items have already been issued/sold from this stock.');
@@ -409,18 +403,13 @@ class ProductionReceiptController extends Controller
                 }
 
                 $sleeveTypeShort = ($sleeve == 'Full') ? 'F/S' : (($sleeve == 'Half') ? 'H/S' : $sleeve);
-                $barcodeMaster = \App\Models\BarcodeMaster::where('art_no', $item->art_no)
-                    ->where('size', $item->size)
-                    ->where('sleeve_type', $sleeveTypeShort)
-                    ->first();
+                $barcodeMaster = \App\Models\BarcodeMaster::where('art_no', $item->art_no)->where('size', $item->size)->where('sleeve_type', $sleeveTypeShort)->first();
 
                 if ($barcodeMaster) {
                     $sku = $barcodeMaster->barcode_no;
                     $itemCode = $barcodeMaster->item_code ?: $itemCode;
                     $barcodeMasterId = $barcodeMaster->id;
                 } else {
-                    // Fallback: generate barcode if not found in barcode_masters
-                    // (e.g., if issue was done before barcode_masters feature was added)
                     preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $item->art_no, $matches);
                     $numericBase = $matches[2] ?? '';
                     $suffix = $matches[3] ?? '1';
@@ -437,21 +426,16 @@ class ProductionReceiptController extends Controller
                     $sku = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
                     $barcodeMasterId = null;
                 }
-                // --- End barcode lookup ---
 
                 $styleId = null;
                 if ($barcodeMaster && !empty($barcodeMaster->style_id)) {
                     $styleId = $barcodeMaster->style_id;
                 } else {
-                    $fallbackBm = \App\Models\BarcodeMaster::where('job_card_entry_id', $receipt->job_card_id)
-                        ->whereNotNull('style_id')
-                        ->first();
+                    $fallbackBm = \App\Models\BarcodeMaster::where('job_card_entry_id', $receipt->job_card_id)->whereNotNull('style_id')->first();
                     if ($fallbackBm) {
                         $styleId = $fallbackBm->style_id;
                     } else {
-                        $fallbackBm2 = \App\Models\BarcodeMaster::where('art_no', $item->art_no)
-                            ->whereNotNull('style_id')
-                            ->first();
+                        $fallbackBm2 = \App\Models\BarcodeMaster::where('art_no', $item->art_no)->whereNotNull('style_id')->first();
                         if ($fallbackBm2) {
                             $styleId = $fallbackBm2->style_id;
                         }
@@ -539,28 +523,18 @@ class ProductionReceiptController extends Controller
                 return null;
             }
 
-            $stockItem = \App\Models\StockEntryItem::where('art_no', $normalizedArtNo)
-                ->orderByDesc('id')
-                ->first();
+            $stockItem = \App\Models\StockEntryItem::where('art_no', $normalizedArtNo)->orderByDesc('id')->first();
             if ($stockItem && $stockItem->store_category_id) {
                 return $stockItem->store_category_id;
             }
 
-            $row = \DB::table('grn_entry_items')
-                ->join('purchase_invoice_items', 'grn_entry_items.purchase_invoice_item_id', '=', 'purchase_invoice_items.id')
-                ->join('raw_materials', 'purchase_invoice_items.raw_material_id', '=', 'raw_materials.id')
-                ->where('grn_entry_items.art_no', $normalizedArtNo)
-                ->orderByDesc('grn_entry_items.id')
-                ->select('raw_materials.store_category_id')
-                ->first();
+            $row = \DB::table('grn_entry_items')->join('purchase_invoice_items', 'grn_entry_items.purchase_invoice_item_id', '=', 'purchase_invoice_items.id')->join('raw_materials', 'purchase_invoice_items.raw_material_id', '=', 'raw_materials.id')->where('grn_entry_items.art_no', $normalizedArtNo)->orderByDesc('grn_entry_items.id')->select('raw_materials.store_category_id')->first();
 
             if ($row && $row->store_category_id) {
                 return $row->store_category_id;
             }
 
-            $rawMaterial = \App\Models\RawMaterial::where('code', $normalizedArtNo)
-                ->orWhere('name', $normalizedArtNo)
-                ->first();
+            $rawMaterial = \App\Models\RawMaterial::where('code', $normalizedArtNo)->orWhere('name', $normalizedArtNo)->first();
             if ($rawMaterial) {
                 return $rawMaterial->store_category_id;
             }

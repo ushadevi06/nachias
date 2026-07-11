@@ -558,7 +558,7 @@
                                                         <input type="number" name="items[{{ $index }}][quantity]" class="form-control qty-input open-qty" value="{{ $row->quantity ?? '' }}" min="0.01" step="0.01">
                                                         <div class="stock-info-wrapper mt-1">
                                                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">{{ number_format($row->stock_qty ?? 0, 2) }}</span></small>
-                                                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                                                            <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -821,14 +821,18 @@
                                         <input type="hidden" name="sub_total" id="sub_total" value="{{ old('sub_total', isset($invoice) ? number_format($invoice->sub_total, 2, '.', '') : '0.00') }}">
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <span class="text-secondary fw-medium">Sales Discount (<span id="sales_discount_label">{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount, 2, '.', '') : '0.00') }}</span>%):</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="text-secondary fw-medium me-2">Sales Discount (%):</span>
+                                            <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount, 2, '.', '') : '0.00') }}">
+                                        </div>
                                         <span class="fw-bold mb-0" id="sales_discount_amount_val">₹0.00</span>
-                                        <input type="hidden" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount, 2, '.', '') : '0.00') }}">
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                                        <span class="text-secondary fw-medium">Box Discount (₹<span id="box_discount_label">{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}</span>/pc):</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="text-secondary fw-medium me-2">Box Discount (₹/pc):</span>
+                                            <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="box_discount_amount" id="box_discount_amount" value="{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}">
+                                        </div>
                                         <span class="fw-bold mb-0" id="box_discount_amount_val">₹0.00</span>
-                                        <input type="hidden" name="box_discount_amount" id="box_discount_amount" value="{{ old('box_discount_amount', isset($invoice) ? number_format($invoice->box_discount_amount, 2, '.', '') : '0.00') }}">
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <span class="text-secondary fw-medium">Total Discount Amount:</span>
@@ -1498,8 +1502,6 @@
             var boxDiscountValue = totalQty * boxDiscountPerPc;
             var discount = salesDiscountValue + boxDiscountValue;
             
-            $('#sales_discount_label').text(salesDiscPercent.toFixed(2));
-            $('#box_discount_label').text(boxDiscountPerPc.toFixed(2));
             $('#sales_discount_amount_val').text('₹' + salesDiscountValue.toFixed(2));
             $('#box_discount_amount_val').text('₹' + boxDiscountValue.toFixed(2));
             $('#discount_val').text('- ₹' + discount.toFixed(2));
@@ -1570,7 +1572,7 @@
 
 
 
-        $(document).on('input', '#discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
+        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
             calculateTotals();
         });
 
@@ -1628,6 +1630,9 @@
             if (!isNaN(max) && qty > max) {
                 errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                 qtyInput.addClass('is-invalid');
+            } else if (!isNaN(stock) && qty > stock) {
+                errorDiv.text('Exceeds stock!').show();
+                qtyInput.addClass('is-invalid');
             } else {
                 errorDiv.hide();
                 qtyInput.removeClass('is-invalid');
@@ -1641,9 +1646,54 @@
         });
 
         $('.common-form').on('submit', function(e) {
-            if ($('.qty.is-invalid').length > 0) {
+            let hasError = false;
+
+            // Validate regular items
+            $('#item-rows .item-row').each(function() {
+                var row = $(this);
+                var qtyInput = row.find('.qty');
+                if (qtyInput.length === 0) return;
+                var qty = parseFloat(qtyInput.val()) || 0;
+                var maxAttr = qtyInput.attr('data-max');
+                var max = (maxAttr !== undefined && maxAttr !== '') ? parseFloat(maxAttr) : NaN;
+                var stockAttr = qtyInput.attr('data-stock');
+                var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
+                var errorDiv = row.find('.qty-error');
+
+                if (!isNaN(max) && qty > max) {
+                    errorDiv.text('Exceeds ordered qty (' + max + ')').show();
+                    qtyInput.addClass('is-invalid');
+                    hasError = true;
+                } else if (!isNaN(stock) && qty > stock) {
+                    errorDiv.text('Exceeds stock!').show();
+                    qtyInput.addClass('is-invalid');
+                    hasError = true;
+                } else {
+                    errorDiv.hide();
+                    qtyInput.removeClass('is-invalid');
+                }
+            });
+
+            // Validate open order items
+            $('#open-order-item-rows .item-row').each(function() {
+                var row = $(this);
+                var qtyInput = row.find('.open-qty');
+                if (qtyInput.length === 0) return;
+                var qty = parseFloat(qtyInput.val()) || 0;
+                var available = parseFloat(row.find('.available-stock-display').text()) || 0;
+
+                if (qty > available) {
+                    qtyInput.addClass('is-invalid');
+                    row.find('.stock-error-msg').show();
+                    hasError = true;
+                } else {
+                    qtyInput.removeClass('is-invalid');
+                    row.find('.stock-error-msg').hide();
+                }
+            });
+
+            if (hasError) {
                 e.preventDefault();
-                alert('Please correct the quantities before saving. Some items exceed the ordered quantity.');
                 return false;
             }
         });
@@ -2023,7 +2073,7 @@
                         <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" min="0.01" step="0.01">
                         <div class="stock-info-wrapper mt-1">
                             <small class="stock-label text-muted">Stock: <span class="available-stock-display">${parseFloat(res.balance || 0).toFixed(2)}</span></small>
-                            <div class="invalid-feedback stock-error-msg" style="display: none;">Exceeds!</div>
+                            <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
                         </div>
                     </div>
                 </td>

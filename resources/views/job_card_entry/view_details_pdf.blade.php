@@ -195,21 +195,43 @@
 
         $fabricImageSrcMap = [];
         foreach ($fabricDetails as $detail) {
-            $imageFile = trim((string) ($detail->grn_image ?? ''));
             $imageSrc = '';
-
-            if ($imageFile !== '') {
-                $imagePath = public_path('uploads/grn_items/' . $imageFile);
+            $artNo = trim((string) ($detail->art_no ?? ''));
+            
+            // 1. Try Job Card Entry Image First (Highest Priority)
+            $jobCardImage = $jobCard->images->where('art_no', $artNo)->first();
+            if ($jobCardImage && !empty($jobCardImage->image)) {
+                $imagePath = public_path($jobCardImage->image);
                 if (file_exists($imagePath)) {
                     $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
                     $mimeType = match ($extension) {
                         'jpg', 'jpeg' => 'image/jpeg',
                         'png' => 'image/png',
+                        'webp' => 'image/webp',
                         default => null,
                     };
-
                     if ($mimeType) {
                         $imageSrc = 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($imagePath));
+                    }
+                }
+            }
+
+            // 2. Fallback to GRN Entry Image if Job Card Image not found
+            if ($imageSrc === '') {
+                $imageFile = trim((string) ($detail->grn_image ?? ''));
+                if ($imageFile !== '') {
+                    $imagePath = public_path('uploads/grn_items/' . $imageFile);
+                    if (file_exists($imagePath)) {
+                        $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));
+                        $mimeType = match ($extension) {
+                            'jpg', 'jpeg' => 'image/jpeg',
+                            'png' => 'image/png',
+                            'webp' => 'image/webp',
+                            default => null,
+                        };
+                        if ($mimeType) {
+                            $imageSrc = 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($imagePath));
+                        }
                     }
                 }
             }
@@ -486,63 +508,66 @@
         </tr>
     </table>
 
-    {{-- Fabric Details (Horizontal Format) --}}
-    <table class="table table-bordered" style="margin-top: 3pt;">
-        {{--  <tr>
-            <td class="bg-light fw-bold" style="width: 15%;">FABRIC TYPE</td> 
-            <td colspan="{{ count($fabricDetails) }}" class="text-center fw-bold" style="color: #2f6fae; font-size: 8pt;"> 
-                {{ $jobCard->fabricType->fabric_type ?? 'N/A' }}
-            </td>
-        </tr> --}}
-        <tr>
-            <td class="bg-light fw-bold" style="width: 15%;">IMAGE</td>
-            @foreach($fabricDetails as $detail)
-                @php $imageSrc = $fabricImageSrcMap[$detail->id] ?? ''; @endphp
-                <td class="text-center">
-                    @if($imageSrc)
-                        <img src="{{ $imageSrc }}" alt="GRN Image" class="art-img">
-                    @else
-                        -
-                    @endif
-                </td>
-            @endforeach
-        </tr>
-        <tr>
-            <td class="bg-light fw-bold" style="width: 15%;">ART NO</td>
-            @foreach($fabricDetails as $detail)
-                <td class="text-center fw-bold">
-                    {{ $detail->art_no }}
-                    @if($detail->item_name)
-                        {{-- <br><span style="font-size: 5pt; font-weight: normal;">{{ $detail->item_name }}</span> --}}
-                    @endif
-                </td>
-            @endforeach
-        </tr>
-        <tr>
-            <td class="bg-light fw-bold">WIDTH</td>
-            @foreach($fabricDetails as $detail)
-                <td class="text-center">{{ $detail->width ?: '-' }}</td>
-            @endforeach
-        </tr>
-        <tr>
-            <td class="bg-light fw-bold">Issue Meter</td>
-            @foreach($fabricDetails as $detail)
-                <td class="text-center">{{ $detail->mtr ?: '-' }}</td>
-            @endforeach
-        </tr>
-        <tr>
-            <td class="bg-light fw-bold">IN/OUT</td>
-            @foreach($fabricDetails as $detail)
-                <td class="text-center">{{ $detail->in_out ?: '-' }}</td>
-            @endforeach
-        </tr>
-        <tr>
-            <td class="bg-light fw-bold">N.PATTI</td>
-            @foreach($fabricDetails as $detail)
-                <td class="text-center">{{ $detail->n_patti ?: '-' }}</td>
-            @endforeach
-        </tr>
-    </table>
+    @php
+        $fabricChunks = $fabricDetails->chunk(6);
+    @endphp
+    @foreach($fabricChunks as $chunk)
+        <table class="table table-bordered" style="margin-top: 3pt; table-layout: fixed; width: 100%;">
+            <tr>
+                <td class="bg-light fw-bold" style="width: 16%;">IMAGE</td>
+                @foreach($chunk as $detail)
+                    @php $imageSrc = $fabricImageSrcMap[$detail->id] ?? ''; @endphp
+                    <td class="text-center" style="width: 14%;">
+                        @if($imageSrc)
+                            <img src="{{ $imageSrc }}" alt="GRN Image" class="art-img">
+                        @else
+                            <div style="height: 35pt; width: 100%;"></div>
+                        @endif
+                    </td>
+                @endforeach
+                @for($i = $chunk->count(); $i < 6; $i++)
+                    <td style="width: 14%;"></td>
+                @endfor
+            </tr>
+            <tr>
+                <td class="bg-light fw-bold">ART NO</td>
+                @foreach($chunk as $detail)
+                    <td class="text-center fw-bold">
+                        {{ $detail->art_no }}
+                    </td>
+                @endforeach
+                @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
+            </tr>
+            <tr>
+                <td class="bg-light fw-bold">WIDTH</td>
+                @foreach($chunk as $detail)
+                    <td class="text-center">{{ $detail->width ?: '-' }}</td>
+                @endforeach
+                @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
+            </tr>
+            <tr>
+                <td class="bg-light fw-bold">Issue Meter</td>
+                @foreach($chunk as $detail)
+                    <td class="text-center">{{ $detail->mtr ?: '-' }}</td>
+                @endforeach
+                @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
+            </tr>
+            <tr>
+                <td class="bg-light fw-bold">IN/OUT</td>
+                @foreach($chunk as $detail)
+                    <td class="text-center">{{ $detail->in_out ?: '-' }}</td>
+                @endforeach
+                @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
+            </tr>
+            <tr>
+                <td class="bg-light fw-bold">N.PATTI</td>
+                @foreach($chunk as $detail)
+                    <td class="text-center">{{ $detail->n_patti ?: '-' }}</td>
+                @endforeach
+                @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
+            </tr>
+        </table>
+    @endforeach
 
     {{-- Quantity Summary --}}
     <table class="table table-bordered" style="margin-top: 3pt;">
@@ -571,7 +596,7 @@
             @foreach($fabricDetails as $detail)
                 @php 
                     $rowTotal = $detail->quantities->sum('total_qty');
-    $grandTotal += $rowTotal;
+                    $grandTotal += $rowTotal;
                 @endphp
                 <tr class="text-center">
                     <td class="fw-bold">{{ $detail->art_no }}</td>
@@ -593,12 +618,12 @@
                 @foreach($allSizes as $s)
                     <td>
                         @php
-    $sumFs = 0;
-    foreach ($fabricDetails as $detail) {
-        if ($isCanvas || ($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-            $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
-        }
-    }
+                            $sumFs = 0;
+                            foreach ($fabricDetails as $detail) {
+                                if ($isCanvas || ($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+                                    $sumFs += $detail->quantities->where('size', $s)->sum('qty_fs');
+                                }
+                            }
                         @endphp
                         {{ $sumFs ?: '-' }}
                     </td>
@@ -607,12 +632,12 @@
                 @foreach($allSizes as $s)
                     <td>
                         @php
-    $sumHs = 0;
-    foreach ($fabricDetails as $detail) {
-        if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
-            $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
-        }
-    }
+                            $sumHs = 0;
+                            foreach ($fabricDetails as $detail) {
+                                if (($artCategoryMap[$detail->art_no] ?? 1) == 1) {
+                                    $sumHs += $detail->quantities->where('size', $s)->sum('qty_hs');
+                                }
+                            }
                         @endphp
                         {{ $sumHs ?: '-' }}
                     </td>

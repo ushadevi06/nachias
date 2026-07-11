@@ -1002,7 +1002,7 @@ class SalesOrderController extends Controller
                 'ip.selling_price as retail_mrp',
                 'stock_entry_items.sleeve_type',
                 DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance')
-            )->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.sku', 'items.name', 'brands.brand_name', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'ip.unit_price', 'ip.selling_price', 'stock_entry_items.sleeve_type')->having('balance', '>', 0)->limit(20)->get();
+            )->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.sku', 'items.name', 'brands.brand_name', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'ip.unit_price', 'ip.selling_price', 'stock_entry_items.sleeve_type')->limit(20)->get();
 
         $formattedResults = [];
         foreach ($results as $item) {
@@ -1015,6 +1015,9 @@ class SalesOrderController extends Controller
             }
             if ($item->size) {
                 $label .= ' | Size: ' . $item->size;
+            }
+            if ($item->balance <= 0) {
+                $label .= ' [OUT OF STOCK]';
             }
             
             $finalPrice = $item->unit_price ?? $item->fallback_price;
@@ -1065,7 +1068,7 @@ class SalesOrderController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Charge deleted successfully'
-            ]);
+            ]); 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -1093,7 +1096,5 @@ class SalesOrderController extends Controller
             return redirect('sales_orders')->with('error', 'Sync failed: ' . $e->getMessage());
         }
     }
-
-
 
 }

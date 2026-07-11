@@ -189,6 +189,10 @@ class JobCardEntryController extends Controller
                 'production_stages.*.rate' => $isCanvas ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
                 'stages' => 'nullable|array|min:1',
                 'fabrics.*.mtr' => 'nullable|numeric|min:0.01',
+                'fabrics.*.lay_marks.*.sizes' => 'required|array|min:1',
+                'fabrics.*.lay_marks.*.sleeve' => 'required|string',
+                'fabrics.*.lay_marks.*.meter' => 'required|numeric|gt:0',
+                'fabrics.*.lay_marks.*.no_of_lay' => 'required|numeric|gt:0',
             ];
 
             $messages = [
@@ -204,6 +208,13 @@ class JobCardEntryController extends Controller
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 'fabrics.*.mtr.min' => 'The Issued Meters must be greater than 0 for fabric material.',
+                'fabrics.*.lay_marks.*.sizes.required' => 'Size is mandatory for all Lay Marks.',
+                'fabrics.*.lay_marks.*.sizes.min' => 'Please select at least one Size for Lay Marks.',
+                'fabrics.*.lay_marks.*.sleeve.required' => 'Sleeve is mandatory for all Lay Marks.',
+                'fabrics.*.lay_marks.*.meter.required' => 'Lay Mark Meter is mandatory.',
+                'fabrics.*.lay_marks.*.meter.gt' => 'Lay Mark Meter must be greater than 0.',
+                'fabrics.*.lay_marks.*.no_of_lay.required' => 'No. of Lay is mandatory.',
+                'fabrics.*.lay_marks.*.no_of_lay.gt' => 'No. of Lay must be greater than 0.',
             ];
 
             $validator = Validator::make($request->all(), $rules, $messages);
@@ -470,17 +481,12 @@ class JobCardEntryController extends Controller
                             : null;
 
                         if ($hasTasks || $hasIssuedItems) {
-                            $existing = $jobCard->fabricDetails()
-                                ->where('art_no', $artNo)
-                                ->where('stock_entry_id', $seId)
-                                ->first();
-                            // Only update stock_total_qty if not already snapshotted
+                            $existing = $jobCard->fabricDetails()->where('art_no', $artNo)->where('stock_entry_id', $seId)->first();
                             if ($existing && $existing->stock_total_qty === null && $incomingStockTotalQty !== null) {
                                 $fdVal['stock_total_qty'] = $incomingStockTotalQty;
                             }
                             $fabricDetail = $jobCard->fabricDetails()->updateOrCreate($fdMatch, $fdVal);
                         } else {
-                            // New JC — always set the snapshot
                             if ($incomingStockTotalQty !== null) {
                                 $fdVal['stock_total_qty'] = $incomingStockTotalQty;
                             }

@@ -1549,7 +1549,61 @@
             if ($(this).attr('data-skip-validation') === 'true') return;
 
             e.preventDefault(); 
-            $('.text-danger.small.fw-bold, .backend-error').hide();
+            $('.text-danger.small.fw-bold, .backend-error, .lay-mark-error').hide();
+            $('.lay-mark-row .is-invalid').removeClass('is-invalid');
+
+            let hasLayMarkError = false;
+            $('.lay-mark-row').each(function() {
+                const $row = $(this);
+                
+                // Validate Sizes
+                const $sizesInput = $row.find('.sizes-input');
+                if ($sizesInput.length) {
+                    const sizesVal = $sizesInput.val();
+                    if (!sizesVal || sizesVal.length === 0) {
+                        $sizesInput.siblings('.lay-mark-error').show();
+                        hasLayMarkError = true;
+                    }
+                }
+                
+                // Validate Sleeve
+                const $sleeveInput = $row.find('.sleeve-input');
+                if ($sleeveInput.length) {
+                    if (!$sleeveInput.val()) {
+                        $sleeveInput.addClass('is-invalid');
+                        $sleeveInput.siblings('.lay-mark-error').show();
+                        hasLayMarkError = true;
+                    }
+                }
+                
+                // Validate Meter
+                const $meterInput = $row.find('.meter-input');
+                if ($meterInput.length) {
+                    const meterVal = parseFloat($meterInput.val());
+                    if (isNaN(meterVal) || meterVal <= 0) {
+                        $meterInput.addClass('is-invalid');
+                        $meterInput.siblings('.lay-mark-error').show();
+                        hasLayMarkError = true;
+                    }
+                }
+                
+                // Validate No Of Lay
+                const $noOfLayInput = $row.find('.no-of-lay-input');
+                if ($noOfLayInput.length) {
+                    const layVal = parseFloat($noOfLayInput.val());
+                    if (isNaN(layVal) || layVal <= 0) {
+                        $noOfLayInput.addClass('is-invalid');
+                        $noOfLayInput.siblings('.lay-mark-error').show();
+                        hasLayMarkError = true;
+                    }
+                }
+            });
+
+            if (hasLayMarkError) {
+                // Focus on the first error element
+                $('.lay-mark-error:visible').first().closest('td').find('input, select').focus();
+                return false;
+            }
 
             const grandTotal = $('#article-qty-matrix-grand-total').text().trim();
             const total = parseFloat(grandTotal) || 0;
@@ -2680,28 +2734,36 @@
                             const savedSizes = lm.sizes ? (Array.isArray(lm.sizes) ? lm.sizes : JSON.parse(lm.sizes)) : [];
                             const savedSleeve = lm.sleeve_type || 'F/S';
                             const savedMeter = (lm.lay_mark_meter !== null && lm.lay_mark_meter !== undefined) ? lm.lay_mark_meter : '';
-                            const savedNoOfLay = (lm.no_of_lay !== null && lm.no_of_lay !== undefined) ? lm.no_of_lay : '';
+                    const savedNoOfLay = (lm.no_of_lay !== null && lm.no_of_lay !== undefined) ? lm.no_of_lay : '';
 
                             sizeTableHtml += `
                                 <tr class="lay-mark-row">
                                     <td class="text-center align-middle fw-bold mark-no">${lmIndex + 1}</td>
                                     <td>
-                                        <select class="form-select form-select-sm select2-size-multi" multiple="multiple" name="fabrics[${index}][lay_marks][${lmIndex}][sizes][]" style="width: 100%;">
+                                        <select class="form-select form-select-sm select2-size-multi sizes-input" multiple="multiple" name="fabrics[${index}][lay_marks][${lmIndex}][sizes][]" style="width: 100%;">
                                             ${sizes.map(sz => `<option value="${sz}" ${savedSizes.includes(String(sz)) ? 'selected' : ''}>${sz}</option>`).join('')}
                                         </select>
+                                        <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; font-weight: 500;">This field is required</div>
                                     </td>
                                     ${isCanvas ? `<input type="hidden" name="fabrics[${index}][lay_marks][${lmIndex}][sleeve]" value="F/S">` : `
                                     <td>
-                                        <select class="form-select form-select-sm" name="fabrics[${index}][lay_marks][${lmIndex}][sleeve]">
+                                        <select class="form-select form-select-sm sleeve-input" name="fabrics[${index}][lay_marks][${lmIndex}][sleeve]">
                                             <option value="F/S" ${savedSleeve === 'F/S' ? 'selected' : ''}>F/S</option>
                                             <option value="H/S" ${savedSleeve === 'H/S' ? 'selected' : ''}>H/S</option>
                                         </select>
+                                        <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; font-weight: 500;">This field is required</div>
                                     </td>`}
-                                    <td>
-                                        <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${lmIndex}][meter]" placeholder="0.00" value="${savedMeter}" ${isTaskReadOnly}>
+                                    <td style="padding: 10px; vertical-align: top;">
+                                        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+                                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-center meter-input" name="fabrics[${index}][lay_marks][${lmIndex}][meter]" placeholder="0.00" value="${savedMeter}" ${isTaskReadOnly}>
+                                            <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; width: 100%; font-weight: 500;">This field is required</div>
+                                        </div>
                                     </td>
-                                    <td>
-                                        <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${lmIndex}][no_of_lay]" placeholder="0" value="${savedNoOfLay}" ${isTaskReadOnly}>
+                                    <td style="padding: 10px; vertical-align: top;">
+                                        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+                                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-center no-of-lay-input" name="fabrics[${index}][lay_marks][${lmIndex}][no_of_lay]" placeholder="0" value="${savedNoOfLay}" ${isTaskReadOnly}>
+                                            <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; width: 100%; font-weight: 500;">This field is required</div>
+                                        </div>
                                     </td>
                                     <td class="text-center align-middle">
                                         <button type="button" class="btn btn-sm btn-icon btn-danger remove-lay-mark" ${isTaskReadOnly ? 'disabled' : ''}><i class="ri ri-delete-bin-line"></i></button>
@@ -2810,22 +2872,30 @@
                 <tr class="lay-mark-row">
                     <td class="text-center align-middle fw-bold mark-no">${newIndex + 1}</td>
                     <td>
-                        <select class="form-select form-select-sm select2-size-multi" multiple="multiple" name="fabrics[${index}][lay_marks][${newIndex}][sizes][]" style="width: 100%;">
+                        <select class="form-select form-select-sm select2-size-multi sizes-input" multiple="multiple" name="fabrics[${index}][lay_marks][${newIndex}][sizes][]" style="width: 100%;">
                             ${sizes.map(sz => `<option value="${sz}">${sz}</option>`).join('')}
                         </select>
+                        <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; font-weight: 500;">This field is required</div>
                     </td>
                     ${isCanvas ? `<input type="hidden" name="fabrics[${index}][lay_marks][${newIndex}][sleeve]" value="F/S">` : `
                     <td>
-                        <select class="form-select form-select-sm" name="fabrics[${index}][lay_marks][${newIndex}][sleeve]">
+                        <select class="form-select form-select-sm sleeve-input" name="fabrics[${index}][lay_marks][${newIndex}][sleeve]">
                             <option value="F/S">F/S</option>
                             <option value="H/S">H/S</option>
                         </select>
+                        <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; font-weight: 500;">This field is required</div>
                     </td>`}
-                    <td>
-                        <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${newIndex}][meter]" placeholder="0.00">
+                    <td style="padding: 10px; vertical-align: top;">
+                        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-center meter-input" name="fabrics[${index}][lay_marks][${newIndex}][meter]" placeholder="0.00">
+                            <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; width: 100%; font-weight: 500;">This field is required</div>
+                        </div>
                     </td>
-                    <td>
-                        <input type="number" step="0.01" class="form-control form-control-sm text-center" name="fabrics[${index}][lay_marks][${newIndex}][no_of_lay]" placeholder="0">
+                    <td style="padding: 10px; vertical-align: top;">
+                        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-center no-of-lay-input" name="fabrics[${index}][lay_marks][${newIndex}][no_of_lay]" placeholder="0">
+                            <div class="text-danger small mt-1 lay-mark-error" style="display:none; text-align: left; width: 100%; font-weight: 500;">This field is required</div>
+                        </div>
                     </td>
                     <td class="text-center align-middle">
                         <button type="button" class="btn btn-sm btn-icon btn-danger remove-lay-mark"><i class="ri ri-delete-bin-line"></i></button>
@@ -3745,7 +3815,6 @@
                 
                 $('#add-stage-row').hide();
                 
-                // Size Ratio
                 $('#cutting-size-table tr.qty-hs-row').hide();
                 $('#cutting-size-table tr.qty-fs-row td:first').html('<strong>QUANTITY</strong>');
                 $('select[name="sleeve_types[]"]').closest('.col-md-6').hide();
@@ -3757,7 +3826,6 @@
                 }
                 $('#cutting-size-table-wrapper').show();
                 
-                // Remove required asterisks from production stages headers
                 $('#production-stages-table thead th').each(function() {
                     $(this).html($(this).html().replace(' *', ''));
                 });
@@ -3769,7 +3837,6 @@
                 $('select[name="sleeve_types[]"]').closest('.col-md-6').show();
                 $('#sleeve-instance-manager').show();
                 
-                // Restore required asterisks in production stages headers
                 $('#production-stages-table thead th').each(function() {
                     let text = $(this).text().trim();
                     if (['STAGE', 'ISSUE UNIT (PLANT)', 'RATE', 'ISSUE DATE', 'DEADLINE DATE'].includes(text) && !text.includes('*')) {

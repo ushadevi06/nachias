@@ -44,28 +44,31 @@
                 });
                 $fabricImageMap = [];
                 foreach ($fabricDetails as $detail) {
-                    $prebuiltUrl = trim((string) ($detail->grn_image_url ?? ''));
-                    if ($prebuiltUrl !== '') {
-                        $fabricImageMap[trim((string) $detail->art_no)] = $prebuiltUrl;
-                        continue;
-                    }
-
-                    $imageFile = trim((string) ($detail->grn_image ?? ''));
+                    $artNo = trim((string) $detail->art_no);
                     $imageUrl = '';
 
-                    if ($imageFile !== '') {
-                        $normalized = str_replace('\\', '/', $imageFile);
-                        $normalized = ltrim($normalized, '/');
-
-                        // Accept either a bare filename OR a relative uploads path.
-                        if (str_starts_with($normalized, 'uploads/')) {
-                            $imageUrl = url($normalized);
+                    $jobCardImage = $jobCard->images->where('art_no', $artNo)->first();
+                    if ($jobCardImage && !empty($jobCardImage->image)) {
+                        $imageUrl = url($jobCardImage->image);
+                    } else {
+                        $prebuiltUrl = trim((string) ($detail->grn_image_url ?? ''));
+                        if ($prebuiltUrl !== '') {
+                            $imageUrl = $prebuiltUrl;
                         } else {
-                            $imageUrl = url('uploads/grn_items/' . basename($normalized));
+                            $imageFile = trim((string) ($detail->grn_image ?? ''));
+                            if ($imageFile !== '') {
+                                $normalized = str_replace('\\', '/', $imageFile);
+                                $normalized = ltrim($normalized, '/');
+                                if (str_starts_with($normalized, 'uploads/')) {
+                                    $imageUrl = url($normalized);
+                                } else {
+                                    $imageUrl = url('uploads/grn_items/' . basename($normalized));
+                                }
+                            }
                         }
                     }
 
-                    $fabricImageMap[trim((string) $detail->art_no)] = $imageUrl;
+                    $fabricImageMap[$artNo] = $imageUrl;
                 }
                 $issueDate = $jobCard->job_card_date ? \Carbon\Carbon::parse($jobCard->job_card_date) : null;
                 $deliveryDate = $jobCard->delivery_date ? \Carbon\Carbon::parse($jobCard->delivery_date) : null;
@@ -108,7 +111,6 @@
                             padding: 4px 6px !important;
                             vertical-align: middle;
                         }
-                        /* These rows are only used to keep print layout aligned */
                         .jc-filler-row {
                             display: none;
                         }
@@ -601,6 +603,8 @@
                                     <tr>
                                         <td class="fw-bold py-1"></td>
                                         <td class="py-1"></td>
+                                        <td class="fw-bold py-1 text-center"></td>
+                                        <td colspan="3"></td>
                                         <td class="p-0" colspan="2">
                                             <table class="table mb-0 job-card-table" style="border: none;">
                                                 @for($i = max(1, (count($fsRows) + count($hsRows))); $i < count($allLayMarks); $i++)
@@ -621,8 +625,7 @@
                                                 @endfor
                                             </table>
                                         </td>
-                                        <td class="py-1" colspan="2"></td>
-                                         <td class="py-1"></td>
+                                        <td class="py-1 text-center fw-bold"></td>
                                     </tr>
                                     @endif
                                 </tbody>
@@ -654,7 +657,7 @@
                                                         <img src="{{ $fabricImgUrl }}" alt="GRN Image" class="border rounded" style="width: 52px; height: 52px; object-fit: cover;">
                                                     </a>
                                                 @else
-                                                    <span class="text-muted">-</span>
+                                                    <div style="height: 52px; width: 100%;"></div>
                                                 @endif
                                             </td>
                                         @endforeach
@@ -723,7 +726,7 @@
                                         @endif
                                         @if(!$isCanvas && count($activeHs) > 0)
                                             @php
-                                             $hsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Half Sleeve')->first()->meter ?? null;
+                                                $hsMeter = $jobCard->sleeveMeters->where('sleeve_type', 'Half Sleeve')->first()->meter ?? null;
                                             @endphp
                                             <th colspan="{{ count($activeHs) }}">
                                                 H/S @if($hsMeter) <br><small>({{ $hsMeter }} Mtr)</small> @endif
@@ -839,63 +842,52 @@
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <!-- Column 1 Headers -->
                                             <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
                                             <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
                                             <td class="bg-light fw-bold" style="width: 8%;">PLANING DATE</td>
 
-                                            <!-- Column 2 Headers -->
                                             <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
                                             <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
                                             <td class="bg-light fw-bold" style="width: 8%;">DATE</td>
 
-                                            <!-- Column 3 Headers -->
                                             <td class="bg-light fw-bold" style="width: 10%;">SECTION</td>
                                             <td class="bg-light fw-bold" style="width: 10%;">INCHARGE SIGN</td>
                                             <td class="bg-light fw-bold" style="width: 8%;">DATE</td>
 
-                                            <!-- Remarks Grid Cell -->
                                             <td rowspan="8" class="p-0" style="vertical-align: top; width: 16%;">
 
                                             </td>
                                         </tr>
-                                        <!-- Row 1 -->
                                         <tr>
                                             <td class="text-start">PURCHASE</td><td></td><td rowspan="2" class="fw-bold text-center">{{ $pDates['d1'] }}</td>
                                             <td class="text-start">READY</td><td></td><td rowspan="2" class="fw-bold text-center">{{ $pDates['d3'] }}</td>
                                             <td class="text-start">FINAL FINISH RECD</td><td rowspan="4"></td><td rowspan="4" class="fw-bold text-center">{{ $pDates['d6'] }}</td>
                                         </tr>
-                                        <!-- Row 2 -->
                                         <tr>
                                             <td class="text-start">FABRIC STORE</td><td></td>
                                             <td class="text-start">READY STORE</td><td></td>
                                             <td class="text-start">IRONING</td>
                                         </tr>
-                                        <!-- Row 3 -->
                                         <tr>
                                             <td class="text-start">CUTTING</td><td></td><td rowspan="2" class="fw-bold text-center">{{ $pDates['d2'] }}</td>
                                             <td class="text-start">ASSEMBLE</td><td></td><td rowspan="2" class="fw-bold text-center">{{ $pDates['d4'] }}</td>
                                             <td class="text-start">PACKING</td>
                                         </tr>
-                                        <!-- Row 4 -->
                                         <tr>
                                             <td class="text-start">FUSING & LOGO</td><td></td>
                                             <td class="text-start">ASSEMBLE STORE</td><td></td>
                                             <td class="text-start">DELIVERY</td>
                                         </tr>
-                                        <!-- Row 5 -->
                                         <tr>
                                             <td class="text-start">CUTTING SEND BY</td><td></td><td></td>
                                             <td class="text-start">KAJA & BUTTON</td><td></td><td rowspan="3" class="fw-bold text-center">{{ $pDates['d5'] }}</td>
                                             <td class="text-start">F.G STORE</td><td></td><td></td>
                                         </tr>
-                                        <!-- Row 6 -->
                                         <tr>
                                             <td class="text-start">CUTTING RECD BY</td><td></td><td></td>
                                             <td class="text-start">TRIM & CHECK</td><td></td>
                                             <td></td><td></td><td></td>
                                         </tr>
-                                        <!-- Row 7 -->
                                         <tr>
                                             <td class="text-start">UNIT INCHARGE</td><td></td><td></td>
                                             <td class="text-start">PRO SEND</td><td></td>

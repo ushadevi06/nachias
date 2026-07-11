@@ -129,16 +129,13 @@
         }
         
         .tag-main-details {
-            display: flex;
-            justify-content: space-between;
-            flex: 1;
+            height: 33.2mm;
             position: relative;
         }
         
         .details-table {
             border-collapse: collapse;
             width: 100%;
-            height: 100%;
         }
         .details-table td {
             padding: 0.1mm 0;
@@ -167,7 +164,7 @@
         .lot-vertical {
             position: absolute;
             right: 1.5mm;
-            bottom: 38mm;
+            bottom: 4mm;
             transform: rotate(-90deg);
             transform-origin: right bottom;
             font-size: 4.5pt;
@@ -183,6 +180,8 @@
         .tag-footer-info {
             text-align: left;
             line-height: 1.1;
+            height: 13.4mm;
+            overflow: hidden;
         }
         
         .complaints-table {
@@ -202,6 +201,10 @@
             text-align: center;
             margin-top: auto;
             margin-bottom: 1mm;
+        }
+        
+        .hide-for-print {
+            visibility: hidden !important;
         }
         
     </style>
@@ -242,12 +245,12 @@
         <div class="page-container" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
                 <!-- PRICE TAG (45x85 mm) -->
                 <div class="tag-container">
-                    <div class="tag-header-icons">
+                    <div class="tag-header-icons hide-for-print">
                         <img src="{{ url('assets/images/fav.jpeg') }}" class="tag-logo" alt="Logo">
                         <div class="tag-hole"></div>
                     </div>
                     
-                    <div class="size-banner" style="background-color: {{ $bgColor }}; display: none;">
+                    <div class="size-banner hide-for-print" style="background-color: {{ $bgColor }};">
                         <span class="f-6  font-oswald">Size</span>
                         <span class="f-14 font-bebas" style="letter-spacing: 1px;">{{ $labelData['size'] ?? '-' }}</span>
                     </div>
@@ -266,17 +269,38 @@
                         <div class="tag-qr-section">
                             {!! QrCode::size(50)->generate($qrString) !!}
                         </div>
+                        <div class="lot-vertical">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
                     </div>
-                    <div class="lot-vertical">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
                     
-                    <div class="tag-footer-info f-6" style="display: none;">
+                    <div class="tag-footer-info f-6 hide-for-print">
+                        <div class="f-5" style="color: #000000; margin-bottom: 0.5mm;">Manufactured & Marketed by:</div>
+                        <div class="fw-bold" style="font-size: 5pt; margin-bottom: 0.5mm;">{{ $companyName }}</div>
+                        <div style="font-size: 4pt; line-height: 1.2;">
+                            {{ $labelData['company_address'] ?? '272/2, Somu Nager, Sringeri Nagar, By Pass Road, Madurai - 625 016.' }}
+                        </div>
+                        
+                        <div class="tag-separator"></div>
+                        
+                        <table class="complaints-table">
+                            <tr>
+                                <td class="comp-lbl">Complaints</td>
+                                <td class="comp-col">:</td>
+                                <td class="comp-val fw-bold">{{ $phones }}</td>
+                            </tr>
+                            <tr>
+                                <td class="comp-lbl">Email</td>
+                                <td class="comp-col">:</td>
+                                <td class="comp-val">{{ $firstEmail }}</td>
+                            </tr>
+                        </table>
+                        <div class="tag-separator"></div>
+                    </div>
                     
                     <div class="mrp-section">
                         <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
                         <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
                         <div class="f-5" style="color: #000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
                     </div>
-                </div>
         </div>
     @endforeach
 </body>
