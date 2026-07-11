@@ -224,9 +224,9 @@ class SalesOrderController extends Controller
         $charges = collect();
         if ($id) {
             $salesOrder = SalesOrder::with(['items', 'charges'])->findOrFail($id);
-            // if ($salesOrder->status !== 'Draft' && $salesOrder->status !== 'Pending') {
-            //     return redirect('sales_orders')->with('error', 'Only Draft or Pending Sales Orders can be edited.');
-            // }
+            if ($salesOrder->status !== 'Draft' && $salesOrder->status !== 'Pending') {
+                return redirect('sales_orders')->with('error', 'Only Draft or Pending Sales Orders can be edited.');
+            }
             $charges = $salesOrder->charges;
         }
 

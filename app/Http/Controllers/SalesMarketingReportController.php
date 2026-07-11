@@ -12,81 +12,12 @@ use Illuminate\Support\Facades\DB;
 
 class SalesMarketingReportController extends Controller
 {
-    private function getCustomerPendingItems($customerId)
-    {
-        $allCustomerSOs = \App\Models\SalesOrder::with(['items'])
-            ->where('customer_id', $customerId)
-            ->whereIn('status', ['Approved', 'Dispatched', 'Delivered', 'Partial Delivery'])
-            ->orderBy('id', 'asc')
-            ->get();
-        
-        $soItemOrdered = [];
-        $soItemInvoiced = [];
-
-        foreach($allCustomerSOs as $so) {
-            foreach($so->items as $item) {
-                $soItemOrdered[$so->id][$item->stock_entry_item_id] = $item->qty;
-            }
-        }
-
-        $invoices = DB::table('sales_invoices')
-            ->where('customer_id', $customerId)
-            ->where(function($q) {
-                $q->whereNull('einvoice_status')
-                  ->orWhere('einvoice_status', '!=', 'cancelled');
-            })
-            ->get(['id', 'so_ids', 'so_id', 'delivery_status']);
-
-        foreach($invoices as $inv) {
-            $so_ids = json_decode($inv->so_ids, true);
-            if (!$so_ids && $inv->so_id) {
-                $so_ids = [(string)$inv->so_id];
-            }
-            if (!$so_ids) continue;
-
-            $invItems = DB::table('sales_invoice_items')->where('sales_invoice_id', $inv->id)->get();
-
-            foreach($invItems as $invItem) {
-                $itemId = $invItem->stock_entry_item_id;
-                
-                if ($invItem->scanned_qty > 0) {
-                    $qtyToAllocate = $invItem->scanned_qty;
-                } elseif ($inv->delivery_status === 'Dispatched') {
-                    $qtyToAllocate = $invItem->quantity;
-                } else {
-                    $qtyToAllocate = $invItem->scanned_qty ?? 0;
-                }
-
-                foreach($so_ids as $so_id) {
-                    if ($qtyToAllocate <= 0) break;
-
-                    $ordered = $soItemOrdered[$so_id][$itemId] ?? 0;
-                    $alreadyInvoiced = $soItemInvoiced[$so_id][$itemId] ?? 0;
-                    $pending = $ordered - $alreadyInvoiced;
-
-                    if ($pending > 0) {
-                        $allocate = min($pending, $qtyToAllocate);
-                        $soItemInvoiced[$so_id][$itemId] = $alreadyInvoiced + $allocate;
-                        $qtyToAllocate -= $allocate;
-                    }
-                }
-                
-                if ($qtyToAllocate > 0 && count($so_ids) > 0) {
-                    $first_so = $so_ids[0];
-                    $soItemInvoiced[$first_so][$itemId] = ($soItemInvoiced[$first_so][$itemId] ?? 0) + $qtyToAllocate;
-                }
-            }
-        }
-
-        return $soItemInvoiced;
-    }
-
     public function index(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view sales-marketing-report')) {
             return unauthorizedRedirect();
         }
-        $query = SalesOrder::with(['customer.place', 'customer.city', 'items.stockEntryItem', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices'])->whereNull('deleted_at');
+        $query = SalesOrder::with(['customer.place', 'customer.city', 'items.stockEntryItem', 'items.item.brand', 'salesAgent', 'zone', 'salesInvoices.items'])->whereNull('deleted_at');
 
         if ($request->from_date) {
             $query->where('so_date', '>=', date('Y-m-d', strtotime($request->from_date)));
@@ -104,18 +35,14 @@ class SalesMarketingReportController extends Controller
 
         $orders = $query->orderBy('id', 'desc')->get();
 
-        $customerPendingItemsCache = [];
-
         foreach ($orders as $order) {
-            if (!isset($customerPendingItemsCache[$order->customer_id])) {
-                $customerPendingItemsCache[$order->customer_id] = $this->getCustomerPendingItems($order->customer_id);
-            }
+            $validInvoices = $order->salesInvoices->filter(function($inv) {
+                return empty($inv->einvoice_status) || strtolower($inv->einvoice_status) !== 'cancelled';
+            })->sortBy('inv_date');
             
             $delivered_qty = 0;
-            if (isset($customerPendingItemsCache[$order->customer_id][$order->id])) {
-                foreach ($customerPendingItemsCache[$order->customer_id][$order->id] as $qty) {
-                    $delivered_qty += $qty;
-                }
+            foreach ($validInvoices as $inv) {
+                $delivered_qty += $inv->items->sum('quantity');
             }
 
             // Calculate brand categories
@@ -148,29 +75,31 @@ class SalesMarketingReportController extends Controller
             $order->delivered_qty = $delivered_qty;
             $order->pending_qty = max(0, $order->total_qty - $delivered_qty);
 
-            $validInvoices = $order->salesInvoices->filter(function($inv) {
-                return empty($inv->einvoice_status) || strtolower($inv->einvoice_status) !== 'cancelled';
-            })->sortBy('inv_date');
-            
             $order->partial_d_date = null;
             $order->despatch_complete_date = null;
             
             if ($validInvoices->count() > 0) {
-                $order->partial_d_date = $validInvoices->first()->inv_date ? $validInvoices->first()->inv_date->format('d-m-Y') : null;
-                if ($order->pending_qty <= 0) {
-                    $lastInvoice = $validInvoices->last();
-                    $order->despatch_complete_date = $lastInvoice->dispatch_completed_at ? $lastInvoice->dispatch_completed_at->format('d-m-Y') : ($lastInvoice->updated_at ? $lastInvoice->updated_at->format('d-m-Y') : ($lastInvoice->inv_date ? $lastInvoice->inv_date->format('d-m-Y') : null));
+                $latestInvoice = $validInvoices->sortByDesc(function($inv) {
+                    return $inv->dispatch_completed_at ?? $inv->inv_date;
+                })->first();
+
+                $latestDate = $latestInvoice->dispatch_completed_at ? $latestInvoice->dispatch_completed_at->format('d-m-Y') : ($latestInvoice->inv_date ? $latestInvoice->inv_date->format('d-m-Y') : null);
+                
+                $order->partial_d_date = $latestDate;
+                
+                if ($order->delivered_qty >= $order->total_qty) {
+                    $order->despatch_complete_date = $latestDate;
                 }
             }
 
-            if ($delivered_qty <= 0) {
-                $order->fulfillment_status = 'Planned';
+            if ($order->delivered_qty >= $order->total_qty) {
+                $order->fulfillment_status = 'Delivered';
             }
-            elseif ($order->pending_qty > 0) {
+            elseif ($order->delivered_qty > 0) {
                 $order->fulfillment_status = 'Partial Delivery';
             }
             else {
-                $order->fulfillment_status = 'Delivered';
+                $order->fulfillment_status = 'Planned';
             }
             $order->delay_reason = $order->reason_for_delay;
         }

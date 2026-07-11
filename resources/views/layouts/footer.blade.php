@@ -52,25 +52,45 @@
 </script>
 <script>
     $(document).ready(function() {
-        var table = $('.datatables-products').DataTable({
-            responsive: true,
-            paging: true,
-            autoWidth: false,
-            searching: true,
-            ordering: true,
-            info: true,
-            lengthChange: true,
-            pageLength: 10,
-            dom: '<"d-none"B>lfrtip',
-            buttons: [
-                'excel', 'pdf', 'print'
-            ],
-            language: {
-                emptyTable: "No data found matching your filters",
-                zeroRecords: "No matching records found",
-                infoEmpty: "Showing 0 to 0 entries",
-            }
+        $('.datatables-products').each(function() {
+            var $tbl = $(this);
+            var isDespatch = $tbl.closest('#despatch-report').length > 0;
+
+            var pdfButton = isDespatch ? {
+                extend: 'pdf',
+                orientation: 'landscape',
+                pageSize: 'A3',
+                customize: function (doc) {
+                    doc.defaultStyle.fontSize = 7;
+                    doc.styles.tableHeader.fontSize = 8;
+                    doc.pageMargins = [15, 20, 15, 20];
+                }
+            } : 'pdf';
+
+            $tbl.DataTable({
+                responsive: true,
+                paging: true,
+                autoWidth: false,
+                searching: true,
+                ordering: true,
+                info: true,
+                lengthChange: true,
+                pageLength: 10,
+                dom: '<"d-none"B>lfrtip',
+                buttons: [
+                    'excel', 
+                    pdfButton, 
+                    'print'
+                ],
+                language: {
+                    emptyTable: "No data found matching your filters",
+                    zeroRecords: "No matching records found",
+                    infoEmpty: "Showing 0 to 0 entries",
+                }
+            });
         });
+
+        var table = $('.datatables-products').DataTable();
 
         table.on('responsive-display.dt', function(e, datatable, row, showHide, update) {
             if (showHide) {

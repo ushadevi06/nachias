@@ -1,3 +1,7 @@
 ALTER TABLE `sales_invoices`
 ADD COLUMN `sales_discount` DECIMAL(10,2) NULL AFTER `sub_total`,
 ADD COLUMN `box_discount_amount` DECIMAL(10,2) NULL AFTER `sales_discount`;
+
+
+-- 
+ALTER TABLE sales_orders MODIFY COLUMN status ENUM('Draft','Approved','Pending','In Production','Dispatched','Cancelled','Rejected') NOT NULL DEFAULT 'Draft';

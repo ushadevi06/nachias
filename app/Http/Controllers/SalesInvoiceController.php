@@ -184,7 +184,7 @@ class SalesInvoiceController extends Controller
             if ($brandCode === 'CW') {
                 $maxRunningNo = 1157;
             } elseif ($brandCode === 'CDS') {
-                $maxRunningNo = 722;
+                $maxRunningNo = 735;
             }
         }
 
@@ -271,7 +271,7 @@ class SalesInvoiceController extends Controller
                                 if ($brandCode === 'CW') {
                                     $maxRunningNo = 1157;
                                 } elseif ($brandCode === 'CDS') {
-                                    $maxRunningNo = 722;
+                                    $maxRunningNo = 735;
                                 }
                             }
 
