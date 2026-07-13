@@ -95,6 +95,23 @@ Route::get('/update_page', function () {
     return view('update_page');
 });
 
+Route::get('/fix-cw-items', function () {
+    \Illuminate\Support\Facades\DB::table('stock_entry_items')->where('finished_item_code', 'CW-FS')->orWhere('finished_item_code', 'CW--F/S')->update(['finished_item_code' => 'CW-WHT-FS']);
+    \Illuminate\Support\Facades\DB::table('production_receipt_items')->where('item_code', 'CW-FS')->orWhere('item_code', 'CW--F/S')->update(['item_code' => 'CW-WHT-FS']);
+    \Illuminate\Support\Facades\DB::table('barcode_masters')->where('item_code', 'CW-FS')->orWhere('item_code', 'CW--F/S')->update(['item_code' => 'CW-WHT-FS']);
+
+    \Illuminate\Support\Facades\DB::table('stock_entry_items')->where('finished_item_code', 'CW-HS')->orWhere('finished_item_code', 'CW--H/S')->update(['finished_item_code' => 'CW-WHT-HS']);
+    \Illuminate\Support\Facades\DB::table('production_receipt_items')->where('item_code', 'CW-HS')->orWhere('item_code', 'CW--H/S')->update(['item_code' => 'CW-WHT-HS']);
+    \Illuminate\Support\Facades\DB::table('barcode_masters')->where('item_code', 'CW-HS')->orWhere('item_code', 'CW--H/S')->update(['item_code' => 'CW-WHT-HS']);
+
+    $oldSku = 'BC014801';
+    $newSku = 'BCORGANICLINEN4801';
+    \Illuminate\Support\Facades\DB::table('stock_entry_items')->where('sku', $oldSku)->update(['sku' => $newSku]);
+    \Illuminate\Support\Facades\DB::table('barcode_masters')->where('barcode_no', $oldSku)->update(['barcode_no' => $newSku]);
+
+    return "Successfully fixed CW items and SKUs on live server!";
+});
+
 Route::get('/fix-orderaxe-customers', function () {
     $service = new \App\Services\OrderaxeService();
     $apiOrders = $service->fetchOrders(0, 100);

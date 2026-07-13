@@ -410,10 +410,6 @@ class ProductionReceiptController extends Controller
                     $itemCode = $barcodeMaster->item_code ?: $itemCode;
                     $barcodeMasterId = $barcodeMaster->id;
                 } else {
-                    preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $item->art_no, $matches);
-                    $numericBase = $matches[2] ?? '';
-                    $suffix = $matches[3] ?? '1';
-                    $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
                     $formattedSize = str_pad(trim((string)$item->size), 2, '0', STR_PAD_LEFT);
                     $sleeveCode = '00';
                     if (isset($sleevePart)) {
@@ -423,7 +419,21 @@ class ProductionReceiptController extends Controller
                         if ($sleeve == 'Full') $sleeveCode = '01';
                         elseif ($sleeve == 'Half') $sleeveCode = '02';
                     }
-                    $sku = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+
+                    $hasAlpha = preg_match('/[a-zA-Z]/', $item->art_no);
+                    $matchesExistingPattern = preg_match('/^([a-zA-Z]*)(\d+)(?:-(\d+))?$/', $item->art_no);
+                    
+                    if ($hasAlpha && !$matchesExistingPattern) {
+                        $cleanedArtNo = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $item->art_no));
+                        $cleanSize = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $item->size));
+                        $sku = 'BC' . $cleanedArtNo . $cleanSize . $sleeveCode;
+                    } else {
+                        preg_match('/([a-zA-Z]*)(\d+)(?:-(\d+))?/', $item->art_no, $matches);
+                        $numericBase = $matches[2] ?? '';
+                        $suffix = $matches[3] ?? '1';
+                        $formattedSuffix = str_pad($suffix, 2, '0', STR_PAD_LEFT);
+                        $sku = 'BC' . $numericBase . $formattedSuffix . $formattedSize . $sleeveCode;
+                    }
                     $barcodeMasterId = null;
                 }
 
