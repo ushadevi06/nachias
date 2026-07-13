@@ -91,8 +91,10 @@ class OrderaxeService
 
             if (in_array($orderNo, ['100008782', '100008821'])) return false;
 
-            if (isset($orderData['created_at'])) {
-                $orderDate = date('Y-m-d', (int)($orderData['created_at'] / 1000));
+            $effectiveDateMs = $orderData['updated_at'] ?? $orderData['created_at'] ?? 0;
+            $orderDate = date('Y-m-d');
+            if ($effectiveDateMs > 0) {
+                $orderDate = date('Y-m-d', (int)($effectiveDateMs / 1000));
                 if ($orderDate < '2026-07-02') {
                     return false;
                 }
@@ -194,6 +196,11 @@ class OrderaxeService
                     $updateData['internal_remarks'] = $orderData['remarks'];
                 }
 
+                if (!$existingOrder->so_date || $existingOrder->so_date->format('Y-m-d') !== $orderDate) {
+                    $updateData['so_date'] = $orderDate;
+                    $updateData['request_date'] = $orderDate;
+                }
+
                 if (!empty($updateData)) {
                     $existingOrder->update($updateData);
                 }
@@ -288,8 +295,8 @@ class OrderaxeService
                 'order_no'     => $orderNo,
                 'orderaxe_id'  => $orderAxeId,
                 'orderaxe_ref_id' => $orderaxeRefId,
-                'so_date'      => date('Y-m-d', (int)($orderData['created_at'] / 1000)),
-                'request_date' => date('Y-m-d', (int)($orderData['created_at'] / 1000)),
+                'so_date'      => $orderDate,
+                'request_date' => $orderDate,
                 'delivery_date'=> $deliveryDate,
                 'customer_id'  => $customer->id,
                 'agent_id'     => $agentId,

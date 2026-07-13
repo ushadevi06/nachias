@@ -55,8 +55,8 @@
             height: {{ $height }}mm;
             position: relative;
             background-color: white;
-            border: 1px solid #000;
-            border-radius: 4mm;
+            border: none;
+            border-radius: 0;
             box-sizing: border-box;
             overflow: hidden;
         }
@@ -140,7 +140,8 @@
             vertical-align: top;
             font-size: 5pt;
             line-height: 1.1;
-            font-weight: semi-bold;
+            font-weight: 600;
+            color: #000;
         }
         .td-lbl { width: 11mm; }
         .td-col { width: 2mm; text-align: center; font-weight: bold; }

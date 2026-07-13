@@ -313,17 +313,21 @@
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-floating form-floating-outline">
-                                                <select class="select2 form-select" name="issue_store" id="issue_store" data-placeholder="Select Store">
-                                                    <option value="">Select Store</option>
-                                                    @if(isset($stores))
-                                                        @foreach($stores as $store)
-                                                            <option value="{{ $store->id }}" {{ old('issue_store', $task->issue_store ?? '') == $store->id ? 'selected' : '' }}>{{ $store->store_type_name }}</option>
+                                                <select class="select2 form-select" name="issued_by" id="issued_by" data-placeholder="Select Supervisor">
+                                                    <option value="">Select Supervisor</option>
+                                                    @if(isset($supervisors) && $supervisors->count() > 0)
+                                                        @foreach($supervisors as $supervisor)
+                                                            <option value="{{ $supervisor->id }}" {{ old('issued_by', $task->issued_by ?? '') == $supervisor->id ? 'selected' : '' }}>
+                                                                {{ $supervisor->name }} {{ $supervisor->emp_id ? '('.$supervisor->emp_id.')' : '' }}
+                                                            </option>
                                                         @endforeach
+                                                    @else
+                                                        <option value="" disabled>No Production Supervisor available.</option>
                                                     @endif
                                                 </select>
-                                                <label>Issue Store *</label>
+                                                <label>Issued By *</label>
                                             </div>
-                                            @error('issue_store') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                            @error('issued_by') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-floating form-floating-outline">
@@ -396,6 +400,12 @@
                                                 </div>
                                             </div>
                                         @endif
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0 fw-bold">Employee Assignments</h6>
+                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                                                <i class="ri ri-stack-line me-1"></i> Bulk Update Qty
+                                            </button>
+                                        </div>
 
                                         <div class="accordion custom-accordion" id="taskAssignmentsAccordion">
                                             @if($task->assignments && $task->assignments->count() > 0)
@@ -1557,6 +1567,62 @@
     }
     </style>
 
+    <!-- Bulk Update Modal -->
+    <div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold text-primary d-flex align-items-center mb-0" id="bulkUpdateModalLabel">
+                        <i class="ri ri-stack-line me-2"></i> Bulk Update Quantity
+                    </h5>
+                    <div class="d-flex align-items-center me-3">
+                        @if(isset($jobCard->grand_total_qty))
+                            <span class="badge bg-label-primary px-3 py-2 fs-6">Qty: {{ (int) $jobCard->grand_total_qty }} PCS</span>
+                        @endif
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 px-3 mb-4 d-flex align-items-center">
+                        <i class="ri ri-information-line me-2 fs-5"></i>
+                        <small>Values entered here will be applied to all employees, <strong>except</strong> those you have manually modified.</small>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-success">Completed Qty</label>
+                            <input type="number" step="0.01" class="form-control border-success fw-bold bulk-qty-input" id="bulk_completed_qty" placeholder="e.g. 10">
+                            <div class="invalid-feedback fw-bold extra-small"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-danger">Wastage Qty</label>
+                            <input type="number" step="0.01" class="form-control border-danger fw-bold bulk-qty-input" id="bulk_wastage_qty" placeholder="e.g. 0">
+                            <div class="invalid-feedback fw-bold extra-small"></div>
+                        </div>
+                        @if(auth()->user()->hasRole('QUALITY CHECKER') || auth()->user()->id == 1)
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-info">QC Checked Qty</label>
+                            <input type="number" step="1" class="form-control border-info fw-bold bulk-qty-input" id="bulk_qc_checked" placeholder="e.g. 10">
+                            <div class="invalid-feedback fw-bold extra-small"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-info">QC Passed Qty</label>
+                            <input type="number" step="1" class="form-control border-info fw-bold bulk-qty-input" id="bulk_qc_passed" placeholder="e.g. 10">
+                            <div class="invalid-feedback fw-bold extra-small"></div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top-0 py-3">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4" id="btn-apply-bulk">
+                        <i class="ri ri-check-line me-1"></i> Apply to All Employees
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @section('scripts')
     <script>
         $(document).ready(function() {
@@ -1641,7 +1707,10 @@
                 }
             }
 
-            $(document).on('input', '.row-completed-qty, .row-wastage-qty, .row-qc-checked, .row-qc-passed', function() {
+            $(document).on('input', '.row-completed-qty, .row-wastage-qty, .row-qc-checked, .row-qc-passed', function(e) {
+                if (e.originalEvent) {
+                    $(this).attr('data-user-modified', 'true');
+                }
                 var row = $(this).closest('.status-update-row');
                 calculateRow(row);
                 validateForm();
@@ -1691,6 +1760,8 @@
                     submitBtn.attr('disabled', false);
                     $('#validation-error-msg').remove();
                 }
+
+                return { valid: isValid, message: errorMsg };
             }
 
             $('.status-update-row').each(function() {
@@ -1737,6 +1808,144 @@
                         $('#history-content').html('<div class="text-center text-danger py-3">Failed to load logs.</div>');
                     }
                 });
+            });
+
+            // Bulk Update Validation Logic
+            var maxJobCardQty = {{ isset($jobCard->grand_total_qty) ? (int) $jobCard->grand_total_qty : 0 }};
+            
+            function validateBulkInputs() {
+                var $btnApply = $('#btn-apply-bulk');
+                var isValid = true;
+                
+                // Clear previous errors
+                $('.bulk-qty-input').removeClass('is-invalid').next('.invalid-feedback').text('');
+                
+                var compQty = parseFloat($('#bulk_completed_qty').val()) || 0;
+                var wasQty = parseFloat($('#bulk_wastage_qty').val()) || 0;
+                var qcChecked = parseFloat($('#bulk_qc_checked').val()) || 0;
+                var qcPassed = parseFloat($('#bulk_qc_passed').val()) || 0;
+                
+                // 1. Negative checks
+                $('.bulk-qty-input').each(function() {
+                    var val = parseFloat($(this).val());
+                    if (val < 0) {
+                        $(this).addClass('is-invalid').next('.invalid-feedback').text('Cannot be negative.');
+                        isValid = false;
+                    }
+                });
+
+                // 2. Individual Max Check
+                if (isValid) {
+                    $('.bulk-qty-input').each(function() {
+                        var val = parseFloat($(this).val()) || 0;
+                        if (maxJobCardQty > 0 && val > maxJobCardQty) {
+                            $(this).addClass('is-invalid').next('.invalid-feedback').text('Exceeds Job Card Qty (' + maxJobCardQty + ')');
+                            isValid = false;
+                        }
+                    });
+                }
+                
+                // 3. Completed + Wastage Check
+                if (isValid && maxJobCardQty > 0 && (compQty + wasQty) > maxJobCardQty) {
+                    $('#bulk_completed_qty, #bulk_wastage_qty').addClass('is-invalid');
+                    $('#bulk_wastage_qty').next('.invalid-feedback').text('Completed + Wastage > Job Card Qty');
+                    isValid = false;
+                }
+                
+                // 4. QC Checked <= Completed
+                if (isValid && $('#bulk_qc_checked').length > 0 && $('#bulk_completed_qty').val() !== '') {
+                    if (qcChecked > compQty) {
+                        $('#bulk_qc_checked').addClass('is-invalid').next('.invalid-feedback').text('Cannot exceed Completed Qty');
+                        isValid = false;
+                    }
+                }
+                
+                // 5. QC Passed <= QC Checked
+                if (isValid && $('#bulk_qc_passed').length > 0 && $('#bulk_qc_checked').val() !== '') {
+                    if (qcPassed > qcChecked) {
+                        $('#bulk_qc_passed').addClass('is-invalid').next('.invalid-feedback').text('Cannot exceed QC Checked');
+                        isValid = false;
+                    }
+                }
+                
+                $btnApply.prop('disabled', !isValid);
+            }
+
+            $('.bulk-qty-input').on('input', function() {
+                validateBulkInputs();
+            });
+
+            $('#btn-apply-bulk').on('click', function() {
+                var bulkCompleted = $('#bulk_completed_qty').val();
+                var bulkWastage = $('#bulk_wastage_qty').val();
+                var bulkQcChecked = $('#bulk_qc_checked').val();
+                var bulkQcPassed = $('#bulk_qc_passed').val();
+
+                $('.status-update-row').each(function() {
+                    var row = $(this);
+                    var changed = false;
+
+                    // Completed Qty
+                    var completedInput = row.find('.row-completed-qty');
+                    if (bulkCompleted !== '' && completedInput.attr('data-user-modified') !== 'true') {
+                        completedInput.val(bulkCompleted);
+                        changed = true;
+                    }
+
+                    // Wastage Qty
+                    var wastageInput = row.find('.row-wastage-qty');
+                    if (bulkWastage !== '' && wastageInput.attr('data-user-modified') !== 'true') {
+                        wastageInput.val(bulkWastage);
+                        changed = true;
+                    }
+
+                    // QC Checked
+                    var qcCheckedInput = row.find('.row-qc-checked');
+                    if (qcCheckedInput.length > 0 && bulkQcChecked !== '' && qcCheckedInput.attr('data-user-modified') !== 'true') {
+                        qcCheckedInput.val(bulkQcChecked);
+                        changed = true;
+                    }
+
+                    // QC Passed
+                    var qcPassedInput = row.find('.row-qc-passed');
+                    if (qcPassedInput.length > 0 && bulkQcPassed !== '' && qcPassedInput.attr('data-user-modified') !== 'true') {
+                        qcPassedInput.val(bulkQcPassed);
+                        changed = true;
+                    }
+
+                    if (changed) {
+                        calculateRow(row);
+                    }
+                });
+
+                var validation = validateForm();
+                
+                if (!validation.valid) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Validation Error',
+                            text: 'Some applied quantities exceed their limits. ' + validation.message,
+                            icon: 'error',
+                            customClass: {
+                                confirmButton: 'btn btn-primary'
+                            },
+                            buttonsStyling: false
+                        });
+                    } else {
+                        alert("Validation Error: \n" + validation.message + "\n\nPlease check the affected rows.");
+                    }
+                }
+
+                $('#bulkUpdateModal').modal('hide');
+                
+                
+                // Clear bulk inputs
+                $('#bulk_completed_qty').val('').removeClass('is-invalid');
+                $('#bulk_wastage_qty').val('').removeClass('is-invalid');
+                $('#bulk_qc_checked').val('').removeClass('is-invalid');
+                $('#bulk_qc_passed').val('').removeClass('is-invalid');
+                $('.bulk-qty-input').next('.invalid-feedback').text('');
+                $('#btn-apply-bulk').prop('disabled', false);
             });
         });
     </script>

@@ -55,8 +55,6 @@
             height: {{ $height }}mm;
             position: relative;
             background-color: white;
-            border: 1px solid #000;
-            border-radius: 4mm;
             box-sizing: border-box;
             overflow: hidden;
         }
@@ -138,11 +136,12 @@
             width: 100%;
         }
         .details-table td {
-            padding: 0.1mm 0;
+            padding: 0.8mm 0;
             vertical-align: middle;
             font-size: 5pt;
             line-height: 1.1;
-            font-weight: semi-bold;
+            font-weight: 600;
+            color: #000;
         }
         .td-lbl { width: 11mm; }
         .td-col { width: 2mm; text-align: center; font-weight: bold; }
@@ -168,7 +167,7 @@
             transform: rotate(-90deg);
             transform-origin: right bottom;
             font-size: 4.5pt;
-            color: #555;
+            color: #000;
             white-space: nowrap;
         }
         
@@ -243,64 +242,64 @@
         @endphp
 
         <div class="page-container" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
-                <!-- PRICE TAG (45x85 mm) -->
-                <div class="tag-container">
-                    <div class="tag-header-icons hide-for-print">
-                        <img src="{{ url('assets/images/fav.jpeg') }}" class="tag-logo" alt="Logo">
-                        <div class="tag-hole"></div>
+            <!-- PRICE TAG (45x85 mm) -->
+            <div class="tag-container">
+                <div class="tag-header-icons hide-for-print">
+                    <img src="{{ url('assets/images/fav.jpeg') }}" class="tag-logo" alt="Logo">
+                    <div class="tag-hole"></div>
+                </div>
+                
+                <div class="size-banner hide-for-print" style="background-color: {{ $bgColor }};">
+                    <span class="f-6  font-oswald">Size</span>
+                    <span class="f-14 font-bebas" style="letter-spacing: 1px;">{{ $labelData['size'] ?? '-' }}</span>
+                </div>
+                
+                <div class="tag-main-details">
+                    <table class="details-table">
+                        <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
+                        <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
+                        <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ $labelData['fit'] ?? 'Tailor Fit' }}</td></tr>
+                        <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
+                        <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
+                        <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
+                        <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
+                        <tr><td class="td-lbl" style="padding-top: 1.5mm;">Art No</td><td class="td-col" style="padding-top: 1.5mm;">:</td><td class="td-val fw-bold" style="padding-top: 1.5mm; font-size: 8pt;">{{ $labelData['design'] ?? '-' }}</td></tr>
+                    </table>
+                    <div class="tag-qr-section">
+                        {!! QrCode::size(50)->generate($qrString) !!}
+                    </div>
+                    <div class="lot-vertical">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
+                </div>
+                
+                <div class="tag-footer-info f-6 hide-for-print">
+                    <div class="f-5" style="color: #000000; margin-bottom: 0.5mm;">Manufactured & Marketed by:</div>
+                    <div class="fw-bold" style="font-size: 5pt; margin-bottom: 0.5mm;">{{ $companyName }}</div>
+                    <div style="font-size: 4pt; line-height: 1.2;">
+                        {{ $labelData['company_address'] ?? '272/2, Somu Nager, Sringeri Nagar, By Pass Road, Madurai - 625 016.' }}
                     </div>
                     
-                    <div class="size-banner hide-for-print" style="background-color: {{ $bgColor }};">
-                        <span class="f-6  font-oswald">Size</span>
-                        <span class="f-14 font-bebas" style="letter-spacing: 1px;">{{ $labelData['size'] ?? '-' }}</span>
-                    </div>
+                    <div class="tag-separator"></div>
                     
-                    <div class="tag-main-details">
-                        <table class="details-table">
-                            <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
-                            <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
-                            <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ $labelData['fit'] ?? 'Tailor Fit' }}</td></tr>
-                            <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
-                            <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
-                            <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
-                            <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
-                            <tr><td class="td-lbl" style="padding-top: 1.5mm;">Art No</td><td class="td-col" style="padding-top: 1.5mm;">:</td><td class="td-val fw-bold" style="padding-top: 1.5mm; font-size: 8pt;">{{ $labelData['design'] ?? '-' }}</td></tr>
-                        </table>
-                        <div class="tag-qr-section">
-                            {!! QrCode::size(50)->generate($qrString) !!}
-                        </div>
-                        <div class="lot-vertical">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
-                    </div>
-                    
-                    <div class="tag-footer-info f-6 hide-for-print">
-                        <div class="f-5" style="color: #000000; margin-bottom: 0.5mm;">Manufactured & Marketed by:</div>
-                        <div class="fw-bold" style="font-size: 5pt; margin-bottom: 0.5mm;">{{ $companyName }}</div>
-                        <div style="font-size: 4pt; line-height: 1.2;">
-                            {{ $labelData['company_address'] ?? '272/2, Somu Nager, Sringeri Nagar, By Pass Road, Madurai - 625 016.' }}
-                        </div>
-                        
-                        <div class="tag-separator"></div>
-                        
-                        <table class="complaints-table">
-                            <tr>
-                                <td class="comp-lbl">Complaints</td>
-                                <td class="comp-col">:</td>
-                                <td class="comp-val fw-bold">{{ $phones }}</td>
-                            </tr>
-                            <tr>
-                                <td class="comp-lbl">Email</td>
-                                <td class="comp-col">:</td>
-                                <td class="comp-val">{{ $firstEmail }}</td>
-                            </tr>
-                        </table>
-                        <div class="tag-separator"></div>
-                    </div>
-                    
-                    <div class="mrp-section">
-                        <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
-                        <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
-                        <div class="f-5" style="color: #000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
-                    </div>
+                    <table class="complaints-table">
+                        <tr>
+                            <td class="comp-lbl">Complaints</td>
+                            <td class="comp-col">:</td>
+                            <td class="comp-val fw-bold">{{ $phones }}</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-lbl">Email</td>
+                            <td class="comp-col">:</td>
+                            <td class="comp-val">{{ $firstEmail }}</td>
+                        </tr>
+                    </table>
+                    <div class="tag-separator"></div>
+                </div>
+                
+                <div class="mrp-section">
+                    <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
+                    <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                    <div class="f-5" style="color: #000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
+                </div>
         </div>
     @endforeach
 </body>

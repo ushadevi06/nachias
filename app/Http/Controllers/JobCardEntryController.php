@@ -1247,7 +1247,7 @@ class JobCardEntryController extends Controller
                                     ['barcode_no' => $barcodeFS],
                                     [
                                         'job_card_entry_id' => $jobCard->id,
-                                        'item_code' => implode('-', array_filter([$brand->code ?? '', $style->code ?? '', 'F/S'])),
+                                        'item_code' => implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'FS'], function($v) { return $v !== ''; })),
                                         'art_no' => $artNo,
                                         'item_name' => trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' F/S'),
                                         'sleeve_type' => 'F/S',
@@ -1268,7 +1268,7 @@ class JobCardEntryController extends Controller
                                     ['barcode_no' => $barcodeHS],
                                     [
                                         'job_card_entry_id' => $jobCard->id,
-                                        'item_code' => implode('-', array_filter([$brand->code ?? '', $style->code ?? '', 'H/S'])),
+                                        'item_code' => implode('-', array_filter([trim($brand->code ?? ''), trim($style->code ?? ''), 'HS'], function($v) { return $v !== ''; })),
                                         'art_no' => $artNo,
                                         'item_name' => trim(($brand->brand_name ?? '') . ' ' . ($style->style_name ?? '') . ' H/S'),
                                         'sleeve_type' => 'H/S',

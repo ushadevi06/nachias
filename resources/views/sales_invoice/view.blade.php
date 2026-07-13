@@ -61,6 +61,7 @@
                                     <th>Linked SO No.</th>
                                     <th>Total Items</th>
                                     <th>Total Qty</th>
+                                    <th>Sub Total</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
                                     <th>Delivery Status</th>
@@ -68,6 +69,16 @@
                                 </tr>
                             </thead>
                             <tbody></tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="5" class="text-end fw-bold">Total:</th>
+                                    <th id="footer-total-items" class="fw-bold">0</th>
+                                    <th id="footer-total-qty" class="fw-bold">0</th>
+                                    <th id="footer-sub-total" class="fw-bold">₹0.00</th>
+                                    <th id="footer-grand-total" class="fw-bold">₹0.00</th>
+                                    <th colspan="3"></th>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -138,6 +149,7 @@
                 { data: 'so_no' },
                 { data: 'total_items' },
                 { data: 'total_qty' },
+                { data: 'sub_total' },
                 { data: 'grand_total' },
                 { 
                     data: 'status',
@@ -168,7 +180,33 @@
                     }
                 },
                 { data: 'action', orderable: false, searchable: false },
-            ]
+            ],
+            footerCallback: function (row, data, start, end, display) {
+                let api = this.api();
+
+                let intVal = function (i) {
+                    return typeof i === 'string' ? i.replace(/[\₹,]/g, '') * 1 : typeof i === 'number' ? i : 0;
+                };
+
+                let currentFilteredData = api.rows({ search: 'applied' }).data().toArray();
+
+                let totalItems = 0;
+                let totalQty = 0;
+                let subTotal = 0;
+                let grandTotal = 0;
+
+                currentFilteredData.forEach(function (rowData) {
+                    totalItems += intVal(rowData.total_items);
+                    totalQty += intVal(rowData.total_qty);
+                    subTotal += intVal(rowData.raw_sub_total);
+                    grandTotal += intVal(rowData.raw_grand_total);
+                });
+
+                $('#footer-total-items').html(totalItems);
+                $('#footer-total-qty').html(totalQty);
+                $('#footer-sub-total').html('₹' + subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+                $('#footer-grand-total').html('₹' + grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            }
         });
         $('#inv_date_range').flatpickr({
             mode: 'range',

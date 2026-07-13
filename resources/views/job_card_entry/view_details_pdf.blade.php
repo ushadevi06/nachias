@@ -360,7 +360,7 @@
             $currentRow = 0;
         @endphp
         <tr>
-            <td class="fw-bold"></td>
+            <td class="fw-bold" style="font-size:7px;">WIDTH</td>
             <td class="text-center">{{ $jobCard->width ?: '-' }}</td>
             <td class="text-center fw-bold bg-light" style="width: 8%;">SIZE</td>
             @foreach($allSizes as $s)

@@ -60,7 +60,7 @@
             height: {{ $height }}mm;
             position: relative;
             background-color: white;
-            border: 1px solid #000;
+            border: none;
             box-sizing: border-box;
             overflow: hidden;
         }
@@ -139,7 +139,8 @@
             vertical-align: middle;
             font-size: 4.7pt;
             line-height: 1.15;
-            font-weight: 500;
+            font-weight: 600;
+            color: #000;
         }
         .td-lbl { width: 11mm; }
         .td-col { width: 1.5mm; text-align: center; }

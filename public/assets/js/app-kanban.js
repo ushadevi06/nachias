@@ -339,7 +339,7 @@
             */
             const progressHtml = ''; // Working level and progress hidden
 
-            const stageName = itemData.stage_name || 'No S+ badgeHtmltage';
+            const stageName = itemData.stage_name || 'No Stage';
             const stageHtml = `<div class="text-xs mb-2 text-dark bg-label-warning p-1 rounded fw-bold text-center">${stageName}</div>`;
 
             el.insertAdjacentHTML('beforeend', headerHtml + titleHtml + stageHtml + datesHtml + progressHtml);

@@ -443,6 +443,7 @@ class StockEntryController extends Controller
             'stockEntryItems.grnEntryItem',
             'stockEntryItems.fabricType',
             'stockEntryItems.item',
+            'stockEntryItems.style',
             'stockEntryItems.color',
             'productionReceipt.jobCard.fabricType',
             'createdBy',

@@ -67,6 +67,7 @@
                                             <tr>
                                                 <th>Material / Category</th>
                                                 <th>Art No</th>
+                                                <th>Style</th>
                                                 <th>UOM</th>
                                                 <th>Qty In</th>
                                                 <th>Unit Price</th>
@@ -81,6 +82,7 @@
                                                     <small class="text-muted">{{ $item->storeCategory->category_name ?? '-' }}</small>
                                                 </td>
                                                 <td>{{ $item->art_no ?: ($item->grnEntryItem->art_no ?? '-') }}</td>
+                                                <td>{{ $item->style->style_name ?? '-' }}</td>
                                                 <td>{{ $item->uom->uom_code ?? '-' }}</td>
                                                 <td class="text-success fw-bold">+{{ floatval($item->qty_in) }}</td>
                                                 <td>{{ $item->price > 0 ? '₹' . number_format($item->price, 2) : '-' }}</td>
@@ -90,7 +92,7 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <th colspan="3" class="text-end">Total:</th>
+                                                <th colspan="4" class="text-end">Total:</th>
                                                 <th class="text-success fw-bold">+{{ floatval($totalQtyIn) }}</th>
                                                 <th></th>
                                                 <th></th>
@@ -101,21 +103,21 @@
                             </div>
                             @else
                                 @if($firstItem)
-                                                    @php
-                                    $fabricType = $firstItem->fabricType ? $firstItem->fabricType->fabric_type : null;
-                                    if (!$fabricType && $stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard) {
-                                        $fabricType = $stockEntry->productionReceipt->jobCard->fabricType->fabric_type ?? null;
-                                    }
-                                    $fabricType = $fabricType ?? '-';
-                                    $colorName = $firstItem->color ? $firstItem->color->color_name : '-';
-                                    $qrString = ($firstItem->sku ?? '-') . " | " .
-                                        ($firstItem->item->name ?? '-') . " | " .
-                                        $fabricType . " | " .
-                                        ($firstItem->size ?? '-') . " | " .
-                                        $colorName . " | " .
-                                        ($firstItem->sleeve_type ?? '-') . " | Qty: " .
-                                        floatval($firstItem->qty_in);
-                                        @endphp
+                                    @php
+                                        $fabricType = $firstItem->fabricType ? $firstItem->fabricType->fabric_type : null;
+                                        if (!$fabricType && $stockEntry->productionReceipt && $stockEntry->productionReceipt->jobCard) {
+                                            $fabricType = $stockEntry->productionReceipt->jobCard->fabricType->fabric_type ?? null;
+                                        }
+                                        $fabricType = $fabricType ?? '-';
+                                        $colorName = $firstItem->color ? $firstItem->color->color_name : '-';
+                                        $qrString = ($firstItem->sku ?? '-') . " | " .
+                                            ($firstItem->item->name ?? '-') . " | " .
+                                            $fabricType . " | " .
+                                            ($firstItem->size ?? '-') . " | " .
+                                            $colorName . " | " .
+                                            ($firstItem->sleeve_type ?? '-') . " | Qty: " .
+                                            floatval($firstItem->qty_in);
+                                    @endphp
                                         <div class="col-md-12 mt-4">
                                             <div class="card shadow-none border bg-light bg-opacity-25 rounded-3">
                                                 <div class="card-body p-4">
@@ -204,9 +206,9 @@
                                 <div class="text-muted">
                                     @if($stockEntry->reference_document)
                                         @php
-            $ext = pathinfo($stockEntry->reference_document, PATHINFO_EXTENSION);
-            $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-            $fileUrl = url('uploads/stock_entries/' . $stockEntry->reference_document);
+                                            $ext = pathinfo($stockEntry->reference_document, PATHINFO_EXTENSION);
+                                            $isImage = in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                            $fileUrl = url('uploads/stock_entries/' . $stockEntry->reference_document);
                                         @endphp
                                         <div class="d-inline-flex align-items-center border rounded shadow-sm">
                                             @if($isImage)
@@ -214,9 +216,9 @@
                                             @else
                                                 <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
                                                     @if(strtolower($ext) == 'pdf')
-                                                        <i class="ri-file-pdf-fill text-danger fs-1"></i>
+                                                        <i class="ri i-file-pdf-fill text-danger fs-1"></i>
                                                     @else
-                                                        <i class="ri-file-text-fill text-primary fs-1"></i>
+                                                        <i class="ri ri-file-text-fill text-primary fs-1"></i>
                                                     @endif
                                                     <div class="ms-2">
                                                         <div class="fw-bold text-dark small text-uppercase">{{ $ext }} Document</div>

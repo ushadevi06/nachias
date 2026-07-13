@@ -287,7 +287,7 @@
 
                                     {{-- Row 5 --}}
                                     <tr>
-                                        <td class="fw-bold p-3" style="font-size: 12px;"></td>
+                                        <td class="fw-bold p-3" style="font-size: 0.9rem;">WIDTH</td>
                                         <td class="p-3">{{ $jobCard->width ?: '-' }}</td>
                                         <td class="fw-bold p-3 text-center">SIZE</td>
                                         <td colspan="3" class="p-0">

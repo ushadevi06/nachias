@@ -551,7 +551,8 @@ class ProductionReceiptController extends Controller
         $allMaterials = $jobCard->fabricDetails->values();
         $fabricDetails = $allMaterials->filter(function ($fd) use ($getStoreCategoryIdForArtNo, $isCanvas) {
             $cat = $getStoreCategoryIdForArtNo($fd->art_no);
-            return $isCanvas || $cat === null || (int)$cat === 1;
+            $hasMatrix = \App\Models\JobCardMatrixQuantity::where('job_card_fabric_detail_id', $fd->id)->exists();
+            return $isCanvas || $cat === null || (int)$cat === 1 || $hasMatrix;
         })->values();
         
         $articlePrices = [];
@@ -802,6 +803,12 @@ class ProductionReceiptController extends Controller
 
                     $styleCode = $fallbackStyleCode;
                     $styleName = $fallbackStyleName;
+                    
+                    if (!$styleCode && isset($stockStyle) && $stockStyle) {
+                        $styleCode = $stockStyle->style_code;
+                        $styleName = $stockStyle->style_name;
+                    }
+
                     if ($barcodeMaster && $barcodeMaster->style_id) {
                         $style = \App\Models\Style::find($barcodeMaster->style_id);
                         if ($style) {
@@ -809,7 +816,9 @@ class ProductionReceiptController extends Controller
                             $styleName = $style->style_name;
                         }
                     }
-                    $itemCode = $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : trim($brandCode.'-'.$styleCode.'-'.$sleeve,'-');
+                    $sleeveCode = str_replace('/', '', $sleeve);
+                    $fallbackCode = implode('-', array_filter([trim($brandCode), trim($styleCode), $sleeveCode], function($v) { return $v !== ''; }));
+                    $itemCode = $barcodeMaster && $barcodeMaster->item_code ? $barcodeMaster->item_code : $fallbackCode;
                     $itemName = $brandName . ' ' . $styleName . ' ' . $sleeve;
 
                     if ($isCanvas) {
@@ -817,7 +826,16 @@ class ProductionReceiptController extends Controller
                         $itemName = count($pricing['consumption_details']) > 0 ? $pricing['consumption_details'][0]['material_name'] : $normalizedArtNo;
                     }
 
-                    $itemPrice = \App\Models\ItemPrice::where('status', 'Active')->where('finished_item_code', $itemCode)->where('art_no', $normalizedArtNo)->where('size', $size)->whereDate('effective_from', '<=', now())->orderBy('effective_from', 'desc')->orderBy('id', 'desc')->first();
+                    $itemPrice = \App\Models\ItemPrice::where('status', 'Active')
+                        ->where('finished_item_code', $itemCode)
+                        ->where('art_no', $normalizedArtNo)
+                        ->where(function($q) use ($size) {
+                            $q->where('size', $size)->orWhereNull('size')->orWhere('size', '');
+                        })
+                        ->whereDate('effective_from', '<=', now())
+                        ->orderBy('effective_from', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->first();
 
                     $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
                     $mrp = $itemPrice ? $itemPrice->selling_price : $pricing['total_cost'];

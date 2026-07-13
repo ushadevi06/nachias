@@ -20,7 +20,7 @@ class Task extends Model
         'issue_date',
         'due_date',
         'issue_qty',
-        'issue_store',
+        'issued_by',
         'remarks',
         'status',
         'total_hrs',
@@ -41,12 +41,20 @@ class Task extends Model
 
     public function stage()
     {
-        return $this->belongsTo(ProcessSchedule::class, 'stage_id');
+        // Use withTrashed so that soft-deleted ProcessSchedule records
+        // are still resolved (tasks retain their stage info even after
+        // the schedule is archived/soft-deleted).
+        return $this->belongsTo(ProcessSchedule::class, 'stage_id')->withTrashed();
     }
 
     public function assignee()
     {
         return $this->belongsTo(User::class, 'issued_to');
+    }
+
+    public function issuedBy()
+    {
+        return $this->belongsTo(User::class, 'issued_by');
     }
     
     public function adjustments()
@@ -59,9 +67,23 @@ class Task extends Model
         return $this->hasMany(TaskAssignEmployee::class, 'task_id');
     }
 
+    /**
+     * The operation stage resolved through the associated ProcessSchedule (stage).
+     * tasks.stage_id → process_schedules.id → process_schedules.operation_stage_id → operation_stages.id
+     *
+     * NOTE: hasOneThrough does not support withTrashed on the intermediate model,
+     * so stage resolution is handled directly in the controller/repository layer.
+     */
     public function operationStage()
     {
-        return $this->belongsTo(OperationStage::class, 'stage_id');
+        return $this->hasOneThrough(
+            OperationStage::class,   // final model
+            ProcessSchedule::class,  // intermediate model
+            'id',                    // FK on process_schedules that matches tasks.stage_id
+            'id',                    // FK on operation_stages
+            'stage_id',              // local key on tasks
+            'operation_stage_id'     // local key on process_schedules → operation_stages
+        );
     }
 
     public function getEffectiveStageAttribute()

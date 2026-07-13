@@ -191,14 +191,14 @@ class TaskManagementController extends Controller
                 'assignments.*.issued_to' => 'required',
                 'assignments.*.issue_date' => 'required',
                 'assignments.*.due_date' => 'nullable',
-                'issue_store' => 'required',
+                'issued_by' => 'required',
                 'status' => 'required'
             ], [
                 'assignments.*.service_id.required' => 'This field is required.',
                 'assignments.*.issued_to.required' => 'This field is required.',
                 'assignments.*.issue_date.required' => 'This field is required.',
                 'assignments.*.issue_qty.required' => 'This field is required.',
-                'issue_store.required' => 'This field is required.',
+                'issued_by.required' => 'This field is required.',
                 'assignments.*.issue_qty.min' => 'Issue Qty must be at least 1',
             ]);
 
@@ -270,7 +270,7 @@ class TaskManagementController extends Controller
                 }
             }
 
-            $commonData = $request->only(['job_card_entry_id', 'job_card_no', 'stage_id', 'issue_store', 'remarks', 'status']);
+            $commonData = $request->only(['job_card_entry_id', 'job_card_no', 'stage_id', 'issued_by', 'remarks', 'status']);
 
             DB::beginTransaction();
             try {
@@ -394,8 +394,11 @@ class TaskManagementController extends Controller
 
         $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT);
         $users = User::where('id', '!=', 1)->where('status', 'Active')->get();
-        $stores = StoreType::where('status', 'Active')->get();
-
+        $supervisors = User::join('roles', 'users.role_id', '=', 'roles.id')
+            ->where('roles.id', 18)
+            ->where('users.status', 'Active')
+            ->select('users.*')
+            ->get();
         $allStatuses = TaskStatus::pluck('name')->toArray();
         if (empty($allStatuses)) {
             $allStatuses = ['Planned', 'In Progress', 'Completed', 'Hold'];
@@ -470,7 +473,7 @@ class TaskManagementController extends Controller
                 ->first() ?? '';
         }
 
-        return view('task_management/add', compact('task', 'jobCard', 'stages', 'users', 'stores', 'nextTaskNo', 'allStatuses', 'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts', 'taskAdjustments', 'services', 'jobCardGrnNo'));
+        return view('task_management/add', compact('task', 'jobCard', 'stages', 'users', 'supervisors', 'nextTaskNo', 'allStatuses', 'nextAdjNo', 'relatedTasks', 'taskAdjustment', 'shifts', 'taskAdjustments', 'services', 'jobCardGrnNo'));
     }
 
     public function view($id)
