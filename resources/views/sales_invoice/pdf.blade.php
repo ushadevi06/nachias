@@ -748,7 +748,8 @@ if ($showPrice) $colsAfterQty++;
                                         <b>Company's Bank Details :</b><br>
                                         Bank Name : {{ $setting->bank_name ?? '' }}, {{ $setting->branch_location ? $setting->branch_location . ', ' : '' }}<br>
                                         A/C No. : {{ $setting->account_no ?? '' }}<br>
-                                        Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}<br>
+                                        Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}<br><br>
+                                        <strong>CASH DISCOUNT IS VALID ONLY ON PAYMENTS RECEIVED WITHIN 30 DAYS AND ONLY ON THE TAXABLE VALUE</strong><br>
                                         {!! $invoice->notes ?? '' !!}
                                     </div>
                                 </td>
@@ -769,7 +770,10 @@ if ($showPrice) $colsAfterQty++;
                     <td colspan="{{ $colsAfterQty }}" style="width: {{ $w_colsAfterQty }}%; padding: 0; vertical-align: top; border-bottom: 1px solid #000000; border-top: 1px solid #000000; border-right: 1px solid #000000;">
                         <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
                             @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Discount({{ $invoice->discount_percent }}%)</td></tr>
+                            @php
+                                $effectiveDiscountPercent = $invoice->discount_percent > 0 ? (float)$invoice->discount_percent : ($invoice->sub_total > 0 ? round(($invoice->discount / $invoice->sub_total) * 100, 2) : 0);
+                            @endphp
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Discount({{ rtrim(rtrim(number_format($effectiveDiscountPercent, 2), '0'), '.') }}%)</td></tr>
                             @endif
                             @if($showSubTotal)
                             <tr><td style="border: none; padding: 2px 4px; text-align: right;">Taxable Value</td></tr>
@@ -792,7 +796,7 @@ if ($showPrice) $colsAfterQty++;
                             <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
                             @endif
                             @if($showSubTotal)
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td></tr>
+                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td></tr>
                             @endif
                             @if($showTax)
                                 @if(!$invoice->other_state)
@@ -873,7 +877,7 @@ if ($showPrice) $colsAfterQty++;
                 <tr style="border-top: 1px solid #000000;">
                     <td class="text-center">&nbsp;</td>
                     <td class="text-right bold" style="padding-right: 8px;">Total</td>
-                    <td class="text-right bold">{{ number_format($invoice->taxable_amount ?? $invoice->sub_total, 2) }}</td>
+                    <td class="text-right bold">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td>
                     @if(!$invoice->other_state)
                     <td>&nbsp;</td>
                     <td class="text-right bold">{{ number_format($invoice->cgst, 2) }}</td>
@@ -909,7 +913,7 @@ if ($showPrice) $colsAfterQty++;
             <tr>
                 <td width="60%" style="vertical-align: top; padding-left: 4px;">
                     <div style="margin-bottom: 8px; font-size: 10px;">
-                        <span>Remarks :</span> {{ $invoice->salesOrder->order_no ?? '' }}
+                        <span>Remarks :</span> {{ $invoice->remarks ?? '' }}
                     </div>
                     <div style="font-weight: bold; font-size: 10px;">Terms & Conditions :</div>
                     <div style="font-size: 9px; line-height: 1.4;">

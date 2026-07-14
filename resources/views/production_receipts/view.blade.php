@@ -7,11 +7,11 @@
             <h4>Production Receipts</h4>
             <div class="d-flex gap-2">
                 <a href="{{ url('production_receipts/export-excel') }}" class="btn btn-outline-success">
-                    <i class="ri ri-file-excel-line me-1"></i> Export
+                    <i class="menu-icon icon-base ri ri-file-excel-line me-1"></i> Export
                 </a>
                 @if(auth()->id() == 1 || auth()->user()->can('create production-receipts'))
                 <a href="{{ url('production_receipts/add') }}" class="btn btn-primary">
-                    <i class="ri ri-add-circle-line me-1"></i> Add
+                    <i class="menu-icon icon-base ri ri-add-circle-line me-1"></i> Add
                 </a>
                 @endif
             </div>

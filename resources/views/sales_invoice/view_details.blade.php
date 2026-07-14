@@ -4,16 +4,26 @@
     <div class="container-xxl section-padding">
         <div class="row">
             <div class="col-lg-12">
-                <div class="table-header-box">
-                    <h4>View Sales Invoice</h4>
-                    <div class="d-flex gap-2">
-                        <a href="{{ url('sales_invoices/download/' . $invoice->id) }}" class="btn btn-primary"
-                            target="_blank">
-                            <i class="ri ri-download-line back-arrow"></i>Download
-                        </a>
-                        <a href="{{ url('sales_invoices/print/' . $invoice->id) }}" class="btn btn-primary" target="_blank">
-                            <i class="ri ri-printer-line back-arrow"></i>Print
-                        </a>
+                <div class="table-header-box d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
+                    <h4 class="mb-0">View Sales Invoice</h4>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-primary dropdown-toggle" type="button" id="pdfOptionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ri ri-file-pdf-line back-arrow"></i>PDF Options
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="pdfOptionsDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/download/' . $invoice->id) }}" target="_blank">
+                                        <i class="ri ri-download-line me-2"></i>Download PDF
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url('sales_invoices/print/' . $invoice->id) }}" target="_blank">
+                                        <i class="ri ri-printer-line me-2"></i>Print PDF
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                         <div class="dropdown">
                             <button class="btn btn-primary dropdown-toggle" type="button" id="deliveryOrderDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="ri ri-truck-line back-arrow"></i>Delivery Order
@@ -96,19 +106,19 @@
                             </div>
 
                             <div class="col-md-4">
-                                <label class="detail-title">Invoice No:</label>
-                                <div class="text-muted">{{ $invoice->inv_no }}</div>
+                                <label class="detail-title text-muted">Invoice No:</label>
+                                <div class="fw-bold text-primary fs-5">{{ $invoice->inv_no }}</div>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="detail-title">Invoice Date:</label>
-                                <div class="text-muted">{{ $invoice->inv_date->format('d-M-Y') }}</div>
+                                <label class="detail-title text-muted">Invoice Date:</label>
+                                <div class="text-dark fw-semibold">{{ $invoice->inv_date->format('d-M-Y') }}</div>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="detail-title">Customer / Buyer Name:</label>
-                                <div class="text-muted">{{ $invoice->customer ? $invoice->customer->name : '-' }}
-                                    ({{ $invoice->customer ? $invoice->customer->code : '' }})</div>
+                                <label class="detail-title text-muted">Customer / Buyer Name:</label>
+                                <div class="fw-bold text-primary fs-6">{{ $invoice->customer ? $invoice->customer->name : '-' }}
+                                    <span class="text-muted fw-normal">({{ $invoice->customer ? $invoice->customer->code : '' }})</span></div>
                             </div>
 
                             <div class="col-md-4">
@@ -154,7 +164,7 @@
                             </div>
                             <div class="col-lg-12">
                                 <div class="table-responsive">
-                                    <table class="table table-bordered">
+                                    <table class="table table-bordered table-hover text-nowrap align-middle">
                                         <thead class="table-light">
                                             <tr>
                                                 <th>S.No</th>
@@ -174,59 +184,59 @@
                                                 <tr>
                                                     <td>{{ $index + 1 }}</td>
                                                      <td>
-                                                         @php
-                                                             $brandName = '';
-                                                             $itemName = '';
-                                                             $sleeveType = $item->sleeve_type;
+                                                        @php
+                                                            $brandName = '';
+                                                            $itemName = '';
+                                                            $sleeveType = $item->sleeve_type;
 
-                                                             if ($item->item) {
-                                                                 if ($item->item->brand) {
-                                                                     $brandName = $item->item->brand->brand_name;
-                                                                 } elseif ($item->brandCategory) {
-                                                                     $brandName = $item->brandCategory->name;
-                                                                 }
+                                                            if ($item->item) {
+                                                                if ($item->item->brand) {
+                                                                    $brandName = $item->item->brand->brand_name;
+                                                                } elseif ($item->brandCategory) {
+                                                                    $brandName = $item->brandCategory->name;
+                                                                }
 
-                                                                 if ($item->item->style) {
-                                                                     $itemName = $item->item->style->style_name;
-                                                                 } else {
-                                                                     $itemName = $item->item->name;
-                                                                 }
-                                                             } elseif ($item->stockEntryItem) {
-                                                                 if ($item->stockEntryItem->item) {
-                                                                     $seItem = $item->stockEntryItem->item;
-                                                                     if ($seItem->brand) {
-                                                                         $brandName = $seItem->brand->brand_name;
-                                                                     } elseif ($seItem->brandCategory) {
-                                                                         $brandName = $seItem->brandCategory->name;
-                                                                     }
+                                                                if ($item->item->style) {
+                                                                    $itemName = $item->item->style->style_name;
+                                                                } else {
+                                                                    $itemName = $item->item->name;
+                                                                }
+                                                            } elseif ($item->stockEntryItem) {
+                                                                if ($item->stockEntryItem->item) {
+                                                                    $seItem = $item->stockEntryItem->item;
+                                                                    if ($seItem->brand) {
+                                                                        $brandName = $seItem->brand->brand_name;
+                                                                    } elseif ($seItem->brandCategory) {
+                                                                        $brandName = $seItem->brandCategory->name;
+                                                                    }
 
-                                                                     if ($seItem->style) {
-                                                                         $itemName = $seItem->style->style_name;
-                                                                     } else {
-                                                                         $itemName = $seItem->name;
-                                                                     }
-                                                                 } else {
-                                                                     $brandName = $item->stockEntryItem->finished_item_code;
-                                                                 }
+                                                                    if ($seItem->style) {
+                                                                        $itemName = $seItem->style->style_name;
+                                                                    } else {
+                                                                        $itemName = $seItem->name;
+                                                                    }
+                                                                } else {
+                                                                    $brandName = $item->stockEntryItem->finished_item_code;
+                                                                }
 
-                                                                 if (empty($sleeveType)) {
-                                                                     $sleeveType = $item->stockEntryItem->sleeve_type;
-                                                                 }
-                                                             }
+                                                                if (empty($sleeveType)) {
+                                                                    $sleeveType = $item->stockEntryItem->sleeve_type;
+                                                                }
+                                                            }
 
-                                                             if (empty($brandName) && $item->brandCategory) {
-                                                                 $brandName = $item->brandCategory->name;
-                                                             }
-                                                             if (empty($itemName) && !empty($item->art_no)) {
-                                                                 $itemName = $item->art_no;
-                                                             }
-                                                         @endphp
-                                                         <div class="fw-bold">{{ $brandName ?: '-' }}</div>
-                                                         <div class="small text-muted">{{ $itemName ?: '' }} {{ $sleeveType ? '(' . $sleeveType . ')' : '' }}</div>
-                                                         @if(!empty($item->sku))
-                                                             <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
-                                                         @endif
-                                                     </td>
+                                                            if (empty($brandName) && $item->brandCategory) {
+                                                                $brandName = $item->brandCategory->name;
+                                                            }
+                                                            if (empty($itemName) && !empty($item->art_no)) {
+                                                                $itemName = $item->art_no;
+                                                            }
+                                                        @endphp
+                                                        <div class="fw-bold">{{ $brandName ?: '-' }}</div>
+                                                        <div class="small text-muted">{{ $itemName ?: '' }} {{ $sleeveType ? '(' . $sleeveType . ')' : '' }}</div>
+                                                        @if(!empty($item->sku))
+                                                            <div class="small text-primary" style="font-size: 11px;">Barcode: {{ $item->sku }}</div>
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $item->api_color ?: ($item->color ? $item->color->color_name : '-') }}</td>
                                                     <td>{{ $item->art_no ?? '-' }}</td>
                                                     <td>{{ $item->uom_id ?? '-' }}</td>
@@ -408,84 +418,84 @@
                                                 <label class="detail-title">Invoice Status:</label>
                                                 <div class="text-right"><span class="badge bg-primary">{{ $invoice->invoice_status }}</span></div>
                                             </div>
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Payment Mode:</label>
-                                                <div class="text-muted">{{ $invoice->payment_mode ?? '-' }}</div>
-                                            </div>
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Cheque / UPI Ref:</label>
-                                                <div class="text-muted">{{ $invoice->extra_input ?? '-' }}</div>
-                                            </div>
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Due Date:</label>
-                                                <div class="text-muted">
-                                                    {{ $invoice->due_date ? $invoice->due_date->format('d-M-Y') : '-' }}
+                                            <div class="payment-details-box p-3 bg-light border rounded mb-3">
+                                                <h6 class="mb-3 border-bottom pb-2 text-primary"><i class="ri-money-dollar-circle-line me-1"></i>Payment Information</h6>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <label class="detail-title text-muted">Payment Mode:</label>
+                                                    <div class="fw-semibold text-dark">{{ $invoice->payment_mode ?? '-' }}</div>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <label class="detail-title text-muted">Cheque / UPI Ref:</label>
+                                                    <div class="fw-semibold text-dark">{{ $invoice->extra_input ?? '-' }}</div>
+                                                </div>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <label class="detail-title text-muted">Due Date:</label>
+                                                    <div class="fw-semibold text-dark">
+                                                        {{ $invoice->due_date ? $invoice->due_date->format('d-M-Y') : '-' }}
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex justify-content-between">
+                                                    <label class="detail-title text-muted">Additional Notes:</label>
+                                                    <div class="fw-semibold text-dark text-end" style="max-width: 60%; word-wrap: break-word; white-space: normal;">{{ $invoice->notes ?? '-' }}</div>
                                                 </div>
                                             </div>
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Additional Notes:</label>
-                                                <div class="text-muted">{{ $invoice->notes ?? '-' }}</div>
-                                            </div>
-                                            <div class="d-flex justify-content-between mb-2 border-top pt-2">
-                                                <label class="detail-title">Authorized Signature:</label>
+
+                                            @if($invoice->signature_file)
+                                            <div class="d-flex justify-content-between mb-3 border-top pt-3">
+                                                <label class="detail-title text-muted">Authorized Signature:</label>
                                                 <div class="text-muted">
-                                                    @if($invoice->signature_file)
-                                                        @php
-                                                            $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
-                                                            $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                            $sigUrl = asset($invoice->signature_file);
-                                                        @endphp
-                                                        <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
-                                                            @if($isSigImage)
-                                                                <img src="{{ $sigUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $sigUrl }}" width="45" height="45" style="object-fit: cover;" alt="Signature">
-                                                            @else
-                                                                <a href="{{ $sigUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
-                                                                    @if(strtolower($sigExt) == 'pdf')
-                                                                        <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
-                                                                    @else
-                                                                        <i class="ri ri-file-text-fill text-primary fs-3"></i>
-                                                                    @endif
-                                                                </a>
-                                                            @endif
-                                                        </div>
-                                                    @else
-                                                        -
-                                                    @endif
+                                                    @php
+                                                        $sigExt = pathinfo($invoice->signature_file, PATHINFO_EXTENSION);
+                                                        $isSigImage = in_array(strtolower($sigExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                        $sigUrl = asset($invoice->signature_file);
+                                                    @endphp
+                                                    <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
+                                                        @if($isSigImage)
+                                                            <img src="{{ $sigUrl }}" class="rounded cursor-pointer view-image" data-image="{{ $sigUrl }}" width="45" height="45" style="object-fit: cover;" alt="Signature">
+                                                        @else
+                                                            <a href="{{ $sigUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center px-2">
+                                                                @if(strtolower($sigExt) == 'pdf')
+                                                                    <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
+                                                                @else
+                                                                    <i class="ri ri-file-text-fill text-primary fs-3"></i>
+                                                                @endif
+                                                            </a>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </div>
+                                            @endif
+                                            
+                                            @if($invoice->attachment_file)
                                             <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Attachments:</label>
+                                                <label class="detail-title text-muted">Attachments:</label>
                                                 <div class="text-muted">
-                                                    @if($invoice->attachment_file)
-                                                        @php
-                                                            $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
-                                                            $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-                                                            $attUrl = asset($invoice->attachment_file);
-                                                        @endphp
-                                                        <div
-                                                            class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
-                                                            @if($isAttImage)
-                                                                <img src="{{ $attUrl }}" class="rounded cursor-pointer view-image"
-                                                                    data-image="{{ $attUrl }}" width="45" height="45"
-                                                                    style="object-fit: cover;" alt="Attachment">
-                                                            @else
-                                                                <a href="{{ $attUrl }}" target="_blank"
-                                                                    class="text-decoration-none d-flex align-items-center px-2">
-                                                                    @if(strtolower($attExt) == 'pdf')
-                                                                        <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
-                                                                    @else
-                                                                        <i class="ri ri-file-text-fill text-primary fs-3"></i>
-                                                                    @endif
-                                                                    <span class="ms-1 small text-dark fw-bold text-uppercase"
-                                                                        style="font-size: 10px;">{{ $attExt }}</span>
-                                                                </a>
-                                                            @endif
-                                                        </div>
-                                                    @else
-                                                        -
-                                                    @endif
+                                                    @php
+                                                        $attExt = pathinfo($invoice->attachment_file, PATHINFO_EXTENSION);
+                                                        $isAttImage = in_array(strtolower($attExt), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+                                                        $attUrl = asset($invoice->attachment_file);
+                                                    @endphp
+                                                    <div class="p-1 border rounded d-inline-flex align-items-center bg-white shadow-sm">
+                                                        @if($isAttImage)
+                                                            <img src="{{ $attUrl }}" class="rounded cursor-pointer view-image"
+                                                                data-image="{{ $attUrl }}" width="45" height="45"
+                                                                style="object-fit: cover;" alt="Attachment">
+                                                        @else
+                                                            <a href="{{ $attUrl }}" target="_blank"
+                                                                class="text-decoration-none d-flex align-items-center px-2">
+                                                                @if(strtolower($attExt) == 'pdf')
+                                                                    <i class="ri ri-file-pdf-2-line text-danger fs-3"></i>
+                                                                @else
+                                                                    <i class="ri ri-file-text-fill text-primary fs-3"></i>
+                                                                @endif
+                                                                <span class="ms-1 small text-dark fw-bold text-uppercase"
+                                                                    style="font-size: 10px;">{{ $attExt }}</span>
+                                                            </a>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
