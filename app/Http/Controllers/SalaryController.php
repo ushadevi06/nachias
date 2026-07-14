@@ -180,6 +180,7 @@ class SalaryController extends Controller
             $carbonStart = Carbon::parse($fromDate);
             $carbonEnd = Carbon::parse($toDate);
             $totalDays = $carbonStart->diffInDays($carbonEnd) + 1;
+            $monthTotalDays = $carbonStart->daysInMonth;
             $monthNumber = $carbonStart->month;
             $year = $carbonStart->year;
         } else {
@@ -189,32 +190,55 @@ class SalaryController extends Controller
             $startDate = $date->copy()->startOfMonth()->toDateString();
             $endDate = $date->copy()->endOfMonth()->toDateString();
             $totalDays = $date->daysInMonth;
+            $monthTotalDays = $totalDays;
         }
 
-        $sundays = 0;
+        $holidayDates = DB::table('declared_holidays')->whereBetween('date', [$startDate, $endDate])->pluck('date')->toArray();
+
+        $totHolidays = 0;
         for ($day = 0; $day < $totalDays; $day++) {
-            $currentDate = Carbon::parse($startDate)->addDays($day);
-            if ($currentDate->isSunday()) {
-                $sundays++;
+            $currentDate = Carbon::parse($startDate)->addDays($day)->toDateString();
+            $isSunday = Carbon::parse($currentDate)->isSunday();
+            $isDeclaredHoliday = in_array($currentDate, $holidayDates);
+            
+            if ($isSunday || $isDeclaredHoliday) {
+                $totHolidays++;
             }
         }
-        $holidays = DB::table('declared_holidays')->whereBetween('date', [$startDate, $endDate])->count();
-        $totHolidays = $sundays + $holidays;
-        $employees = User::where('id', '!=', 1)->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($startDate, $endDate) {
+
+        $employees = User::where('id', '!=', 1)->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
             $query->select(
                 DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
             )
             ->from('salary_generations')
-            ->where('from_date', '<=', $endDate)
-            ->where('to_date', '>=', $startDate);
+            ->where('salary_month', $monthNumber)
+            ->where('salary_year', $year);
         })
         ->get();
         $payroll = [];
         foreach ($employees as $employee) {
             $attendance = DB::table('attendances')->where('emp_code', $employee->emp_id)->whereBetween('date', [$startDate, $endDate])->get();
-            $presentDays = $attendance->whereIn('status', ['Present', 'Late', 'Overtime'])->count();
-            $absentDays = $attendance->where('status', 'Absent')->count();
-            if ($presentDays == 0) {
+            
+            $presentDays = 0;
+            $absentDays = 0;
+            $totalPresentDaysAny = $attendance->whereIn('status', ['Present', 'Late', 'Overtime'])->count();
+            
+            for ($day = 0; $day < $totalDays; $day++) {
+                $currentDate = Carbon::parse($startDate)->addDays($day)->toDateString();
+                $isSunday = Carbon::parse($currentDate)->isSunday();
+                $isDeclaredHoliday = in_array($currentDate, $holidayDates);
+                
+                if (!$isSunday && !$isDeclaredHoliday) {
+                    $att = $attendance->where('date', $currentDate)->first();
+                    if ($att && in_array($att->status, ['Present', 'Late', 'Overtime'])) {
+                        $presentDays++;
+                    } else {
+                        $absentDays++;
+                    }
+                }
+            }
+
+            if ($totalPresentDaysAny == 0) {
                 $payroll[] = [
                     'employee_id'      => $employee->emp_id,
                     'employee_name'    => $employee->name,
@@ -258,7 +282,7 @@ class SalaryController extends Controller
                         $inTime->diffInMinutes($outTime) / 60
                     );
                     $isSunday = Carbon::parse($att->date)->isSunday();
-                    $isHoliday = DB::table('declared_holidays')->whereDate('date', $att->date)->exists();
+                    $isHoliday = in_array($att->date, $holidayDates);
                     if ($isSunday || $isHoliday) {
                         $otHours += $workedHours;
                     } else {
@@ -276,7 +300,7 @@ class SalaryController extends Controller
             $workingDays = $presentDays - $otDays;
             $busFare = $employee->bus_fare ? $workingDays * $employee->bus_fare : 0;
             $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
-            $perDaySalary = $fixedGross > 0 ? $fixedGross / $totalDays : 0;
+            $perDaySalary = $fixedGross > 0 ? $fixedGross / $monthTotalDays : 0;
             $perHourSalary = $perDaySalary / 8;
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
@@ -312,7 +336,7 @@ class SalaryController extends Controller
                 'employee_id'      => $employee->emp_id,
                 'employee_name'    => $employee->name,
                 'emp_code'         => $employee->emp_id,
-                'total_days'     => $totalDays,
+                'total_days'       => $totalDays,
                 'present_days'     => $presentDays,
                 'absent_days'      => $absentDays,
                 'holidays'         => $totHolidays,
@@ -407,7 +431,7 @@ class SalaryController extends Controller
                         'updated_at'      => now()
                     ]);
             } else {
-                $alreadyGenerated = DB::table('salary_generations')->where('employee_id', $row['employee_id'])->where('from_date', '<=', $endDate)->where('to_date', '>=', $startDate)->exists();
+                $alreadyGenerated = DB::table('salary_generations')->where('employee_id', $row['employee_id'])->where('salary_month', $salaryMonth)->where('salary_year', $salaryYear)->exists();
                 if($alreadyGenerated) {
                     continue;
                 }
@@ -520,7 +544,6 @@ class SalaryController extends Controller
             $onTimeDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Present')->count();
             $lateDays = DB::table('attendances')->where('emp_code', $salary->employee_id)->whereMonth('date', $month)->whereYear('date', $year)->where('status', 'Late')->count();
             $setting = Setting::with(['state', 'city'])->first();
-            // Just mark as Paid — PDF is generated on-demand when downloading/viewing
             DB::table('salary_generations')
                 ->where('id', $id)
                 ->update([
@@ -648,6 +671,7 @@ class SalaryController extends Controller
             $carbonStart = Carbon::parse($fromDate);
             $carbonEnd = Carbon::parse($toDate);
             $totalDays = $carbonStart->diffInDays($carbonEnd) + 1;
+            $monthTotalDays = $carbonStart->daysInMonth;
             $monthNumber = $carbonStart->month;
             $year = $carbonStart->year;
         } else {
@@ -657,26 +681,31 @@ class SalaryController extends Controller
             $startDate = $date->copy()->startOfMonth()->toDateString();
             $endDate = $date->copy()->endOfMonth()->toDateString();
             $totalDays = $date->daysInMonth;
+            $monthTotalDays = $totalDays;
         }
 
-        $sundays = 0;
+        $holidayDates = DB::table('declared_holidays')->whereBetween('date', [$startDate, $endDate])->pluck('date')->toArray();
+
+        $totHolidays = 0;
         for ($day = 0; $day < $totalDays; $day++) {
-            $currentDate = Carbon::parse($startDate)->addDays($day);
-            if ($currentDate->isSunday()) {
-                $sundays++;
+            $currentDate = Carbon::parse($startDate)->addDays($day)->toDateString();
+            $isSunday = Carbon::parse($currentDate)->isSunday();
+            $isDeclaredHoliday = in_array($currentDate, $holidayDates);
+            
+            if ($isSunday || $isDeclaredHoliday) {
+                $totHolidays++;
             }
         }
-        $holidays = DB::table('declared_holidays')->whereBetween('date', [$startDate, $endDate])->count();
-        $totHolidays = $sundays + $holidays;
+
         $employees = DB::table('users')
             ->where('id', '!=', 1)
-            ->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($startDate, $endDate) {
+            ->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
                 $query->select(
                     DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
                 )
                 ->from('salary_generations')
-                ->where('from_date', '<=', $endDate)
-                ->where('to_date', '>=', $startDate);
+                ->where('salary_month', $monthNumber)
+                ->where('salary_year', $year);
             })
             ->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -686,9 +715,26 @@ class SalaryController extends Controller
         $payroll = [];
         foreach ($employees as $employee) {
             $attendance = DB::table('attendances')->where('emp_code', $employee->emp_id)->whereBetween('date', [$startDate, $endDate])->get();
-            $presentDays = $attendance->whereIn('status', ['Present', 'Late', 'Overtime'])->count();
-            $absentDays = $attendance->where('status', 'Absent')->count();
-            if ($presentDays == 0) {
+            
+            $presentDays = 0;
+            $absentDays = 0;
+            $totalPresentDaysAny = $attendance->whereIn('status', ['Present', 'Late', 'Overtime'])->count();
+            
+            for ($day = 0; $day < $totalDays; $day++) {
+                $currentDate = Carbon::parse($startDate)->addDays($day)->toDateString();
+                $isSunday = Carbon::parse($currentDate)->isSunday();
+                $isDeclaredHoliday = in_array($currentDate, $holidayDates);
+                
+                if (!$isSunday && !$isDeclaredHoliday) {
+                    $att = $attendance->where('date', $currentDate)->first();
+                    if ($att && in_array($att->status, ['Present', 'Late', 'Overtime'])) {
+                        $presentDays++;
+                    } else {
+                        $absentDays++;
+                    }
+                }
+            }
+            if ($totalPresentDaysAny == 0) {
                 $payroll[] = [
                     'employee_id'      => $employee->emp_id,
                     'employee_name'    => $employee->name,
@@ -746,7 +792,7 @@ class SalaryController extends Controller
             $hra   = ($fixedGross * 20) / 100;
             $da    = ($fixedGross * 20) / 100;
             $oa    = ($fixedGross * 10) / 100;
-            $perDaySalary = $fixedGross / $totalDays;
+            $perDaySalary = $fixedGross > 0 ? $fixedGross / $monthTotalDays : 0;
             $perHourSalary = $perDaySalary / 8;
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;

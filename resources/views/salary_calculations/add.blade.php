@@ -83,7 +83,7 @@ th.sticky-col-employee {
                                         @endif
                                     @endif
                                     <a href="{{ url('monthly_payroll') }}" class="btn btn-secondary">
-                                        <i class="fa fa-arrow-left"></i> Back
+                                        <i class="ri ri-arrow-left-line"></i> Back
                                     </a>
                                 </div>
                             </div>
@@ -323,7 +323,6 @@ th.sticky-col-employee {
                 });
                 return;
             }
-            // Button loading state
             let btn = $(this);
             btn.prop('disabled', true);
             btn.html(`
