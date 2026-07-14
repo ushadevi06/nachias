@@ -26,6 +26,7 @@ class SalesInvoiceItem extends Model
         'sleeve_type',
         'stock_entry_item_id',
         'scanned_qty',
+        'is_extra',
     ];
 
     public function salesInvoice()

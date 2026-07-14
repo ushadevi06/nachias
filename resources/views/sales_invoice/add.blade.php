@@ -1566,11 +1566,7 @@
 
             $('#grand_total_val').text(grandTotal.toFixed(2));
             $('#grand_total').val(grandTotal.toFixed(2));
-
-
         }
-
-
 
         $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
             calculateTotals();

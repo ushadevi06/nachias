@@ -126,7 +126,8 @@
         
         .tag-main-details {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            justify-content: center;
             flex: 1;
             position: relative;
         }
@@ -136,21 +137,28 @@
             width: 100%;
         }
         .details-table td {
-            padding: 0.1mm 0;
+            padding: 0.3mm 0;
             vertical-align: top;
-            font-size: 5pt;
-            line-height: 1.1;
+            font-size: 5.5pt;
+            line-height: 1.25;
             font-weight: 600;
-            color: #000;
+            color: #000000;
         }
-        .td-lbl { width: 11mm; }
+        .tag-main-details .details-table td {
+            padding: 0.8mm 0;
+            vertical-align: middle;
+            font-size: 7.5pt;
+            line-height: 1.3;
+            font-weight: 700;
+        }
+        .td-lbl { width: 14mm; }
         .td-col { width: 2mm; text-align: center; font-weight: bold; }
         .td-val { width: 26mm; }
         
         .tag-qr-section {
             position: absolute;
-            right: 4mm;
-            top: 6mm;
+            right: 0mm;
+            top: 2mm;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -166,8 +174,9 @@
             bottom: 38mm;
             transform: rotate(-90deg);
             transform-origin: right bottom;
-            font-size: 4.5pt;
-            color: #555;
+            font-size: 6pt;
+            color: #000000;
+            font-weight: 700;
             white-space: nowrap;
         }
         
@@ -314,7 +323,7 @@
                             <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
                             <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
                             <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
-                            <tr><td class="td-lbl" style="padding-top: 1.5mm;">Art No</td><td class="td-col" style="padding-top: 1.5mm;">:</td><td class="td-val fw-bold" style="padding-top: 1.5mm; font-size: 8pt;">{{ $labelData['design'] ?? '-' }}</td></tr>
+                            <tr><td class="td-lbl" style="padding-top: 1.5mm;">Art No</td><td class="td-col" style="padding-top: 1.5mm;">:</td><td class="td-val font-bebas" style="padding-top: 1.5mm; font-size: 16pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</td></tr>
                         </table>
                         <div class="tag-qr-section">
                             {!! QrCode::size(50)->generate($qrString) !!}
@@ -375,26 +384,26 @@
                             </div>
                             <div class="sticker-qr">
                                 {!! QrCode::size(45)->generate($qrString) !!}
-                                <div class="f-5" style="color: #666; text-align: right; margin-top: 1mm;">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
+                                <div class="fw-bold" style="color: #000000; text-align: right; margin-top: 1mm; font-size: 8pt;">Lot: {{ $labelData['lot_no'] ?? '' }}</div>
                             </div>
                             <div class="sticker-mrp-section">
-                                <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
-                                <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
-                                <div class="f-5" style="color: #666;">MADE IN INDIA WITH PRIDE</div>
+                                <div class="fw-bold" style="font-size: 8pt; color: #000000;">MRP <span class="fw-bold" style="font-size: 6pt;">(inclusive of all taxes)</span></div>
+                                <div class="fw-bold" style="font-size: 16pt; color: #000000; margin: 1mm 0;">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                                <div class="fw-bold" style="font-size: 6.5pt; color: #000000;">MADE IN INDIA WITH PRIDE</div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="sticker-footer-info f-5 mt-1">
-                        <span class="f-5" style="color: #444;">Mfr. & Mktd. by:</span> <span class="fw-bold" style="font-size: 4.5pt;">{{ $companyName }}</span><br>
-                        <span style="font-size: 4pt; line-height: 1.1;">{{ $labelData['company_address'] }}</span>
+                    <div class="sticker-footer-info mt-1" style="color: #000000;">
+                        <span class="fw-bold" style="font-size: 6.5pt;">Mfr. & Mktd. by: {{ $companyName }}</span><br>
+                        <span class="fw-bold" style="font-size: 5.5pt; line-height: 1.2;">{{ $labelData['company_address'] }}</span>
                     </div>
-                    <table class="complaints-table" style="margin-bottom: 0;">
+                    <table class="complaints-table" style="margin-bottom: 0; color: #000000;">
                         <tr>
-                            <td class="comp-lbl">Complaints</td>
-                            <td class="comp-col">:</td>
-                            <td class="comp-val fw-bold">{{ $labelData['toll_free'] ?? '84899 38071 | 84899 38073' }}</td>
-                            <td style="text-align:right;">Email: {{ $labelData['company_email'] ?? 'srinachias@yahoo.in' }}</td>
+                            <td class="comp-lbl fw-bold" style="font-size: 5.5pt;">Complaints</td>
+                            <td class="comp-col fw-bold" style="font-size: 5.5pt;">:</td>
+                            <td class="comp-val fw-bold" style="font-size: 5.5pt;">{{ $labelData['toll_free'] ?? '84899 38071 | 84899 38073' }}</td>
+                            <td class="fw-bold" style="text-align:right; font-size: 5.5pt;">Email: {{ $labelData['company_email'] ?? 'srinachias@yahoo.in' }}</td>
                         </tr>
                     </table>
                 </div>

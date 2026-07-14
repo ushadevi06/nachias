@@ -282,7 +282,11 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
         $formats = ['d-m-Y', 'd/m/Y', 'd-m-y', 'd/m/y', 'Y-m-d', 'Y/m/d'];
         foreach ($formats as $format) {
             try {
-                return Carbon::createFromFormat($format, trim((string) $dateValue));
+                $parsed = Carbon::createFromFormat($format, trim((string) $dateValue));
+                if ($parsed->year < 100) {
+                    $parsed->addYears(2000);
+                }
+                return $parsed;
             } catch (\Exception $e) {
             }
         }

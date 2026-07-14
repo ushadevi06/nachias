@@ -122,13 +122,14 @@
             align-items: center;
             padding: 1mm 3mm;
             color: white;
-            margin-bottom: 2mm;
+            margin-bottom: 2.5mm;
             height: 6.5mm;
         }
         
         .tag-main-details {
             height: 33.2mm;
             position: relative;
+            padding-top: 2.3mm;
         }
         
         .details-table {
@@ -136,16 +137,16 @@
             width: 100%;
         }
         .details-table td {
-            padding: 0.8mm 0;
+            padding: 0.5mm 0;
             vertical-align: middle;
-            font-size: 5pt;
+            font-size: 6.5pt;
             line-height: 1.1;
-            font-weight: 600;
-            color: #000;
+            font-weight: 700;
+            color: #000000;
         }
-        .td-lbl { width: 11mm; }
+        .td-lbl { width: 12.5mm; white-space: nowrap; }
         .td-col { width: 2mm; text-align: center; font-weight: bold; }
-        .td-val { width: 26mm; }
+        .td-val { width: 24.5mm; }
         
         .tag-qr-section {
             position: absolute;
@@ -162,12 +163,13 @@
         
         .lot-vertical {
             position: absolute;
-            right: 1.5mm;
-            bottom: 4mm;
-            transform: rotate(-90deg);
-            transform-origin: right bottom;
-            font-size: 4.5pt;
-            color: #000;
+            right: 0.5mm;
+            top: 2mm;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 6pt;
+            color: #000000;
+            font-weight: 700;
             white-space: nowrap;
         }
         
@@ -263,7 +265,7 @@
                         <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
                         <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
                         <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
-                        <tr><td class="td-lbl" style="padding-top: 1.5mm;">Art No</td><td class="td-col" style="padding-top: 1.5mm;">:</td><td class="td-val fw-bold" style="padding-top: 1.5mm; font-size: 8pt;">{{ $labelData['design'] ?? '-' }}</td></tr>
+                        <tr><td class="td-lbl" style="padding-top: 3mm;">Art No</td><td class="td-col" style="padding-top: 3mm;">:</td><td class="td-val font-bebas" style="padding-top: 3mm; font-size: 12pt; letter-spacing: 0.5px;">{{ $labelData['design'] ?? '-' }}</td></tr>
                     </table>
                     <div class="tag-qr-section">
                         {!! QrCode::size(50)->generate($qrString) !!}
@@ -296,9 +298,9 @@
                 </div>
                 
                 <div class="mrp-section">
-                    <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 5pt;">(inclusive of all taxes)</span></div>
-                    <div class="f-12 fw-bold">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
-                    <div class="f-5" style="color: #000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
+                    <div class="fw-bold" style="font-size: 7pt; color: #000000;">MRP <span class="fw-bold" style="font-size: 6.5pt; color: #000000;">(inclusive of all taxes)</span></div>
+                    <div class="fw-bold" style="font-size: 14pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                    <div class="fw-bold" style="font-size: 6pt; color: #000000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
                 </div>
         </div>
     @endforeach

@@ -131,6 +131,10 @@ class SalesInvoiceController extends Controller
                     'total_qty' => $inv->items->sum('quantity'),
                     'sub_total' => '₹' . number_format($inv->sub_total, 2),
                     'raw_sub_total' => $inv->sub_total,
+                    'discount' => '₹' . number_format($inv->discount ?? 0, 2),
+                    'raw_discount' => $inv->discount ?? 0,
+                    'taxable_value' => '₹' . number_format($inv->sub_total - ($inv->discount ?? 0), 2),
+                    'raw_taxable_value' => $inv->sub_total - ($inv->discount ?? 0),
                     'grand_total' => '₹' . number_format($inv->grand_total, 2),
                     'raw_grand_total' => $inv->grand_total,
                     'status' => $statusDropdown,
@@ -1009,6 +1013,7 @@ class SalesInvoiceController extends Controller
     public function downloadPdf($id)
     {
         $invoice = SalesInvoice::with([
+            'brand',
             'customer.state', 
             'customer.city', 
             'salesOrder.salesAgent', 
@@ -1022,6 +1027,7 @@ class SalesInvoiceController extends Controller
         
         $setting = Setting::with(['state', 'city'])->first();
         
+        $discountRatio = $invoice->sub_total > 0 ? (($invoice->discount ?? 0) / $invoice->sub_total) : 0;
         $taxSummary = [];
         foreach ($invoice->items as $item) {
             $hsn = $item->hsn_sac ?: 'N/A';
@@ -1037,7 +1043,7 @@ class SalesInvoiceController extends Controller
                     'igst_amount' => 0,
                 ];
             }
-            $taxSummary[$hsn]['taxable_value'] += $item->amount;
+            $taxSummary[$hsn]['taxable_value'] += $item->amount - ($item->amount * $discountRatio);
         }
 
         foreach ($taxSummary as &$summary) {
@@ -1059,6 +1065,7 @@ class SalesInvoiceController extends Controller
     public function print($id)
     {
         $invoice = SalesInvoice::with([
+            'brand',
             'customer.state', 
             'customer.city', 
             'salesOrder.salesAgent', 
@@ -1072,6 +1079,7 @@ class SalesInvoiceController extends Controller
         
         $setting = Setting::with(['state', 'city'])->first();
         
+        $discountRatio = $invoice->sub_total > 0 ? (($invoice->discount ?? 0) / $invoice->sub_total) : 0;
         $taxSummary = [];
         foreach ($invoice->items as $item) {
             $hsn = $item->hsn_sac ?: 'N/A';
@@ -1087,7 +1095,7 @@ class SalesInvoiceController extends Controller
                     'igst_amount' => 0,
                 ];
             }
-            $taxSummary[$hsn]['taxable_value'] += $item->amount;
+            $taxSummary[$hsn]['taxable_value'] += $item->amount - ($item->amount * $discountRatio);
         }
 
         foreach ($taxSummary as &$summary) {

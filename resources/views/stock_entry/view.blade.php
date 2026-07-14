@@ -36,7 +36,7 @@
                     <!-- Tabs Section -->
                     <div class="d-flex justify-content-center mb-4">
                         <div class="nav nav-pills custom-segment-tabs p-1 rounded-pill bg-light" id="stockEntryTabs" role="tablist">
-                            <button class="nav-link active rounded-pill px-4 fw-bold" id="raw-material-tab" type="button" data-entry-type="Raw Material">Raw Material</button>
+                            <button class="nav-link active rounded-pill px-4 fw-bold" id="raw-material-tab" type="button" data-entry-type="Raw Material">Raw Materials</button>
                             <button class="nav-link rounded-pill px-4 fw-bold" id="finished-goods-tab" type="button" data-entry-type="Finished Goods">Finished Goods</button>
                         </div>
                     </div>

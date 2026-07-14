@@ -108,6 +108,7 @@
             justify-content: space-between;
             padding: 2.5mm 1mm 1mm 4mm;
             height: 35.5mm;
+            position: relative;
         }
         
         .left-col {
@@ -137,12 +138,12 @@
         .details-table td {
             padding: 0.6mm 0;
             vertical-align: middle;
-            font-size: 4.7pt;
-            line-height: 1.15;
+            font-size: 6.5pt;
+            line-height: 1.20;
             font-weight: 600;
-            color: #000;
+            color: #000000;
         }
-        .td-lbl { width: 11mm; }
+        .td-lbl { width: 15mm; white-space: nowrap; }
         .td-col { width: 1.5mm; text-align: center; }
         .td-val { white-space: nowrap; }
         
@@ -178,11 +179,15 @@
         .lot-vertical {
             writing-mode: vertical-rl;
             transform: rotate(180deg);
-            font-size: 3pt;
-            margin-left: 0.5mm;
-            height: 100%;
-            text-align: center;
-            color: #000;
+            font-size: 5.3pt;
+            line-height: 1.2;
+            padding: 0 1mm;
+            color: #000000;
+            font-weight: 600;
+            white-space: nowrap;
+            position: absolute;
+            right: 0mm;
+            top: 1mm;
         }
         
         .mrp-section {
@@ -268,8 +273,8 @@
                             </div>
                         </div>
                         <div class="art-no-box">
-                            <span class="f-5 fw-bold" style="margin-right: 1mm;">Art No :</span>
-                            <span class="font-bebas" style="font-size: 14pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</span>
+                            <span class="fw-bold" style="font-size: 8pt; margin-right: 1mm; color: #000000;">Art No :</span>
+                            <span class="font-bebas" style="font-size: 16pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</span>
                         </div>
                     </div>
                     
@@ -283,25 +288,25 @@
                         </div>
                         
                         <div class="mrp-section" style="margin-top: auto;">
-                            <div class="f-6 fw-bold">MRP <span class="fw-normal" style="font-size: 4pt;">(inclusive of all taxes)</span></div>
-                            <div class="fw-bold" style="font-size: 12pt; line-height: 1;">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
-                            <div class="f-5" style="color: #000; margin-top: 0.5mm; font-size:4pt;">MADE IN INDIA WITH PRIDE</div>
+                            <div class="fw-bold" style="font-size: 4pt; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 4pt;">(inclusive of all taxes)</span></div>
+                            <div class="fw-bold" style="font-size: 14pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                            <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 4pt;">MADE IN INDIA WITH PRIDE</div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="footer-boxes" style="display: none;">
+                <div class="footer-boxes" style="display: none; color: #000000;">
                     <div class="footer-row">
                         <div>
-                            <span class="f-5" style="color: #333;">Manufactured & Marketed by:</span> <span class="fw-bold" style="font-size: 7pt;">{{ $companyName }}</span>
+                            <span class="fw-bold" style="font-size: 6.5pt;">Manufactured & Marketed by: {{ $companyName }}</span>
                         </div>
                         <div>
-                            <span style="font-size: 5pt;">{{ $labelData['company_address'] ?? '272/2, Somu Nager, Sringeri Nagar, By Pass Road, Madurai - 625 016.' }}</span>
+                            <span class="fw-bold" style="font-size: 5.5pt;">{{ $labelData['company_address'] ?? '272/2, Somu Nager, Sringeri Nagar, By Pass Road, Madurai - 625 016.' }}</span>
                         </div>
                     </div>
                     <div class="footer-row" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                        <div><span class="f-5" style="color: #333;">Complaints :</span> <span class="fw-bold" style="font-size: 5pt;">84899 38071 | 84899 38073</span></div>
-                        <div><span class="f-5" style="color: #333;">Email:</span> <span style="font-size: 5pt;">{{ $firstEmail }}</span></div>
+                        <div><span class="fw-bold" style="font-size: 5.5pt;">Complaints : 84899 38071 | 84899 38073</span></div>
+                        <div><span class="fw-bold" style="font-size: 5.5pt;">Email: {{ $firstEmail }}</span></div>
                     </div>
                 </div>
             </div>
