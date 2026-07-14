@@ -549,7 +549,11 @@ class SalesInvoiceController extends Controller
 
         foreach($allCustomerSOs as $so) {
             foreach($so->items as $item) {
-                $soItemOrdered[$so->id][$item->stock_entry_item_id] = $item->qty;
+                $itemId = $item->stock_entry_item_id ?? '';
+                if (!isset($soItemOrdered[$so->id][$itemId])) {
+                    $soItemOrdered[$so->id][$itemId] = 0;
+                }
+                $soItemOrdered[$so->id][$itemId] += $item->qty;
             }
         }
 
@@ -574,7 +578,7 @@ class SalesInvoiceController extends Controller
             $invItems = DB::table('sales_invoice_items')->where('sales_invoice_id', $inv->id)->get();
 
             foreach($invItems as $invItem) {
-                $itemId = $invItem->stock_entry_item_id;
+                $itemId = $invItem->stock_entry_item_id ?? '';
                 $qtyToAllocate = $invItem->quantity;
 
                 foreach($so_ids as $so_id) {
@@ -618,7 +622,12 @@ class SalesInvoiceController extends Controller
 
             foreach ($so->items as $item) {
                 $totalQty += $item->qty;
-                $invoicedQty += ($soItemInvoiced[$so->id][$item->stock_entry_item_id] ?? 0);
+            }
+            
+            if (isset($soItemInvoiced[$so->id])) {
+                foreach ($soItemInvoiced[$so->id] as $qty) {
+                    $invoicedQty += $qty;
+                }
             }
 
             $pendingQty = max(0, $totalQty - $invoicedQty);
