@@ -305,7 +305,6 @@ class SalesInvoiceController extends Controller
                         }
                     }
                 } catch (\Exception $e) {
-                    // Fail gracefully and let validation handle format
                 }
             }
 

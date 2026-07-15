@@ -1692,6 +1692,29 @@
                 e.preventDefault();
                 return false;
             }
+            if (!$(this).data('ready-to-submit')) {
+                e.preventDefault();
+                if ($('#invoice-preloader').length === 0) {
+                    $('body').append(`
+                        <div id="invoice-preloader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.7);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+                            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <h4 class="mt-3 text-primary">Calculating & Saving...</h4>
+                        </div>
+                    `);
+                } else {
+                    $('#invoice-preloader').show();
+                }
+                if (typeof calculateTotals === 'function') {
+                    calculateTotals();
+                }
+                var form = this;
+                setTimeout(function() {
+                    $(form).data('ready-to-submit', true);
+                    form.submit();
+                }, 500);
+            }
         });
 
         $('#einvoice-generate').on('click', function() {
