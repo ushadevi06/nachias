@@ -149,12 +149,15 @@
         
         .art-no-box {
             margin-top: 0mm;
-            margin-bottom: 2mm;
+            margin-bottom: 0mm;
             display: flex;
             align-items: center;
         }
         
         .sticker-qr {
+            position: absolute;
+            right: 24mm;
+            top: 6mm;
         }
         .sticker-qr img, .sticker-qr svg {
             width: 10mm;
@@ -268,13 +271,13 @@
                                 <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
                                 <tr><td class="td-lbl">Net Quantity</td><td class="td-col">:</td><td class="td-val">{{ $labelData['quantity'] ?? '1 Number' }}</td></tr>
                             </table>
-                            <div class="sticker-qr" style="margin-top: 4mm;">
+                            <div class="sticker-qr">
                                 {!! QrCode::size(40)->generate($qrString) !!}
                             </div>
                         </div>
                         <div class="art-no-box">
                             <span class="fw-bold" style="font-size: 8pt; margin-right: 1mm; color: #000000;">Art No :</span>
-                            <span class="font-bebas" style="font-size: 16pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</span>
+                            <span class="font-bebas" style="font-size: 13pt; letter-spacing: 1px;">{{ $labelData['design'] ?? '-' }}</span>
                         </div>
                     </div>
                     

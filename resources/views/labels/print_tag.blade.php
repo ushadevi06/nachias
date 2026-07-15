@@ -150,7 +150,7 @@
         
         .tag-qr-section {
             position: absolute;
-            right: 4mm;
+            right: 3.3mm;
             top: 6mm;
             display: flex;
             flex-direction: column;
@@ -163,7 +163,7 @@
         
         .lot-vertical {
             position: absolute;
-            right: 0.5mm;
+            right: -0.5mm;
             top: 2mm;
             writing-mode: vertical-rl;
             transform: rotate(180deg);
@@ -200,8 +200,11 @@
         
         .mrp-section {
             text-align: center;
-            margin-top: auto;
-            margin-bottom: 1mm;
+            position: absolute;
+            bottom: 2mm;
+            left: 0;
+            right: 0;
+            width: 100%;
         }
         
         .hide-for-print {
@@ -260,7 +263,7 @@
                     <table class="details-table">
                         <tr><td class="td-lbl">Brand</td><td class="td-col">:</td><td class="td-val">{{ $brandText }}</td></tr>
                         <tr><td class="td-lbl">Product</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['product_name'] ?? '-')) }}</td></tr>
-                        <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ $labelData['fit'] ?? 'Tailor Fit' }}</td></tr>
+                        <tr><td class="td-lbl">Fit</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fit'] ?? 'Tailor Fit')) }}</td></tr>
                         <tr><td class="td-lbl">Sleeve</td><td class="td-col">:</td><td class="td-val">{{ $sText }}</td></tr>
                         <tr><td class="td-lbl">Colour</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['color'] ?? '-')) }}</td></tr>
                         <tr><td class="td-lbl">Fabric</td><td class="td-col">:</td><td class="td-val">{{ ucwords(strtolower($labelData['fabric'] ?? 'Cotton')) }}</td></tr>
