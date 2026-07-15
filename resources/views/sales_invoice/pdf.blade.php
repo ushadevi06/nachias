@@ -730,99 +730,117 @@ if ($showPrice) $colsAfterQty++;
                 </tr>
             </tfoot>
             <tbody>
+                @php
+                    $totalColsCount = 6 + $colsAfterQty + ($showAmount ? 1 : 0);
+                    $leftW = $showAmount ? $w1_6 : max(0, 100 - ($w_colsAfterQty + 15));
+                    $midW = $w_colsAfterQty;
+                    $rightW = $showAmount ? ($colWidths['amount'] ?? 15) : 15;
+                @endphp
                 <tr style="border-top: 1px solid #000000;">
-                    <!-- Left Side (IRN + Bank + UPI) in a nested table to ensure borders join edge-to-edge -->
-                    <td colspan="6" style="width: {{ $w1_6 }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
+                    <td colspan="{{ $totalColsCount }}" style="padding: 0; border: none;">
                         <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
                             <tr>
-                                <td colspan="2" style="padding: 4px; vertical-align: top; border: none; border-bottom: 1px solid #000000;">
-                                    <div style="font-size: 11px;">
-                                        IRN: {{ $invoice->irn ?? '' }}<br>
-                                        Ack No.: {{ $invoice->ack_no ?? '' }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Eway Bill No. : {{ $invoice->eway_bill_no ?? '' }}
-                                    </div>
+                                <!-- Left Side (IRN + Bank + UPI) -->
+                                <td style="width: {{ $leftW }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
+                                    <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
+                                        <tr>
+                                            <td colspan="2" style="padding: 4px; vertical-align: top; border: none; border-bottom: 1px solid #000000;">
+                                                <div style="font-size: 11px;">
+                                                    IRN: {{ $invoice->irn ?? '' }}<br>
+                                                    Ack No.: {{ $invoice->ack_no ?? '' }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Eway Bill No. : {{ $invoice->eway_bill_no ?? '' }}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width: {{ ($w_1_4 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; border: none; border-right: 1px solid #000000;">
+                                                <div style="font-size: 12px;">
+                                                    <b>Company's Bank Details :</b><br>
+                                                    Bank Name : {{ $setting->bank_name ?? '' }}, {{ $setting->branch_location ? $setting->branch_location . ', ' : '' }}<br>
+                                                    A/C No. : {{ $setting->account_no ?? '' }}<br>
+                                                    Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}<br><br>
+                                                    <strong>CASH DISCOUNT IS VALID ONLY ON PAYMENTS RECEIVED WITHIN 30 DAYS AND ONLY ON THE TAXABLE VALUE</strong><br>
+                                                    {!! $invoice->notes ?? '' !!}
+                                                </div>
+                                            </td>
+                                            <td style="width: {{ ($w_5_6 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; text-align: center; border: none;">
+                                                <div style="font-size: 11px; min-height: 85px;">
+                                                    <span style="font-weight: bold;">For UPI Payment</span><br>
+                                                    @if($qrBase64)
+                                                        <img src="{{ $qrBase64 }}" style="max-width: 100px; margin-top: 4px;">
+                                                    @else
+                                                    <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="max-width: 100px; margin-top: 4px;">
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </td>
-                            </tr>
-                            <tr>
-                                <td style="width: {{ ($w_1_4 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; border: none; border-right: 1px solid #000000;">
-                                    <div style="font-size: 12px;">
-                                        <b>Company's Bank Details :</b><br>
-                                        Bank Name : {{ $setting->bank_name ?? '' }}, {{ $setting->branch_location ? $setting->branch_location . ', ' : '' }}<br>
-                                        A/C No. : {{ $setting->account_no ?? '' }}<br>
-                                        Branch & IFS Code : {{ $setting->ifsc_code ?? '' }}<br><br>
-                                        <strong>CASH DISCOUNT IS VALID ONLY ON PAYMENTS RECEIVED WITHIN 30 DAYS AND ONLY ON THE TAXABLE VALUE</strong><br>
-                                        {!! $invoice->notes ?? '' !!}
-                                    </div>
-                                </td>
-                                <td style="width: {{ ($w_5_6 / $w1_6) * 100 }}%; padding: 4px; vertical-align: top; text-align: center; border: none;">
-                                    <div style="font-size: 11px; min-height: 85px;">
-                                        <span style="font-weight: bold;">For UPI Payment</span><br>
-                                        @if($qrBase64)
-                                            <img src="{{ $qrBase64 }}" style="max-width: 100px; margin-top: 4px;">
-                                        @else
-                                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="max-width: 100px; margin-top: 4px;">
+                                <!-- Right Side Labels -->
+                                <td style="width: {{ $midW }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
+                                    <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
+                                        @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
+                                        @php
+                                            $effectiveDiscountPercent = $invoice->discount_percent > 0 ? (float)$invoice->discount_percent : ($invoice->sub_total > 0 ? round(($invoice->discount / $invoice->sub_total) * 100, 2) : 0);
+                                        @endphp
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount({{ rtrim(rtrim(number_format($effectiveDiscountPercent, 2), '0'), '.') }}%)</td></tr>
                                         @endif
-                                    </div>
+                                        @if($showSubTotal)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Taxable Value</td></tr>
+                                        @endif
+                                        @if($showTax)
+                                            @if(!$invoice->other_state)
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">OUTPUT CGST</td></tr>
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">OUTPUT SGST</td></tr>
+                                            @else
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">OUTPUT IGST</td></tr>
+                                            @endif
+                                        @endif
+                                        @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Other Charges</td></tr>
+                                        @endif
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Round Off</td></tr>
+                                    </table>
+                                </td>
+                                <!-- Right Side Amounts -->
+                                <td style="width: {{ $rightW }}%; padding: 0; vertical-align: top; border-bottom: 1px solid #000000;">
+                                    <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
+                                        @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
+                                        @endif
+                                        @if($showSubTotal)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td></tr>
+                                        @endif
+                                        @if($showTax)
+                                            @if(!$invoice->other_state)
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->cgst, 2) }}</td></tr>
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sgst, 2) }}</td></tr>
+                                            @else
+                                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst, 2) }}</td></tr>
+                                            @endif
+                                        @endif
+                                        @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->other_charges, 2) }}</td></tr>
+                                        @endif
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ (in_array(strtolower($invoice->round_off_type ?? ''), ['less', 'minus']) ? ' - ' : '') . number_format($invoice->round_off ?? 0, 2) }}</td></tr>
+                                    </table>
                                 </td>
                             </tr>
-                        </table>
-                    </td>
-                    <!-- Right Side Labels -->
-                    <td colspan="{{ $colsAfterQty }}" style="width: {{ $w_colsAfterQty }}%; padding: 0; vertical-align: top; border-bottom: 1px solid #000000; border-top: 1px solid #000000; border-right: 1px solid #000000;">
-                        <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
-                            @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                            @php
-                                $effectiveDiscountPercent = $invoice->discount_percent > 0 ? (float)$invoice->discount_percent : ($invoice->sub_total > 0 ? round(($invoice->discount / $invoice->sub_total) * 100, 2) : 0);
-                            @endphp
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Discount({{ rtrim(rtrim(number_format($effectiveDiscountPercent, 2), '0'), '.') }}%)</td></tr>
+                            @if($showGrandTotal)
+                            <tr>
+                                <td style="padding: 8px; border-right: none; border-bottom: 1px solid #000000;">
+                                    Rupees &nbsp;&nbsp;&nbsp;: {{ strtoupper($totalInWords) }}
+                                </td>
+                                <td style="padding: 4px; font-weight: bold; text-align: right; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
+                                    Total
+                                </td>
+                                <td style="padding: 4px 6px; font-weight: bold; text-align: right; border-bottom: 1px solid #000000;">
+                                    {{ number_format($invoice->grand_total, 2) }}
+                                </td>
+                            </tr>
                             @endif
-                            @if($showSubTotal)
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Taxable Value</td></tr>
-                            @endif
-                            @if($showTax)
-                                @if(!$invoice->other_state)
-                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT CGST</td></tr>
-                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT SGST</td></tr>
-                                @else
-                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">OUTPUT IGST</td></tr>
-                                @endif
-                            @endif
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">Round Off</td></tr>
-                        </table>
-                    </td>
-                    <!-- Right Side Amounts -->
-                    <td colspan="1" style="width: {{ $colWidths['amount'] }}%; padding: 0; vertical-align: top; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
-                        <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
-                            @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
-                            @endif
-                            @if($showSubTotal)
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td></tr>
-                            @endif
-                            @if($showTax)
-                                @if(!$invoice->other_state)
-                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->cgst, 2) }}</td></tr>
-                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sgst, 2) }}</td></tr>
-                                @else
-                                <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->igst, 2) }}</td></tr>
-                                @endif
-                            @endif
-                            <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ (in_array(strtolower($invoice->round_off_type ?? ''), ['less', 'minus']) ? ' - ' : '') . number_format($invoice->round_off ?? 0, 2) }}</td></tr>
                         </table>
                     </td>
                 </tr>
-                @if($showGrandTotal)
-                <tr>
-                    <td colspan="6" style="padding: 8px; border-right: none; border-bottom: 1px solid #000000; border-top: 1px solid #000000;">
-                        Rupees &nbsp;&nbsp;&nbsp;: {{ strtoupper($totalInWords) }}
-                    </td>
-                    <td colspan="{{ $colsAfterQty }}" style="padding: 4px; font-weight: bold; text-align: right; border-right: 1px solid #000000; border-top: 1px solid #000000; border-bottom: 1px solid #000000;">
-                        Total
-                    </td>
-                    <td colspan="1" style="padding: 4px; font-weight: bold; text-align: right; border-top: 1px solid #000000; border-bottom: 1px solid #000000;">
-                        {{ number_format($invoice->grand_total, 2) }}
-                    </td>
-                </tr>
-                @endif
             </tbody>
             @endif
         </table>

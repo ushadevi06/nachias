@@ -20,6 +20,7 @@ use App\Models\Attendance;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class HomeController extends Controller
 {
@@ -44,6 +45,7 @@ class HomeController extends Controller
         $urgent_orders = SalesOrder::where('status', 'Pending')->count();
 
         /*  Employee Attendance Dashboard */
+        $total_emp = User::where('status', 'Active')->where('id', '!=', 1)->count();
         $present_emp_today = Attendance::whereDate('date', $today)->where('status', 'Present')->count();
         $absent_emp_today = Attendance::whereDate('date', $today)->where('status', 'Absent')->count();
         $late_emp_today = Attendance::whereDate('date', $today)->where('status', 'Late')->count();
@@ -365,7 +367,7 @@ class HomeController extends Controller
             ->groupBy('operation_stages.id', 'operation_stages.operation_stage_name')
             ->get();
 
-        return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today', 'dbDevices', 'attendance_chart_data'));
+        return view('dashboard', compact('sales_today', 'sales_month', 'sales_year', 'sales_count_today', 'sales_count_month', 'sales_count_year', 'orders_today', 'orders_month', 'total_stock', 'urgent_orders', 'total_sales_value', 'sales_return', 'bill_discount', 'bill_discount_percent', 'cash_discount', 'cash_discount_percent', 'total_debtors', 'total_purchase', 'purchase_return', 'total_creditors', 'debtors_aging', 'creditors_aging', 'collection_performance', 'fabric_value', 'accessories_value', 'wip_value', 'finished_goods_value', 'months_labels', 'sales_chart_data', 'collection_chart_data', 'purchase_chart_data', 'payment_chart_data', 'production_wip', 'production_plan_qty', 'production_achieved_qty', 'production_efficiency', 'delivery_overdue', 'process_wise_status', 'wip_cost_breakdown', 'maintenance_raised', 'maintenance_attended', 'maintenance_pending', 'expiring_documents', 'total_emp', 'present_emp_today', 'absent_emp_today', 'late_emp_today', 'overtime_today', 'dbDevices', 'attendance_chart_data'));
     }
 
     public function getServiceWipDetails(Request $request)

@@ -134,16 +134,60 @@ class JobCardEntryController extends Controller
     }
     public function add(Request $request, $id = null)
     {
+        $restrictedRoleIds = [4, 9, 12, 18, 28]; // 4: CUTTING SUPERVISOR, 9: UNIT INCHARGE, 12: CUTTING INCHARGE, 18: PRODUCTION SUPERVISOR
+        $hasRestrictedRole = false;
+        if (auth()->check() && auth()->id() != 1) {
+            $hasRestrictedRole = in_array(auth()->user()->role_id, $restrictedRoleIds);
+        }
+        $canEdit = auth()->id() == 1 || auth()->user()->can('edit job-card');
+        
+        $isRestrictedEdit = false;
+        
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit job-card')) {
+            if ($hasRestrictedRole) {
+                $isRestrictedEdit = true;
+            } elseif (!$canEdit) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create job-card')) {
+            if ($hasRestrictedRole) {
+                return unauthorizedRedirect();
+            }
+            if (!$canEdit && !auth()->user()->can('create job-card')) {
                 return unauthorizedRedirect();
             }
         }
+
         if ($request->isMethod('post')) {
+            if ($isRestrictedEdit && $id) {
+                $jobCard = JobCardEntry::with('issueItems.fabricDetail')->findOrFail($id);
+                $oldData = $jobCard->toArray();
+                
+                if ($request->has('production_stages')) {
+                    $jobCard->operations()->delete();
+                    foreach ($request->production_stages as $stageData) {
+                        if (!empty($stageData['stage_id'])) {
+                            $jobCard->operations()->create([
+                                'operation_stage_id' => $stageData['stage_id'],
+                                'service_provider_id' => $stageData['service_provider_id'] ?? null,
+                                'employee_id' => $stageData['employee_id'] ?? null,
+                                'assigned_date' => !empty($stageData['issue_date']) ? date('Y-m-d', strtotime($stageData['issue_date'])) : null,
+                                'deadline_date' => !empty($stageData['deadline_date']) ? date('Y-m-d', strtotime($stageData['deadline_date'])) : null,
+                                'remarks' => $stageData['remarks'] ?? null,
+                                'rate' => $stageData['rate'] ?? 0,
+                                'total_cost' => ($stageData['rate'] ?? 0) * $jobCard->grand_total_qty,
+                            ]);
+                        }
+                    }
+                }
+                
+                $this->syncSchedulesFromJobCard($jobCard, $request->production_stages ?? []);
+                
+                $newData = $jobCard->fresh()->toArray();
+                addLog('update', 'Job Card Entry', 'job_card_entries', $id, $oldData, $newData);
+                
+                return redirect('job_card_entries')->with('success', 'Production stages saved successfully');
+            }
             $isCanvas = false;
             if ($request->filled('brand_id')) {
                 $brand = \App\Models\Brand::find($request->input('brand_id'));
@@ -771,7 +815,8 @@ class JobCardEntryController extends Controller
             'stageTaskStatus',
             'hasTasks',
             'hasIssuedItems',
-            'colors'
+            'colors',
+            'isRestrictedEdit'
         ));
     }
     public function view_details($id)

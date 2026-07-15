@@ -702,9 +702,12 @@ $isSuper = $user->id == 1;
                                     </li>
                                 @endif
 
-                                @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime') || $user->can('view monthly-payroll')))
+                                @php
+                                    $isEmployeeUser = $user && isset($user->emp_id) && !empty($user->emp_id) && !$isSuper;
+                                @endphp
+                                @if($user && ($isSuper || $user->can('view attendance') || $user->can('view manage-leaves') || $user->can('view overtime') || $user->can('view monthly-payroll') || $isEmployeeUser))
                                     <li
-                                        class="menu-item {{ (request()->is('attendances*') || request()->is('view_attendance/*') || request()->is('leave*') || request()->is('add_leave') || request()->is('view_leave/*') || request()->is('overtime*') || request()->is('view_overtime/*') || request()->is('monthly_payroll*') || request()->is('add_monthly_payroll') || request()->is('payslip*')) ? 'active' : '' }}">
+                                        class="menu-item {{ (request()->is('attendances*') || request()->is('view_attendance/*') || request()->is('leave*') || request()->is('add_leave') || request()->is('view_leave/*') || request()->is('overtime*') || request()->is('view_overtime/*') || request()->is('monthly_payroll*') || request()->is('add_monthly_payroll') || request()->is('payslip*') || request()->is('employee_attendance*')) ? 'active' : '' }}">
 
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
                                             <i class="menu-icon icon-base ri ri-money-rupee-circle-line"></i>
@@ -715,6 +718,14 @@ $isSuper = $user->id == 1;
                                                 <li class="menu-item {{ request()->is('attendances*') || request()->is('view_attendance/*') ? 'active' : '' }}">
                                                     <a href="{{ url('attendances') }}" class="menu-link">
                                                         <div>Attendances</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+
+                                            @if($isEmployeeUser)
+                                                <li class="menu-item {{ request()->is('employee_attendance*') ? 'active' : '' }}">
+                                                    <a href="{{ url('employee_attendance') }}" class="menu-link">
+                                                        <div>Employee Attendance</div>
                                                     </a>
                                                 </li>
                                             @endif

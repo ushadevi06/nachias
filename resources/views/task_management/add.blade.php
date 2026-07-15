@@ -322,7 +322,7 @@
                                                             </option>
                                                         @endforeach
                                                     @else
-                                                        <option value="" disabled>No Production Supervisor available.</option>
+                                                        <option value="" disabled>No Supervisors Available.</option>
                                                     @endif
                                                 </select>
                                                 <label>Issued By *</label>

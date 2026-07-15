@@ -62,7 +62,7 @@
     <div class="container-xxl section-padding">
         <div class="row">
             <div class="col-lg-12">
-                <form action="{{ url('job_card_entries/add/' . ($jobCard ? $jobCard->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
+                <form action="{{ url('job_card_entries/add/' . ($jobCard ? $jobCard->id : '')) }}" method="POST" class="common-form" id="job-card-form" enctype="multipart/form-data" autocomplete="off">
                     @csrf
                     <div class="col-lg-12">
                         @include('flash_messages')
@@ -3852,6 +3852,31 @@
         
         setTimeout(applyCanvasLogic, 500);
 
+        @if(isset($isRestrictedEdit) && $isRestrictedEdit)
+
+        setTimeout(() => {
+            $('form#job-card-form').find('input, select, textarea, button').prop('disabled', true);
+            $('form#job-card-form').find('input[type="file"]').prop('disabled', true);
+            $('form#job-card-form').find('input[type="hidden"]').prop('disabled', false);
+            
+            $('#production-stages-table').find('input, select, textarea, button').prop('disabled', false);
+            $('#production-stages-table-wrapper').find('input, select, textarea, button').prop('disabled', false);
+            
+            $('#job-card-form button[type="submit"]').prop('disabled', false);
+            $('#add-stage-row').prop('disabled', false);
+            $('.assign-task-btn').prop('disabled', false);
+            
+            $('#fetch-fabric-btn, #add-size, #add-fabric-btn, #add-sleeve-btn, .sync-mtr-btn').hide();
+            $('.btn-danger:not(#production-stages-table .btn-danger)').hide();
+            $('.remove-row:not(#production-stages-table .remove-row)').hide();
+            
+            $('select').not('#production-stages-table select').each(function() {
+                if ($(this).data('select2')) {
+                    $(this).prop('disabled', true);
+                }
+            });
+        }, 800);
+        @endif
     });
 </script>
 <style>

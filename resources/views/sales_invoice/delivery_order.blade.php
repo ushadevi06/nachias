@@ -489,13 +489,13 @@
                 <tr>
                     <th rowspan="2" style="width: 28%; text-align: left; padding-left: 6px;">Description</th>
                     <th rowspan="2" style="width: 8%;">UOM</th>
-                    @if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
+                    @if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
                     <th rowspan="2" style="width: 16%;">Art</th>
                     @endif
-                    @if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
+                    @if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
                     <th rowspan="2" style="width: 10%; text-align: right; padding-right: 6px;">Retail Price</th>
                     @endif
-                    @if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
+                    @if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
                     <th rowspan="2" style="width: 10%; text-align: right; padding-right: 6px;">Unit Price</th>
                     @endif
                     <th colspan="{{ count($allSizes) }}">Size</th>
@@ -512,13 +512,13 @@
                     <tr>
                         <td style="padding-left: 6px;">{{ $row['description'] }}</td>
                         <td class="text-center">{{ $row['uom'] }}</td>
-                        @if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
+                        @if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
                         <td class="text-center">{{ $row['art'] }}</td>
                         @endif
-                        @if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
+                        @if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
                         <td class="text-right" style="padding-right: 6px;">{{ number_format($row['mrp'], 2) }}</td>
                         @endif
-                        @if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
+                        @if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
                         <td class="text-right" style="padding-right: 6px;">{{ number_format($row['rate'], 2) }}</td>
                         @endif
                         @foreach($allSizes as $size)
@@ -537,9 +537,9 @@
                 <tr class="bold bg-light-blue">
                     @php
                         $leftColspan = 2;
-                        if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields)) $leftColspan++;
-                        if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $leftColspan++;
-                        if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $leftColspan++;
+                        if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields)) $leftColspan++;
+                        if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $leftColspan++;
+                        if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $leftColspan++;
                     @endphp
                     <td colspan="{{ $leftColspan }}" class="text-right" style="padding-right: 8px;">Total</td>
                     @foreach($allSizes as $size)

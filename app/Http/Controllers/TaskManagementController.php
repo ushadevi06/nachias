@@ -106,11 +106,11 @@ class TaskManagementController extends Controller
     public function add($id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit task-management')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit task-management') && !auth()->user()->can('assign-task job-card')) {
                 return unauthorizedRedirect();
             }
         } else {
-            if (auth()->id() != 1 && !auth()->user()->can('create task-management')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create task-management') && !auth()->user()->can('assign-task job-card')) {
                 return unauthorizedRedirect();
             }
         }
@@ -395,7 +395,7 @@ class TaskManagementController extends Controller
         $nextTaskNo = $id ? $task->task_no : 'TASK-' . str_pad(Task::count() + 1, 3, '0', STR_PAD_LEFT);
         $users = User::where('id', '!=', 1)->where('status', 'Active')->get();
         $supervisors = User::join('roles', 'users.role_id', '=', 'roles.id')
-            ->where('roles.id', 18)
+            ->whereIn('roles.name', ['Production Supervisor', 'Supervisor', 'Unit Supervisor', 'Cutting Supervisor'])
             ->where('users.status', 'Active')
             ->select('users.*')
             ->get();

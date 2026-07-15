@@ -145,7 +145,24 @@
             <div class="section-indicator bg-secondary me-2"></div>
             <h5 class="fw-bold mb-0">Employee's Attendance Dashboard</h5>
         </div>
-        <div class="col-xl-3 col-md-6">
+        
+        <div class="col-xl col-md-4 col-sm-6">
+            <div class="card attendance-card border-0 shadow-sm" style="border-left: 4px solid #0d6efd;">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="small text-muted mb-1">Total Employees</p>
+                        <h2 class="fw-bold text-primary mb-0">
+                            {{ $total_emp ?? 0 }}
+                        </h2>
+                    </div>
+                    <div class="kpi-icon bg-light-primary">
+                        <i class="ri ri-team-line text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl col-md-4 col-sm-6">
             <div class="card attendance-card present-card border-0 shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
@@ -155,14 +172,14 @@
                         </h2>
                     </div>
 
-                    <div class="attendance-icon bg-success-subtle">
-                        <i class="ri-user-smile-line"></i>
+                    <div class="kpi-icon bg-light-success">
+                        <i class="ri ri-user-smile-line text-success"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-4 col-sm-6">
             <div class="card attendance-card absent-card border-0 shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
@@ -172,14 +189,14 @@
                         </h2>
                     </div>
 
-                    <div class="attendance-icon bg-danger-subtle">
-                        <i class="ri-user-unfollow-line"></i>
+                    <div class="kpi-icon bg-light-danger">
+                        <i class="ri ri-user-unfollow-line text-danger"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-4 col-sm-6">
             <div class="card attendance-card late-card border-0 shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
@@ -189,14 +206,14 @@
                         </h2>
                     </div>
 
-                    <div class="attendance-icon bg-warning-subtle">
-                        <i class="ri-time-line"></i>
+                    <div class="kpi-icon bg-light-warning">
+                        <i class="ri ri-time-line text-warning"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-4 col-sm-6">
             <div class="card attendance-card overtime-card border-0 shadow-sm">
                 <div class="card-body d-flex justify-content-between align-items-center">
                     <div>
@@ -206,8 +223,8 @@
                         </h2>
                     </div>
 
-                    <div class="attendance-icon bg-primary-subtle">
-                        <i class="ri-alarm-warning-line"></i>
+                    <div class="kpi-icon bg-light-info">
+                        <i class="ri ri-alarm-warning-line text-info"></i>
                     </div>
                 </div>
             </div>
@@ -575,7 +592,7 @@
                     <div class="card-header bg-white py-3">
                         <h6 class="mb-0 fw-bold text-danger"><i class="ri ri-time-line me-2"></i>Delivery Days Overdue</h6>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
                         <div class="list-group list-group-flush">
                             @if($delivery_overdue->count() > 0)
                                 @foreach($delivery_overdue as $od)
