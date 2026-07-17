@@ -48,7 +48,7 @@
                             </h5>
                         </div>
                         <div class="col-md-6 text-md-end">
-                            <div class="btn-group me-2">
+                            {{-- <div class="btn-group me-2">
                                 <button type="button" class="btn btn-sm btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="ri ri-printer-line me-1"></i> Bulk Print
                                 </button>
@@ -64,9 +64,9 @@
                                         </a>
                                     </li>
                                 </ul>
-                            </div>
+                            </div> --}}
                             <span class="badge bg-label-info px-3 py-2 me-2">ART: {{ $issueItem->fabricDetail->art_no ?? $issueItem->rawMaterial->code ?? '-' }}</span>
-                            <span class="badge bg-label-secondary px-3 py-2">COLOR: {{ $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-') }}</span>
+                            {{-- <span class="badge bg-label-secondary px-3 py-2">COLOR: {{ $issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-') }}</span> --}}
                         </div>
                     </div>
                 </div>

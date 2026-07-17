@@ -243,10 +243,22 @@ class TaskManagementController extends Controller
                 }
 
                 foreach ($serviceQtySums as $serviceId => $totalQty) {
-                    if ($totalQty > $stageMaxQty) {
-                        $service = ProductionService::find($serviceId);
+                    $service = ProductionService::find($serviceId);
+                    $serviceMaxQty = $stageMaxQty;
+                    
+                    if ($service && $jobCard) {
+                        if ($service->base_quantity_source == 'FS Qty') {
+                            $serviceMaxQty = $jobCard->total_qty_fs ?? $serviceMaxQty;
+                        } elseif ($service->base_quantity_source == 'HS Qty') {
+                            $serviceMaxQty = $jobCard->total_qty_hs ?? $serviceMaxQty;
+                        } else {
+                            $serviceMaxQty = $jobCard->grand_total_qty ?? $serviceMaxQty;
+                        }
+                    }
+
+                    if ($totalQty > $serviceMaxQty) {
                         $serviceName = $service ? $service->service_name : 'Selected Service';
-                        throw new \Exception("Total quantity for service '$serviceName' ($totalQty) exceeds the stage planned quantity ($stageMaxQty PCS).");
+                        throw new \Exception("Total quantity for service '$serviceName' ($totalQty) exceeds the allowed quantity ($serviceMaxQty PCS).");
                     }
                 }
             }
@@ -452,8 +464,9 @@ class TaskManagementController extends Controller
                 }
                 return [
                     'id' => $s->id,
-                    'name' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
-                    'qty' => $qty
+                    'name' => ($s->service_name ?? ''),
+                    'qty' => $qty,
+                    'multiplier' => 1
                 ];
             })->values()->all();
         }
@@ -705,7 +718,7 @@ class TaskManagementController extends Controller
                     ->map(function ($s) {
                         return [
                             'id' => $s->id,
-                            'name' => $s->service_name . ' (' . $s->service_code . ')'
+                            'name' => $s->service_name
                         ];
                     });
             }

@@ -185,12 +185,16 @@
                                                         } elseif (isset($task) && $task->assignments->count() > 0) {
                                                             $assignmentsArr = $task->assignments;
                                                         } elseif (!isset($task) && isset($services) && count($services) > 0) {
+                                                            $isStitchingAssemble = ($selectedStage->operationStage->operation_stage_name ?? '') === 'STITCHING ASSEMBLE';
+                                                            $multiplier = $isStitchingAssemble ? 2 : 1;
                                                             foreach ($services as $svc) {
-                                                                $assignmentsArr[] = [
-                                                                    'service_id' => $svc['id'],
-                                                                    'issue_qty' => $svc['qty'],
-                                                                    'status' => 'Open'
-                                                                ];
+                                                                for ($i = 0; $i < $multiplier; $i++) {
+                                                                    $assignmentsArr[] = [
+                                                                        'service_id' => $svc['id'],
+                                                                        'issue_qty' => $i === 0 ? $svc['qty'] : '',
+                                                                        'status' => 'Open'
+                                                                    ];
+                                                                }
                                                             }
                                                         } elseif (!isset($task)) {
                                                             $assignmentsArr = [[]];
@@ -235,14 +239,14 @@
                                                                         <option value="">Select Service</option>
                                                                         @if(isset($services) && count($services) > 0)
                                                                             @foreach($services as $svc)
-                                                                                <option value="{{ $svc['id'] }}" {{ $service_id == $svc['id'] ? 'selected' : '' }}>{{ $svc['name'] }}</option>
+                                                                                <option value="{{ $svc['id'] }}" data-qty="{{ $svc['qty'] }}" {{ $service_id == $svc['id'] ? 'selected' : '' }}>{{ $svc['name'] }}</option>
                                                                             @endforeach
                                                                         @elseif($service_id)
                                                                             @php
                                                                                 $selectedService = \App\Models\ProductionService::find($service_id);
                                                                             @endphp
                                                                             <option value="{{ $service_id }}" selected>
-                                                                                {{ $selectedService ? ($selectedService->service_name . ' - ' . $selectedService->service_code) : 'Service ID: ' . $service_id }}
+                                                                                {{ $selectedService ? $selectedService->service_name : 'Service ID: ' . $service_id }}
                                                                             </option>
                                                                         @endif
                                                                     </select>
@@ -411,7 +415,7 @@
                                             @if($task->assignments && $task->assignments->count() > 0)
                                                 @foreach($task->assignments as $index => $assign)
                                                     @php
-                                                        $serviceName = $assign->service ? ($assign->service->service_name . ' (' . $assign->service->service_code . ')') : 'N/A';
+                                                        $serviceName = $assign->service ? $assign->service->service_name : 'N/A';
                                                         $employeeName = $assign->assignee ? $assign->assignee->name : 'Unknown';
                                                         $progressPercent = ($assign->issue_qty > 0) ? min(100, round(($assign->completed_qty / $assign->issue_qty) * 100)) : 0;
 
@@ -833,6 +837,12 @@
                         <div class="form-group mb-3">
                             <label>Service *</label>
                             <select class="form-select select2 services-select" name="assignments[${assignmentIndex}][service_id]" data-placeholder="Select Service">
+                                <option value="">Select Service</option>
+                                @if(isset($services) && count($services) > 0)
+                                    @foreach($services as $svc)
+                                        <option value="{{ $svc['id'] }}" data-qty="{{ $svc['qty'] }}" ${data.service_id == {{ $svc['id'] }} ? 'selected' : ''}>{{ $svc['name'] }}</option>
+                                    @endforeach
+                                @endif
                             </select>
                         </div>
 
@@ -891,10 +901,70 @@
                 updateCardNumbers();
             }
             $(document).on('input change', '#assignment-cards-container input[name*="[issue_qty]"]', function() {
+                var $currentRow = $(this).closest('.assignment-row');
+                var serviceId = $currentRow.find('.services-select').val();
+                
+                if (serviceId) {
+                    var $allRows = $('#assignment-cards-container .assignment-row').filter(function() {
+                        return $(this).find('.services-select').val() == serviceId;
+                    });
+                    
+                    if ($allRows.length > 1) {
+                        var $lastRow = $allRows.last();
+                        if (!$currentRow.is($lastRow)) {
+                            var $selectedOption = $currentRow.find('.services-select option:selected');
+                            var maxQty = parseFloat($selectedOption.data('qty')) || 0;
+                            if (!maxQty) {
+                                var $el = $('#stage_select');
+                                var $selected = $el.is('select') ? $el.find(':selected') : $el;
+                                maxQty = parseFloat($selected.data('qty')) || 0;
+                            }
+                            
+                            var totalAssigned = 0;
+                            $allRows.not($lastRow).each(function() {
+                                totalAssigned += parseFloat($(this).find('input[name*="[issue_qty]"]').val()) || 0;
+                            });
+                            
+                            var balance = maxQty - totalAssigned;
+                            if (balance < 0) balance = 0;
+                            $lastRow.find('input[name*="[issue_qty]"]').val(balance);
+                        }
+                    }
+                }
+                
                 validateTotalQty();
             });
 
-            $(document).on('change', '#assignment-cards-container .services-select', function() {
+            $(document).on('change', '#assignment-cards-container .services-select', function(e, isInit) {
+                if (isInit) return; // Prevent overwriting quantities on page load
+                var $row = $(this).closest('.assignment-row');
+                var serviceId = $(this).val();
+                
+                if (serviceId) {
+                    var $selectedOption = $(this).find('option:selected');
+                    var maxQty = parseFloat($selectedOption.data('qty')) || 0;
+                    if (!maxQty) {
+                        var $el = $('#stage_select');
+                        var $selected = $el.is('select') ? $el.find(':selected') : $el;
+                        maxQty = parseFloat($selected.data('qty')) || 0;
+                    }
+                    
+                    var totalAssigned = 0;
+                    $('#assignment-cards-container .assignment-row').not($row).each(function() {
+                        if ($(this).find('.services-select').val() == serviceId) {
+                            totalAssigned += parseFloat($(this).find('input[name*="[issue_qty]"]').val()) || 0;
+                        }
+                    });
+                    
+                    var balance = maxQty - totalAssigned;
+                    if (balance < 0) balance = 0;
+                    
+                    $row.find('input[name*="[issue_qty]"]').val(balance);
+                }
+                validateTotalQty();
+            });
+
+            $(document).on('input', 'input[name*="[issue_qty]"]', function() {
                 validateTotalQty();
             });
             function updateCardNumbers() {
@@ -908,42 +978,39 @@
                 var $selected = $el.is('select') ? $el.find(':selected') : $el;
                 var stageMaxQty = parseFloat($selected.data('qty')) || 0;
 
-                if (stageMaxQty <= 0) return true;
-
                 $('#qty-exceed-error').remove();
 
                 var isValid = true;
                 var errorMessages = [];
                 var serviceTotals = {};
                 var serviceNames = {};
+                var serviceMaxQties = {};
 
                 $('#assignment-cards-container .assignment-row').each(function() {
                     var qty = parseFloat($(this).find('input[name*="[issue_qty]"]').val()) || 0;
-                    var serviceId = $(this).find('.services-select').val();
-                    var serviceName = $(this).find('.services-select option:selected').text();
-                    var employeeName = $(this).find('.employee-select option:selected').text() || 'Employee';
-
-                    if (qty > stageMaxQty) {
-                        isValid = false;
-                        errorMessages.push(
-                            `<b>${serviceName}</b> → ${employeeName}: qty (<b>${qty}</b>) exceeds planned qty (<b>${stageMaxQty} PCS</b>).`
-                        );
-                    }
-
+                    var $serviceSelect = $(this).find('.services-select');
+                    var serviceId = $serviceSelect.val();
+                    var $selectedOption = $serviceSelect.find('option:selected');
+                    var serviceName = $selectedOption.text();
+                    
                     if (serviceId) {
+                        var sMaxQty = parseFloat($selectedOption.data('qty')) || stageMaxQty;
+                        
                         if (!serviceTotals[serviceId]) {
                             serviceTotals[serviceId] = 0;
                             serviceNames[serviceId] = serviceName;
+                            serviceMaxQties[serviceId] = sMaxQty;
                         }
                         serviceTotals[serviceId] += qty;
                     }
                 });
 
                 for (var sId in serviceTotals) {
-                    if (serviceTotals[sId] > stageMaxQty) {
+                    if (serviceTotals[sId] > serviceMaxQties[sId]) {
                         isValid = false;
+                        var remaining = Math.max(0, serviceMaxQties[sId] - (serviceTotals[sId] - parseFloat($('#assignment-cards-container .assignment-row').find('.services-select').filter(function() { return $(this).val() == sId; }).closest('.assignment-row').find('input[name*="[issue_qty]"]').last().val() || 0)));
                         errorMessages.push(
-                            `Total quantity for service <b>${serviceNames[sId]}</b> (<b>${serviceTotals[sId]}</b>) exceeds planned qty (<b>${stageMaxQty} PCS</b>).`
+                            `<b>${serviceNames[sId]}</b>: Total assigned qty (<b>${serviceTotals[sId]}</b>) exceeds maximum allowed (<b>${serviceMaxQties[sId]} PCS</b>). Only <b>${serviceMaxQties[sId]} PCS</b> total available.`
                         );
                     }
                 }
@@ -1004,27 +1071,10 @@
                     placeholder: "Select Service", 
                     allowClear: true, 
                     width: '100%', 
-                    dropdownParent: $row.find('.services-select').parent(),
-                    ajax: {
-                        url: function() {
-                            var psId = $('#stage_select').val();
-                            console.log(psId);
-                            if (!psId) return '';
-                            return "{{ url('get-services-by-stage') }}/" + psId;
-                        },
-                        dataType: 'json',
-                        delay: 250,
-                        data: function (params) { return { q: params.term }; },
-                        processResults: function (data) { 
-                            return { results: data.results }; 
-                        },
-                        cache: true
-                    }
+                    dropdownParent: $row.find('.services-select').parent()
                 }).on('select2:select', function(e) {
-                    var data = e.params.data;
-                    if(data.qty) {
-                        $row.find('input[name*="[issue_qty]"]').val(data.qty);
-                    }
+                    // Trigger the document-level change event to run the balance auto-fill logic
+                    $(this).trigger('change');
                 });
 
                 $row.find('.status-select-row').each(function() {
@@ -1143,7 +1193,7 @@
                     calculateRowHours($(this));
                 });
 
-                $('.select2').trigger('change');
+                $('.select2').trigger('change', [isInit]);
                 if (typeof populateAllMaterialDropdowns === 'function') {
                     populateAllMaterialDropdowns();
                 }

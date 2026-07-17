@@ -162,7 +162,7 @@ class AjaxController extends Controller
             }
             return [
                 'id' => $s->id,
-                'text' => ($s->service_name ?? '') . ' - ' . ($s->service_code ?? ''),
+                'text' => ($s->service_name ?? ''),
                 'qty' => $qty
             ];
         })->values()->all();

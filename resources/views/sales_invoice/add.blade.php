@@ -2038,6 +2038,10 @@
             let price = parseFloat(res.price || 0).toFixed(2);
             let qty = 1;
             let amount = (qty * price).toFixed(2);
+            
+            let size = res.size === null ? "" : res.size;
+            let sizeStock = res.size_stock || {};
+            let balance = sizeStock[size] !== undefined ? sizeStock[size] : (res.balance || 0);
 
             let rowHtml = `
             <tr class="item-row">
@@ -2091,7 +2095,7 @@
                     <div class="form-floating form-floating-outline">
                         <input type="number" name="items[open_${index}][quantity]" class="form-control qty-input open-qty" value="${qty}" min="0.01" step="0.01">
                         <div class="stock-info-wrapper mt-1">
-                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">${parseFloat(res.balance || 0).toFixed(2)}</span></small>
+                            <small class="stock-label text-muted">Stock: <span class="available-stock-display">${parseFloat(balance).toFixed(2)}</span></small>
                             <div class="text-danger small stock-error-msg" style="display: none; font-weight: 500;">Exceeds stock!</div>
                         </div>
                     </div>
