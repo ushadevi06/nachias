@@ -421,13 +421,23 @@ class SalesInvoiceController extends Controller
                     $invoiceData['attachment_file'] = 'uploads/sales_invoices/attachments/' . $fileName;
                 }
 
+                $oldQuantities = [];
                 if ($id) {
                     $invoice = SalesInvoice::with('items')->findOrFail($id);
-                    $this->adjustStock($id, true); // Revert existing stock before updating
+                    foreach($invoice->items as $oItem) {
+                        $oldQuantities[$oItem->id] = ['quantity' => $oItem->quantity, 'inv_no' => $invoice->inv_no, 'stock_entry_item_id' => $oItem->stock_entry_item_id];
+                    }
+                    
                     $activeStatuses = ['Paid', 'Partially Paid', 'Unpaid/Credit'];
                     $invoiceData['received_amount'] = (float)$invoice->received_amount + (float)$request->received_amount;
                     $invoice->update($invoiceData);                     
+                    
                     $itemIds = collect($request->items)->pluck('id')->filter()->toArray();
+                    $deletedItems = $invoice->items()->whereNotIn('id', $itemIds)->get();
+                    foreach ($deletedItems as $dItem) {
+                        $this->createReturnStockEntry($dItem, $dItem->quantity, $invoice->inv_no);
+                    }
+                    
                     $invoice->items()->whereNotIn('id', $itemIds)->forceDelete();
                 } else {
                     $invoiceData['received_amount'] = (float)$request->received_amount;
@@ -474,7 +484,7 @@ class SalesInvoiceController extends Controller
                     );
                 }
                 
-                $this->adjustStock($invoiceId);
+                $this->adjustStock($invoiceId, false, $oldQuantities ?? []);
 
                 $invoice->load(['items', 'customer.city', 'customer.place']);
                 $totalPcs = (int) $invoice->items->sum('quantity');
@@ -1726,7 +1736,7 @@ class SalesInvoiceController extends Controller
             $alreadyDeducted = 0;
             if ($invoiceId) {
                 foreach ($existingInvoiceItems as $ei) {
-                    if ($ei->sku === $req['sku'] && $ei->size_id == $req['size']) {
+                    if ($ei->sku === $req['sku'] && $ei->size == $req['size']) {
                         $alreadyDeducted += $ei->quantity;
                     }
                 }
@@ -1734,12 +1744,49 @@ class SalesInvoiceController extends Controller
             $effectiveAvailable = ($totalIn - $totalOut) + $alreadyDeducted;
 
             if ($effectiveAvailable < $req['qty']) {
+                \Illuminate\Support\Facades\Log::error("Validation Failed:", [
+                    'sku' => $req['sku'],
+                    'req_qty' => $req['qty'],
+                    'totalIn' => $totalIn,
+                    'totalOut' => $totalOut,
+                    'alreadyDeducted' => $alreadyDeducted,
+                    'existing_skus' => collect($existingInvoiceItems)->pluck('sku')->toArray()
+                ]);
                 throw new \Exception("Insufficient stock for " . $req['display'] . " (Available: " . $effectiveAvailable . ", Required: " . $req['qty'] . ")");
             }
         }
     }
 
-    private function adjustStock($salesInvoiceId, $revert = false)
+    private function createReturnStockEntry($item, $returnQty, $invNo)
+    {
+        if ($returnQty <= 0 || !$item->stock_entry_item_id) return;
+
+        $originalStockItem = \App\Models\StockEntryItem::find($item->stock_entry_item_id);
+        if (!$originalStockItem) return;
+
+        $stockEntry = \App\Models\StockEntry::create([
+            'stock_entry_no' => 'SR-' . time() . '-' . rand(10, 99),
+            'stock_date' => date('Y-m-d'),
+            'entry_type' => 'Finished Goods',
+            'remarks' => 'Sales Return for Invoice ' . $invNo,
+            'status' => 'Posted',
+            'created_by' => auth()->id() ?? 1,
+        ]);
+
+        $newItemData = $originalStockItem->toArray();
+        unset($newItemData['id']);
+        unset($newItemData['created_at']);
+        unset($newItemData['updated_at']);
+        unset($newItemData['deleted_at']);
+        
+        $newItemData['stock_entry_id'] = $stockEntry->id;
+        $newItemData['qty_in'] = $returnQty;
+        $newItemData['qty_out'] = 0;
+
+        \App\Models\StockEntryItem::create($newItemData);
+    }
+
+    private function adjustStock($salesInvoiceId, $revert = false, $oldQuantities = [])
     {
         $items = SalesInvoiceItem::where('sales_invoice_id', $salesInvoiceId)->get();
         foreach ($items as $item) {
@@ -1823,8 +1870,20 @@ class SalesInvoiceController extends Controller
                         ->where('qty_out', '>=', $item->quantity)
                         ->decrement('qty_out', $item->quantity);
                 } else {
-                    StockEntryItem::where('id', $stockEntryItemId)
-                        ->increment('qty_out', $item->quantity);
+                    if (!empty($oldQuantities) && isset($oldQuantities[$item->id])) {
+                        $oldQty = $oldQuantities[$item->id]['quantity'];
+                        $delta = $item->quantity - $oldQty;
+                        
+                        if ($delta > 0) {
+                            StockEntryItem::where('id', $stockEntryItemId)->increment('qty_out', $delta);
+                        } elseif ($delta < 0) {
+                            $returnQty = abs($delta);
+                            $this->createReturnStockEntry($item, $returnQty, $oldQuantities[$item->id]['inv_no']);
+                        }
+                    } else {
+                        StockEntryItem::where('id', $stockEntryItemId)
+                            ->increment('qty_out', $item->quantity);
+                    }
                 }
             }
         }

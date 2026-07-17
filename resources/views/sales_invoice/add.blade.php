@@ -299,6 +299,8 @@
                                                         ->value(\Illuminate\Support\Facades\DB::raw('qty_in - COALESCE(qty_out, 0)')) ?? 0;
                                                 }
 
+                                                $stockQty += (float)$item->quantity;
+
                                                 return [
                                                     'brand_id' => $item->brand_id,
                                                     'brand_name' => $brandName ?: '',
@@ -347,7 +349,7 @@
                                                             $rowObj->color_name = $stockItem->color->color_name ?? '';
                                                             $rowObj->art_no = $stockItem->art_no ?? '';
                                                             $rowObj->size_name = $stockItem->size;
-                                                            $rowObj->stock_qty = $stockItem->qty_in - ($stockItem->qty_out ?? 0);
+                                                            $rowObj->stock_qty = ($stockItem->qty_in - ($stockItem->qty_out ?? 0)) + (float)$rowObj->quantity;
                                                         }
                                                     }
                                                     $openOrderItems[$index] = $rowObj;
@@ -411,7 +413,7 @@
                                                 @if(isset($row->max_qty) && $row->max_qty !== '')
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif
-                                                @if(isset($row->stock_qty) && $row->stock_qty !== '')
+                                                @if(!isset($invoice) && isset($row->stock_qty) && $row->stock_qty !== '')
                                                     <small class="{{ $row->stock_qty < ($row->max_qty ?? 0) ? 'text-danger' : 'text-muted' }} d-block" style="font-weight: 500;">Stock: {{ $row->stock_qty }}</small>
                                                 @endif
                                             </td>
