@@ -1125,4 +1125,100 @@ class ProductionReceiptController extends Controller
         }
         return Excel::download(new ProductionReceiptExport, 'production_receipts_' . date('Ymd_His') . '.xlsx');
     }
+
+    public function report(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view production-receipt-report')) {
+            return unauthorizedRedirect();
+        }
+
+        if ($request->ajax()) {
+            $query = \App\Models\ProductionReceiptItem::with('productionReceipt')->orderBy('id', 'desc');
+
+            if (!empty($request->date_range)) {
+                $dates = explode(' to ', $request->date_range);
+                $startDate = isset($dates[0]) ? \Carbon\Carbon::parse($dates[0])->format('Y-m-d') : null;
+                $endDate = isset($dates[1]) ? \Carbon\Carbon::parse($dates[1])->format('Y-m-d') : $startDate;
+
+                if ($startDate && $endDate) {
+                    $query->whereHas('productionReceipt', function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('receipt_date', [$startDate, $endDate]);
+                    });
+                } elseif ($startDate) {
+                    $query->whereHas('productionReceipt', function ($q) use ($startDate) {
+                        $q->whereDate('receipt_date', $startDate);
+                    });
+                }
+            }
+
+            $totalRecords = $query->count();
+            $filteredRecords = $totalRecords;
+
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 10);
+
+            if ($length != -1) {
+                $query->skip($start)->take($length);
+            }
+
+            $items = $query->get();
+            $data = [];
+            $count = $start + 1;
+
+            $sizeMappings = [
+                '36' => 'S',
+                '38' => 'M',
+                '40' => 'L',
+                '42' => 'XL',
+                '44' => 'XXL',
+                '46' => '3XL',
+                '48' => '4XL',
+                '50' => '5XL',
+            ];
+
+            foreach ($items as $item) {
+                $date = '';
+                if ($item->productionReceipt && $item->productionReceipt->receipt_date) {
+                    $date = \Carbon\Carbon::parse($item->productionReceipt->receipt_date)->format('d-m-Y');
+                }
+
+                $rawSize = $item->size ?? '';
+                $sizeChar = $sizeMappings[$rawSize] ?? '';
+                $mappedSize = $rawSize . ($sizeChar ? ' ' . $sizeChar : '');
+                
+                $sleeveType = '';
+                if (preg_match('/(F\/S|H\/S|Fs|Hs)/i', $item->item_name, $matches)) {
+                    $sleeveType = str_ireplace(['Fs', 'Hs', 'F/s', 'H/s'], ['F/S', 'H/S', 'F/S', 'H/S'], $matches[1]);
+                }
+        
+                $nameOfItem = trim(($item->art_no ?? '') . ' ' . $mappedSize . ' ' . $sleeveType);
+
+                $data[] = [
+                    'DT_RowIndex' => $count++,
+                    'date' => $date,
+                    'item' => $nameOfItem,
+                    'quantity' => $item->qty_to_receive ?? 0,
+                    'price' => '₹' . number_format($item->unit_price ?? 0, 2),
+                    'amount' => '₹' . number_format($item->total_value ?? 0, 2),
+                ];
+            }
+
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
+        }
+
+        return view('production_receipts.report');
+    }
+
+    public function exportReport(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('export production-receipt-report')) {
+            return unauthorizedRedirect();
+        }
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ProductionReceiptReportExport($request), 'production_receipt_report_' . date('Ymd_His') . '.xlsx');
+    }
 }

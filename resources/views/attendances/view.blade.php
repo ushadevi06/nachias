@@ -876,6 +876,23 @@
             staffReportGenerateButton.disabled = true;
             staffReportGenerateButton.innerHTML =
                 '<span class="spinner-border spinner-border-sm"></span> Loading...';
+
+            if ($.fn.DataTable.isDataTable('#staffReportTable')) {
+                $('#staffReportTable').DataTable().clear().destroy();
+            }
+            staffReportNoData.style.display = 'none';
+            staffReportBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2 text-muted fw-semibold fs-5">Fetching Staff Report...</div>
+                        <div class="text-muted small">Please wait while we generate the report</div>
+                    </td>
+                </tr>
+            `;
+            staffReportSummary.innerHTML = '<span class="text-primary fw-semibold">Loading data...</span>';
             fetch(`${APP_URL}/staff-report`, {
                 method: 'POST',
                 headers: {
@@ -957,7 +974,7 @@
             })
             .finally(() => {
                 staffReportGenerateButton.disabled = false;
-                staffReportGenerateButton.textContent = 'Generate';
+                staffReportGenerateButton.textContent = 'Show Report';
             });
         }
         function renderStaffReportPanel() {

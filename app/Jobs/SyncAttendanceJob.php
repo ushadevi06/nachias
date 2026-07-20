@@ -37,7 +37,8 @@ class SyncAttendanceJob implements ShouldQueue
 
         $controller->formatAttendance(
             $grouped,
-            $this->date
+            $this->date,
+            $this->device
         );
     }
 }

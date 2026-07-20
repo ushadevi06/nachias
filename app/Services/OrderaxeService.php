@@ -480,9 +480,20 @@ class OrderaxeService
             $taxAmount = round($totalAmount * ($totalTaxPercent / 100), 2);
             $grandTotal = $totalAmount + $taxAmount;
 
+            $agentCommValue = 0;
+            if ($agentId) {
+                $agent = \App\Models\SalesAgent::find($agentId);
+                if ($agent) {
+                    $agentCommValue = (float) ($agent->commission_value ?? 0);
+                }
+            }
+            $commAmount = $totalQty * $agentCommValue;
+
             $salesOrder->update([
                 'total_qty' => $totalQty,
                 'sub_total_qty' => $totalAmount,
+                'commission_percent' => $agentCommValue,
+                'commission_amount' => $commAmount,
                 'taxable_amount' => $totalAmount,
                 'other_state' => $otherState,
                 'cgst_percent' => $cgstPercent,

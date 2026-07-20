@@ -39,7 +39,7 @@ th.sticky-col-employee {
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <form action="" method="POST" class="common-form" autocomplete="off">
+            <form action="" method="POST" class="common-form" autocomplete="off" onsubmit="return false;">
                 <div class="card">
                     <div class="card-body">
                         <div class="card-header-box">
@@ -629,29 +629,35 @@ th.sticky-col-employee {
         });
         function calculateSalary(row) {
             let fixed_gross = parseFloat(row.find('.fixed_gross').val()) || 0;
-            let basic = parseFloat(row.find('.basic_salary').val()) || 0;
+            let totalDays = parseFloat(row.find('.total_days').val()) || 1;
+            let absentDays = parseFloat(row.find('.absent_days').val()) || 0;
+            let perDaySalary = totalDays > 0 ? fixed_gross / totalDays : 0;
+            let lopAmount = perDaySalary * absentDays;
+            let payable = fixed_gross - lopAmount;
+
+            let basic = (payable * 50) / 100;
+            let hra = (payable * 20) / 100;
+            let da = (payable * 20) / 100;
+            let oa = (payable * 10) / 100;
+
+            row.find('.basic_salary').val(basic.toFixed(2));
+            row.find('.hra').val(hra.toFixed(2));
+            row.find('.da').val(da.toFixed(2));
+            row.find('.oa').val(oa.toFixed(2));
+
             let incentive = parseFloat(row.find('.incentive').val()) || 0;
             let misc = parseFloat(row.find('.misc').val()) || 0;
             let busFare = parseFloat(row.find('.bus_fare').val()) || 0;
             let otHours = parseFloat(row.find('.ot_hours').val()) || 0;
             let salaryAdvance = parseFloat(row.find('.salary_advance').val()) || 0;
-            let totalDays = parseFloat(row.find('.total_days').val()) || 1;
             let lateFine = parseFloat(row.find('.late_fine').val()) || 0;
             let otherDeduction = parseFloat(row.find('.other_deduction').val()) || 0;
-            let hra = parseFloat(row.find('.hra').val()) || 0;;
-            let da  = parseFloat(row.find('.da').val()) || 0;
-            let oa  = parseFloat(row.find('.oa').val()) || 0;
-            row.find('.hra').val(hra.toFixed(2));
-            row.find('.da').val(da.toFixed(2));
-            row.find('.oa').val(oa.toFixed(2));
-            let perDaySalary = totalDays > 0 ? fixed_gross / totalDays : 0;
+
             let perHourSalary = perDaySalary / 8;
             let otAmount = perHourSalary * otHours;
             row.find('.overtime_amount').val(otAmount.toFixed(2));
-            let absentDays = parseFloat(row.find('.absent_days').val()) || 0;
-            let lopAmount = perDaySalary * absentDays;
-            let grossSalary = fixed_gross - lopAmount;
-            let totalEarnings = grossSalary + incentive + misc + busFare + otAmount;
+            
+            let totalEarnings = payable + incentive + misc + busFare + otAmount;
             row.find('.gross_salary').val(totalEarnings.toFixed(2));
             let pfWage = basic + da;
             let pf = (pfWage * 12) / 100;

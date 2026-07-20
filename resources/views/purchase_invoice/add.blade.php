@@ -247,8 +247,8 @@
                                                 </td>
                                                 <td>{{ $item['uom_code'] ?? '-' }}</td>
                                                 <td class="rate-display">
-                                                    <input type="number" step="0.01" min="0" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" {{ isset($item['selected']) ? '' : 'readonly' }}>
-                                                </td>
+                                                <input type="number" step="any" min="0" name="items[{{ $index }}][rate]" value="{{ $item['rate'] ?? 0 }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" {{ isset($item['selected']) ? '' : 'readonly' }}>
+                                            </td>
                                                 <td class="item-amount">
                                                     {{ number_format(($item['quantity'] ?? 0) * ($item['rate'] ?? 0), 2) }}
                                                 </td>
@@ -332,8 +332,8 @@
 
                                                 <td>{{ $invItem->uom->uom_code ?? '-' }}</td>
                                                 <td class="rate-display">
-                                                    <input type="number" step="0.01" min="0" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;">
-                                                </td>
+                                                <input type="number" step="any" min="0" name="items[{{ $index }}][rate]" value="{{ $invItem->rate }}" class="form-control form-control-sm item-rate text-end" style="width: 100px;">
+                                            </td>
                                                 <td class="item-amount">
                                                     {{ number_format($invItem->quantity * $invItem->rate, 2) }}
                                                 </td>
@@ -1003,7 +1003,7 @@
 
                                         <td>${item.uom_code}</td>
                                         <td class="rate-display">
-                                            <input type="number" step="0.01" min="0" name="items[${index}][rate]" value="${parseFloat(item.rate).toFixed(2)}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" readonly>
+                                            <input type="number" step="any" min="0" name="items[${index}][rate]" value="${parseFloat(item.rate).toFixed(4)}" class="form-control form-control-sm item-rate text-end" style="width: 100px;" readonly>
                                         </td>
                                         <td class="item-amount">0.00</td>
 

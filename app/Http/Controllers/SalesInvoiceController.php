@@ -21,7 +21,10 @@ use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use Illuminate\Support\Facades\Log;
-
+use App\Models\Brand;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\SalesInvoiceReportExport;
+use App\Exports\SalesInvoiceItemsExport;
 
 class SalesInvoiceController extends Controller
 {
@@ -1671,6 +1674,48 @@ class SalesInvoiceController extends Controller
         $existingInvoiceItems = [];
         if ($invoiceId) {
             $existingInvoiceItems = SalesInvoiceItem::where('sales_invoice_id', $invoiceId)->get();
+            
+            $stockFieldsChanged = false;
+            $reqItemsMap = [];
+            foreach ($items as $reqItem) {
+                if (!empty($reqItem['id'])) {
+                    $reqItemsMap[$reqItem['id']] = $reqItem;
+                } else {
+                    $stockFieldsChanged = true;
+                    break;
+                }
+            }
+            
+            if (!$stockFieldsChanged) {
+                if (count($items) !== $existingInvoiceItems->count()) {
+                    $stockFieldsChanged = true;
+                } else {
+                    foreach ($existingInvoiceItems as $ei) {
+                        if (!isset($reqItemsMap[$ei->id])) {
+                            $stockFieldsChanged = true;
+                            break;
+                        }
+                        
+                        $reqItem = $reqItemsMap[$ei->id];
+                        if (
+                            $ei->quantity != ($reqItem['quantity'] ?? 0) ||
+                            $ei->sku != ($reqItem['sku'] ?? null) ||
+                            $ei->size != ($reqItem['size'] ?? null) ||
+                            $ei->art_no != ($reqItem['art_no'] ?? null) ||
+                            $ei->color_id != ($reqItem['color_id'] ?? null) ||
+                            $ei->sleeve_type != ($reqItem['sleeve_type'] ?? null) ||
+                            $ei->stock_entry_item_id != ($reqItem['stock_entry_item_id'] ?? null)
+                        ) {
+                            $stockFieldsChanged = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!$stockFieldsChanged) {
+                return;
+            }
         }
 
         $requiredQuantities = [];
@@ -1887,5 +1932,78 @@ class SalesInvoiceController extends Controller
                 }
             }
         }
+    }
+
+    public function report(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('view sales-invoice-report')) {
+            return unauthorizedRedirect();
+        }
+
+        if ($request->ajax()) {
+            $query = SalesInvoice::with(['customer', 'brand'])->orderBy('id', 'desc');
+
+            if ($request->customer_id) {
+                $query->where('customer_id', $request->customer_id);
+            }
+            if ($request->brand_id) {
+                $query->where('brand_id', $request->brand_id);
+            }
+            if ($request->inv_no) {
+                $query->where('inv_no', $request->inv_no); // Or 'like' but exact match is better if it says "entered invoice number does not exist"
+            }
+            if ($request->inv_date_range) {
+                $dates = explode(' to ', $request->inv_date_range);
+                if (count($dates) == 2) {
+                    $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                    $endDate = Carbon::createFromFormat('d-m-Y', trim($dates[1]))->endOfDay();
+                    $query->whereBetween('inv_date', [$startDate, $endDate]);
+                } elseif (count($dates) == 1) {
+                    $startDate = Carbon::createFromFormat('d-m-Y', trim($dates[0]))->startOfDay();
+                    $query->whereDate('inv_date', $startDate);
+                }
+            }
+
+            $invoices = $query->get();
+            $data = [];
+            $count = 1;
+
+            foreach ($invoices as $inv) {
+                $data[] = [
+                    'id' => $inv->id,
+                    'DT_RowIndex' => $count++,
+                    'inv_no' => $inv->inv_no,
+                    'inv_date' => $inv->inv_date ? $inv->inv_date->format('d-m-Y') : 'N/A',
+                    'customer_name' => $inv->customer ? $inv->customer->name : 'N/A',
+                    'brand_name' => $inv->brand ? $inv->brand->brand_name : 'N/A',
+                    'total_qty' => $inv->items()->sum('quantity'),
+                    'grand_total' => '₹' . number_format($inv->grand_total, 2),
+                ];
+            }
+
+            return response()->json(['data' => $data]);
+        }
+
+        $customers = Customer::orderBy('name')->get();
+        $brands = Brand::orderBy('brand_name')->get();
+        return view('sales_invoice.report', compact('customers', 'brands'));
+    }
+
+    public function exportReport(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('export sales-invoice-report')) {
+            return unauthorizedRedirect();
+        }
+        $filters = $request->only(['customer_id', 'brand_id', 'inv_date_range', 'inv_no']);
+        return Excel::download(new SalesInvoiceReportExport($filters), 'Sales_Invoice_Report.xlsx');
+    }
+
+    public function exportItemsReport(Request $request)
+    {
+        if (auth()->id() != 1 && !auth()->user()->can('export sales-invoice-report')) {
+            return unauthorizedRedirect();
+        }
+        $filters = $request->only(['customer_id', 'brand_id', 'inv_date_range', 'inv_no']);
+        return Excel::download(new SalesInvoiceItemsExport($filters), 'Sales_Invoice_Items.xlsx');
     }
 }

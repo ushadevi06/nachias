@@ -18,13 +18,8 @@ class SalaryController extends Controller
     {
         if ($request->ajax()) {
             $query = DB::table('salary_generations')
-                ->join('users', function ($join) {
-                    $join->on(
-                        DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
-                        '=',
-                        DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
-                    );
-                })
+                ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
+                ->whereNull('users.deleted_at')
                 ->select(
                     'salary_generations.*',
                     'users.name',
@@ -147,13 +142,8 @@ class SalaryController extends Controller
         $salary = null;
         if($id) {
             $salary = DB::table('salary_generations')
-                ->join('users', function ($join) {
-                    $join->on(
-                        DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
-                        '=',
-                        DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
-                    );
-                })
+                ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
+                ->whereNull('users.deleted_at')
                 ->select(
                     'salary_generations.*',
                     'users.name',
@@ -206,15 +196,9 @@ class SalaryController extends Controller
             }
         }
 
-        $employees = User::where('id', '!=', 1)->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
-            $query->select(
-                DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
-            )
-            ->from('salary_generations')
-            ->where('salary_month', $monthNumber)
-            ->where('salary_year', $year);
-        })
-        ->get();
+        $existingEmpIds = DB::table('salary_generations')->where('salary_month', $monthNumber)->where('salary_year', $year)->pluck('employee_id')->toArray();
+
+        $employees = User::where('id', '!=', 1)->where('status', 'Active')->whereNotIn('emp_id', $existingEmpIds)->get();
         $payroll = [];
         foreach ($employees as $employee) {
             $attendance = DB::table('attendances')->where('emp_code', $employee->emp_id)->whereBetween('date', [$startDate, $endDate])->get();
@@ -406,30 +390,30 @@ class SalaryController extends Controller
             }
             if(!empty($row['salary_id'])) {
                 DB::table('salary_generations')->where('id', $row['salary_id'])->update([
-                        'basic_salary'    => $row['basic_salary'],
-                        'hra'             => $row['hra'],
-                        'da'              => $row['da'],
-                        'oa'              => $row['oa'],
-                        'incentive'       => $row['incentive'],
-                        'misc_amount'     => $row['misc'],
-                        'present_days'    => $row['present_days'],
-                        'absent_days'     => $row['absent_days'],
-                        'holidays'        => $row['holidays'],
-                        'ot_hours'        => $row['ot_hours'],
-                        'late_hours'        => $row['late_hours'],
-                        'overtime_amount' => $row['overtime_amount'],
-                        'bus_fare'        => $row['bus_fare'],
-                        'pf'              => $row['pf'],
-                        'esi'             => $row['esi'],
-                        'other_deduction' => $row['other_deduction'],
-                        'salary_advance'  => $row['salary_advance'],
-                        'late_fine'       => $row['late_fine'],
-                        'lop_amount'      => $row['lop_amount'],
-                        'gross_salary'    => $row['gross_salary'],
-                        'total_deduction' => $row['total_deduction'],
-                        'net_salary'      => $row['net_salary'],
-                        'updated_at'      => now()
-                    ]);
+                    'basic_salary'    => $row['basic_salary'],
+                    'hra'             => $row['hra'],
+                    'da'              => $row['da'],
+                    'oa'              => $row['oa'],
+                    'incentive'       => $row['incentive'],
+                    'misc_amount'     => $row['misc'],
+                    'present_days'    => $row['present_days'],
+                    'absent_days'     => $row['absent_days'],
+                    'holidays'        => $row['holidays'],
+                    'ot_hours'        => $row['ot_hours'],
+                    'late_hours'        => $row['late_hours'],
+                    'overtime_amount' => $row['overtime_amount'],
+                    'bus_fare'        => $row['bus_fare'],
+                    'pf'              => $row['pf'],
+                    'esi'             => $row['esi'],
+                    'other_deduction' => $row['other_deduction'],
+                    'salary_advance'  => $row['salary_advance'],
+                    'late_fine'       => $row['late_fine'],
+                    'lop_amount'      => $row['lop_amount'],
+                    'gross_salary'    => $row['gross_salary'],
+                    'total_deduction' => $row['total_deduction'],
+                    'net_salary'      => $row['net_salary'],
+                    'updated_at'      => now()
+                ]);
             } else {
                 $alreadyGenerated = DB::table('salary_generations')->where('employee_id', $row['employee_id'])->where('salary_month', $salaryMonth)->where('salary_year', $salaryYear)->exists();
                 if($alreadyGenerated) {
@@ -558,13 +542,7 @@ class SalaryController extends Controller
     public function viewPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->join('users', function ($join) {
-                $join->on(
-                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
-                    '=',
-                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
-                );
-            })
+            ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
             ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
             ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
             ->select(
@@ -590,13 +568,7 @@ class SalaryController extends Controller
     public function printPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->join('users', function ($join) {
-                $join->on(
-                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
-                    '=',
-                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
-                );
-            })
+            ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
             ->leftJoin(
                 'departments',
                 'users.department_id',
@@ -627,13 +599,7 @@ class SalaryController extends Controller
     public function downloadPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->join('users', function ($join) {
-                $join->on(
-                    DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'),
-                    '=',
-                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci')
-                );
-            })
+            ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
             ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
             ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
             ->select(
@@ -697,16 +663,15 @@ class SalaryController extends Controller
             }
         }
 
-        $employees = DB::table('users')
-            ->where('id', '!=', 1)
-            ->whereNotIn(DB::raw('emp_id COLLATE utf8mb4_unicode_ci'), function ($query) use ($monthNumber, $year) {
-                $query->select(
-                    DB::raw('employee_id COLLATE utf8mb4_unicode_ci')
-                )
-                ->from('salary_generations')
-                ->where('salary_month', $monthNumber)
-                ->where('salary_year', $year);
-            })
+        $existingEmpIds = DB::table('salary_generations')
+            ->where('salary_month', $monthNumber)
+            ->where('salary_year', $year)
+            ->pluck('employee_id')
+            ->toArray();
+
+        $employees = User::where('id', '!=', 1)
+            ->where('status', 'Active')
+            ->whereNotIn('emp_id', $existingEmpIds)
             ->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                 ->orWhere('emp_id', 'like', "%{$search}%");
@@ -788,15 +753,19 @@ class SalaryController extends Controller
             }
             $otDays = $otHours / 8; 
             $fixedGross = $employee->fixed_gross ?? 0;
-            $basic = ($fixedGross * 50) / 100;
-            $hra   = ($fixedGross * 20) / 100;
-            $da    = ($fixedGross * 20) / 100;
-            $oa    = ($fixedGross * 10) / 100;
             $perDaySalary = $fixedGross > 0 ? $fixedGross / $monthTotalDays : 0;
             $perHourSalary = $perDaySalary / 8;
             $otAmount = $perHourSalary * $otHours;
             $lopAmount = $perDaySalary * $absentDays;
-            $grossSalary = $fixedGross - $lopAmount;
+
+            $payable = $fixedGross - $lopAmount;
+
+            $basic = ($payable * 50) / 100;
+            $da    = ($payable * 20) / 100;
+            $hra   = ($payable * 20) / 100;
+            $oa    = ($payable * 10) / 100;
+
+            $grossSalary = $payable;
             $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)->whereBetween('issue_date', [$startDate, $endDate])->sum('total_cost') ?? 0; 
             $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
             $otherDeduction = 0;

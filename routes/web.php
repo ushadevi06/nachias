@@ -44,6 +44,7 @@ use App\Http\Controllers\DocumentRepositoryController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\EmployeeAttendanceController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\OvertimeController;
 use App\Http\Controllers\SalaryController;
@@ -94,84 +95,6 @@ Route::get('/', function () {
 Route::get('/update_page', function () {
     return view('update_page');
 });
-
-Route::get('/fix-cw-items', function () {
-    \Illuminate\Support\Facades\DB::table('stock_entry_items')->where('finished_item_code', 'CW-FS')->orWhere('finished_item_code', 'CW--F/S')->update(['finished_item_code' => 'CW-WHT-FS']);
-    \Illuminate\Support\Facades\DB::table('production_receipt_items')->where('item_code', 'CW-FS')->orWhere('item_code', 'CW--F/S')->update(['item_code' => 'CW-WHT-FS']);
-    \Illuminate\Support\Facades\DB::table('barcode_masters')->where('item_code', 'CW-FS')->orWhere('item_code', 'CW--F/S')->update(['item_code' => 'CW-WHT-FS']);
-
-    \Illuminate\Support\Facades\DB::table('stock_entry_items')->where('finished_item_code', 'CW-HS')->orWhere('finished_item_code', 'CW--H/S')->update(['finished_item_code' => 'CW-WHT-HS']);
-    \Illuminate\Support\Facades\DB::table('production_receipt_items')->where('item_code', 'CW-HS')->orWhere('item_code', 'CW--H/S')->update(['item_code' => 'CW-WHT-HS']);
-    \Illuminate\Support\Facades\DB::table('barcode_masters')->where('item_code', 'CW-HS')->orWhere('item_code', 'CW--H/S')->update(['item_code' => 'CW-WHT-HS']);
-
-    $oldSku = 'BC014801';
-    $newSku = 'BCORGANICLINEN4801';
-    \Illuminate\Support\Facades\DB::table('stock_entry_items')->where('sku', $oldSku)->update(['sku' => $newSku]);
-    \Illuminate\Support\Facades\DB::table('barcode_masters')->where('barcode_no', $oldSku)->update(['barcode_no' => $newSku]);
-
-    return "Successfully fixed CW items and SKUs on live server!";
-});
-
-Route::get('/fix-orderaxe-customers', function () {
-    $service = new \App\Services\OrderaxeService();
-    $apiOrders = $service->fetchOrders(0, 100);
-
-    if (!$apiOrders) {
-        return response()->json(['status' => 'error', 'message' => 'Could not fetch orders from Orderaxe API.']);
-    }
-
-    $apiOrdersMap = [];
-    foreach ($apiOrders as $order) {
-        if (!empty($order['order_no'])) {
-            $apiOrdersMap[$order['order_no']] = $order;
-        }
-        if (!empty($order['_id'])) {
-            $apiOrdersMap[$order['_id']] = $order;
-        }
-    }
-
-    $localOrders = \App\Models\SalesOrder::whereNotNull('orderaxe_id')
-        ->orWhereNotNull('order_no')
-        ->get();
-
-    $output = [];
-    $mismatches = 0;
-
-    foreach ($localOrders as $so) {
-        $apiOrder = $apiOrdersMap[$so->order_no] ?? ($apiOrdersMap[$so->orderaxe_id] ?? null);
-        if (!$apiOrder) {
-            $output[] = "Order {$so->so_no} (#{$so->order_no}): API order not found in current page.";
-            continue;
-        }
-
-        $refId = $apiOrder['retailer']['reference_id'] ?? null;
-        if (empty($refId)) {
-            $output[] = "Order {$so->so_no} (#{$so->order_no}): API order has no reference_id.";
-            continue;
-        }
-
-        $correctCustomer = \App\Models\Customer::where('code', $refId)->first();
-        if (!$correctCustomer) {
-            $output[] = "Order {$so->so_no} (#{$so->order_no}): Reference ID '{$refId}' does not match any Customer in database.";
-            continue;
-        }
-
-        $currentCustomer = $so->customer;
-        if (!$currentCustomer || $currentCustomer->id !== $correctCustomer->id) {
-            $currentName = $currentCustomer ? $currentCustomer->name : 'None';
-            $currentCode = $currentCustomer ? $currentCustomer->code : 'None';
-            $output[] = "<strong>MISMATCH FIXED:</strong> Order {$so->so_no} (#{$so->order_no}) updated from customer [{$currentName} (Code: {$currentCode})] to [{$correctCustomer->name} (Code: {$correctCustomer->code})].";
-            $so->update(['customer_id' => $correctCustomer->id]);
-            $mismatches++;
-        } else {
-            $output[] = "OK: Order {$so->so_no} (#{$so->order_no}) matches Customer: {$currentCustomer->name} (Code: {$currentCustomer->code})";
-        }
-    }
-
-    $outputHtml = implode("<br>", $output);
-    return "<h3>Checked " . $localOrders->count() . " local orders. Mismatches fixed: $mismatches</h3><br>" . $outputHtml;
-});
-
 
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');
 Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active'])->group(function () {
@@ -550,6 +473,9 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::delete('sales_orders/delete-charge/{id}', [SalesOrderController::class, 'deleteCharge']);
 
     /* Sales Invoice */
+    Route::get('sales_invoices/report', [SalesInvoiceController::class, 'report']);
+    Route::get('sales_invoices/report/export', [SalesInvoiceController::class, 'exportReport']);
+    Route::get('sales_invoices/report/export_items', [SalesInvoiceController::class, 'exportItemsReport']);
     Route::get('sales_invoices', [SalesInvoiceController::class, 'index']);
     Route::get('sales_invoices/get_next_invoice_no', [SalesInvoiceController::class, 'getNextInvoiceNo']);
     Route::match(['GET', 'POST'], 'sales_invoices/add/{id?}', [SalesInvoiceController::class, 'add']);
@@ -662,6 +588,8 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('production_receipts/get-job-card-details/{id}', [ProductionReceiptController::class, 'getJobCardDetails']);
     Route::get('production_receipts/delete/{id}', [ProductionReceiptController::class, 'destroy']);
     Route::get('production_receipts/export-excel', [ProductionReceiptController::class, 'exportExcel']);
+    Route::get('production_receipts/report', [ProductionReceiptController::class, 'report']);
+    Route::get('production_receipts/report/export', [ProductionReceiptController::class, 'exportReport']);
 
     /* Shifts */
     Route::get('shifts', [ShiftController::class, 'index']);
@@ -731,6 +659,11 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('/get-employees', [AttendanceController::class, 'getEmployees']);
     Route::post('/attendance/update', [AttendanceController::class, 'updateAttendance']);
     Route::get('/attendance-records', [AttendanceController::class, 'getAttendanceRecords']);
+
+    /* Employee Attendance */
+    Route::get('employee_attendance', [EmployeeAttendanceController::class, 'index']);
+    Route::get('employee_attendance/data', [EmployeeAttendanceController::class, 'getAttendanceData']);
+    Route::get('employee_attendance/kpi-counts', [EmployeeAttendanceController::class, 'getKpiCounts']);
 
     /*  Leave  */
     Route::get('leave', [LeaveController::class, 'index']);

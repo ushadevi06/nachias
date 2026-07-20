@@ -1,0 +1,77 @@
+
+-- Indexes for `users` table
+ALTER TABLE users ADD INDEX users_emp_id_index (emp_id);
+ALTER TABLE users ADD INDEX users_status_index (status);
+ALTER TABLE users ADD INDEX users_department_id_index (department_id);
+ALTER TABLE users ADD INDEX users_role_id_index (role_id);
+
+-- Indexes for `attendances` table
+ALTER TABLE attendances ADD INDEX attendances_emp_code_date_index (emp_code, date); 
+ALTER TABLE attendances ADD INDEX attendances_device_serial_number_index (device_serial_number);
+
+-- Indexes for `tasks` table
+ALTER TABLE tasks ADD INDEX tasks_job_card_entry_id_index (job_card_entry_id);
+ALTER TABLE tasks ADD INDEX tasks_stage_id_index (stage_id);
+ALTER TABLE tasks ADD INDEX tasks_status_index (status);
+
+-- Indexes for `task_assign_employees` table
+ALTER TABLE task_assign_employees ADD INDEX task_assign_employees_task_id_index (task_id);
+ALTER TABLE task_assign_employees ADD INDEX task_assign_employees_issued_to_index (issued_to);
+ALTER TABLE task_assign_employees ADD INDEX task_assign_employees_status_index (status);
+
+-- Indexes for `process_schedules` table
+ALTER TABLE process_schedules ADD INDEX process_schedules_jc_os_index (job_card_entry_id, operation_stage_id);
+
+-- Indexes for `raw_materials` table
+ALTER TABLE raw_materials ADD INDEX raw_materials_store_category_id_index (store_category_id);
+ALTER TABLE raw_materials ADD INDEX raw_materials_code_index (code);
+ALTER TABLE raw_materials ADD INDEX raw_materials_status_index (status);
+
+-- Production & Job Card Tables
+ALTER TABLE job_card_entries ADD INDEX job_card_entries_job_card_no_index (job_card_no);
+ALTER TABLE job_card_entries ADD INDEX job_card_entries_status_index (status);
+ALTER TABLE job_card_entries ADD INDEX job_card_entries_delivery_date_index (delivery_date);
+ALTER TABLE job_card_entries ADD INDEX job_card_entries_fabric_type_id_index (fabric_type_id);
+ALTER TABLE job_card_entries ADD INDEX job_card_entries_style_id_index (style_id);
+
+ALTER TABLE job_card_operations ADD INDEX job_card_operations_job_card_entry_id_index (job_card_entry_id);
+ALTER TABLE job_card_operations ADD INDEX job_card_operations_operation_stage_id_index (operation_stage_id);
+
+ALTER TABLE job_card_issue_items ADD INDEX job_card_issue_items_stock_entry_item_id_index (stock_entry_item_id);
+ALTER TABLE job_card_issue_items ADD INDEX job_card_issue_items_raw_material_id_index (raw_material_id);
+
+-- Indexes for `stock_entry_items` table
+ALTER TABLE stock_entry_items ADD INDEX stock_entry_items_grn_entry_item_id_index (grn_entry_item_id);
+ALTER TABLE stock_entry_items ADD INDEX stock_entry_items_raw_material_id_index (raw_material_id);
+ALTER TABLE stock_entry_items ADD INDEX stock_entry_items_sku_index (sku);
+ALTER TABLE stock_entry_items ADD INDEX stock_entry_items_barcode_index (barcode);
+ALTER TABLE stock_entry_items ADD INDEX stock_entry_items_style_id_index (style_id);
+ALTER TABLE stock_entry_items ADD INDEX stock_entry_items_color_id_index (color_id);
+ALTER TABLE stock_entry_items ADD INDEX stock_entry_items_brand_id_index (brand_id);
+ALTER TABLE raw_materials ADD INDEX raw_materials_store_category_id_index (store_category_id);
+
+-- Sales Tables
+ALTER TABLE sales_orders ADD INDEX sales_orders_order_no_index (order_no);
+ALTER TABLE sales_orders ADD INDEX sales_orders_customer_id_index (customer_id);
+ALTER TABLE sales_orders ADD INDEX sales_orders_status_index (status);
+ALTER TABLE sales_orders ADD INDEX sales_orders_date_index (date);
+
+ALTER TABLE sales_invoices ADD INDEX sales_invoices_invoice_no_index (invoice_no);
+ALTER TABLE sales_invoices ADD INDEX sales_invoices_customer_id_index (customer_id);
+ALTER TABLE sales_invoices ADD INDEX sales_invoices_status_index (status);
+ALTER TABLE sales_invoices ADD INDEX sales_invoices_date_index (date);
+
+ALTER TABLE sales_order_items ADD INDEX sales_order_items_sale_order_id_index (sale_order_id);
+ALTER TABLE sales_order_items ADD INDEX sales_order_items_sku_index (sku);
+ALTER TABLE sales_order_items ADD INDEX sales_order_items_item_id_index (item_id);
+
+-- Purchase Tables
+ALTER TABLE purchase_orders ADD INDEX purchase_orders_supplier_id_index (supplier_id);
+ALTER TABLE purchase_orders ADD INDEX purchase_orders_status_index (status);
+
+ALTER TABLE purchase_invoices ADD INDEX purchase_invoices_supplier_id_index (supplier_id);
+ALTER TABLE purchase_invoices ADD INDEX purchase_invoices_status_index (status);
+ALTER TABLE purchase_invoices ADD INDEX purchase_invoices_transaction_id_index (transaction_id);
+
+ALTER TABLE attendances CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE users CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

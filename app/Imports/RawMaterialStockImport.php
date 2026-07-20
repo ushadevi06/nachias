@@ -161,6 +161,12 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
                 }
             }
 
+            if ($storeCategory && strtolower(trim($storeCategory->category_name)) === 'fabric') {
+                if (strtolower($uomName) !== 'mtr') {
+                    $rowErrors[] = "Row {$rowNumber}: UOM must be MTR when Store Category is Fabric. Entered UOM: {$uomName}.";
+                }
+            }
+
             $locationName = trim((string)($row['store_location'] ?? ''));
             $storeLocation = null;
             if (empty($locationName)) {
@@ -278,7 +284,6 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
             return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($dateValue));
         }
 
-        // Try exact formats first to avoid Carbon::parse timezone/slashes mismatch
         $formats = ['d-m-Y', 'd/m/Y', 'd-m-y', 'd/m/y', 'Y-m-d', 'Y/m/d'];
         foreach ($formats as $format) {
             try {

@@ -29,12 +29,15 @@ class StockEntryController extends Controller
 {
     public function index(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-raw-materials') && !auth()->user()->can('view stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
 
         if ($request->ajax()) {
             if ($request->entry_type === 'Finished Goods') {
+                if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-finished-goods')) {
+                    return response()->json(['error' => 'Unauthorized'], 403);
+                }
                 $query = StockEntryItem::with([
                     'stockEntry.productionReceipt.jobCard.fabricType',
                     'fabricType',
@@ -93,7 +96,9 @@ class StockEntryController extends Controller
                     }
 
                     $action = '<div class="button-box">';
-                    $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=finished_goods?item_id=' . $item->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
+                    if (auth()->id() == 1 || auth()->user()->can('view_details stock-entry-finished-goods')) {
+                        $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=finished_goods?item_id=' . $item->id) . '" class="btn btn-view" title="View Details"><i class="icon-base ri ri-eye-line"></i></a>';
+                    }
                     $action .= '</div>';
 
                     $jobCardNo = '-';
@@ -125,6 +130,9 @@ class StockEntryController extends Controller
                     ];
                 }
             } else {
+                if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-raw-materials')) {
+                    return response()->json(['error' => 'Unauthorized'], 403);
+                }
                 $query = StockEntry::with(['grnEntry', 'stockEntryItems.rawMaterial', 'stockEntryItems.storeCategory', 'stockEntryItems.grnEntryItem', 'stockEntryItems.item', 'stockEntryItems.fabricType']);
                 if ($request->material_category) {
                     $query->whereHas('stockEntryItems', function ($q) use ($request) {
@@ -207,13 +215,13 @@ class StockEntryController extends Controller
                         : ($firstItem && $firstItem->finished_item_code ? $firstItem->finished_item_code : '-');
 
                     $action = '<div class="button-box">';
-                    if (auth()->id() == 1 || auth()->user()->can('stock_adjustment stock-entry')) {
+                    if (auth()->id() == 1 || auth()->user()->can('stock_adjustment stock-entry-raw-materials')) {
                         $action .= '<button type="button" class="btn btn-adjust" data-entry-id="' . $entry->id . '" data-item-id="' . ($firstItem->id ?? 0) . '" data-art-no="' . $artNo . '" data-grn-no="' . ($entry->grnEntry->grn_number ?? '-') . '" data-material="' . ($firstItem && $firstItem->rawMaterial ? $firstItem->rawMaterial->name : '-') . '" data-current-qty="' . $totalQtyIn . '" title="Quick Adjust Stock"><i class="ri ri-pulse-line"></i></button>';
                     }
-                    if (auth()->id() == 1 || auth()->user()->can('stock_adjustment_logs stock-entry')) {
+                    if (auth()->id() == 1 || auth()->user()->can('stock_adjustment_logs stock-entry-raw-materials')) {
                         $action .= '<a href="' . url('stock_entries/adjustment-logs/' . $entry->id) . '" class="btn btn-item" title="View Adjustment Logs"><i class="icon-base ri ri-history-line"></i></a>';
                     }
-                    if (auth()->id() == 1 || auth()->user()->can('view_details stock-entry')) {
+                    if (auth()->id() == 1 || auth()->user()->can('view_details stock-entry-raw-materials')) {
                         $action .= '<a href="' . url('stock_entries/view/' . $entry->id . '/entry_type=raw_materials') . '" class="btn btn-view"><i class="icon-base ri ri-eye-line"></i></a>';
                     }
                     $action .= '</div>';
@@ -250,12 +258,12 @@ class StockEntryController extends Controller
     public function add(Request $request, $id = null)
     {
         if ($id) {
-            if (auth()->id() != 1 && !auth()->user()->can('edit stock-entry')) {
+            if (auth()->id() != 1 && !auth()->user()->can('edit stock-entry-raw-materials')) {
                 return unauthorizedRedirect();
             }
         }
         else {
-            if (auth()->id() != 1 && !auth()->user()->can('create stock-entry')) {
+            if (auth()->id() != 1 && !auth()->user()->can('create stock-entry-raw-materials')) {
                 return unauthorizedRedirect();
             }
         }
@@ -429,7 +437,7 @@ class StockEntryController extends Controller
 
     public function view($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view_details stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view_details stock-entry-raw-materials') && !auth()->user()->can('view_details stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
         $stockEntry = StockEntry::with([
@@ -580,7 +588,7 @@ class StockEntryController extends Controller
 
     public function adjustmentLogs($id = null)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-raw-materials') && !auth()->user()->can('view stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
 
@@ -599,7 +607,7 @@ class StockEntryController extends Controller
 
     public function exportFinishedGoods()
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
 
@@ -608,7 +616,7 @@ class StockEntryController extends Controller
 
     public function exportBarcode()
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
 
@@ -617,7 +625,7 @@ class StockEntryController extends Controller
 
     public function exportRawMaterials()
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-raw-materials')) {
             return unauthorizedRedirect();
         }
 
@@ -626,7 +634,7 @@ class StockEntryController extends Controller
 
     public function importRawMaterials(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('create stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('create stock-entry-raw-materials')) {
             return unauthorizedRedirect();
         }
 
@@ -654,7 +662,7 @@ class StockEntryController extends Controller
     }
     public function importFinishedGoods(Request $request)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('create stock-entry')) {
+        if (auth()->id() != 1 && !auth()->user()->can('create stock-entry-finished-goods')) {
             return unauthorizedRedirect();
         }
 
@@ -663,6 +671,7 @@ class StockEntryController extends Controller
         ]);
 
         try {
+            set_time_limit(0); // Prevent timeout for large imports
             Excel::import(new FinishedGoodsStockImport, $request->file('import_file'));
             return redirect('stock_entries')->with('success', 'Finished Goods Stock imported successfully.');
         } catch (\Exception $e) {

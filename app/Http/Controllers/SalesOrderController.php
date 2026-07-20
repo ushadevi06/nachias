@@ -1048,7 +1048,7 @@ class SalesOrderController extends Controller
             return unauthorizedRedirect();
         }
 
-        $limit = $request->query('limit');
+        $limit = $request->query('limit', 1000);
         $count = $orderaxeService->syncOrders($limit);
 
 
@@ -1085,7 +1085,7 @@ class SalesOrderController extends Controller
 
         try {
             $service = new \App\Services\OrderaxeService();
-            $limit = $request->query('limit', 100);
+            $limit = $request->query('limit', 1000);
             $syncCount = $service->syncOrders((int)$limit);
             if ($syncCount > 0) {
                 return redirect('sales_orders')->with('success', $syncCount . ' orders synced successfully from Orderaxe');

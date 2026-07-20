@@ -82,7 +82,8 @@ class PermissionSeeder extends Seeder
 
             /* Store */
             'grn-entry' => ['create', 'edit', 'view','view_details'],
-            'stock-entry' => ['create', 'view', 'view_details', 'stock_adjustment','stock_adjustment_logs'],
+            'stock-entry-raw-materials' => ['create', 'view', 'view_details', 'stock_adjustment','stock_adjustment_logs'],
+            'stock-entry-finished-goods' => ['create', 'view', 'view_details', 'stock_adjustment','stock_adjustment_logs'],
             'debit-notes' => ['create', 'edit', 'view','view_details'],
             'stock-consumable-return' => ['view', 'view_details'],
 
@@ -117,6 +118,8 @@ class PermissionSeeder extends Seeder
             'warehouse-report' => ['view'],
             'production-report' => ['view'],
             'purchase-report' => ['view'],
+            'sales-invoice-report' => ['view', 'export'],
+            'production-receipt-report' => ['view', 'export'],
 
             /* Ticket Management */
             'ticket-management' => ['create', 'edit', 'delete', 'view'],

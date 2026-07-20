@@ -13,10 +13,15 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 
-class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
+class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
 {
     protected array $entryMap = [];
+    protected array $uomCache = [];
+    protected array $storeLocationCache = [];
+    protected array $colorCache = [];
+    protected array $styleCache = [];
 
     public function collection(Collection $rows)
     {
@@ -77,6 +82,22 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             throw new \Exception('Size is required.');
         }
 
+        $sleeveType = $this->nullableTrim($this->getRowValue($row, ['sleeve_type', 'sleevetype', 'sleeve_typ']));
+        if ($sleeveType && $finishedItemCode) {
+            $cleanSleeve = strtoupper(preg_replace('/[\s\/\-]/', '', $sleeveType));
+            
+            if ($cleanSleeve === 'HALF') $cleanSleeve = 'HS';
+            if ($cleanSleeve === 'FULL') $cleanSleeve = 'FS';
+
+            if (preg_match('/(F\/?S|H\/?S)$/i', $finishedItemCode, $matches)) {
+                $expectedSuffix = strtoupper(str_replace('/', '', $matches[1]));
+                if ($cleanSleeve !== $expectedSuffix) {
+                    $expectedOriginal = ($expectedSuffix === 'FS') ? 'F/S' : (($expectedSuffix === 'HS') ? 'H/S' : $expectedSuffix);
+                    throw new \Exception("Sleeve Type {$sleeveType} does not match Product Code {$finishedItemCode}. Expected Sleeve Type: {$expectedOriginal}.");
+                }
+            }
+        }
+
         $entryKey = implode('|', [
             $stockDate->format('Y-m-d'),
             $storeLocation->id,
@@ -109,7 +130,7 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             'size' => $size,
             'color_id' => $color?->id,
             'style_id' => $style?->id,
-            'sleeve_type' => $this->nullableTrim($this->getRowValue($row, ['sleeve_type', 'sleevetype', 'sleeve_typ'])),
+            'sleeve_type' => $sleeveType,
             'store_location_id' => $storeLocation->id,
             'uom_id' => $uom->id,
             'qty_in' => $qtyIn,
@@ -199,6 +220,10 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             throw new \Exception('UOM ID is required.');
         }
 
+        if (array_key_exists($lookup, $this->uomCache)) {
+            return $this->uomCache[$lookup];
+        }
+
         $record = Uom::query()
             ->when(is_numeric($lookup), function ($query) use ($lookup) {
                 $query->where('id', (int) $lookup);
@@ -212,6 +237,8 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             throw new \Exception("UOM '{$lookup}' was not found.");
         }
 
+        $this->uomCache[$lookup] = $record;
+
         return $record;
     }
 
@@ -222,6 +249,10 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             throw new \Exception('Store Location is required.');
         }
      
+        if (array_key_exists($lookup, $this->storeLocationCache)) {
+            return $this->storeLocationCache[$lookup];
+        }
+
         $record = StoreLocation::query()
             ->where('store_location', $lookup)
             ->when(is_numeric($lookup), function ($query) use ($lookup) {
@@ -233,6 +264,8 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             throw new \Exception("Store Location '{$lookup}' was not found.");
         }
 
+        $this->storeLocationCache[$lookup] = $record;
+
         return $record;
     }
 
@@ -241,6 +274,10 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
         $lookup = $this->nullableTrim($value);
         if (!$lookup) {
             return null;
+        }
+
+        if (array_key_exists($lookup, $this->colorCache)) {
+            return $this->colorCache[$lookup];
         }
 
         $record = Color::query()
@@ -254,6 +291,8 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             throw new \Exception("Color '{$lookup}' was not found.");
         }
 
+        $this->colorCache[$lookup] = $record;
+
         return $record;
     }
 
@@ -262,6 +301,10 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
         $lookup = $this->nullableTrim($value);
         if (!$lookup) {
             return null;
+        }
+
+        if (array_key_exists($lookup, $this->styleCache)) {
+            return $this->styleCache[$lookup];
         }
 
         $record = Style::query()
@@ -276,6 +319,8 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
             throw new \Exception("Style '{$lookup}' was not found.");
         }
 
+        $this->styleCache[$lookup] = $record;
+
         return $record;
     }
 
@@ -289,7 +334,7 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow
     protected function generateStockEntryNo(): string
     {
         $maxSequence = StockEntry::withTrashed()
-            ->where('stock_entry_no', 'like', 'SE%')
+            ->where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
             ->selectRaw('MAX(CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED)) as max_sequence')
             ->value('max_sequence');
 

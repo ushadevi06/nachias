@@ -6,6 +6,11 @@
         <div class="col-lg-12 d-flex justify-content-between align-items-center">
             <h4>Production Receipts</h4>
             <div class="d-flex gap-2">
+                @if(auth()->id() == 1 || auth()->user()->can('view production-receipt-report'))
+                <a href="{{ url('production_receipts/report') }}" class="btn btn-outline-info">
+                    <i class="menu-icon icon-base ri ri-file-list-3-line me-1"></i> Report
+                </a>
+                @endif
                 <a href="{{ url('production_receipts/export-excel') }}" class="btn btn-outline-success">
                     <i class="menu-icon icon-base ri ri-file-excel-line me-1"></i> Export
                 </a>

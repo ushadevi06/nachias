@@ -6,11 +6,18 @@
         <div class="col-lg-12">
             <div class="table-header-box">
                 <h4>Sales Invoices</h4>
-                @if(auth()->id() == 1 || auth()->user()->can('create sales-invoice'))
-                <a class="btn btn-primary" href="{{ url('sales_invoices/add') }}">
-                    <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
-                </a>
-                @endif
+                <div>
+                    @if(auth()->id() == 1 || auth()->user()->can('view sales-invoice-report'))
+                    <a class="btn btn-outline-success me-2" href="{{ url('sales_invoices/report') }}">
+                        <i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Report & Export
+                    </a>
+                    @endif
+                    @if(auth()->id() == 1 || auth()->user()->can('create sales-invoice'))
+                    <a class="btn btn-primary" href="{{ url('sales_invoices/add') }}">
+                        <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
+                    </a>
+                    @endif
+                </div>
             </div>
             <div class="col-lg-12">
                 @include('flash_messages')

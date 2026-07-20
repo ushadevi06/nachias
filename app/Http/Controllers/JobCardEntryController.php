@@ -2543,6 +2543,7 @@ class JobCardEntryController extends Controller
         ])->findOrFail($id);
         $jobCard = $issueItem->jobCard;
         $colorName = $request->custom_color ?: ($issueItem->stockEntryItem->color->color_name ?? ($issueItem->stockEntryItem->grnEntryItem->color->color_name ?? '-'));
+        $fabricName = $request->custom_fabric ?: ($issueItem->rawMaterial->name ?? '-');
         $format = $request->format ?? 'tag';
         
         if ($format === 'sticker') {
@@ -2715,7 +2716,7 @@ class JobCardEntryController extends Controller
                 'brand_name' => $jobCard->brand->brand_name ?? '-',
                 'design' => $artNo,
                 'color' => $colorName,
-                'fabric' => $issueItem->rawMaterial->name ?? '-',
+                'fabric' => $fabricName,
                 'size' => $selectedSize,
                 'sleeve' => $sleeveText,
                 'fit' => $jobCard->fit->fit_name ?? 'Tailor Fit',

@@ -19,6 +19,12 @@
                                     @error('name')<div class="text-danger mt-1">{{ $message }}</div>@enderror
                                 </div>
                             </div>
+                            <div class="col-md-6 col-xl-4 ms-auto">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" id="module-search" placeholder="Search Module...">
+                                    <label for="module-search"><i class="ri-search-line me-1"></i> Search Module</label>
+                                </div>
+                            </div>
                             <div class="col-lg-12">
                                 <div class="table-fixed-header">
                                     <table class="table table-bordered align-middle">
@@ -36,7 +42,7 @@
                                         </thead>
                                         <tbody>
                                             @foreach ($permissions as $main => $submodules)
-                                            <tr class="table-primary">
+                                            <tr class="table-primary module-group" data-module="{{ strtolower(str_replace(['-', '_'], ' ', $main)) }}">
                                                 <td colspan="8">
                                                     <strong>{{ ucwords(str_replace('-', ' ', $main)) }}</strong>
                                                 </td>
@@ -47,7 +53,7 @@
                                             $checkedPermissions = array_intersect($availablePermissions, $rolePermissions ?? []);
                                             $allChecked = count($checkedPermissions) > 0;
                                             @endphp
-                                            <tr>
+                                            <tr class="module-group" data-module="{{ strtolower(str_replace(['-', '_'], ' ', $main)) }}">
                                                 <td class="text-center">
                                                     <input type="checkbox" class="allow-all-sub" data-sub="{{ $main }}" {{ $allChecked ? 'checked' : '' }}>
 
@@ -146,6 +152,21 @@
                 if (allowAll) allowAll.checked = anyChecked;
             });
         });
+
+        const searchInput = document.getElementById('module-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                document.querySelectorAll('.module-group').forEach(row => {
+                    const moduleName = row.getAttribute('data-module') || '';
+                    if (moduleName.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
     });
 </script>
 @endsection

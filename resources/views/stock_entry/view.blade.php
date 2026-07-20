@@ -7,22 +7,26 @@
             <div class="table-header-box d-flex justify-content-between align-items-center mb-3">
                 <h4 class="mb-0">Stock Entry</h4>
                 <div class="d-flex gap-2">
-                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
-                    <button type="button" class="btn btn-secondary" id="import-stock-btn" data-bs-toggle="modal" data-bs-target="#importModal">
+                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials') || auth()->user()->can('create stock-entry-finished-goods'))
+                    <button type="button" class="btn btn-secondary" id="import-stock-btn" data-bs-toggle="modal" data-bs-target="#importModal" style="display: none;">
                         <i class="menu-icon icon-base ri ri-upload-2-line"></i> Import
                     </button>
                     @endif
+                    @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods'))
                     <a href="{{ url('stock_entries/export-finished-goods') }}" class="btn btn-outline-success" id="export-finished-goods-btn" style="display: none;">
                         <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export 
                     </a>
                     <a href="{{ url('stock_entries/export-barcode') }}" class="btn btn-outline-primary" id="export-barcode-btn" style="display: none;">
                         <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export Barcode
                     </a>
-                    <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success" id="export-raw-materials-btn">
+                    @endif
+                    @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-raw-materials'))
+                    <a href="{{ url('stock_entries/export-raw-materials') }}" class="btn btn-outline-success" id="export-raw-materials-btn" style="display: none;">
                         <i class="menu-icon icon-base ri ri-file-excel-line"></i> Export 
                     </a>
-                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry'))
-                    <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}">
+                    @endif
+                    @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials'))
+                    <a class="btn btn-primary" id="add-stock-entry-btn" href="{{ url('stock_entries/add') }}" style="display: none;">
                         <i class="menu-icon icon-base ri ri-add-circle-line"></i> Add
                     </a>
                     @endif
@@ -36,8 +40,12 @@
                     <!-- Tabs Section -->
                     <div class="d-flex justify-content-center mb-4">
                         <div class="nav nav-pills custom-segment-tabs p-1 rounded-pill bg-light" id="stockEntryTabs" role="tablist">
-                            <button class="nav-link active rounded-pill px-4 fw-bold" id="raw-material-tab" type="button" data-entry-type="Raw Material">Raw Materials</button>
+                            @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-raw-materials'))
+                            <button class="nav-link rounded-pill px-4 fw-bold" id="raw-material-tab" type="button" data-entry-type="Raw Material">Raw Materials</button>
+                            @endif
+                            @if(auth()->id() == 1 || auth()->user()->can('view stock-entry-finished-goods'))
                             <button class="nav-link rounded-pill px-4 fw-bold" id="finished-goods-tab" type="button" data-entry-type="Finished Goods">Finished Goods</button>
+                            @endif
                         </div>
                     </div>
 
@@ -280,11 +288,22 @@
         $('#stockEntryTabs .nav-link').on('click', function() {
             $('#stockEntryTabs .nav-link').removeClass('active');
             $(this).addClass('active');
+            applyTabLogic();
+        });
 
-            if ($(this).data('entry-type') === 'Finished Goods') {
+        function applyTabLogic() {
+            const activeTab = $('#stockEntryTabs .nav-link.active');
+            if (activeTab.length === 0) return;
+            
+            if (activeTab.data('entry-type') === 'Finished Goods') {
                 $('.filter-box').hide();
                 $('#add-stock-entry-btn').hide();
                 updateImportModal('Finished Goods');
+                @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-finished-goods'))
+                $('#import-stock-btn').show();
+                @else
+                $('#import-stock-btn').hide();
+                @endif
                 $('#export-finished-goods-btn').show();
                 $('#export-barcode-btn').show();
                 $('#export-raw-materials-btn').hide();
@@ -298,7 +317,15 @@
                 table.column(9).visible(true);
             } else {
                 $('.filter-box').show();
+                
+                @if(auth()->id() == 1 || auth()->user()->can('create stock-entry-raw-materials'))
+                $('#import-stock-btn').show();
                 $('#add-stock-entry-btn').show();
+                @else
+                $('#import-stock-btn').hide();
+                $('#add-stock-entry-btn').hide();
+                @endif
+                
                 updateImportModal('Raw Material');
                 $('#export-finished-goods-btn').hide();
                 $('#export-barcode-btn').hide();
@@ -314,7 +341,13 @@
             }
 
             table.ajax.reload();
-        });
+        }
+
+        let firstTab = $('#stockEntryTabs .nav-link').first();
+        if (firstTab.length) {
+            firstTab.addClass('active');
+            applyTabLogic();
+        }
 
 
         $('#btn-filter').click(function() {

@@ -107,12 +107,7 @@ class AttendanceController extends Controller
         $final = [];
         foreach ($grouped as $emp => $dates) {
             $empStr = (string)$emp;
-            $employeeExistsAndActive = DB::table('users')
-                ->where('emp_id', $empStr)
-                ->where('id', '!=', 1)
-                ->where('status', 'Active')
-                ->whereNull('deleted_at')
-                ->exists();
+            $employeeExistsAndActive = DB::table('users')->where('emp_id', $empStr)->where('id', '!=', 1)->where('status', 'Active')->whereNull('deleted_at')->exists();
             if (!$employeeExistsAndActive) {
                 continue;
             }
@@ -123,26 +118,16 @@ class AttendanceController extends Controller
                 $existingAttendance = DB::table('attendances')->where('emp_code', $empStr)->where('date', $date)->first();
                 if ($existingAttendance && $existingAttendance->is_manual) {
                     $attendanceId = $existingAttendance->id;
-                    $name = DB::table('users')
-                        ->where('emp_id', $empStr)
-                        ->value('name');
-                    $department_id = DB::table('users')
-                    ->where('emp_id', $empStr)
-                    ->value('department_id');
-                    $department = DB::table('departments')
-                        ->where('id', $department_id)
-                        ->value('department');
+                    $name = DB::table('users')->where('emp_id', $empStr)->value('name');
+                    $department_id = DB::table('users')->where('emp_id', $empStr)->value('department_id');
+                    $department = DB::table('departments')->where('id', $department_id)->value('department');
                     $final[] = [
                         'id' => $attendanceId,
                         'name' => $name ?? 'Unknown',
                         'code' => $empStr,
                         'date' => date('d-m-Y', strtotime($date)),
-                        'inTime' => $existingAttendance->in_time
-                            ? date('h:i A', strtotime($existingAttendance->in_time))
-                            : '-',
-                        'outTime' => $existingAttendance->out_time
-                            ? date('h:i A', strtotime($existingAttendance->out_time))
-                            : '-',
+                        'inTime' => $existingAttendance->in_time ? date('h:i A', strtotime($existingAttendance->in_time)) : '-',
+                        'outTime' => $existingAttendance->out_time ? date('h:i A', strtotime($existingAttendance->out_time)) : '-',
                         'hours' => $existingAttendance->work_hours ?: '-',
                         'permission_hours' => $existingAttendance->permission_hours ?: '-',
                         'status' => $existingAttendance->status,
@@ -172,9 +157,7 @@ class AttendanceController extends Controller
                         }
                     }
                 }
-                $hours = ($in && $out)
-                    ? (strtotime($out) - strtotime($in)) / 3600
-                    : 0;
+                $hours = ($in && $out) ? (strtotime($out) - strtotime($in)) / 3600 : 0;
                 $status = $this->getStatus($date, $in, $out, $hours);
                 $permissionMinutes = 0;
                 if ($in) {
@@ -223,27 +206,16 @@ class AttendanceController extends Controller
                     'name' => $name ?? 'Unknown',
                     'code' => $empStr,
                     'date' => date('d-m-Y', strtotime($date)),
-                    'inTime' => $in
-                        ? date('h:i A', strtotime($in))
-                        : '-',
-                    'outTime' => $out
-                        ? date('h:i A', strtotime($out))
-                        : '-',
-                    'hours' => $hours
-                        ? round($hours, 2)
-                        : '-',
+                    'inTime' => $in ? date('h:i A', strtotime($in)) : '-',
+                    'outTime' => $out ? date('h:i A', strtotime($out)) : '-',
+                    'hours' => $hours ? round($hours, 2) : '-',
                     'permission_hours' => $permissionMinutes ?: '-',
                     'status' => $status,
                     'department' => $department ?? '-'
                 ];
             }
         }
-        $allEmployees = DB::table('users')
-            ->where('id', '!=', 1)
-            ->where('status', 'Active')
-            ->whereNull('deleted_at')
-            ->pluck('emp_id')
-            ->toArray();
+        $allEmployees = DB::table('users')->where('id', '!=', 1)->where('status', 'Active')->whereNull('deleted_at')->pluck('emp_id')->toArray();
         $datesToMark = [];
         for ($i = 6; $i >= 0; $i--) {
             $datesToMark[] = date('Y-m-d', strtotime("-$i days"));
@@ -255,31 +227,19 @@ class AttendanceController extends Controller
             foreach ($allEmployees as $emp) {
                 $empStr = (string)$emp;
                 if (!isset($grouped[$empStr][$dateKey])) {
-                    $existingAttendance = DB::table('attendances')
-                        ->where('emp_code', $empStr)
-                        ->where('date', $dateKey)
-                        ->first();
+                    $existingAttendance = DB::table('attendances')->where('emp_code', $empStr)->where('date', $dateKey)->first();
                     if ($existingAttendance) {
                         if ($existingAttendance->is_manual || $existingAttendance->in_time || $existingAttendance->out_time) {
-                            $name = DB::table('users')
-                                ->where('emp_id', $empStr)
-                                ->value('name');
-                            $department_id = DB::table('users')->where('emp_id', $empStr)
-                                ->value('department_id');
-                            $department = DB::table('departments')
-                                ->where('id', $department_id)
-                                ->value('department');
+                            $name = DB::table('users')->where('emp_id', $empStr)->value('name');
+                            $department_id = DB::table('users')->where('emp_id', $empStr)->value('department_id');
+                            $department = DB::table('departments')->where('id', $department_id)->value('department');
                             $final[] = [
                                 'id' => $existingAttendance->id,
                                 'name' => $name ?? 'Unknown',
                                 'code' => $empStr,
                                 'date' => date('d-m-Y', strtotime($dateKey)),
-                                'inTime' => $existingAttendance->in_time
-                                    ? date('h:i A', strtotime($existingAttendance->in_time))
-                                    : '-',
-                                'outTime' => $existingAttendance->out_time
-                                    ? date('h:i A', strtotime($existingAttendance->out_time))
-                                    : '-',
+                                'inTime' => $existingAttendance->in_time ? date('h:i A', strtotime($existingAttendance->in_time)) : '-',
+                                'outTime' => $existingAttendance->out_time ? date('h:i A', strtotime($existingAttendance->out_time)) : '-',
                                 'hours' => $existingAttendance->work_hours ?: '-',
                                 'permission_hours' => $existingAttendance->permission_hours ?: '-',
                                 'status' => $existingAttendance->status,
@@ -398,41 +358,42 @@ class AttendanceController extends Controller
         $date = $request->date;
         $device = $request->device;
 
-        $records = DB::table('attendances')
-            ->leftJoin('users', function ($join) {
-                $join->on(
-                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'),
-                    '=',
-                    DB::raw('attendances.emp_code COLLATE utf8mb4_unicode_ci')
-                );
-            })
-            ->leftJoin(
-                'departments',
-                'users.department_id',
-                '=',
-                'departments.id'
-            )
+        $attendances = DB::table('attendances')
             ->select(
-                'attendances.id',
-                DB::raw('COALESCE(users.name, "Unknown") as name'),
-                'attendances.emp_code as code',
-                'attendances.date',
-                'attendances.in_time',
-                'attendances.out_time',
-                'attendances.work_hours as hours',
-                'attendances.status',
-                DB::raw('COALESCE(departments.department, "-") as department')
+                'id',
+                'emp_code as code',
+                'date',
+                'in_time',
+                'out_time',
+                'work_hours as hours',
+                'status'
             )
-            ->whereDate('attendances.date', $date)
+            ->whereDate('date', $date)
             ->when($device, function ($query) use ($device) {
-                $query->where('attendances.device_serial_number', $device);
+                $query->where('device_serial_number', $device);
             })
-            ->orderBy('departments.department')
-            ->orderBy('users.name')
             ->get();
 
+        if ($attendances->isNotEmpty()) {
+            $empCodes = $attendances->pluck('code')->unique()->toArray();
+
+            $users = DB::table('users')->leftJoin('departments', 'users.department_id', '=', 'departments.id')->whereIn('users.emp_id', $empCodes)->select('users.emp_id', 'users.name', 'departments.department')->get()->keyBy('emp_id');
+
+            $attendances->transform(function ($item) use ($users) {
+                $user = $users[$item->code] ?? null;
+                $item->name = $user && $user->name ? $user->name : 'Unknown';
+                $item->department = $user && $user->department ? $user->department : '-';
+                return $item;
+            });
+
+            $attendances = $attendances->sortBy([
+                ['department', 'asc'],
+                ['name', 'asc']
+            ])->values();
+        }
+
         return response()->json([
-            'data' => $records
+            'data' => $attendances
         ]);
     }
     public function index(Request $request)
@@ -494,37 +455,47 @@ class AttendanceController extends Controller
     }
     public function getStaffReport(Request $request)
     {
+
         $empCode = $request->emp_code;
         $month   = $request->month;
         $fromDate = $request->from_date;
         $toDate   = $request->to_date;
+
         $query = DB::table('attendances')
-            ->join('users', function ($join) {
-                $join->on(
-                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'),
-                    '=',
-                    DB::raw('attendances.emp_code COLLATE utf8mb4_unicode_ci')
-                );
-            })
             ->select(
-                'attendances.date',
-                'users.name as employee',
-                'attendances.emp_code as code',
-                'attendances.in_time',
-                'attendances.out_time',
-                'attendances.work_hours as hours',
-                'attendances.status'
+                'date',
+                'emp_code as code',
+                'in_time',
+                'out_time',
+                'work_hours as hours',
+                'status'
             );
+
         if ($empCode && $empCode !== 'all') {
-            $query->where('attendances.emp_code', $empCode);
+            $query->where('emp_code', $empCode);
         }
         if ($month) {
-            $query->where('attendances.date', 'like', $month . '%');
+            $query->where('date', 'like', $month . '%');
         } elseif ($fromDate && $toDate) {
-            $query->whereBetween('attendances.date', [$fromDate, $toDate]);
+            $query->whereBetween('date', [$fromDate, $toDate]);
         }
-        $records = $query->orderBy('attendances.date','desc') ->orderBy('users.emp_id', 'desc')->get();
-        return response()->json($records);
+
+        $attendances = $query->orderBy('date', 'desc')->orderBy('emp_code', 'desc')->get();
+
+        if ($attendances->isNotEmpty()) {
+            $empCodes = $attendances->pluck('code')->unique()->toArray();
+
+            $users = DB::table('users')
+                ->whereIn('emp_id', $empCodes)
+                ->pluck('name', 'emp_id');
+
+            $attendances->transform(function ($item) use ($users) {
+                $item->employee = $users[$item->code] ?? 'Unknown';
+                return $item;
+            });
+        }
+
+        return response()->json($attendances);
     }
     public function getEmployees()
     {
@@ -561,25 +532,30 @@ class AttendanceController extends Controller
     public function view($id)
     {
         $attendance = DB::table('attendances')
-            ->join('users', function ($join) {
-                $join->on(
-                    DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'),
-                    '=',
-                    DB::raw('attendances.emp_code COLLATE utf8mb4_unicode_ci')
-                );
-            })
-            ->select(
-                'attendances.*',
-                'users.id as user_id',
-                'users.name',
-                'users.emp_id',
-                'users.profile_image',
-            )
-            ->where('attendances.id', $id)
+            ->where('id', $id)
             ->first();
+
         if (!$attendance) {
             abort(404, 'Attendance not found');
         }
+
+        $user = DB::table('users')
+            ->where('emp_id', $attendance->emp_code)
+            ->select('id as user_id', 'name', 'emp_id', 'profile_image')
+            ->first();
+
+        if ($user) {
+            $attendance->user_id = $user->user_id;
+            $attendance->name = $user->name;
+            $attendance->emp_id = $user->emp_id;
+            $attendance->profile_image = $user->profile_image;
+        } else {
+            $attendance->user_id = null;
+            $attendance->name = 'Unknown';
+            $attendance->emp_id = $attendance->emp_code;
+            $attendance->profile_image = null;
+        }
+
         return view('attendances.view_details', compact('attendance'));
     }
     public function updateAttendance(Request $request)

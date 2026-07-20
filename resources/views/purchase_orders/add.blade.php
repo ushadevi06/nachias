@@ -285,7 +285,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror" name="items[{{ $index }}][rate]" step="0.01" min="0" value="{{ $item['rate'] ?? '' }}">
+                                                    <input type="number" class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror" name="items[{{ $index }}][rate]" step="any" min="0" value="{{ $item['rate'] ?? '' }}">
                                                     @error('items.' . $index . '.rate')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -442,7 +442,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror" name="items[{{ $index }}][rate]" step="0.01" min="0" value="{{ $item->rate }}">
+                                                    <input type="number" class="form-control rate @error('items.' . $index . '.rate') is-invalid @enderror" name="items[{{ $index }}][rate]" step="any" min="0" value="{{ $item->rate }}">
                                                     @error('items.' . $index . '.rate')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -583,7 +583,7 @@
                                                 <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
                                             </td>
                                             <td>
-                                                <input type="number" class="form-control rate" name="items[0][rate]" step="0.01" min="0" placeholder="Enter Rate">
+                                                <input type="number" class="form-control rate" name="items[0][rate]" step="any" min="0" placeholder="Enter Rate">
                                             </td>
                                             <td class="td-gst td-cgst d-none">
                                                 <input type="number" class="form-control cgst_percent text-end" name="items[0][cgst_percent]" step="0.01" min="0" value="">
@@ -928,7 +928,7 @@
                         <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
                     </td>
                     <td>
-                        <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="0.01" min="0" placeholder="Enter Rate">
+                        <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="any" min="0" placeholder="Enter Rate">
                     </td>
                     <td class="td-gst td-cgst d-none">
                         <input type="number" class="form-control cgst_percent text-end" name="items[${itemIndex}][cgst_percent]" step="0.01" min="0" value="">

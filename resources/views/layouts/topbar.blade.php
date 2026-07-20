@@ -573,7 +573,7 @@ $isSuper = $user->id == 1;
                                 @endif
 
                                 <!-- Store -->
-                                @if($user && ($isSuper || $user->can('view grn-entry') || $user->can('view stock-entry') || $user->can('view debit-notes') || $user->can('view stock-consumable-return')))
+                                @if($user && ($isSuper || $user->can('view grn-entry') || $user->can('view stock-entry-raw-materials') || $user->can('view stock-entry-finished-goods') || $user->can('view debit-notes') || $user->can('view stock-consumable-return')))
                                     <li
                                         class="menu-item {{ (request()->is('grn_entries*') || request()->is('stock_entries*') || request()->is('debit_notes*') || request()->is('stock_consumables_returns*')) ? 'active' : '' }}">
                                         <a href="javascript:void(0)" class="menu-link menu-toggle">
@@ -589,7 +589,7 @@ $isSuper = $user->id == 1;
                                                 </li>
                                             @endif
 
-                                            @if($isSuper || $user->can('view stock-entry'))
+                                            @if($isSuper || $user->can('view stock-entry-raw-materials') || $user->can('view stock-entry-finished-goods'))
                                                 <li class="menu-item {{ request()->is('stock_entries*') ? 'active' : '' }}">
                                                     <a href="{{ url('stock_entries') }}" class="menu-link">
                                                         <div>Stock Entry</div>
