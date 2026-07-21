@@ -302,7 +302,7 @@
                 
                 <div class="mrp-section">
                     <div class="fw-bold" style="font-size: 6.2pt; color: #000000;">MRP <span class="fw-bold" style="font-size: 6.5pt; color: #000000;">(inclusive of all taxes)</span></div>
-                    <div class="fw-bold" style="font-size: 11pt; line-height: 1; color: #000000; margin: 0.8mm 0;">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                    <div class="fw-bold" style="font-size: 11pt; line-height: 1; color: #000000; margin: 0.8mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
                     <div class="fw-bold" style="font-size: 4pt; color: #000000; margin-top: 0.5mm;">MADE IN INDIA WITH PRIDE</div>
                 </div>
         </div>

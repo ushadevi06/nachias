@@ -1514,10 +1514,12 @@
 
                 let url = '';
                 let ajaxData = {};
+                let requestType = 'GET';
 
                 if (selectedEntries.length > 0) {
                     url = '{{ url("job_card_entries/get-stock-entry-details") }}';
-                    ajaxData = { ids: selectedEntries, job_card_id: jobCardId };
+                    ajaxData = { ids: selectedEntries, job_card_id: jobCardId, _token: '{{ csrf_token() }}' };
+                    requestType = 'POST';
                 } else if (poId) {
                     url = `{{ url('job_card_entries/check-stock') }}/${poId}`;
                     ajaxData = { job_card_id: jobCardId };
@@ -1528,7 +1530,7 @@
 
                 $.ajax({
                     url: url,
-                    type: 'GET',
+                    type: requestType,
                     data: ajaxData,
                     cache: false, 
                     success: function(data) {
@@ -1721,7 +1723,18 @@
                 }
 
                 const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
-                $.get(detailsUrl, { ids: selectedIds, job_card_id: jobCardId }, function (data) {
+                
+                // Force a clean POST request in the body so it NEVER uses a URL
+                fetch(detailsUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ ids: selectedIds, job_card_id: jobCardId })
+                })
+                .then(response => response.json())
+                .then(data => {
                     currentArtNumbers = data.art_numbers;
                     currentArtData    = data.art_data;
 
@@ -1854,7 +1867,17 @@
 
             if (selectedIds.length > 0) {
                 const jobCardId = '{{ $jobCard ? $jobCard->id : "" }}';
-                $.get(detailsUrl, { ids: selectedIds, job_card_id: jobCardId }, function (data) {
+                
+                fetch(detailsUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ ids: selectedIds, job_card_id: jobCardId })
+                })
+                .then(response => response.json())
+                .then(data => {
                     currentArtNumbers = data.art_numbers;
                     currentArtData    = data.art_data;
 

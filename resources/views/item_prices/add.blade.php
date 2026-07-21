@@ -366,7 +366,7 @@
         });
 
         function loadArtNos(itemCode) {
-            let currentArtNo = "{{ $price->art_no ?? '' }}";
+            let currentArtNo = "{{ old('art_no', $price->art_no ?? '') }}";
             let artNoSelect = $('#art_no');
 
             if (itemCode) {
@@ -391,9 +391,6 @@
                                     artNoSelect.append('<option value="' + artNo + '">' + artNo + '</option>');
                                 }
                             });
-                            if (response.art_nos.length === 1 && !artNoSelect.val()) {
-                                artNoSelect.val(response.art_nos[0]);
-                            }
                         }
                         artNoSelect.prop('disabled', false).trigger('change');
                     }

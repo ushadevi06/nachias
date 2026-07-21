@@ -92,8 +92,19 @@ use App\Http\Controllers\ItemPriceController;
 Route::get('/', function () {
     return view('login');
 });
-Route::get('/update_page', function () {
-    return view('update_page');
+Route::get('/check-php-limits', function () {
+    return '<b>Max Input Vars:</b> ' . ini_get('max_input_vars') . '<br>' .
+           '<b>Memory Limit:</b> ' . ini_get('memory_limit') . '<br>' .
+           '<b>Max Execution Time:</b> ' . ini_get('max_execution_time') . '<br><br>' .
+           '<i>Note: To support 250+ rows in Job Card Entry, Max Input Vars needs to be at least 10000.</i>';
+});
+
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    return 'All caches cleared successfully! Now press Ctrl+F5 on your Job Card page.';
 });
 
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');
@@ -536,7 +547,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
     Route::get('job_card_entries/get-po-details/{id}', [JobCardEntryController::class, 'getPoDetails']);
     Route::get('job_card_entries/check-stock/{id}', [JobCardEntryController::class, 'checkStock']);
     Route::get('job_card_entries/search-stock-entries', [JobCardEntryController::class, 'searchStockEntries']);
-    Route::get('job_card_entries/get-stock-entry-details', [JobCardEntryController::class, 'getStockEntryDetails']);
+    Route::match(['GET', 'POST'], 'job_card_entries/get-stock-entry-details', [JobCardEntryController::class, 'getStockEntryDetails']);
     Route::get('job_card_entries/get_items_by_store_category', [JobCardEntryController::class, 'getItemsByStoreCategory']);
     Route::get('job_card_entries/get_items_by_brand_category', [JobCardEntryController::class, 'getItemsByBrandCategory']);
     Route::delete('job_card_entries/delete-image/{id}', [JobCardEntryController::class, 'deleteImage']);
@@ -745,4 +756,9 @@ Route::get('/run-permission-seeder', function () {
     Artisan::call('db:seed', [
         '--class' => 'Database\\Seeders\\PermissionSeeder'
     ]);
+});
+
+Route::get('fix-dates', function() {
+    \Illuminate\Support\Facades\DB::table('item_prices')->whereYear('effective_from', 26)->update(['effective_from' => \Illuminate\Support\Facades\DB::raw('DATE_ADD(effective_from, INTERVAL 2000 YEAR)')]);
+    return 'Dates Fixed!';
 });

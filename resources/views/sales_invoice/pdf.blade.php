@@ -5,7 +5,7 @@
     <title>Sales Invoice - {{ $invoice->inv_no }}</title>
     <style>
         @page {
-            margin: 5px 10px 15px 10px;
+            margin: 20px 10px 15px 10px;
         }
         body {
             font-family: 'Helvetica', Arial, sans-serif;
@@ -708,7 +708,7 @@ if ($showPrice) $colsAfterQty++;
                 @endfor
             </tbody>
             @if($isLastChunk)
-            <tfoot>
+            <tbody>
                 <tr>
                     <td style="border-top: none;"></td>
                     <td style="border-top: none;"></td> 
@@ -728,7 +728,7 @@ if ($showPrice) $colsAfterQty++;
                         <td class="text-right bold" style="padding-right: 4px; vertical-align: middle; border-top: 1px solid #000000;">{{ number_format($invoice->sub_total, 2) }}</td>
                     @endif
                 </tr>
-            </tfoot>
+            </tbody>
             <tbody>
                 @php
                     $totalColsCount = 6 + $colsAfterQty + ($showAmount ? 1 : 0);
@@ -766,9 +766,9 @@ if ($showPrice) $colsAfterQty++;
                                                 <div style="font-size: 11px; min-height: 85px;">
                                                     <span style="font-weight: bold;">For UPI Payment</span><br>
                                                     @if($qrBase64)
-                                                        <img src="{{ $qrBase64 }}" style="max-width: 100px; margin-top: 4px;">
+                                                        <img src="{{ $qrBase64 }}" style="width: 85px; height: 85px; margin-top: 4px;">
                                                     @else
-                                                    <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="max-width: 100px; margin-top: 4px;">
+                                                    <img src="{{ isset($is_print) && $is_print ? asset('assets/images/qr_code.png') : public_path('assets/images/qr_code.png') }}" style="width: 85px; height: 85px; margin-top: 4px;">
                                                     @endif
                                                 </div>
                                             </td>

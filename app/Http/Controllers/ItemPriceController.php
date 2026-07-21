@@ -483,8 +483,22 @@ class ItemPriceController extends Controller
         $headers = [
             'Finished Item Code',
             'Art No',
-            'Selling Price',
-            'Unit Price',
+            'MRP 36',
+            'Selling Price 36',
+            'MRP 38',
+            'Selling Price 38',
+            'MRP 40',
+            'Selling Price 40',
+            'MRP 42',
+            'Selling Price 42',
+            'MRP 44',
+            'Selling Price 44',
+            'MRP 46',
+            'Selling Price 46',
+            'MRP 48',
+            'Selling Price 48',
+            'MRP 50',
+            'Selling Price 50',
             'Effective From',
             'Status',
         ];
@@ -493,14 +507,14 @@ class ItemPriceController extends Controller
             $file = fopen('php://output', 'w');
             fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($file, $headers);
-            fputcsv($file, [
-                'CDS-PRNT',
-                'CDS30906',
-                '499.00',
-                '',
-                date('d-m-Y'),
-                'Active',
-            ]);
+            // fputcsv($file, [
+            //     'CDS-PRNT',
+            //     'CDS30906',
+            //     '499.00',
+            //     '',
+            //     date('d-m-Y'),
+            //     'Active',
+            // ]);
             fclose($file);
         };
 

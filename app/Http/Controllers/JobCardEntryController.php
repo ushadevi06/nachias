@@ -159,6 +159,9 @@ class JobCardEntryController extends Controller
         }
 
         if ($request->isMethod('post')) {
+            set_time_limit(600); // Allow up to 10 minutes for large saves
+            ini_set('memory_limit', '1024M'); // Increase memory limit
+
             if ($isRestrictedEdit && $id) {
                 $jobCard = JobCardEntry::with('issueItems.fabricDetail')->findOrFail($id);
                 $oldData = $jobCard->toArray();
@@ -2700,6 +2703,24 @@ class JobCardEntryController extends Controller
                 ->orderBy('id', 'desc')
                 ->first();
 
+            if (!$priceRecord) {
+                $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+                    ->where('art_no', $artNo)
+                    ->where('size', $selectedSize)
+                    ->whereDate('effective_from', '<=', now())
+                    ->orderBy('effective_from', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+            }
+
+            if (!$priceRecord) {
+                $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
+                    ->where('art_no', $artNo)
+                    ->whereDate('effective_from', '<=', now())
+                    ->orderBy('effective_from', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+            }
             $mrpPrice = $priceRecord ? $priceRecord->selling_price : ($jobCard->mrp > 0 ? $jobCard->mrp : $issueItem->unit_price);
 
             $labelData = [

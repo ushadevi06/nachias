@@ -15,42 +15,80 @@ class ItemPricesExport implements FromCollection, WithHeadings, WithMapping
     */
     public function collection()
     {
-        return DB::table('item_prices')
-            ->leftJoin(DB::raw('(SELECT finished_item_code, MAX(item_id) as item_id FROM stock_entry_items WHERE deleted_at IS NULL GROUP BY finished_item_code) as sei'), 'item_prices.finished_item_code', '=', 'sei.finished_item_code')
-            ->leftJoin('items', 'sei.item_id', '=', 'items.id')
-            ->whereNull('item_prices.deleted_at')
-            ->select(
-                'item_prices.finished_item_code',
-                'item_prices.art_no',
-                'item_prices.unit_price',
-                'item_prices.selling_price',
-                'item_prices.effective_from'
-            )
-            ->orderBy('item_prices.id', 'desc')
+        $prices = DB::table('item_prices')
+            ->whereNull('deleted_at')
+            ->orderBy('id', 'desc')
             ->get();
+
+        $grouped = [];
+        foreach ($prices as $price) {
+            $key = $price->finished_item_code . '|' . ($price->art_no ?? '') . '|' . $price->effective_from;
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'finished_item_code' => $price->finished_item_code,
+                    'art_no' => $price->art_no,
+                    'effective_from' => $price->effective_from,
+                    'status' => $price->status,
+                    'sizes' => []
+                ];
+            }
+            $grouped[$key]['sizes'][$price->size] = [
+                'unit_price' => $price->unit_price,
+                'selling_price' => $price->selling_price
+            ];
+        }
+
+        return collect(array_values($grouped));
     }
 
     public function headings(): array
     {
         return [
-            'ITEM CODE',
-            'UOM',
-            'ART NO',
-            'UNIT PRICE',
-            'RETAIL PRICE',
-            'EFFECTIVE DATE',
+            'Finished Item Code',
+            'Art No',
+            'MRP 36',
+            'Selling Price 36',
+            'MRP 38',
+            'Selling Price 38',
+            'MRP 40',
+            'Selling Price 40',
+            'MRP 42',
+            'Selling Price 42',
+            'MRP 44',
+            'Selling Price 44',
+            'MRP 46',
+            'Selling Price 46',
+            'MRP 48',
+            'Selling Price 48',
+            'MRP 50',
+            'Selling Price 50',
+            'Effective From',
+            'Status',
         ];
     }
 
     public function map($row): array
     {
-        return [
-            $row->finished_item_code,
-            'PCS',
-            $row->art_no ?? '-',
-            number_format($row->unit_price, 2, '.', ''),
-            number_format($row->selling_price, 2, '.', ''),
-            $row->effective_from ? Carbon::parse($row->effective_from)->format('d-m-Y') : '-',
+        $sizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
+        
+        $mapped = [
+            $row['finished_item_code'],
+            $row['art_no'] ?? '-',
         ];
+
+        foreach ($sizes as $size) {
+            if (isset($row['sizes'][$size])) {
+                $mapped[] = number_format($row['sizes'][$size]['unit_price'], 2, '.', '');
+                $mapped[] = number_format($row['sizes'][$size]['selling_price'], 2, '.', '');
+            } else {
+                $mapped[] = '';
+                $mapped[] = '';
+            }
+        }
+
+        $mapped[] = $row['effective_from'] ? Carbon::parse($row['effective_from'])->format('d-m-Y') : '-';
+        $mapped[] = $row['status'] ?? 'Active';
+
+        return $mapped;
     }
 }

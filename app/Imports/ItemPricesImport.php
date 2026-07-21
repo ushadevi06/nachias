@@ -16,16 +16,13 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
     {
         $errors = [];
         $validRows = [];
+        $supportedSizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
 
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             $rowErrors = [];
 
-            if (
-                !isset($row['finished_item_code']) &&
-                !isset($row['selling_price']) &&
-                !isset($row['effective_from'])
-            ) {
+            if (!isset($row['finished_item_code']) && !isset($row['effective_from'])) {
                 continue;
             }
 
@@ -36,11 +33,6 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
 
             $artNo = isset($row['art_no']) ? trim((string)$row['art_no']) : null;
             $artNo = $artNo === '' ? null : $artNo;
-
-            $sellingPrice = $row['selling_price'] ?? null;
-            if ($sellingPrice === null || $sellingPrice === '' || !is_numeric($sellingPrice) || $sellingPrice < 0) {
-                $rowErrors[] = "Row {$rowNumber}: Selling Price must be a number greater than or equal to 0.";
-            }
 
             $effectiveFromRaw = $row['effective_from'] ?? null;
             $effectiveFrom = $this->parseDate($effectiveFromRaw);
@@ -56,29 +48,51 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
                 $rowErrors[] = "Row {$rowNumber}: Status must be Active or Inactive.";
             }
 
-            $unitPrice = $row['unit_price'] ?? null;
-            if ($unitPrice !== null && $unitPrice !== '' && (!is_numeric($unitPrice) || $unitPrice < 0)) {
-                $rowErrors[] = "Row {$rowNumber}: Unit Price must be a number greater than or equal to 0.";
+            $hasAnySize = false;
+            foreach ($supportedSizes as $size) {
+                $mrpKey = 'mrp_' . $size;
+                $spKey = 'selling_price_' . $size;
+
+                $mrp = $row[$mrpKey] ?? null;
+                $sp = $row[$spKey] ?? null;
+
+                if ($mrp !== null && $mrp !== '' || $sp !== null && $sp !== '') {
+                    $hasAnySize = true;
+
+                    if ($mrp !== null && $mrp !== '' && (!is_numeric($mrp) || $mrp < 0)) {
+                        $rowErrors[] = "Row {$rowNumber}: MRP {$size} must be a number greater than or equal to 0.";
+                    }
+
+                    if ($sp !== null && $sp !== '' && (!is_numeric($sp) || $sp < 0)) {
+                        $rowErrors[] = "Row {$rowNumber}: Selling Price {$size} must be a number greater than or equal to 0.";
+                    }
+
+                    if (empty($rowErrors)) {
+                        $spFloat = (float)$sp;
+                        $mrpFloat = ($mrp === null || $mrp === '')
+                            ? ($spFloat / 1.5)
+                            : (float)$mrp;
+
+                        $validRows[] = [
+                            'finished_item_code' => $itemCode,
+                            'art_no' => $artNo,
+                            'size' => $size,
+                            'selling_price' => $spFloat,
+                            'unit_price' => $mrpFloat,
+                            'effective_from' => $effectiveFrom->format('Y-m-d'),
+                            'status' => $status,
+                        ];
+                    }
+                }
+            }
+
+            if (!$hasAnySize) {
+                $rowErrors[] = "Row {$rowNumber}: At least one size-wise price must be provided.";
             }
 
             if (!empty($rowErrors)) {
                 $errors = array_merge($errors, $rowErrors);
-                continue;
             }
-
-            $sellingPriceFloat = (float)$sellingPrice;
-            $unitPriceFloat = ($unitPrice === null || $unitPrice === '')
-                ? ($sellingPriceFloat / 1.5)
-                : (float)$unitPrice;
-
-            $validRows[] = [
-                'finished_item_code' => $itemCode,
-                'art_no' => $artNo,
-                'selling_price' => $sellingPriceFloat,
-                'unit_price' => $unitPriceFloat,
-                'effective_from' => $effectiveFrom->format('Y-m-d'),
-                'status' => $status,
-            ];
         }
 
         if (!empty($errors)) {
@@ -89,7 +103,8 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
         try {
             foreach ($validRows as $data) {
                 $query = ItemPrice::where('finished_item_code', $data['finished_item_code'])
-                    ->whereDate('effective_from', $data['effective_from']);
+                    ->whereDate('effective_from', $data['effective_from'])
+                    ->where('size', $data['size']);
 
                 if ($data['art_no'] === null) {
                     $query->whereNull('art_no');
@@ -139,10 +154,18 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
 
         $value = trim((string)$value);
         try {
-            return Carbon::createFromFormat('d-m-Y', $value);
+            $date = Carbon::createFromFormat('d-m-Y', $value);
+            if ($date->year < 100) {
+                $date->addYears(2000);
+            }
+            return $date;
         } catch (\Exception $e) {
             try {
-                return Carbon::parse($value);
+                $date = Carbon::parse($value);
+                if ($date->year < 100) {
+                    $date->addYears(2000);
+                }
+                return $date;
             } catch (\Exception $e2) {
                 return null;
             }

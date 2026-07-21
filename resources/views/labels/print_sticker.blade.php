@@ -254,6 +254,7 @@
             
             $emails = explode(',', $labelData['company_email'] ?? 'srinachias@yahoo.in');
             $firstEmail = trim($emails[0]);
+            $phones = str_replace(',', ' | ', $labelData['toll_free'] ?? '84899 38071 | 84899 38073');
         @endphp
 
         <div class="page-container" style="{{ !$loop->last ? 'page-break-after: always;' : '' }}">
@@ -292,7 +293,7 @@
                         
                         <div class="mrp-section" style="margin-top: auto;">
                             <div class="fw-bold" style="font-size: 4pt; color: #000000; font-weight:bold;">MRP <span class="fw-bold" style="font-size: 4pt;">(inclusive of all taxes)</span></div>
-                            <div class="fw-bold" style="font-size: 14pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ number_format((float) ($labelData['price'] ?? 0), 2) }}</div>
+                            <div class="fw-bold" style="font-size: 11pt; line-height: 1; color: #000000; margin: 1mm 0;">₹ {{ $labelData['price'] ?? '0.00' }}</div>
                             <div class="fw-bold" style="color: #000000; margin-top: 0.5mm; font-size: 4pt;">MADE IN INDIA WITH PRIDE</div>
                         </div>
                     </div>
@@ -308,7 +309,7 @@
                         </div>
                     </div>
                     <div class="footer-row" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                        <div><span class="fw-bold" style="font-size: 5.5pt;">Complaints : 84899 38071 | 84899 38073</span></div>
+                        <div><span class="fw-bold" style="font-size: 5.5pt;">Complaints : {{ $phones }}</span></div>
                         <div><span class="fw-bold" style="font-size: 5.5pt;">Email: {{ $firstEmail }}</span></div>
                     </div>
                 </div>
