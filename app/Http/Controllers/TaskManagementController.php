@@ -166,6 +166,27 @@ class TaskManagementController extends Controller
                 $psStage = $stages->where('operation_stage_id', $sId)->first();
                 if ($psStage) {
                     request()->merge(['stage_id' => $psStage->id]);
+                    $sId = $psStage->id;
+                }
+            }
+
+            if (!$id && $psStage) {
+                $jobCardId = $psStage->job_card_entry_id;
+                $tasksForJobCard = Task::where('job_card_entry_id', $jobCardId)->pluck('stage_id')->toArray();
+                
+                $canAssign = true;
+                foreach ($stages as $stage) {
+                    if ($stage->id == $psStage->id) {
+                        break;
+                    }
+                    if (!in_array($stage->id, $tasksForJobCard)) {
+                        $canAssign = false;
+                        break;
+                    }
+                }
+                
+                if (!$canAssign) {
+                    return redirect()->back()->with('danger', 'You cannot assign a task for a future stage before previous stages are assigned.');
                 }
             }
 
@@ -185,22 +206,31 @@ class TaskManagementController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
 
-            $request->validate([
+            $rules = [
                 'assignments' => 'required|array|min:1',
                 'assignments.*.service_id' => 'required',
-                'assignments.*.issued_to' => 'required',
-                'assignments.*.issue_date' => 'required',
-                'assignments.*.due_date' => 'nullable',
                 'issued_by' => 'required',
                 'status' => 'required'
-            ], [
+            ];
+            
+            $messages = [
                 'assignments.*.service_id.required' => 'This field is required.',
-                'assignments.*.issued_to.required' => 'This field is required.',
-                'assignments.*.issue_date.required' => 'This field is required.',
-                'assignments.*.issue_qty.required' => 'This field is required.',
                 'issued_by.required' => 'This field is required.',
-                'assignments.*.issue_qty.min' => 'Issue Qty must be at least 1',
-            ]);
+            ];
+
+            $assignmentsInput = $request->input('assignments', []);
+            foreach ($assignmentsInput as $index => $assign) {
+                if (!empty($assign['issued_to'])) {
+                    $rules["assignments.{$index}.issue_date"] = 'required';
+                    $rules["assignments.{$index}.issue_qty"] = 'required|numeric|min:1';
+                    
+                    $messages["assignments.{$index}.issue_date.required"] = 'This field is required.';
+                    $messages["assignments.{$index}.issue_qty.required"] = 'This field is required.';
+                    $messages["assignments.{$index}.issue_qty.min"] = 'Issue Qty must be at least 1';
+                }
+            }
+
+            $request->validate($rules, $messages);
 
             $assignments = $request->input('assignments');
             if (!$assignments) {
@@ -344,15 +374,15 @@ class TaskManagementController extends Controller
                 $totalIssueQty = 0;
 
                 foreach ($assignments as $assign) {
-                    if (empty($assign['issued_to']))
-                        continue;
+                    $isAssigned = !empty($assign['issued_to']);
+                    $status = $isAssigned ? ($assign['status'] ?? 'Open') : 'Pending Assignment';
 
                     $assignData = [
                         'task_id' => $task->id,
-                        'issued_to' => $assign['issued_to'],
+                        'issued_to' => $isAssigned ? $assign['issued_to'] : null,
                         'issue_qty' => $assign['issue_qty'] ?? 0,
                         'total_hrs' => $assign['total_hrs'] ?? 0,
-                        'status' => $assign['status'] ?? 'Open',
+                        'status' => $status,
                         'remarks' => $assign['remarks'] ?? null,
                         'created_by' => auth()->id(),
                     ];

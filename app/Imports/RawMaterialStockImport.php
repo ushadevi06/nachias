@@ -237,7 +237,9 @@ class RawMaterialStockImport implements ToCollection, WithHeadingRow
         DB::beginTransaction();
         try {
             foreach ($grouped as $group) {
-                $lastEntry = StockEntry::latest('id')->first();
+                $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
+                                       ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
+                                       ->first();
                 $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
                 $stockEntryNo = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 

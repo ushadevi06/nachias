@@ -199,7 +199,5 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
             ],
         ]);
-        
-        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
     }
 }

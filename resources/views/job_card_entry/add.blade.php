@@ -3855,6 +3855,11 @@
         @if(isset($isRestrictedEdit) && $isRestrictedEdit)
 
         setTimeout(() => {
+            var assignTaskStates = [];
+            $('.assign-task-btn').each(function() {
+                assignTaskStates.push($(this).is(':disabled'));
+            });
+
             $('form#job-card-form').find('input, select, textarea, button').prop('disabled', true);
             $('form#job-card-form').find('input[type="file"]').prop('disabled', true);
             $('form#job-card-form').find('input[type="hidden"]').prop('disabled', false);
@@ -3864,7 +3869,10 @@
             
             $('#job-card-form button[type="submit"]').prop('disabled', false);
             $('#add-stage-row').prop('disabled', false);
-            $('.assign-task-btn').prop('disabled', false);
+            
+            $('.assign-task-btn').each(function(index) {
+                $(this).prop('disabled', assignTaskStates[index]);
+            });
             
             $('#fetch-fabric-btn, #add-size, #add-fabric-btn, #add-sleeve-btn, .sync-mtr-btn').hide();
             $('.btn-danger:not(#production-stages-table .btn-danger)').hide();

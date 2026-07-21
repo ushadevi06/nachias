@@ -368,7 +368,9 @@ class StockEntryController extends Controller
                     $stockEntry->stockEntryItems()->forceDelete();
                     addLog('update', 'Stock Entry', 'stock_entries', $stockEntry->id, $oldValues, $headerData);
                 } else {
-                    $lastEntry = StockEntry::latest('id')->first();
+                    $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
+                                           ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
+                                           ->first();
                     $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
                     $headerData['stock_entry_no'] = 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
                     $headerData['created_by'] = auth()->id();
@@ -411,7 +413,11 @@ class StockEntryController extends Controller
             }
         }
 
-        $nextStockNo = $id ? $stockEntry->stock_entry_no : 'SE' . str_pad((StockEntry::latest('id')->first()->id ?? 0) + 1, 5, '0', STR_PAD_LEFT);
+        $lastEntry = StockEntry::where('stock_entry_no', 'REGEXP', '^SE[0-9]+$')
+                               ->orderByRaw('CAST(SUBSTRING(stock_entry_no, 3) AS UNSIGNED) DESC')
+                               ->first();
+        $nextNumber = $lastEntry ? (int)substr($lastEntry->stock_entry_no, 2) + 1 : 1;
+        $nextStockNo = $id ? $stockEntry->stock_entry_no : 'SE' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
 
         $savedItems = [];
         if ($stockEntry && $stockEntry->grn_entry_id) {

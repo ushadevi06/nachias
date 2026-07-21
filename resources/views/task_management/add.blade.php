@@ -211,8 +211,12 @@
                                                             if (isset($assign->assignee)) {
                                                                 $employee_name = $assign->assignee->name;
                                                                 $employee_emp_id = $assign->assignee->emp_id ?? '';
-                                                            } elseif (isset($assign->employee_name)) {
-                                                                $employee_name = $assign->employee_name;
+                                                            } elseif ($emp_id_val) {
+                                                                $oldUser = \App\Models\User::find($emp_id_val);
+                                                                if ($oldUser) {
+                                                                    $employee_name = $oldUser->name;
+                                                                    $employee_emp_id = $oldUser->emp_id ?? '';
+                                                                }
                                                             }
 
                                                             $employee_display = $employee_name ?: 'Selected Employee';
@@ -284,14 +288,16 @@
                                                                         <input type="number" step="0.01" class="form-control total-hrs" name="assignments[{{ $index }}][total_hrs]" value="{{ $assign->total_hrs ?? '' }}" placeholder="0.00">
                                                                     </div>
                                                                     <div class="form-group">
-                                                                        <label>Qty</label>
+                                                                        <label>Qty *</label>
                                                                         <input type="number" step="1" class="form-control" name="assignments[{{ $index }}][issue_qty]" value="{{ $assign->issue_qty ?? '' }}" placeholder="Qty">
+                                                                        @error("assignments.$index.issue_qty") <div class="text-danger extra-small mt-1">{{ $message }}</div> @enderror
                                                                     </div>
                                                                 </div>
 
                                                                 <div class="form-group mb-3">
                                                                     <label>Status</label>
                                                                     <select class="form-select select2 status-select-row" name="assignments[{{ $index }}][status_display]" disabled>
+                                                                        <option value="Pending Assignment" {{ $status == 'Pending Assignment' ? 'selected' : '' }}>Pending Assignment</option>
                                                                         <option value="Open" {{ $status == 'Open' ? 'selected' : '' }}>Open</option>
                                                                         <option value="In Progress" {{ $status == 'In Progress' ? 'selected' : '' }}>In Progress</option>
                                                                         <option value="Completed" {{ $status == 'Completed' ? 'selected' : '' }}>Completed</option>
@@ -824,6 +830,17 @@
             let availableMaterials = [];
 
             function addAssignmentRow(data = {}) {
+                var firstRow = $('.assignment-row').first();
+                if (!data.issue_date && firstRow.length) {
+                    data.issue_date = firstRow.find('.flatpickr-assignment.issue-date').val();
+                }
+                if (!data.due_date && firstRow.length) {
+                    data.due_date = firstRow.find('.flatpickr-assignment.due-date').val();
+                }
+                if (!data.total_hrs && firstRow.length) {
+                    data.total_hrs = firstRow.find('.total-hrs').val();
+                }
+
                 let rowHtml = `
                 <div class="assignment-card assignment-row">
                     <div class="card-badge">#${assignmentIndex + 1}</div>
@@ -1051,6 +1068,16 @@
                         if(dueDateInstance) {
                             dueDateInstance.set('minDate', dateStr);
                         }
+
+                        var isFirstRow = $row.is($('.assignment-row').first());
+                        if (isFirstRow && dateStr) {
+                            $('.assignment-row').not($row).each(function() {
+                                var otherInput = $(this).find('.flatpickr-assignment.issue-date')[0];
+                                if (otherInput && otherInput._flatpickr && !otherInput.value) {
+                                    otherInput._flatpickr.setDate(dateStr, true);
+                                }
+                            });
+                        }
                     }
                 });
 
@@ -1059,8 +1086,18 @@
                     allowInput: true,
                     minDate: stageStartDate ? moment(stageStartDate).format('DD-MM-YYYY') : null,
                     maxDate: stageDueDate ? moment(stageDueDate).format('DD-MM-YYYY') : null,
-                    onChange: function() {
+                    onChange: function(selectedDates, dateStr, instance) {
                         calculateRowHours($row);
+
+                        var isFirstRow = $row.is($('.assignment-row').first());
+                        if (isFirstRow && dateStr) {
+                            $('.assignment-row').not($row).each(function() {
+                                var otherInput = $(this).find('.flatpickr-assignment.due-date')[0];
+                                if (otherInput && otherInput._flatpickr && !otherInput.value) {
+                                    otherInput._flatpickr.setDate(dateStr, true);
+                                }
+                            });
+                        }
                     }
                 });
 
@@ -1113,20 +1150,34 @@
                 });
             }
 
+            $(document).on('input', '.total-hrs', function() {
+                var $row = $(this).closest('.assignment-row');
+                var hrsVal = $(this).val();
+                
+                var isFirstRow = $row.is($('.assignment-row').first());
+                if (isFirstRow && hrsVal !== '') {
+                    $('.assignment-row').not($row).each(function() {
+                        var $otherInput = $(this).find('.total-hrs');
+                        if (!$otherInput.val()) {
+                            $otherInput.val(hrsVal);
+                        }
+                    });
+                }
+            });
 
             function calculateRowHours($row) {
-                let issueDateStr = $row.find('.issue-date').val();
-                let dueDateStr = $row.find('.due-date').val();
-                if (issueDateStr && dueDateStr) {
-                    let d1 = moment(issueDateStr, "DD-MM-YYYY");
-                    let d2 = moment(dueDateStr, "DD-MM-YYYY");
-                    if (d1.isValid() && d2.isValid()) {
-                        let diffDays = d2.diff(d1, 'days');
-                        let diffHours = (diffDays + 1) * 24;
-                        if (diffHours < 0) diffHours = 0;
-                        $row.find('.total-hrs').val(diffHours);
-                    }
-                }
+                // let issueDateStr = $row.find('.issue-date').val();
+                // let dueDateStr = $row.find('.due-date').val();
+                // if (issueDateStr && dueDateStr) {
+                //     let d1 = moment(issueDateStr, "DD-MM-YYYY");
+                //     let d2 = moment(dueDateStr, "DD-MM-YYYY");
+                //     if (d1.isValid() && d2.isValid()) {
+                //         let diffDays = d2.diff(d1, 'days');
+                //         let diffHours = (diffDays + 1) * 24;
+                //         if (diffHours < 0) diffHours = 0;
+                //         $row.find('.total-hrs').val(diffHours);
+                //     }
+                // }
             }
 
             // function checkOverdueStatus($row) {
