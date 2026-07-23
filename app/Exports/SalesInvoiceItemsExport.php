@@ -24,7 +24,7 @@ class SalesInvoiceItemsExport implements FromCollection, WithHeadings, WithMappi
 
     public function collection()
     {
-        $query = SalesInvoice::with(['brand', 'items', 'items.item'])->orderBy('id', 'asc');
+        $query = SalesInvoice::with(['brand', 'items', 'items.item'])->whereNotNull('irn')->orderBy('id', 'asc');
 
         if (!empty($this->filters['customer_id'])) {
             $query->where('customer_id', $this->filters['customer_id']);
@@ -99,7 +99,7 @@ class SalesInvoiceItemsExport implements FromCollection, WithHeadings, WithMappi
         $sizeChar = $sizeMappings[$rawSize] ?? '';
         $mappedSize = $rawSize . ($sizeChar ? ' ' . $sizeChar : '');
         
-        $sleeveType = str_ireplace(['Fs', 'Hs', 'F/s', 'H/s'], ['F/S', 'H/S', 'F/S', 'H/S'], $item->sleeve_type);
+        $sleeveType = str_ireplace(['Fs', 'Hs', 'F/s', 'H/s', 'Full', 'Half'], ['F/S', 'H/S', 'F/S', 'H/S', 'F/S', 'H/S'], $item->sleeve_type);
 
         $nameOfItem = trim($item->art_no . ' ' . $mappedSize . ' ' . $sleeveType);
 

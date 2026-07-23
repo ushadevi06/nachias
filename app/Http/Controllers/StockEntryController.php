@@ -34,7 +34,16 @@ class StockEntryController extends Controller
         }
 
         if ($request->ajax()) {
-            if ($request->entry_type === 'Finished Goods') {
+            $entryType = $request->entry_type;
+            if (empty($entryType) || $entryType === 'undefined') {
+                if (auth()->id() == 1 || auth()->user()->can('view stock-entry-raw-materials')) {
+                    $entryType = 'Raw Material';
+                } else if (auth()->user()->can('view stock-entry-finished-goods')) {
+                    $entryType = 'Finished Goods';
+                }
+            }
+
+            if ($entryType === 'Finished Goods') {
                 if (auth()->id() != 1 && !auth()->user()->can('view stock-entry-finished-goods')) {
                     return response()->json(['error' => 'Unauthorized'], 403);
                 }

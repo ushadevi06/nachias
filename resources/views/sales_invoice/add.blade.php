@@ -248,6 +248,21 @@
                                                     }
                                                 }
 
+                                                if (empty($brandName) && !empty($item->sku)) {
+                                                    $seItemBySku = \App\Models\StockEntryItem::where('sku', $item->sku)->first();
+                                                    if ($seItemBySku) {
+                                                        if ($seItemBySku->item && $seItemBySku->item->brand) {
+                                                            $brandName = $seItemBySku->item->brand->brand_name;
+                                                        } elseif ($seItemBySku->item && $seItemBySku->item->brandCategory) {
+                                                            $brandName = $seItemBySku->item->brandCategory->name;
+                                                        } else {
+                                                            $brandName = $seItemBySku->finished_item_code;
+                                                        }
+                                                        if (empty($sleeveType)) {
+                                                            $sleeveType = $seItemBySku->sleeve_type;
+                                                        }
+                                                    }
+                                                }
                                                 if (empty($brandName) && $item->brandCategory) {
                                                     $brandName = $item->brandCategory->name;
                                                 }
@@ -825,7 +840,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <div class="d-flex align-items-center">
                                             <span class="text-secondary fw-medium me-2">Sales Discount (%):</span>
-                                            <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount, 2, '.', '') : '0.00') }}">
+                                            <input type="number" step="any" min="0" class="form-control form-control-sm text-end" style="width: 80px;" name="sales_discount" id="sales_discount" value="{{ old('sales_discount', isset($invoice) ? number_format($invoice->sales_discount > 0 ? $invoice->sales_discount : $invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                         </div>
                                         <span class="fw-bold mb-0" id="sales_discount_amount_val">₹0.00</span>
                                     </div>
@@ -840,7 +855,7 @@
                                         <span class="text-secondary fw-medium">Total Discount Amount:</span>
                                         <span class="fw-bold mb-0 text-danger" id="discount_val">₹0.00</span>
                                         <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
-                                        <input type="hidden" name="discount_percent" id="discount_percent" value="0">
+                                        <input type="hidden" name="discount_percent" id="discount_percent" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <span class="text-secondary fw-medium">Taxable Amount:</span>

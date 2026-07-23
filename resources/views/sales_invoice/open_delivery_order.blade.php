@@ -154,6 +154,10 @@
                 }
             }
 
+            if (empty(trim($brandName)) && $invoice->brand) {
+                $brandName = $invoice->brand->brand_name;
+            }
+
             return trim($brandName);
         });
 

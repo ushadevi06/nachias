@@ -25,7 +25,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
 
     public function collection()
     {
-        $query = SalesInvoice::with(['customer', 'brand', 'items', 'items.item'])->orderBy('id', 'asc');
+        $query = SalesInvoice::with(['customer', 'brand', 'items', 'items.item'])->whereNotNull('irn')->orderBy('id', 'asc');
 
         if (!empty($this->filters['customer_id'])) {
             $query->where('customer_id', $this->filters['customer_id']);
@@ -69,6 +69,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             'DATE',
             'PARTY',
             'BUYER GSTIN',
+            '',
             'Pin Code',
             'Bill To',
             'Ship To',
@@ -98,7 +99,6 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             'COURIER CHARGES',
             'ROUND OFF',
             'GROSS TOTAL',
-            'BRAND',
         ];
     }
 
@@ -125,7 +125,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
         $sizeChar = $sizeMappings[$rawSize] ?? '';
         $mappedSize = $rawSize . ($sizeChar ? ' ' . $sizeChar : '');
         
-        $sleeveType = str_ireplace(['Fs', 'Hs', 'F/s', 'H/s'], ['F/S', 'H/S', 'F/S', 'H/S'], $item->sleeve_type);
+        $sleeveType = str_ireplace(['Fs', 'Hs', 'F/s', 'H/s', 'Full', 'Half'], ['F/S', 'H/S', 'F/S', 'H/S', 'F/S', 'H/S'], $item->sleeve_type);
 
         $nameOfItem = trim($item->art_no . ' ' . $mappedSize . ' ' . $sleeveType);
 
@@ -148,12 +148,13 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $inv->inv_date ? $inv->inv_date->format('d-m-Y') : '',
             $customer ? $customer->name : '',
             $customer ? $customer->gst_no : '',
+            '',
             $customer ? $customer->zip_code : '',
             $customer ? $customer->name : '',
             $customer ? $customer->name : '',
             $inv->irn,
             $inv->ack_no,
-            $inv->ack_date ? $inv->ack_date->format('d-m-Y H:i:s') : '',
+            $inv->ack_date ? $inv->ack_date->format('d-m-Y') : '',
             $inv->grand_total,
             $nameOfItem,
             $brandName,
@@ -163,7 +164,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $item->rate,
             $item->quantity,
             $item->amount,
-            $inv->discount,
+            count($inv->items) > 0 ? round($inv->discount / count($inv->items), 2) : 0,
             $inv->box_discount_amount,
             $inv->sub_total,
             $gstPercent,
@@ -177,7 +178,6 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $inv->other_charges,
             $inv->round_off,
             $inv->grand_total,
-            $brandName . '(FG)(FG)',
         ];
     }
 

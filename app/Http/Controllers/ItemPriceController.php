@@ -202,7 +202,7 @@ class ItemPriceController extends Controller
                 }
                 $unitPrice = $request->has("size_prices.{$currentSize}.unit_price") 
                     ? $request->input("size_prices.{$currentSize}.unit_price") 
-                    : ($selPrice / 1.5);
+                    : ($request->has('unit_price') && empty($currentSize) ? $request->unit_price : round($selPrice / 1.5, 2));
                 
                 $data = [
                     'finished_item_code' => $finishedItemCode,
@@ -227,7 +227,7 @@ class ItemPriceController extends Controller
                         $selPrice = $request->input("size_prices.{$sz}.selling_price");
                         $unitPrice = $request->has("size_prices.{$sz}.unit_price") 
                             ? $request->input("size_prices.{$sz}.unit_price") 
-                            : ($selPrice / 1.5);
+                            : round($selPrice / 1.5, 2);
                         $sizeData = [
                             'finished_item_code' => $finishedItemCode,
                             'art_no'             => $artNo,
@@ -253,6 +253,47 @@ class ItemPriceController extends Controller
                         $createdCount++;
                     }
                 }
+                
+                $checkedSizes = $request->has('sizes') && is_array($request->sizes) ? $request->sizes : [];
+                if (empty($checkedSizes)) {
+                    ItemPrice::where('finished_item_code', $finishedItemCode)
+                        ->where('art_no', $artNo)
+                        ->whereNotNull('size')
+                        ->delete();
+                        
+                    // Ensure a base record exists
+                    $baseExists = ItemPrice::where('finished_item_code', $finishedItemCode)->where('art_no', $artNo)->whereNull('size')->first();
+                    if (!$baseExists) {
+                        ItemPrice::create([
+                            'finished_item_code' => $finishedItemCode,
+                            'art_no'             => $artNo,
+                            'size'               => null,
+                            'selling_price'      => $request->selling_price,
+                            'unit_price'         => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5, 2),
+                            'effective_from'     => $effectiveFrom,
+                            'status'             => $status,
+                            'created_by'         => auth()->id() ?? 1,
+                        ]);
+                    }
+                } else {
+                    ItemPrice::where('finished_item_code', $finishedItemCode)
+                        ->where('art_no', $artNo)
+                        ->whereNotNull('size')
+                        ->whereNotIn('size', $checkedSizes)
+                        ->delete();
+                }
+
+                // ALWAYS sync the base (size=null) record if it exists
+                ItemPrice::where('finished_item_code', $finishedItemCode)
+                    ->where('art_no', $artNo)
+                    ->whereNull('size')
+                    ->update([
+                        'selling_price' => $request->selling_price,
+                        'unit_price'    => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5, 2),
+                        'effective_from'=> $effectiveFrom,
+                        'status'        => $status,
+                        'updated_by'    => auth()->id() ?? 1,
+                    ]);
 
                 if ($createdCount > 0) {
                     $msg = 'Item Price updated and ' . $createdCount . ' other size prices added/updated successfully';
@@ -266,7 +307,7 @@ class ItemPriceController extends Controller
                         $selPrice = $request->input("size_prices.{$sz}.selling_price");
                         $unitPrice = $request->has("size_prices.{$sz}.unit_price") 
                             ? $request->input("size_prices.{$sz}.unit_price") 
-                            : ($selPrice / 1.5);
+                            : round($selPrice / 1.5, 2);
                         $data = [
                             'finished_item_code' => $finishedItemCode,
                             'art_no'             => $artNo,
@@ -298,11 +339,12 @@ class ItemPriceController extends Controller
                         'art_no'             => $artNo,
                         'size'               => null,
                         'selling_price'      => $request->selling_price,
-                        'unit_price'         => $request->selling_price / 1.5,
+                        'unit_price'         => $request->has('unit_price') ? $request->unit_price : round($request->selling_price / 1.5, 2),
                         'effective_from'     => $effectiveFrom,
                         'status'             => $status,
                         'created_by'         => auth()->id() ?? 1,
                     ];
+
                     $newPrice = ItemPrice::create($data);
                     addLog('create', 'Item Price', 'item_prices', $newPrice->id, null, $data);
                     $msg = 'Item Price added successfully';

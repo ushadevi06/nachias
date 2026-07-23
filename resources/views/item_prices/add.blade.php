@@ -44,7 +44,7 @@
                             <div class="col-md-6">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" step="0.01" class="form-control @error('selling_price') is-invalid @enderror" id="selling_price" placeholder="Enter Selling Price" name="selling_price" value="{{ old('selling_price', $price->selling_price ?? '') }}">
-                                    <label for="selling_price">Base Selling Price <span class="text-danger">*</span></label>
+                                    <label for="selling_price">MRP <span class="text-danger">*</span></label>
                                 </div>
                                 @error('selling_price')
                                 <div class="text-danger mt-1">{{ $message }}</div>
@@ -54,7 +54,7 @@
                             <div class="col-md-6">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="unit_price" placeholder="Unit Price" name="unit_price" value="{{ old('unit_price', $price->unit_price ?? '') }}" readonly tabindex="-1" style="pointer-events: none; background-color: #f0f0f0;">
-                                    <label for="unit_price">Base Unit Price</label>
+                                    <label for="unit_price">Selling Price</label>
                                 </div>
                             </div>
 
@@ -227,7 +227,8 @@
                 } else if (dbPrices && dbPrices[sz] !== undefined && dbPrices[sz].unit_price !== undefined) {
                     unitVal = dbPrices[sz].unit_price;
                 } else if (val) {
-                    unitVal = (parseFloat(val) / 1.5).toFixed(2);
+                    let baseUnit = $('#unit_price').val();
+                    unitVal = baseUnit ? baseUnit : (parseFloat(val) / 1.5).toFixed(2);
                 }
 
                 let actionTd = `
@@ -402,7 +403,7 @@
         if ($('#finished_item_code').val()) {
             loadArtNos($('#finished_item_code').val());
         }
-        if ($('#selling_price').val()) {
+        if (!isEditMode && $('#selling_price').val()) {
             $('#selling_price').trigger('input');
         }
         renderGrid();

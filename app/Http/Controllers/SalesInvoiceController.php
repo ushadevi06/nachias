@@ -465,6 +465,14 @@ class SalesInvoiceController extends Controller
                         $apiColor = 'A';
                     }
 
+                    $stockEntryItemId = !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null;
+                    if (empty($stockEntryItemId) && !empty($item['sku'])) {
+                        $seItem = \App\Models\StockEntryItem::where('sku', $item['sku'])->first();
+                        if ($seItem) {
+                            $stockEntryItemId = $seItem->id;
+                        }
+                    }
+
                     SalesInvoiceItem::updateOrCreate(
                         ['id' => $item['id'] ?? null],
                         [
@@ -481,7 +489,7 @@ class SalesInvoiceController extends Controller
                             'color_id' => $item['color_id'] ?? null,
                             'api_color' => $apiColor,
                             'sleeve_type' => $item['sleeve_type'] ?? null,
-                            'stock_entry_item_id' => !empty($item['stock_entry_item_id']) ? $item['stock_entry_item_id'] : null,
+                            'stock_entry_item_id' => $stockEntryItemId,
                             'is_extra' => $isExtra,
                         ]
                     );
@@ -1941,7 +1949,7 @@ class SalesInvoiceController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = SalesInvoice::with(['customer', 'brand'])->orderBy('id', 'desc');
+            $query = SalesInvoice::with(['customer', 'brand'])->whereNotNull('irn')->orderBy('id', 'desc');
 
             if ($request->customer_id) {
                 $query->where('customer_id', $request->customer_id);

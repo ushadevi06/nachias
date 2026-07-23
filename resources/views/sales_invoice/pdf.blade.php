@@ -779,10 +779,7 @@ if ($showPrice) $colsAfterQty++;
                                 <td style="width: {{ $midW }}%; padding: 0; vertical-align: top; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
                                     <table style="width: 100%; border-collapse: collapse; margin: 0; border: none;">
                                         @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
-                                        @php
-                                            $effectiveDiscountPercent = $invoice->discount_percent > 0 ? (float)$invoice->discount_percent : ($invoice->sub_total > 0 ? round(($invoice->discount / $invoice->sub_total) * 100, 2) : 0);
-                                        @endphp
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount({{ rtrim(rtrim(number_format($effectiveDiscountPercent, 2), '0'), '.') }}%)</td></tr>
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount</td></tr>
                                         @endif
                                         @if($showSubTotal)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Taxable Value</td></tr>

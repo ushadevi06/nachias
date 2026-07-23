@@ -68,17 +68,23 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
                     }
 
                     if (empty($rowErrors)) {
-                        $spFloat = (float)$sp;
-                        $mrpFloat = ($mrp === null || $mrp === '')
-                            ? ($spFloat / 1.5)
-                            : (float)$mrp;
+                        if ($mrp === null || $mrp === '') {
+                            $spFloat = round((float)$sp, 2);
+                            $mrpFloat = round($spFloat * 1.5, 2);
+                        } else if ($sp === null || $sp === '') {
+                            $mrpFloat = round((float)$mrp, 2);
+                            $spFloat = round($mrpFloat / 1.5, 2);
+                        } else {
+                            $mrpFloat = round((float)$mrp, 2);
+                            $spFloat = round((float)$sp, 2);
+                        }
 
                         $validRows[] = [
                             'finished_item_code' => $itemCode,
                             'art_no' => $artNo,
                             'size' => $size,
-                            'selling_price' => $spFloat,
-                            'unit_price' => $mrpFloat,
+                            'selling_price' => $mrpFloat,
+                            'unit_price' => $spFloat,
                             'effective_from' => $effectiveFrom->format('Y-m-d'),
                             'status' => $status,
                         ];
@@ -103,7 +109,6 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
         try {
             foreach ($validRows as $data) {
                 $query = ItemPrice::where('finished_item_code', $data['finished_item_code'])
-                    ->whereDate('effective_from', $data['effective_from'])
                     ->where('size', $data['size']);
 
                 if ($data['art_no'] === null) {
@@ -119,6 +124,7 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
                     $existing->update([
                         'selling_price' => $data['selling_price'],
                         'unit_price' => $data['unit_price'],
+                        'effective_from' => $data['effective_from'],
                         'status' => $data['status'],
                         'updated_by' => auth()->id() ?? 1,
                     ]);
@@ -155,7 +161,7 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
         $value = trim((string)$value);
         try {
             $date = Carbon::createFromFormat('d-m-Y', $value);
-            if ($date->year < 100) {
+            if ($date->year < 100) { 
                 $date->addYears(2000);
             }
             return $date;

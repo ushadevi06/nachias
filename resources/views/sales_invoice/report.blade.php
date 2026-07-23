@@ -4,8 +4,11 @@
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
-            <div class="table-header-box">
+            <div class="table-header-box d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
                 <h4>Sales Invoice Report</h4>
+                <a href="{{ url('sales_invoices') }}" class="btn btn-secondary">
+                    <i class="ri ri-arrow-left-line back-arrow"></i>Back
+                </a>
             </div>
             <div class="col-lg-12">
                 @include('flash_messages')

@@ -92,13 +92,6 @@ use App\Http\Controllers\ItemPriceController;
 Route::get('/', function () {
     return view('login');
 });
-Route::get('/check-php-limits', function () {
-    return '<b>Max Input Vars:</b> ' . ini_get('max_input_vars') . '<br>' .
-           '<b>Memory Limit:</b> ' . ini_get('memory_limit') . '<br>' .
-           '<b>Max Execution Time:</b> ' . ini_get('max_execution_time') . '<br><br>' .
-           '<i>Note: To support 250+ rows in Job Card Entry, Max Input Vars needs to be at least 10000.</i>';
-});
-
 Route::get('/clear-cache', function () {
     \Illuminate\Support\Facades\Artisan::call('view:clear');
     \Illuminate\Support\Facades\Artisan::call('cache:clear');
