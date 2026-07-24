@@ -866,17 +866,33 @@ class SalesOrderController extends Controller
     {
         $code = $request->code;
         $soId = $request->so_id;
-        $exactMatch = DB::table('stock_entry_items')->where('sku', $code)->where('stock_type', 'finished_goods')->whereNull('deleted_at')->first();
+        $sleeveType = $request->sleeve_type;
+        $size = $request->size;
+
+        $exactMatchQuery = DB::table('stock_entry_items')->where('sku', $code)->where('stock_type', 'finished_goods')->whereNull('deleted_at');
+        if ($sleeveType) {
+            $exactMatchQuery->where('sleeve_type', $sleeveType);
+        }
+        if ($size) {
+            $exactMatchQuery->where('size', $size);
+        }
+        $exactMatch = $exactMatchQuery->first();
 
         $query = DB::table('stock_entry_items')->where('stock_type', 'finished_goods')->whereNull('deleted_at');
 
         if ($exactMatch) {
             $query->where('sku', $code);
+            if ($sleeveType) {
+                $query->where('sleeve_type', $sleeveType);
+            }
         } else {
             $query->where(function($q) use ($code) {
                 $q->where('finished_item_code', $code)
                   ->orWhere(DB::raw("REPLACE(finished_item_code, ' ', '')"), str_replace(' ', '', $code));
             });
+            if ($sleeveType) {
+                $query->where('sleeve_type', $sleeveType);
+            }
         }
 
         $items = $query->select('finished_item_code', 'color_id', 'item_id', 'art_no', 'size', 'price', 'uom_id', 'sleeve_type', 'sku', DB::raw('MAX(id) as stock_entry_item_id'), DB::raw('SUM(qty_in - qty_out) as balance'))
@@ -885,7 +901,14 @@ class SalesOrderController extends Controller
 
         if ($items->isNotEmpty()) {
             $first = $items->first();
-            $target = $exactMatch ? ($items->firstWhere('sku', $code) ?: $first) : $first;
+            if ($size) {
+                $target = $exactMatch ? ($items->firstWhere(function($val) use ($code, $size) {
+                    return $val->sku === $code && $val->size === $size;
+                }) ?: $first) : ($items->firstWhere('size', $size) ?: $first);
+            } else {
+                $target = $exactMatch ? ($items->firstWhere('sku', $code) ?: $first) : $first;
+            }
+            
             $item = Item::find($target->item_id);
             $sizeStock = [];
             foreach ($items as $si) {
@@ -981,7 +1004,6 @@ class SalesOrderController extends Controller
         $results = DB::table('stock_entry_items')
             ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
             ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
-            ->leftJoin(DB::raw('(SELECT finished_item_code, MAX(unit_price) as unit_price, MAX(selling_price) as selling_price FROM item_prices WHERE status = "Active" AND deleted_at IS NULL GROUP BY finished_item_code) as ip'), 'stock_entry_items.finished_item_code', '=', 'ip.finished_item_code')
             ->where('stock_entry_items.stock_type', 'finished_goods')
             ->whereNull('stock_entry_items.deleted_at')
             ->where(function ($query) use ($term) {
@@ -998,11 +1020,9 @@ class SalesOrderController extends Controller
                 'stock_entry_items.art_no',
                 'stock_entry_items.size',
                 'stock_entry_items.price as fallback_price',
-                'ip.unit_price',
-                'ip.selling_price as retail_mrp',
                 'stock_entry_items.sleeve_type',
                 DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance')
-            )->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.sku', 'items.name', 'brands.brand_name', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'ip.unit_price', 'ip.selling_price', 'stock_entry_items.sleeve_type')->limit(20)->get();
+            )->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.sku', 'items.name', 'brands.brand_name', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.sleeve_type')->limit(20)->get();
 
         $formattedResults = [];
         foreach ($results as $item) {
@@ -1020,8 +1040,32 @@ class SalesOrderController extends Controller
                 $label .= ' [OUT OF STOCK]';
             }
             
-            $finalPrice = $item->unit_price ?? $item->fallback_price;
-            $finalMrp = $item->retail_mrp ?? $item->fallback_price;
+            $itemPrice = DB::table('item_prices')
+                ->where('finished_item_code', $item->finished_item_code)
+                ->where('art_no', $item->art_no)
+                ->where('size', $item->size)
+                ->where('status', 'Active')
+                ->whereNull('deleted_at')
+                ->whereDate('effective_from', '<=', now())
+                ->orderBy('effective_from', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if (!$itemPrice) {
+                $itemPrice = DB::table('item_prices')
+                    ->where('finished_item_code', $item->finished_item_code)
+                    ->where('art_no', $item->art_no)
+                    ->whereNull('size')
+                    ->where('status', 'Active')
+                    ->whereNull('deleted_at')
+                    ->whereDate('effective_from', '<=', now())
+                    ->orderBy('effective_from', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->first();
+            }
+
+            $finalPrice = $itemPrice ? $itemPrice->unit_price : $item->fallback_price;
+            $finalMrp = $itemPrice ? $itemPrice->selling_price : $item->fallback_price;
 
             $formattedResults[] = [
                 'id' => $item->finished_item_code,

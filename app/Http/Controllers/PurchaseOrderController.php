@@ -143,7 +143,7 @@ class PurchaseOrderController extends Controller
                 $data[] = [
                     'DT_RowIndex' => $count++,
                     'po_number' => $po->po_number,
-                    'po_date' => $po->reference_date->format('d-m-Y'),
+                    'po_date' => $po->po_date->format('d-m-Y'),
                     'supplier_name' => $po->supplier->name . ' <a href="' . url('suppliers/view_details/' . $po->supplier->id) . '" target="_blank"><span class="mini-title">(' . $po->supplier->code . ')</span></a>',
                     'reference_no' => $po->reference_no ?? '-',
                     'due_date' => $po->due_date->format('d-m-Y'),

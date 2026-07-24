@@ -17,6 +17,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
 {
     protected $filters;
     protected $count = 0;
+    protected $lastInvoiceId = null;
 
     public function __construct($filters = [])
     {
@@ -128,7 +129,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
         $sleeveType = str_ireplace(['Fs', 'Hs', 'F/s', 'H/s', 'Full', 'Half'], ['F/S', 'H/S', 'F/S', 'H/S', 'F/S', 'H/S'], $item->sleeve_type);
 
         $nameOfItem = trim($item->art_no . ' ' . $mappedSize . ' ' . $sleeveType);
-
+        
         $gstPercent = ($inv->cgst_percent + $inv->sgst_percent) ?: ($inv->igst_percent ?? 0);
 
         $cgst2_5 = ''; $sgst2_5 = '';
@@ -141,6 +142,9 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
         $igst5 = ''; $igst12 = '';
         if ($inv->igst_percent == 5) { $igst5 = $inv->igst; }
         if ($inv->igst_percent == 12) { $igst12 = $inv->igst; }
+
+        $isFirstRow = ($this->lastInvoiceId !== $inv->id);
+        $this->lastInvoiceId = $inv->id;
 
         return [
             $this->count,
@@ -155,7 +159,7 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $inv->irn,
             $inv->ack_no,
             $inv->ack_date ? $inv->ack_date->format('d-m-Y') : '',
-            $inv->grand_total,
+            $inv->grand_total, // BILL VALUE
             $nameOfItem,
             $brandName,
             $mappedSize,
@@ -163,17 +167,17 @@ class SalesInvoiceReportExport implements FromCollection, WithHeadings, WithMapp
             $inv->hsn_sac,
             $item->rate,
             $item->quantity,
-            $item->amount,
-            count($inv->items) > 0 ? round($inv->discount / count($inv->items), 2) : 0,
-            $inv->box_discount_amount,
-            $inv->sub_total,
+            $item->amount, // SALES VALUE
+            $isFirstRow ? $inv->discount : '', // SALES DISCOUNT
+            $isFirstRow ? $inv->box_discount_amount : '', // SALES DISCOUNT (WITHOUT BOX)
+            $inv->sub_total, 
             $gstPercent,
-            $cgst2_5,
-            $sgst2_5,
-            $cgst6,
-            $sgst6,
-            $igst5,
-            $igst12,
+            $isFirstRow ? $cgst2_5 : '',
+            $isFirstRow ? $sgst2_5 : '',
+            $isFirstRow ? $cgst6 : '',
+            $isFirstRow ? $sgst6 : '',
+            $isFirstRow ? $igst5 : '',
+            $isFirstRow ? $igst12 : '',
             $inv->total,
             $inv->other_charges,
             $inv->round_off,

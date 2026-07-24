@@ -1348,7 +1348,7 @@
                 }
 
                 addInvoiceItem(ui.item.itemData);
-                setTimeout(() => { $(this).val(''); }, 10);
+                $(this).val(ui.item.value).focus();
                 return false;
             }
         }).autocomplete("instance")._renderItem = function (ul, item) {
@@ -1969,16 +1969,18 @@
                 }
                 
                 if (ui.item) {
+                    let sleeveParam = ui.item.sleeve_type ? `&sleeve_type=${encodeURIComponent(ui.item.sleeve_type)}` : '';
+                    let sizeParam = ui.item.size ? `&size=${encodeURIComponent(ui.item.size)}` : '';
                     $.ajax({
-                        url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}`,
+                        url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}`,
                         type: 'GET',
                         success: function(res) {
                             if (res.success) {
                                 handleOpenOrderScan(res);
-                                $this.val('').focus();
+                                $this.val(ui.item.value).focus();
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
-                                $this.val('').focus();
+                                $this.val(ui.item.value).focus();
                             }
                         },
                         error: function() {

@@ -643,15 +643,19 @@
                             </div>
                             @endif --}}
 
-                            <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
+                            @php
+                                $fabricChunks = $fabricDetails->chunk(6);
+                            @endphp
+                            @foreach($fabricChunks as $chunk)
+                            <table class="table table-bordered table-sm mb-4 job-card-table" style="border-color: #eeeeee !important; table-layout: fixed;">
                                 <tbody>
                                     <tr class="text-center">
-                                        <td class="fw-bold" style="width: 15%;">IMAGE</td>
-                                        @foreach($fabricDetails as $detail)
+                                        <td class="fw-bold bg-light" style="width: 16%;">IMAGE</td>
+                                        @foreach($chunk as $detail)
                                             @php
                                                 $fabricImgUrl = $fabricImageMap[trim((string) $detail->art_no)] ?? '';
                                             @endphp
-                                            <td style="padding-top: 6px !important; padding-bottom: 6px !important;">
+                                            <td style="padding-top: 6px !important; padding-bottom: 6px !important; width: 14%;">
                                                 @if($fabricImgUrl)
                                                     <a href="{{ $fabricImgUrl }}" target="_blank" class="d-inline-block">
                                                         <img src="{{ $fabricImgUrl }}" alt="GRN Image" class="border rounded" style="width: 52px; height: 52px; object-fit: cover;">
@@ -661,47 +665,50 @@
                                                 @endif
                                             </td>
                                         @endforeach
+                                        @for($i = $chunk->count(); $i < 6; $i++)
+                                            <td style="width: 14%;"></td>
+                                        @endfor
                                     </tr>
                                     <tr class="text-center">
-                                        <td class="fw-bold" style="width: 15%;">ART NO</td>
-                                        @foreach($fabricDetails as $detail)
-                                            @php
-                                                $materialName = $artMaterialMap[$detail->art_no] ?? '';
-                                            @endphp
+                                        <td class="fw-bold bg-light">ART NO</td>
+                                        @foreach($chunk as $detail)
                                             <td>
                                                 {{ $detail->art_no }}
-                                                {{-- @if($materialName)
-                                                    <br><small class="text-muted" style="font-size: 0.7rem;">{{ $materialName }}</small>
-                                                @endif --}}
                                             </td>
                                         @endforeach
+                                        @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>
                                     <tr class="text-center">
-                                        <td class="fw-bold">WIDTH</td>
-                                        @foreach($fabricDetails as $detail)
+                                        <td class="fw-bold bg-light">WIDTH</td>
+                                        @foreach($chunk as $detail)
                                             <td>{{ $detail->width ?: '-' }}</td>
                                         @endforeach
+                                        @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>
                                     <tr class="text-center">
-                                        <td class="fw-bold">ISSUE METER</td>
-                                        @foreach($fabricDetails as $detail)
+                                        <td class="fw-bold bg-light">ISSUE METER</td>
+                                        @foreach($chunk as $detail)
                                             <td>{{ $detail->mtr ?: '-' }}</td>
                                         @endforeach
+                                        @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>
                                     <tr class="text-center">
-                                        <td class="fw-bold">IN/OUT</td>
-                                        @foreach($fabricDetails as $detail)
+                                        <td class="fw-bold bg-light">IN/OUT</td>
+                                        @foreach($chunk as $detail)
                                             <td>{{ $detail->in_out ?: '-' }}</td>
                                         @endforeach
+                                        @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>
                                     <tr class="text-center">
-                                        <td class="fw-bold">N.PATTI</td>
-                                        @foreach($fabricDetails as $detail)
+                                        <td class="fw-bold bg-light">N.PATTI</td>
+                                        @foreach($chunk as $detail)
                                             <td>{{ $detail->n_patti ?: '-' }}</td>
                                         @endforeach
+                                        @for($i = $chunk->count(); $i < 6; $i++) <td></td> @endfor
                                     </tr>
                                 </tbody>
                             </table>
+                            @endforeach
 
                             <table class="table table-bordered table-sm mb-0 job-card-table" style="border-color: #eeeeee !important;">
                                 <thead>

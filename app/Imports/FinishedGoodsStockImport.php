@@ -98,6 +98,16 @@ class FinishedGoodsStockImport implements ToCollection, WithHeadingRow, SkipsEmp
             }
         }
 
+        if (!empty($sku)) {
+            $existing = \App\Models\StockEntryItem::where('sku', $sku)
+                ->where('stock_type', 'finished_goods')
+                ->first();
+            
+            if ($existing && $existing->size !== $size) {
+                throw new \Exception("Barcode {$sku} already exists with Size {$existing->size}. Duplicate barcodes are not allowed.");
+            }
+        }
+
         $entryKey = implode('|', [
             $stockDate->format('Y-m-d'),
             $storeLocation->id,

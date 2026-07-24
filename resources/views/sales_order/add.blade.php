@@ -1144,16 +1144,18 @@ $(document).ready(function () {
                         $this.val(ui.item.label);
                         $row.find('.stock-item-select').val(ui.item.value).trigger('change');
                     } else if ($this.attr('id') === 'global_item_search') {
+                        let sleeveParam = ui.item.sleeve_type ? `&sleeve_type=${encodeURIComponent(ui.item.sleeve_type)}` : '';
+                        let sizeParam = ui.item.size ? `&size=${encodeURIComponent(ui.item.size)}` : '';
                         $.ajax({
-                            url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}&so_id={{ $salesOrder->id ?? '' }}`,
+                            url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}&so_id={{ $salesOrder->id ?? '' }}`,
                             type: 'GET',
                             success: function(res) {
                                 if (res.success) {
                                     handleGlobalItemSelection(res);
-                                    $this.val('').focus();
+                                    $this.val(ui.item.value).focus();
                                 } else {
                                     alert("Failed to fetch item details. Please try again.");
-                                    $this.val('').focus();
+                                    $this.val(ui.item.value).focus();
                                 }
                             },
                             error: function() {
