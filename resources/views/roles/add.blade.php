@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', ($role ? 'Edit' : 'Add') . ' Role - ' . env('WEBSITE_NAME'))
+@section('title', ($role->id ? 'Edit' : 'Add') . ' Role - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-fluid">
     <div class="row justify-content-center">
@@ -44,7 +44,7 @@
                                             @foreach ($permissions as $main => $submodules)
                                             <tr class="table-primary module-group" data-module="{{ strtolower(str_replace(['-', '_'], ' ', $main)) }}">
                                                 <td colspan="8">
-                                                    <strong>{{ ucwords(str_replace('-', ' ', $main)) }}</strong>
+                                                    <strong>{{ str_replace('Grn', 'GRN', ucwords(str_replace('-', ' ', $main))) }}</strong>
                                                 </td>
                                             </tr>
                                             @php
@@ -59,7 +59,7 @@
 
                                                 </td>
                                                 <td class="ps-4">
-                                                    {{ ucwords(str_replace(['-', '_'], ' ', $main)) }}
+                                                    {{ str_replace('Grn', 'GRN', ucwords(str_replace(['-', '_'], ' ', $main))) }}
                                                 </td>
                                                 <td class="text-center">
                                                     @if(isset($grouped['create']))
