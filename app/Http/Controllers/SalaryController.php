@@ -18,7 +18,7 @@ class SalaryController extends Controller
     {
         if ($request->ajax()) {
             $query = DB::table('salary_generations')
-                ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
+                ->join('users', DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'), '=', DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'))
                 ->whereNull('users.deleted_at')
                 ->select(
                     'salary_generations.*',

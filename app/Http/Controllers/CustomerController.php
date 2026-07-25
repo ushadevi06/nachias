@@ -105,27 +105,27 @@ class CustomerController extends Controller
 
             $rules = [
                 'category' => 'required|in:Retailer,Wholesaler',
-                'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:20|alpha_num|unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|numeric|digits_between:10,15',
-                'email' => 'nullable|email|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => 'required|string|min:3|max:50|regex:/[a-zA-Z]/',
+                'code' => ['required', 'string', 'min:3', 'max:20', 'not_regex:/^0+$/', 'regex:/^[a-zA-Z0-9\-_]+$/', 'unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
+                'mobile_no' => 'required|numeric|digits_between:10,15|regex:/[1-9]/',
+                'email' => 'nullable|email:rfc,dns|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
-                'transport_name' => 'nullable|string|min:3|max:50',
-                'booking_office' => 'nullable|string|min:3|max:50',
+                'transport_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
+                'booking_office' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
                 'zone_id' => 'required|exists:zones,id',
                 'store_id' => 'nullable|exists:store_types,id',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
-                'address_line_1' => 'required|string|min:3|max:150',
-                'address_line_2' => 'nullable|string|min:3|max:150',
-                'address_line_3' => 'nullable|string|min:3|max:150',
-                'zip_code' => 'nullable|string|min:3|max:10',
-                'contact_person_name' => 'nullable|string|min:3|max:50',
-                'designation' => 'nullable|string|min:3|max:50',
-                'contact_mobile_no' => 'nullable|numeric|digits_between:10,15',
-                'contact_email' => 'nullable|email|max:128',
+                'address_line_1' => 'required|string|min:3|max:150|regex:/[a-zA-Z]/',
+                'address_line_2' => 'nullable|string|min:3|max:150|regex:/[a-zA-Z]/',
+                'address_line_3' => 'nullable|string|min:3|max:150|regex:/[a-zA-Z]/',
+                'zip_code' => 'nullable|numeric|digits:6|regex:/[1-9]/',
+                'contact_person_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
+                'designation' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
+                'contact_mobile_no' => 'nullable|numeric|digits_between:10,15|regex:/[1-9]/',
+                'contact_email' => 'nullable|email:rfc,dns|max:128',
                 'tax_type_id' => 'nullable|exists:taxes,id',
                 'gst_no' => [
                     'nullable',
@@ -141,11 +141,12 @@ class CustomerController extends Controller
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'box_discount_amount' => 'nullable|numeric|min:0',
-                'bank_name' => 'nullable|string|min:3|max:50',
-                'branch' => 'nullable|string|min:3|max:50',
+                'bank_name' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
+                'branch' => 'nullable|string|min:3|max:50|regex:/[a-zA-Z]/',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
+                    'regex:/[1-9]/',
                     'unique:customers,account_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'ifsc_code' => [
@@ -157,13 +158,18 @@ class CustomerController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format',
-                '*.alpha_num' => 'This field should contain only letters and numbers.',
+                'code.not_in' => 'This field is an invalid format.',
+                '*.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',
+                '*.digits' => 'This field must be exactly :digits digits.',
                 '*.numeric' => 'This field must be a number.',
                 '*.url' => 'This field is an invalid URL.',
+                '*.email' => 'Please enter a valid email address.',
+                'credit_limit.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'sales_discount.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'box_discount_amount.min' => 'Please enter a valid numeric value greater than or equal to 0.',
             ];
 
             $validated = $request->validate($rules,$messages);
@@ -224,7 +230,7 @@ class CustomerController extends Controller
             return redirect('customers')->with('success', $message);
         }
 
-        $zones = Zone::active()->get();
+        $zones = [];
         $states = State::active()->get();
         $cities = [];
         $places = [];
@@ -240,6 +246,7 @@ class CustomerController extends Controller
 
         if ($cityId) {
             $places = Place::where('city_id', $cityId)->get();
+            $zones = Zone::active()->whereRaw("FIND_IN_SET(?, city_ids)", [$cityId])->get();
         }
         return view('customers.add', compact('customer', 'zones', 'states', 'cities', 'places', 'taxes', 'store_types'));
     }

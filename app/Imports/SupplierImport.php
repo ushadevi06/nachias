@@ -141,9 +141,19 @@ class SupplierImport implements ToCollection, WithHeadingRow
                 $supplierId = $existing ? $existing->id : null;
             }
 
+            $messages = [
+                '*.required' => 'This field is required.',
+                '*.unique'   => 'This field already exists.',
+                'code.not_in' => 'This field is an invalid format.',
+                '*.numeric'  => 'This field must be a valid number.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
+                '*.email'    => 'Please enter a valid email address.',
+            ];
+
             $validator = Validator::make($data, [
                 'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:20|unique:suppliers,code,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|min:3|max:20|not_in:0|unique:suppliers,code,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
                 'mobile_no' => 'required|numeric|digits_between:10,15|unique:suppliers,mobile_no,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
                 'email' => 'nullable|email|max:128|unique:suppliers,email,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
                 'status' => 'required|in:Active,Inactive',
@@ -151,7 +161,7 @@ class SupplierImport implements ToCollection, WithHeadingRow
                 'city_id' => 'required',
                 'place_id' => 'required',
                 'address_line_1' => 'required|string|min:3|max:150',
-            ]);
+            ], $messages);
 
             if (!empty($data['code'])) {
                 if (in_array($data['code'], $seenCodes)) {

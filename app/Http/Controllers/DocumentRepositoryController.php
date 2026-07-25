@@ -67,20 +67,25 @@ class DocumentRepositoryController extends Controller
                 }
                 $action .= '</div>';
 
-                $status = '<span class="badge bg-success">Active</span>';
-                if ($row->validity_date) {
-                    if (Carbon::parse($row->validity_date)->isPast() && !Carbon::parse($row->validity_date)->isToday()) {
-                        $status = '<span class="badge bg-danger">Expired</span>';
+                $statusHtml = '<span class="badge bg-success">Active</span>';
+                if ($row->status === 'Archived') {
+                    $statusHtml = '<span class="badge bg-secondary">Archived</span>';
+                } elseif ($row->status === 'Expired') {
+                    $statusHtml = '<span class="badge bg-danger">Expired</span>';
+                } else {
+                    if ($row->validity_date && Carbon::parse($row->validity_date)->isPast() && !Carbon::parse($row->validity_date)->isToday()) {
+                        $statusHtml = '<span class="badge bg-danger">Expired</span>';
                     }
                 }
 
                 $data[] = [
                     'DT_RowIndex' => $i++,
+                    'reference_no' => $row->reference_no ?? '-',
                     'document_name' => $row->document_name,
                     'document_type' => $row->document_type,
                     'department' => $row->department->department ?? '-',
                     'validity_date' => $row->validity_date ? date('d-m-Y', strtotime($row->validity_date)) : '-',
-                    'status' => $status,
+                    'status' => $statusHtml,
                     'file' => $file,
                     'action' => $action,
                 ];
@@ -110,8 +115,10 @@ class DocumentRepositoryController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'document_name' => 'required|min:3|max:100',
+                'reference_no'  => 'nullable|string|max:100',
                 'document_type' => 'required|in:Certification,HR,Compliance,Policy',
                 'department_id' => 'required|exists:departments,id',
+                'status'        => 'required|in:Active,Expired,Archived',
                 'validity_date' => 'nullable|date_format:d-m-Y',
                 'remarks' => 'nullable|string',
                 'file' => ($id ? 'nullable' : 'required') . '|file|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048',
@@ -126,8 +133,10 @@ class DocumentRepositoryController extends Controller
             $request->validate($rules, $messages);
             $data = [
                 'document_name' => $request->document_name,
+                'reference_no'  => $request->reference_no,
                 'document_type' => $request->document_type,
                 'department_id' => $request->department_id,
+                'status'        => $request->status,
                 'validity_date' => $request->validity_date ? Carbon::createFromFormat('d-m-Y', $request->validity_date)->format('Y-m-d') : null,
                 'remarks' => $request->remarks,
             ];

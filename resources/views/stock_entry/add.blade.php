@@ -103,9 +103,9 @@
                                             @else
                                                 <a href="{{ $fileUrl }}" target="_blank" class="text-decoration-none d-flex align-items-center">
                                                     @if(strtolower($ext) == 'pdf')
-                                                        <i class="ri-file-pdf-fill text-danger fs-3"></i>
+                                                        <i class="ri ri-file-pdf-fill text-danger fs-3"></i>
                                                     @else
-                                                        <i class="ri-file-text-fill text-primary fs-3"></i>
+                                                        <i class="ri ri-file-text-fill text-primary fs-3"></i>
                                                     @endif
                                                     <span class="ms-1 small text-dark fw-bold text-uppercase">{{ $ext }}</span>
                                                 </a>
@@ -160,17 +160,24 @@
                         
 
                         res.items.forEach((item, index) => {
-                            let oldItem = oldItems && oldItems[index] ? oldItems[index] : null;
+                            let oldItem = null;
+                            if (oldItems && Object.keys(oldItems).length > 0) {
+                                let oldItemsArray = Array.isArray(oldItems) ? oldItems : Object.values(oldItems);
+                                oldItem = oldItemsArray.find(o => o.grn_entry_item_id == item.id);
+                            }
+                            
                             let savedItem = null;
                             if (savedItems && savedItems.length > 0) {
                                 savedItem = savedItems.find(s => s.grn_entry_item_id == item.id);
                             }
 
-                            let qtyIn = oldItem ? oldItem.qty_in : (savedItem ? savedItem.qty_in : item.qty_accepted);
-                            let price = oldItem ? oldItem.price : (savedItem ? savedItem.price : item.rate);
-                            let locId = oldItem ? oldItem.store_location_id : (savedItem ? savedItem.store_location_id : (item.store_location_id ? item.store_location_id : ''));
+                            let qtyIn = (oldItem && oldItem.qty_in !== null && oldItem.qty_in !== '') ? oldItem.qty_in : (savedItem ? savedItem.qty_in : item.qty_accepted);
+                            let price = (oldItem && oldItem.price !== null && oldItem.price !== '') ? oldItem.price : (savedItem ? savedItem.price : item.rate);
+                            let locId = (oldItem && oldItem.store_location_id) ? oldItem.store_location_id : (savedItem ? savedItem.store_location_id : (item.store_location_id ? item.store_location_id : ''));
 
                             let locError = validationErrors['items.' + index + '.store_location_id'] ? validationErrors['items.' + index + '.store_location_id'][0] : '';
+                            let qtyError = validationErrors['items.' + index + '.qty_in'] ? validationErrors['items.' + index + '.qty_in'][0] : '';
+                            let priceError = validationErrors['items.' + index + '.price'] ? validationErrors['items.' + index + '.price'][0] : '';
 
                             let row = `
                                 <tr>
@@ -186,10 +193,12 @@
                                     <td>${item.raw_material_name}</td>
                                     <td>${item.uom_name}</td>
                                     <td>
-                                        <input type="number" name="items[${index}][qty_in]" class="form-control form-control-sm item-qty" value="${qtyIn}" step="0.01" max="${item.qty_accepted}" placeholder="Max: ${item.qty_accepted}">
+                                        <input type="number" name="items[${index}][qty_in]" class="form-control form-control-sm item-qty" value="${qtyIn}" step="0.01" placeholder="Max: ${item.qty_accepted}">
+                                        <div class="text-danger small qty-error" style="${qtyError ? '' : 'display:none;'}">${qtyError || 'Quantity is required'}</div>
                                     </td>
                                     <td>
                                         <input type="number" name="items[${index}][price]" class="form-control form-control-sm" value="${price}" step="0.01">
+                                        <div class="text-danger small price-error" style="${priceError ? '' : 'display:none;'}">${priceError || 'Price is required'}</div>
                                     </td>
                                     <td>
                                         <select name="items[${index}][store_location_id]" class="form-select select2 form-select-sm item-location">
@@ -222,13 +231,6 @@
             }
         });
 
-        $(document).on('input', '.item-qty', function() {
-            let max = parseFloat($(this).attr('max'));
-            let current = parseFloat($(this).val());
-            if (current > max) {
-                $(this).val(max);
-            }
-        });
 
         if (stockEntry || $('#grn_entry_id').val()) {
             $('#grn_entry_id').trigger('change');

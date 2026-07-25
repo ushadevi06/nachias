@@ -92,12 +92,8 @@ use App\Http\Controllers\ItemPriceController;
 Route::get('/', function () {
     return view('login');
 });
-Route::get('/clear-cache', function () {
-    \Illuminate\Support\Facades\Artisan::call('view:clear');
-    \Illuminate\Support\Facades\Artisan::call('cache:clear');
-    \Illuminate\Support\Facades\Artisan::call('route:clear');
-    \Illuminate\Support\Facades\Artisan::call('config:clear');
-    return 'All caches cleared successfully! Now press Ctrl+F5 on your Job Card page.';
+Route::get('/update_page', function () {
+    return view('update_page');
 });
 
 Route::match(['get', 'post'], 'login', [AuthController::class, 'authentication'])->name('login');

@@ -108,12 +108,38 @@ class RawMaterialController extends Controller
 
             $rules = [
                 'store_category_id' => 'required|exists:store_categories,id',
-                'code' => 'required|string|min:3|max:50|unique:raw_materials,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'name' => 'required|string|min:3|max:150',
+                'code' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'not_in:0',
+                    'regex:/^[a-zA-Z0-9\-_]+$/',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:raw_materials,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
+                'name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'uom_id' => 'required|exists:uoms,id',
-                'material_type' => 'nullable|string|max:100',
+                'material_type' => [
+                    'nullable',
+                    'string',
+                    'max:100',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'reference_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1024',
-                'specification' => 'nullable|string|min:5|max:255',
+                'specification' => [
+                    'nullable',
+                    'string',
+                    'min:5',
+                    'max:255',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'min_stock' => 'nullable|numeric|min:0',
                 'status' => 'required|in:Active,Inactive',
             ];
@@ -121,9 +147,14 @@ class RawMaterialController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
+                'code.not_in' => 'This field is an invalid format.',
+                '*.regex' => 'This field is an invalid format.',
                 'size_width' => 'Width must be a number.',
-                'min'      => 'This field must be at least :min characters.',
-                'max'      => 'This field should not be more than :max characters.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
+                '*.numeric' => 'This field must be a number.',
+                'min_stock.min' => 'Please enter a valid numeric value greater than or equal to 0.',
             ];
 
             $validated = $request->validate($rules, $messages);

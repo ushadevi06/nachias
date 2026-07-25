@@ -77,8 +77,9 @@
                                 <p class="text-danger">{{ $errors->first('password') }}</p>
                             </div>
                         </div>
-                        <div class="text-end">
+                        <div class="text-end mt-4">
                             <button type="submit" class="btn btn-primary">Submit</button>
+                            <a href="{{ url('dashboard') }}" class="btn btn-outline-secondary me-2">Cancel</a>
                         </div>
                     </form>
                 </div>

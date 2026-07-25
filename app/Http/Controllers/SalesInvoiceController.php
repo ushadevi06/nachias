@@ -195,6 +195,8 @@ class SalesInvoiceController extends Controller
                 $maxRunningNo = 1157;
             } elseif ($brandCode === 'CDS') {
                 $maxRunningNo = 735;
+            } elseif ($brandCode === 'CB') {
+                $maxRunningNo = 506;
             }
         }
 
@@ -282,6 +284,8 @@ class SalesInvoiceController extends Controller
                                     $maxRunningNo = 1157;
                                 } elseif ($brandCode === 'CDS') {
                                     $maxRunningNo = 735;
+                                } elseif ($brandCode === 'CB') {
+                                    $maxRunningNo = 506;
                                 }
                             }
 
@@ -314,7 +318,7 @@ class SalesInvoiceController extends Controller
             $request->validate([
                 'brand_id' => 'required|exists:brands,id',
                 'inv_no' => 'required|min:3|max:50|unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'inv_date' => 'required|date',
+                'inv_date' => 'required|date_format:d-m-Y',
                 'so_ids' => 'required|array',
                 'so_ids.*' => 'exists:sales_orders,id',
                 'customer_id' => 'required|exists:customers,id',
@@ -330,17 +334,22 @@ class SalesInvoiceController extends Controller
                 'hsn_sac' => 'required|string|max:50',
                 'signature_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
                 'attachment_file' => 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
+                'tran_doc_date' => 'nullable|date_format:d-m-Y',
+                'due_date' => 'nullable|date_format:d-m-Y',
             ], [
                 '*.required'      => 'This field is required.',
                 '*.unique'        => 'This field already exists.',
                 '*.exists'        => 'Selected value is invalid.',
-                '*.date'          => 'Please enter a valid date.',
+                '*.date_format'   => 'Please enter a valid date in DD-MM-YYYY format.',
                 '*.numeric'       => 'This field must be a number.',
                 '*.regex'         => 'This field is an invalid format.',
                 '*.min'           => 'This field must be at least :min characters.',
                 '*.max'           => 'This field must be at most :max characters.',
                 'items.*.quantity.required' => 'This field is required.',
                 'items.*.rate.nullable' => 'This field is optional.',
+                'items.*.quantity.min' => 'Please enter a valid numeric value greater than or equal to 0.01.',
+                'items.*.rate.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'items.*.mrp.min' => 'Please enter a valid numeric value greater than or equal to 0.',
                 'extra_input' => 'nullable|min:3|max:100',
             ]);
             if ($request->invoice_status === 'Paid') {

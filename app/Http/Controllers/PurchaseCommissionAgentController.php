@@ -120,20 +120,75 @@ class PurchaseCommissionAgentController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'name'        => 'required|string|min:3|max:50',
-                'code'        => 'required|string|min:3|max:25|alpha_num|unique:purchase_commission_agents,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name'        => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'code'        => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:25',
+                    'alpha_num',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:purchase_commission_agents,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
                 'email'       => 'nullable|email|max:128|unique:purchase_commission_agents,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no'   => 'nullable|numeric|digits_between:10,15|unique:purchase_commission_agents,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'mobile_no'   => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:purchase_commission_agents,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
                 'status'      => 'required|in:Active,Inactive',
                 'state_id'    => 'required|exists:states,id',
                 'city_id'     => 'required|exists:cities,id',
                 'place_id'    => 'required|exists:places,id',
-                'address_line_1'      => 'nullable|string|min:3|max:150',
-                'address_line_2'      => 'nullable|string|min:3|max:150',
-                'zipcode'             => 'nullable|string|min:6|max:10',
-                'contact_person_name' => 'nullable|string|min:3|max:50',
-                'designation'         => 'nullable|string|min:3|max:50',
-                'phone_number'        => 'nullable|numeric|digits_between:10,15',
+                'address_line_1'      => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'address_line_2'      => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'zipcode'             => [
+                    'nullable',
+                    'string',
+                    'min:6',
+                    'max:10',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_person_name' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'designation'         => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'phone_number'        => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'contact_email'       => 'nullable|email|max:128',
                 'pan_no' => [
                     'nullable',
@@ -202,9 +257,15 @@ class PurchaseCommissionAgentController extends Controller
         $cities = [];
         $servicePoints = [];
 
-        if ($agent) {
-            $cities = City::where('state_id', $agent->state_id)->get();
-            $servicePoints = Place::where('city_id', $agent->city_id)->get();
+        $stateId = old('state_id', $agent->state_id ?? null);
+        $cityId  = old('city_id', $agent->city_id ?? null);
+
+        if ($stateId) {
+            $cities = City::where('state_id', $stateId)->get();
+        }
+
+        if ($cityId) {
+            $servicePoints = Place::where('city_id', $cityId)->get();
         }
 
         return view('purchase_commission_agent.add', compact('agent', 'states', 'cities', 'servicePoints'));

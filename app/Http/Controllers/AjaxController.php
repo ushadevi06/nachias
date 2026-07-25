@@ -24,7 +24,7 @@ class AjaxController extends Controller
     public function fetchCities($state_id)
     {
         $stateIds = explode(',', $state_id);
-        $cities = City::active()->whereIn('state_id', $stateIds)->select('id', 'city_name')->get();
+        $cities = City::active()->whereIn('state_id', $stateIds)->select('id', 'city_name', 'state_id')->get();
         return response()->json($cities);
     }
 

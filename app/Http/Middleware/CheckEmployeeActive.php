@@ -18,14 +18,16 @@ class CheckEmployeeActive
             if ($user->id != 1) {
 
                 if ($user->status !== 'Active') {
+                    $email = $user->email;
                     Auth::logout();
                     $request->session()->invalidate();
                     $request->session()->regenerateToken();
 
                     return redirect('/')
-                        ->with('danger', 'Your account has been deactivated. Contact admin.');
+                        ->with('danger', 'Your account has been deactivated. Contact admin.')
+                        ->withInput(['email' => $email]);
                 }
-            }
+            }   
         }
 
         return $next($request);

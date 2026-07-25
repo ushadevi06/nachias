@@ -130,7 +130,7 @@ class ItemController extends Controller
                 'brand_id'            => 'required|exists:brands,id',
                 'brand_category_id'   => 'required|exists:brand_categories,id',
                 'name'                => 'required|string|min:3|max:100|unique:items,name,' . ($id ?? '0'),
-                'code'                => 'required|string|min:3|max:50|unique:items,code,' . ($id ?? '0'),
+                'code'                => 'required|string|min:3|max:50|not_in:0|regex:/^[a-zA-Z0-9\-_]+$/|unique:items,code,' . ($id ?? '0'),
                 'style_id'            => 'nullable|exists:styles,id',
                 'fabric_type_id'      => 'nullable|exists:fabric_types,id',
                 'design_art_no'       => 'nullable|string|min:3|max:50',
@@ -155,11 +155,17 @@ class ItemController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This value already exists.',
                 '*.exists'   => 'The selected value is invalid.',
+                'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
+                'code.not_in' => 'This field is an invalid format.',
                 '*.numeric'  => 'This field must be a valid number.',
                 '*.array'    => 'This field must be an array.',
                 '*.regex'    => 'This field must be a valid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                'standard_costing.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'wholesale_price.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'retail_price.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'export_price.min' => 'Please enter a valid numeric value greater than or equal to 0.',
             ];
 
             $validated = $request->validate($rules, $messages);

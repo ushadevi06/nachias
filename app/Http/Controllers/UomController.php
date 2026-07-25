@@ -97,6 +97,8 @@ class UomController extends Controller
                     'string',
                     'min:1',
                     'max:10',
+                    'not_in:0',
+                    'regex:/^(?!0+$).*$/',
                     Rule::unique('uoms', 'uom_code')->ignore($id)->whereNull('deleted_at')
                 ],
                 'uom_name' => [
@@ -104,6 +106,7 @@ class UomController extends Controller
                     'string',
                     'min:3',
                     'max:50',
+                    'regex:/^(?!0+$).*$/',
                     Rule::unique('uoms', 'uom_name')->ignore($id)->whereNull('deleted_at')
                 ],
                 // 'description' => ['nullable', 'string', 'max:255', 'regex:/^[^<>]*$/'],
@@ -113,6 +116,7 @@ class UomController extends Controller
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'uom_code.not_in' => 'This field is an invalid format.',
                 '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',

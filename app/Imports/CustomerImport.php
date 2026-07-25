@@ -169,10 +169,20 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
+            $messages = [
+                '*.required' => 'This field is required.',
+                '*.unique'   => 'This field already exists.',
+                'code.not_in' => 'This field is an invalid format.',
+                '*.numeric'  => 'This field must be a valid number.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
+                '*.email'    => 'Please enter a valid email address.',
+            ];
+
             $validator = Validator::make($data, [
                 'category'       => 'required|in:Retailer,Wholesaler',
                 'name'           => 'required|string|min:2|max:100',
-                'code'           => 'required|string|min:2|max:50|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
+                'code'           => 'required|string|min:2|max:50|not_in:0|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'mobile_no'      => 'required|numeric|digits_between:10,15',
                 'email'          => 'nullable|email|max:128|unique:customers,email,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
                 'zone_id'        => 'nullable',
@@ -181,7 +191,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 'city_id'        => 'required',
                 'place_id'       => 'required',
                 'address_line_1' => 'nullable|string|min:3|max:150',
-            ]);
+            ], $messages);
 
             if ($validator->fails()) {
                 $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());

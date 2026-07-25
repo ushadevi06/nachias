@@ -67,20 +67,23 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
                 'status' => $status,
             ];
 
-            $rawMaterialId = null;
-            if (!empty($data['code'])) {
-                $existing = RawMaterial::where('code', $data['code'])->first();
-                $rawMaterialId = $existing ? $existing->id : null;
-            }
+            $messages = [
+                '*.required' => 'This field is required.',
+                '*.unique'   => 'This field already exists.',
+                'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
+                'code.not_in' => 'This field is an invalid format.',
+                'min'      => 'This field must be at least :min characters.',
+                'max'      => 'This field should not be more than :max characters.',
+            ];
 
             $validator = Validator::make($data, [
                 'store_category_id' => 'required|exists:store_categories,id',
-                'code' => 'required|string|min:3|max:50|unique:raw_materials,code,' . ($rawMaterialId ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|min:3|max:50|not_in:0|regex:/^[a-zA-Z0-9\-_]+$/',
                 'name' => 'required|string|min:3|max:150',
                 'uom_id' => 'required|exists:uoms,id',
                 'status' => 'required|in:Active,Inactive',
                 'min_stock' => 'nullable|numeric|min:0',
-            ]);
+            ], $messages);
 
             if (!empty($data['code'])) {
                 if (in_array($data['code'], $seenCodes)) {
@@ -103,11 +106,14 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
         }
 
         foreach ($validData as $d) {
-            $d['created_by'] = auth()->id() ?? 1;
-            RawMaterial::updateOrCreate(
-                ['code' => $d['code']],
-                $d
-            );
+            $existing = RawMaterial::where('code', $d['code'])->first();
+            if ($existing) {
+                $d['updated_by'] = auth()->id() ?? 1;
+                $existing->update($d);
+            } else {
+                $d['created_by'] = auth()->id() ?? 1;
+                RawMaterial::create($d);
+            }
         }
     }
 }

@@ -79,13 +79,29 @@ class StyleController extends Controller
         $style = $id ? Style::findOrFail($id) : null;
         if ($request->isMethod('post')) {
             $rules = [
-                'style_name' => 'required|string|min:3|max:100|unique:styles,style_name,' . $id . ',id,deleted_at,NULL',
-                'code'       => 'required|string|min:3|max:50|alpha_num|unique:styles,code,' . $id . ',id,deleted_at,NULL',
+                'style_name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:100',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:styles,style_name,' . $id . ',id,deleted_at,NULL'
+                ],
+                'code'       => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'alpha_num',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:styles,code,' . $id . ',id,deleted_at,NULL'
+                ],
                 'status'     => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format.',
                 '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',

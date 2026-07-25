@@ -72,13 +72,28 @@ class BrandController extends Controller
         $brand = $id ?Brand::findOrFail($id) : null;
         if ($request->isMethod('post')) {
             $rules = [
-                'brand_name' => 'required|string|min:3|max:100|unique:brands,brand_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'code' => 'required|string|min:2|max:50|unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'brand_name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:100',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:brands,brand_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
+                'code' => [
+                    'required',
+                    'string',
+                    'min:2',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:brands,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
                 'status' => 'required|in:Active,Inactive',
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
             ];

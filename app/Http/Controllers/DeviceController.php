@@ -59,12 +59,27 @@ class DeviceController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'device_name' => ['required','string','min:2','max:50',Rule::unique('devices', 'device_name')->ignore($id)->whereNull('deleted_at')],
-                'serial_number' => ['required','string','min:2','max:100',Rule::unique('devices', 'serial_number')->ignore($id)->whereNull('deleted_at')],
+                'device_name' => [
+                    'required',
+                    'string',
+                    'min:2',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/',
+                    Rule::unique('devices', 'device_name')->ignore($id)->whereNull('deleted_at')
+                ],
+                'serial_number' => [
+                    'required',
+                    'string',
+                    'min:2',
+                    'max:100',
+                    'regex:/^(?!0+$).*$/',
+                    Rule::unique('devices', 'serial_number')->ignore($id)->whereNull('deleted_at')
+                ],
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This Field already exists.',
+                '*.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

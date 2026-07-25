@@ -35,31 +35,75 @@ class EmployeeImport implements ToCollection, WithHeadingRow
             }
             $dateOfJoining = null;
             if (!empty($row['date_of_joining'])) {
-                try {
-                    $dateOfJoining = Carbon::parse($row['date_of_joining'])->format('Y-m-d');
-                } catch (\Exception $e) {
-                    $dateOfJoining = null;
+                $rawDate = trim($row['date_of_joining']);
+                if (is_numeric($rawDate)) {
+                    try {
+                        $dateOfJoining = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($rawDate)->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $dateOfJoining = $rawDate;
+                    }
+                } else {
+                    $parsed = date_parse($rawDate);
+                    if ($parsed['error_count'] > 0 || empty($parsed['year']) || empty($parsed['month']) || empty($parsed['day'])) {
+                        $dateOfJoining = $rawDate;
+                    } else {
+                        try {
+                            $dateOfJoining = Carbon::parse($rawDate)->format('Y-m-d');
+                        } catch (\Exception $e) {
+                            $dateOfJoining = $rawDate;
+                        }
+                    }
                 }
             }
+            $rowErrors = [];
+            
             $departmentId = null;
             if (!empty($row['department'])) {
-                $departmentId = Department::where('department', trim($row['department']))->value('id');
+                $deptString = trim($row['department']);
+                $departmentId = Department::where('department', $deptString)->value('id');
+                if (!$departmentId) {
+                    $rowErrors[] = "Department '{$deptString}' does not exist.";
+                }
             }
 
             $deviceSerialNumber = null;
             if (!empty($row['device'])) {
-                $deviceSerialNumber = Device::where('device_name', trim($row['device']))->value('serial_number');
+                $deviceString = trim($row['device']);
+                $deviceSerialNumber = Device::where('device_name', $deviceString)
+                                            ->orWhere('serial_number', $deviceString)
+                                            ->value('serial_number');
+                if (!$deviceSerialNumber) {
+                    $rowErrors[] = "Device '{$deviceString}' does not exist.";
+                }
             }
 
             $serviceProviderId = null;
             if (!empty($row['service_provider'])) {
-                $serviceProviderId = ServiceProvider::where('name', trim($row['service_provider']))->value('id');
+                $spString = trim($row['service_provider']);
+                $serviceProviderId = ServiceProvider::where('name', $spString)->value('id');
+                if (!$serviceProviderId) {
+                    $rowErrors[] = "Service Provider '{$spString}' does not exist.";
+                }
             }
 
             $operationStageIds = [];
             if (!empty($row['operation_stage'])) {
                 $stages = array_map('trim', explode(',', $row['operation_stage']));
-                $operationStageIds = OperationStage::whereIn('operation_stage_name', $stages)->pluck('id')->toArray();
+                $foundStagesCollection = OperationStage::whereIn('operation_stage_name', $stages)->pluck('operation_stage_name', 'id');
+                $operationStageIds = $foundStagesCollection->keys()->toArray();
+                
+                $foundStageNamesLower = array_map('strtolower', $foundStagesCollection->values()->toArray());
+                $missingStages = [];
+                foreach ($stages as $stage) {
+                    if (!in_array(strtolower($stage), $foundStageNamesLower)) {
+                        $missingStages[] = $stage;
+                    }
+                }
+                
+                if (!empty($missingStages)) {
+                    $missingList = implode(', ', $missingStages);
+                    $rowErrors[] = count($missingStages) > 1 ? "Operation Stages '{$missingList}' do not exist." : "Operation Stage '{$missingList}' does not exist.";
+                }
             }
 
             $phone = !empty($row['phone']) ? preg_replace('/[^0-9]/', '', (string)$row['phone']) : '9' . str_pad($empId, 9, '0', STR_PAD_LEFT);
@@ -72,7 +116,16 @@ class EmployeeImport implements ToCollection, WithHeadingRow
             $roleId = null;
             if(!empty($designation)) {
                 $roleId = DB::table('roles')->whereRaw('LOWER(name) = ?', [strtolower($designation)])->value('id');
+                if (!$roleId) {
+                    $rowErrors[] = "Designation '{$designation}' does not exist.";
+                }
             }
+            
+            if (!empty($rowErrors)) {
+                $errors[] = "Row {$rowNumber}: " . implode(' ', $rowErrors);
+                continue;
+            }
+
             $data = [
                 'emp_id' => $empId,
                 'name' => $name,
@@ -95,11 +148,11 @@ class EmployeeImport implements ToCollection, WithHeadingRow
             }
             $seenEmpIds[] = $empId;
             $validator = Validator::make($data, [
-                'emp_id' => 'required|max:30',
+                'emp_id' => 'required|max:20|not_in:0',
                 'department_id' => 'required|exists:departments,id',
                 'name' => 'required|max:100',
-                'phone' => 'nullable|digits_between:10,15',
-                'email' => 'nullable|email|max:128',
+                'phone' => 'required|digits_between:10,15',
+                'email' => 'nullable|email:filter|max:128',
                 'role_id' => 'required|exists:roles,id',
                 'esi_no' => 'nullable|max:30',
                 'pf_no' => 'nullable|max:30',
@@ -107,6 +160,27 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 'bus_fare' => 'nullable|numeric',
                 'device' => 'required|exists:devices,serial_number',
                 'service_provider_id' => 'nullable|exists:service_providers,id',
+            ], [
+                'department_id.required' => 'Department is required.',
+                'department_id.exists' => 'Invalid Department provided.',
+                'role_id.required' => 'Designation is required.',
+                'role_id.exists' => 'Invalid Designation provided.',
+                'device.required' => 'Device is required.',
+                'device.exists' => 'Invalid Device provided.',
+                'service_provider_id.exists' => 'Invalid Service Provider provided.',
+                'emp_id.required' => 'Employee ID (Emp Code) is required.',
+                'emp_id.max' => 'Employee ID (Emp Code) cannot be more than 30 characters.',
+                'emp_id.not_in' => 'Employee ID cannot be 0.',
+                'name.required' => 'Name is required.',
+                'name.max' => 'Name cannot be more than 100 characters.',
+                'phone.required' => 'Phone Number is required.',
+                'phone.digits_between' => 'Phone Number must be between 10 and 15 digits.',
+                'email.email' => 'Invalid email format.',
+                'email.max' => 'Email cannot be more than 128 characters.',
+                'esi_no.max' => 'ESI No cannot be more than 30 characters.',
+                'pf_no.max' => 'PF No cannot be more than 30 characters.',
+                'fixed_gross.numeric' => 'Fixed Gross must be a number.',
+                'bus_fare.numeric' => 'Bus Fare must be a number.',
             ]);
             if ($validator->fails()) {
                 $errors[] ="Row {$rowNumber}: " . implode(', ', $validator->errors()->all());

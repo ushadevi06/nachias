@@ -101,21 +101,72 @@ class SalesAgentController extends Controller
             $request = request();
             $rules = [
                 'agent_type' => 'required|string|max:50',
-                'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:50|alpha_num|unique:sales_agents,code,' . $id . ',id,deleted_at,NULL',
+                'name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'code' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'alpha_num',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:sales_agents,code,' . $id . ',id,deleted_at,NULL'
+                ],
                 'email' => 'nullable|email|max:128|unique:sales_agents,email,' . $id . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|numeric|digits_between:10,15|unique:sales_agents,mobile_no,' . $id . ',id,deleted_at,NULL',
+                'mobile_no' => [
+                    'required',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:sales_agents,mobile_no,' . $id . ',id,deleted_at,NULL'
+                ],
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
                 'zone_id' => 'required|exists:zones,id',
-                'address_line_1' => 'required|string|max:150',
-                'address_line_2' => 'nullable|string|max:150',
-                'zip_code' => 'required|min:3|max:10',
-                'contact_person_name' => 'nullable|string|max:50',
-                'designation' => 'nullable|string|max:50',
-                'contact_phone_number' => 'nullable|numeric|digits_between:10,15',
+                'address_line_1' => [
+                    'required',
+                    'string',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'address_line_2' => [
+                    'nullable',
+                    'string',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'zip_code' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:10',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_person_name' => [
+                    'nullable',
+                    'string',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'designation' => [
+                    'nullable',
+                    'string',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_phone_number' => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'contact_email' => 'nullable|email|max:128',
                 'gst_no' => [
                     'nullable',

@@ -22,6 +22,7 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
+                                    <th>Reference No.</th>
                                     <th>Document Name</th>
                                     <th>Document Type</th>
                                     <th>Department</th>
@@ -58,9 +59,9 @@
             ajax: {
                 url: "{{ url('document_repository') }}"
             },
-            columns: [{
-                    data: 'DT_RowIndex'
-                },
+            columns: [
+                { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'reference_no', name: 'reference_no' },
                 {
                     data: 'document_name'
                 },

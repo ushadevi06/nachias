@@ -89,6 +89,9 @@ class TaxController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.numeric'  => 'This field must be a valid number.',
+                '*.min'      => 'This field must be at least :min.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ];
 
             $request->validate($rules,$messages);

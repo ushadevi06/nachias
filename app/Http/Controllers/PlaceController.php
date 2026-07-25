@@ -99,17 +99,32 @@ class PlaceController extends Controller
                     'required',
                     'min:3',
                     'max:50',
+                    'regex:/^(?!0+$).*$/',
                     Rule::unique('places', 'place_name')->ignore($id)->whereNull('deleted_at')
                 ],
                 'place_type' => 'required|max:50',
-                'latitude' => 'nullable|string|max:15|numeric|between:-90,90',
-                'longitude' => 'nullable|string|max:15|numeric|between:-180,180',
+                'latitude' => [
+                    'nullable',
+                    'numeric',
+                    'between:-90,90',
+                    'regex:/^(?=.{1,15}$)-?\d+(\.\d+)?$/'
+                ],
+                'longitude' => [
+                    'nullable',
+                    'numeric',
+                    'between:-180,180',
+                    'regex:/^(?=.{1,15}$)-?\d+(\.\d+)?$/'
+                ],
                 'status' => 'required|in:Active,Inactive'
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                'latitude.between' => 'Latitude must be between -90 and 90.',
+                'longitude.between' => 'Longitude must be between -180 and 180.',
+                'latitude.regex' => 'Latitude must be a valid numeric coordinate up to 15 characters.',
+                'longitude.regex' => 'Longitude must be a valid numeric coordinate up to 15 characters.',
             ]);
 
             if ($id) {

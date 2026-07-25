@@ -166,7 +166,7 @@ class PurchaseInvoiceController extends Controller
 
             $rules = [
                 'invoice_no' => ($id ? 'nullable' : 'required') . '|string|min:3|max:50|unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'invoice_date' => 'required|date',
+                'invoice_date' => 'required|date_format:d-m-Y',
                 'purchase_order_id' => 'required|exists:purchase_orders,id',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'po_reference' => 'nullable|string|min:3|max:50',

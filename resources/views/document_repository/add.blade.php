@@ -26,6 +26,15 @@
                         </div>
                         <div class="col-md-6 col-xl-6">
                             <div class="form-floating form-floating-outline">
+                                <input type="text" class="form-control" id="reference_no" placeholder="Enter Reference No." name="reference_no" value="{{ old('reference_no', $document->reference_no ?? '') }}">
+                                <label for="reference_no">Reference No.</label>
+                            </div>
+                            @error('reference_no')
+                            <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6 col-xl-6">
+                            <div class="form-floating form-floating-outline">
                                 <select class="select2 form-select" name="document_type" data-placeholder="Select Document Type">
                                     <option value="">Select Document Type</option>
                                     <option value="Certification" {{ old('document_type', $document->document_type ?? '') == 'Certification' ? 'selected' : '' }}>Certification</option>
@@ -64,7 +73,20 @@
                         </div>
                         <div class="col-md-6 col-xl-6">
                             <div class="form-floating form-floating-outline">
-                                <textarea name="remarks" id="remarks" class="form-control" placeholder="Remarks">{{ old('remarks', $document->remarks ?? '') }}</textarea>
+                                <select class="select2 form-select" name="status" data-placeholder="Select Status">
+                                    <option value="Active" {{ old('status', $document->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
+                                    <option value="Expired" {{ old('status', $document->status ?? '') == 'Expired' ? 'selected' : '' }}>Expired</option>
+                                    <option value="Archived" {{ old('status', $document->status ?? '') == 'Archived' ? 'selected' : '' }}>Archived</option>
+                                </select>
+                                <label for="status">Status * </label>
+                            </div>
+                            @error('status')
+                            <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6 col-xl-6">
+                            <div class="form-floating form-floating-outline">
+                                <textarea name="remarks" id="remarks" class="form-control h-px-100" placeholder="Remarks">{{ old('remarks', $document->remarks ?? '') }}</textarea>
                                 <label for="remarks">Remarks</label>
                             </div>
                             @error('remarks')

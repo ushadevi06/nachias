@@ -54,7 +54,7 @@ class AuthController extends Controller
         } else {
             $request->validate([
                 'name' => 'required|min:3|max:50|regex:/^[a-zA-Z\s,:]+$/',
-                'email' => 'required|email',
+                'email' => 'required|email:rfc,dns|max:128|unique:users,email,'.$request->id,
                 'phone' => 'required|digits:10|not_in:0|unique:users,phone,'.$request->id,
                 'password' => 'nullable|min:8|max:15|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/',
                 'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:1024'
@@ -64,6 +64,8 @@ class AuthController extends Controller
                 'name.max' => 'Name cannot be exceed 50 characters.',
                 'name.regex' => 'This field is an invalid format.',
                 'email.required' => 'This field is required',
+                'email.email' => 'Please enter a valid email address.',
+                'email.unique' => 'Email already exists.',
                 'phone.required' => 'This field is required',
                 'phone.unique' => 'Phone Number already exists',
                 'password.required' => 'This field is required.',

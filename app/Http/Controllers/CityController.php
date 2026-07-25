@@ -97,8 +97,8 @@ class CityController extends Controller
 
             $validated = $request->validate([
                 'state_id'   => 'required|exists:states,id',
-                'city_code' => ['nullable','alpha_num','min:2','max:10',Rule::unique('cities', 'city_code')->ignore($id)->whereNull('deleted_at')],
-                'city_name' => ['required','min:3','max:50',Rule::unique('cities', 'city_name')->ignore($id)->whereNull('deleted_at')],
+                'city_code' => ['nullable','alpha_num','min:2','max:10','regex:/^(?!0+$).*$/',Rule::unique('cities', 'city_code')->ignore($id)->whereNull('deleted_at')],
+                'city_name' => ['required','min:3','max:50','regex:/^(?!0+$).*$/',Rule::unique('cities', 'city_name')->ignore($id)->whereNull('deleted_at')],
                 'status'    => 'required|in:Active,Inactive',
             ], [
                 '*.required' => 'This field is required.',

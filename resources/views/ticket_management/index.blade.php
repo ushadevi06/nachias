@@ -15,10 +15,39 @@
             <div class="col-lg-12">
                 @include('flash_messages')
             </div>
-            <div class="card shadow-sm border-0">
+            <div class="card">
                 <div class="card-body">
+                    <div class="filter-box">
+                        <h6 class="card-title mb-3 fw-bold text-dark">Filter</h6>
+                        <form id="filterForm" class="row gx-2 gy-2 align-items-center">
+                            <div class="col-12 col-md-3">
+                                <select class="form-select select2" id="filter_priority" name="filter_priority" data-placeholder="Select Priority">
+                                    <option value="">Select Priority</option>
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                    <option value="Critical">Critical</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <select class="form-select select2" id="filter_assigned_to" name="filter_assigned_to" data-placeholder="Assigned To Employees">
+                                    <option value="">Assigned To Employees</option>
+                                    @foreach($assignees as $assignee)
+                                        <option value="{{ $assignee->id }}">{{ $assignee->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <input type="text" class="form-control" id="filter_date_range" name="filter_date_range" placeholder="Select Ticket Date Range">
+                            </div>
+                            <div class="col-12 col-md-3 d-flex gap-2">
+                                <button type="button" id="btnFilter" class="btn btn-primary text-uppercase">Filter</button>
+                                <button type="button" id="btnReset" class="btn btn-secondary text-uppercase">Reset</button>
+                            </div>
+                        </form>
+                    </div>
                     <div class="card-datatable">
-                        <table class="table" id="ticketTable">
+                        <table class="table nowrap w-100" id="ticketTable">
                             <thead>
                                 <tr>
                                     <th>#</th>
@@ -55,7 +84,14 @@
             lengthChange: true,
             processing: true,
             serverSide: true,
-            ajax: "{{ url('ticket_management') }}",
+            ajax: {
+                url: "{{ url('ticket_management') }}",
+                data: function (d) {
+                    d.filter_priority = $('#filter_priority').val();
+                    d.filter_assigned_to = $('#filter_assigned_to').val();
+                    d.filter_date_range = $('#filter_date_range').val();
+                }
+            },
             columns: [
                 { data: 'DT_RowIndex' },
                 { data: 'ticket_no' },
@@ -95,6 +131,25 @@
                     $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
                 }
             });
+        });
+
+        if ($('#filter_date_range').length) {
+            $('#filter_date_range').flatpickr({
+                mode: "range",
+                dateFormat: "Y-m-d",
+            });
+        }
+
+        $('#btnFilter').on('click', function() {
+            $('#ticketTable').DataTable().ajax.reload();
+        });
+
+        $('#btnReset').on('click', function() {
+            $('#filterForm')[0].reset();
+            if ($('#filter_date_range').length && $('#filter_date_range')[0]._flatpickr) {
+                $('#filter_date_range')[0]._flatpickr.clear();
+            }
+            $('#ticketTable').DataTable().ajax.reload();
         });
     });
 </script>

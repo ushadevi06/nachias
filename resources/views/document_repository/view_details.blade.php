@@ -11,7 +11,7 @@
                 </div>
                 <div class="d-flex gap-2">
                     <a href="{{ url('document_repository') }}" class="btn btn-outline-secondary d-flex align-items-center">
-                        <i class="ri ri-arrow-left-line me-1"></i> Back
+                        <i class="icon-base ri ri-arrow-left-line me-1"></i> Back
                     </a>
                 </div>
             </div>
@@ -23,13 +23,19 @@
                         <div class="card-body p-4">
                             <h6 class="text-uppercase text-primary small font-bold tracking-wider mb-4">Core Information</h6>
                             <div class="row g-4">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <label class="text-muted small d-block mb-1">Reference No.</label>
+                                        <h5 class="mb-0 text-dark">{{ $document->reference_no ?: 'N/A' }}</h5>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
                                     <div class="p-3 bg-light rounded-3">
                                         <label class="text-muted small d-block mb-1">Document Type</label>
                                         <h5 class="mb-0 text-dark">{{ $document->document_type }}</h5>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="p-3 bg-light rounded-3">
                                         <label class="text-muted small d-block mb-1">Department</label>
                                         <h5 class="mb-0 text-dark">{{ $document->department->department ?? 'N/A' }}</h5>
@@ -41,14 +47,16 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="text-muted small d-block mb-1">Status</label>
-                                    @if($document->validity_date)
-                                        @if(\Carbon\Carbon::parse($document->validity_date)->isPast() && !\Carbon\Carbon::parse($document->validity_date)->isToday())
+                                    @if($document->status === 'Archived')
+                                        <span class="badge bg-secondary rounded-pill px-3 py-2">Archived</span>
+                                    @elseif($document->status === 'Expired')
+                                        <span class="badge bg-danger rounded-pill px-3 py-2">Expired</span>
+                                    @else
+                                        @if($document->validity_date && \Carbon\Carbon::parse($document->validity_date)->isPast() && !\Carbon\Carbon::parse($document->validity_date)->isToday())
                                             <span class="badge bg-danger rounded-pill px-3 py-2">Expired</span>
                                         @else
                                             <span class="badge bg-success rounded-pill px-3 py-2">Active</span>
                                         @endif
-                                    @else
-                                        <span class="badge bg-success rounded-pill px-3 py-2">Active</span>
                                     @endif
                                 </div>
                             </div>
@@ -75,23 +83,24 @@
                                         $url = url('uploads/documents/' . $attachment);
                                     @endphp
 
-                                    <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative d-flex justify-content-center align-items-center" style="width: 100%; height: 100px;" title="{{ basename($attachment) }}">
+                                    <div class="attachment-thumb border rounded p-1 bg-white shadow-sm position-relative d-flex justify-content-center align-items-center mb-2" style="width: 100%; height: 100px;" title="{{ basename($attachment) }}">
                                         @if($isImage)
                                             <img src="{{ $url }}" class="w-100 h-100 object-fit-cover rounded cursor-pointer view-image" data-image="{{ $url }}" alt="Document">
                                         @else
-                                            <a href="{{ $url }}" target="_blank" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
+                                            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light rounded text-decoration-none shadow-none text-primary">
                                                 <i class="ri ri-file-text-line fs-2"></i>
                                                 <span class="badge bg-primary text-white mt-1" style="font-size: 10px;">{{ strtoupper($extension) }}</span>
-                                            </a>
+                                            </div>
                                         @endif
                                     </div>
-                                    @if($isImage)
-                                    <div class="text-center mt-2">
-                                        <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                                            <i class="ri ri-eye-line me-1"></i> View Full
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ $url }}" target="_blank" class="btn btn-sm btn-outline-primary flex-fill">
+                                            <i class="ri ri-eye-line me-1"></i> Preview
+                                        </a>
+                                        <a href="{{ $url }}" download class="btn btn-sm btn-primary flex-fill">
+                                            <i class="ri ri-download-line me-1"></i> Download
                                         </a>
                                     </div>
-                                    @endif
                                 </div>
                                 @endif
                             </div>
@@ -115,10 +124,6 @@
                                 <div class="d-flex justify-content-between mb-2">
                                     <span class="text-white-50 small">Type</span>
                                     <span class="font-medium text-end">{{ $document->document_type }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-white-50 small">Uploaded By</span>
-                                    <span class="font-medium">System</span>
                                 </div>
                             </div>
                         </div>

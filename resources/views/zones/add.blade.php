@@ -38,7 +38,7 @@
                                         @endphp
 
                                         @foreach($cities as $city)
-                                        <option value="{{ $city->id }}"
+                                        <option value="{{ $city->id }}" data-state-id="{{ $city->state_id }}"
                                             {{ in_array($city->id, $selectedCities) ? 'selected' : '' }}>
                                             {{ $city->city_name }}
                                         </option>
@@ -88,27 +88,74 @@
 
 @section('scripts')
 <script>
-    $(document).ready(function() {
-        $('#zone_state_id').on('change', function() {
-            var stateIds = $(this).val();
-            var selectedCities = $('#city_ids').val() || [];
-            $('#city_ids').empty();
+    var cityAjaxRequest = null;
+    var previousStateIds = [];
 
-            if (stateIds && stateIds.length > 0) {
-                  $.ajax({
-                    url: APP_URL + '/get-cities/' + stateIds.join(','),
-                    type: 'GET',
-                    success: function(data) {
-                        $('#city_ids').empty();
-                        $.each(data, function(index, city) {
-                            $('#city_ids').append('<option value="' + city.id + '">' + city.city_name + '</option>');
-                        });
-                        $('#city_ids').val(selectedCities).trigger('change');
+    $(document).ready(function() {
+        var initialStates = $('#zone_state_id').val() || [];
+        previousStateIds = initialStates.map(String);
+
+        $('#zone_state_id').on('change', function() {
+            var rawStateIds = $(this).val() || [];
+            var stateIds = rawStateIds.map(String);
+            
+            // Find added and removed states using strict string comparison
+            var addedStates = stateIds.filter(x => !previousStateIds.includes(x));
+            var removedStates = previousStateIds.filter(x => !stateIds.includes(x));
+            
+            // Capture selected cities BEFORE doing anything
+            var rawSelectedCities = $('#city_ids').val() || [];
+            var selectedCities = rawSelectedCities.map(String);
+            
+            // Remove cities belonging to removed states
+            if (removedStates.length > 0) {
+                var removedAny = false;
+                removedStates.forEach(function(stateId) {
+                    var optionsToRemove = $('#city_ids option[data-state-id="' + stateId + '"]');
+                    if(optionsToRemove.length > 0) {
+                        optionsToRemove.remove();
+                        removedAny = true;
                     }
                 });
-            } else {
-                $('#city_ids').trigger('change');
+                
+                if(removedAny) {
+                    // Update selectedCities to remove the ones that were just deleted from DOM
+                    selectedCities = selectedCities.filter(function(cityId) {
+                        return $('#city_ids option[value="' + cityId + '"]').length > 0;
+                    });
+                    // Simply trigger change so Select2 syncs with the DOM
+                    $('#city_ids').trigger('change');
+                }
             }
+
+            // Fetch and add cities for newly added states
+            if (addedStates.length > 0) {
+                if (cityAjaxRequest) {
+                    cityAjaxRequest.abort();
+                }
+
+                cityAjaxRequest = $.ajax({
+                    url: APP_URL + '/get-cities/' + addedStates.join(','),
+                    type: 'GET',
+                    success: function(data) {
+                        $.each(data, function(index, city) {
+                            var cityIdStr = String(city.id);
+                            // Prevent duplicates
+                            if ($('#city_ids option[value="' + cityIdStr + '"]').length === 0) {
+                                $('#city_ids').append('<option value="' + cityIdStr + '" data-state-id="' + city.state_id + '">' + city.city_name + '</option>');
+                            }
+                        });
+                        
+                        // Maintain the selections explicitly on the DOM elements
+                        selectedCities.forEach(function(cityId) {
+                            $('#city_ids option[value="' + cityId + '"]').prop('selected', true);
+                        });
+                        $('#city_ids').trigger('change');
+                    }
+                });
+            }
+
+            previousStateIds = stateIds;
         });
     });
 </script>

@@ -10,6 +10,9 @@
                         <i class="menu-icon icon-base ri ri-stack-line"></i> Generate System Backup
                     </a>
                 </div>
+                <div class="col-lg-12">
+                    @include('flash_messages')
+                </div>
                 <div class="card">
                     <div class="card-body">
                         <div class="card-datatable">

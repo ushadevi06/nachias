@@ -10,9 +10,11 @@ class DocumentRepository extends Model
     use HasFactory;
     protected $fillable = [
         'document_name',
+        'reference_no',
         'document_type',
         'department_id',
         'validity_date',
+        'status',
         'remarks',
         'file',
         'created_by',

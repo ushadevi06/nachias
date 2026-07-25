@@ -149,7 +149,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('po_prefix') is-invalid @enderror" id="po_prefix" placeholder="PO Prefix (e.g., PO/24-25/)" name="po_prefix" value="{{ old('po_prefix', $setting->po_prefix ?? '') }}">
-                                    <label for="po_prefix">PO Prefix</label>
+                                    <label for="po_prefix">PO Prefix *</label>
                                     @error('po_prefix')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -158,7 +158,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('so_prefix') is-invalid @enderror" id="so_prefix" placeholder="SO Prefix (e.g., SO/24-25/)" name="so_prefix" value="{{ old('so_prefix', $setting->so_prefix ?? '') }}">
-                                    <label for="so_prefix">SO Prefix</label>
+                                    <label for="so_prefix">SO Prefix *</label>
                                     @error('so_prefix')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

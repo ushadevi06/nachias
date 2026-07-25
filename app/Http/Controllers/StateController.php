@@ -95,12 +95,14 @@ class StateController extends Controller
                     'alpha_num',
                     'min:2',
                     'max:10',
+                    'regex:/^(?!0+$).*$/',
                     'unique:states,state_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'state_name' => [
                     'required',
                     'min:5',
                     'max:50',
+                    'regex:/^(?!0+$).*$/',
                     'unique:states,state_name,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'status' => 'required|in:Active,Inactive'

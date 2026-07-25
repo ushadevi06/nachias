@@ -235,9 +235,9 @@ class SalesOrderController extends Controller
 
             $rules = [
                 'so_no' => 'required|string|min:3|max:50|unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'so_date' => 'required|date',
-                'request_date' => 'nullable|date',
-                'delivery_date' => 'nullable|date',
+                'so_date' => 'required|date_format:d-m-Y',
+                'request_date' => 'nullable|date_format:d-m-Y',
+                'delivery_date' => 'nullable|date_format:d-m-Y',
                 'order_type' => 'required|string|max:50',
                 'season_id' => 'nullable|exists:seasons,id',
                 'customer_id' => 'required|exists:customers,id',
@@ -271,25 +271,27 @@ class SalesOrderController extends Controller
                 'shipping_address' => 'nullable|string|regex:/^[^<>]*$/',
                 'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
                 'transporter_name' => 'nullable|string|max:50',
-                //'freight_type' => 'nullable|in:Paid,To Pay',
-                //'freight_amount' => 'nullable|numeric|min:0',
                 'terms_conditions' => 'nullable|string|regex:/^[^<>]*$/',
             ];
 
             $messages = [
                 '*.required' => 'This field is required.',
+                '*.unique' => 'This field already exists.',
                 '*.exists' => 'Selected value is invalid.',
-                '*.unique' => 'SO Number already exists.',
-                '*.date' => 'Please enter a valid date.',
-                '*.numeric' => 'This field must be a number.',
+                '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
+                '*.numeric' => 'This field must be a valid number.',
                 '*.regex' => 'This field is an invalid format.',
-                'items.required' => 'At least one item is required.',
+                '*.min' => 'This field must be at least :min characters.',
+                '*.max' => 'This field must be at most :max characters.',
+                'items.*.qty.required' => 'This field is required.',
+                'items.*.rate.nullable' => 'This field is optional.',
+                'items.*.qty.min' => 'Please enter a valid numeric value greater than or equal to 0.01.',
+                'items.*.rate.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'items.*.mrp.min' => 'Please enter a valid numeric value greater than or equal to 0.',
                 'items.*.brand_cat_id.required' => 'This field is required.',
                 'items.*.item_id.required' => 'This field is required.',
                 'items.*.uom_id.required' => 'This field is required.',
                 'items.*.size_id.required' => 'This field is required.',
-                'items.*.qty.required' => 'This field is required.',
-                'items.*.rate.nullable' => 'This field is optional.',
                 'items.*.art_no.required' => 'This field is required.',
                 'items.*.mrp.required' => 'This field is required.',
                 'attachment.*.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
@@ -443,8 +445,6 @@ class SalesOrderController extends Controller
                 }
 
                 $salesOrder->update(['attachment' => !empty($attachments) ? implode(',', $attachments) : null]);
-
-
 
                 foreach ($request->items as $item) {
                     $itemName = null;

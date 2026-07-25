@@ -112,22 +112,71 @@ class ServiceProviderController extends Controller
 
             $rules = [
                 'operation_stage_id' => 'required|exists:operation_stages,id',
-                'name' => 'required|string|max:50',
-                'code' => 'required|string|max:25|alpha_num|unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => [
+                    'required',
+                    'string',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'code' => [
+                    'required',
+                    'string',
+                    'max:25',
+                    'alpha_num',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:service_providers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
                 'email' => 'nullable|email|max:128|unique:service_providers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|numeric|digits_between:10,15|unique:service_providers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'zip_code' => 'nullable|string|min:6|max:10',
+                'mobile_no' => [
+                    'required',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:service_providers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
+                'zip_code' => [
+                    'nullable',
+                    'string',
+                    'min:6',
+                    'max:10',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'website_url' => 'nullable|url|max:255',
                 'service_rate' => 'required|in:Per Agent,Job Type',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
-                'address_line_1' => 'required|string|max:150',
-                'address_line_2' => 'nullable|string|max:150',
-                'contact_person_name' => 'nullable|string|max:50',
-                'designation' => 'nullable|string|max:50',
-                'phone_number' => 'nullable|numeric|digits_between:10,15',
+                'address_line_1' => [
+                    'required',
+                    'string',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'address_line_2' => [
+                    'nullable',
+                    'string',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_person_name' => [
+                    'nullable',
+                    'string',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'designation' => [
+                    'nullable',
+                    'string',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'phone_number' => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'contact_email' => 'nullable|email|max:128',
                 'pan_no' => [
                     'nullable',
@@ -140,8 +189,21 @@ class ServiceProviderController extends Controller
                     'unique:service_providers,gst_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'remarks' => 'nullable|string|min:5|max:255|regex:/^[a-zA-Z0-9\s.,-]*$/',
-                'bank_name' => 'nullable|string|min:5|max:100',
-                'bank_acc_no' => 'nullable|string|min:5|max:50|unique:service_providers,bank_acc_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'bank_name' => [
+                    'nullable',
+                    'string',
+                    'min:5',
+                    'max:100',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'bank_acc_no' => [
+                    'nullable',
+                    'string',
+                    'min:5',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:service_providers,bank_acc_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
                 'ifsc_code' => [
                     'nullable',
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',

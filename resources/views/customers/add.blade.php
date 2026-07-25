@@ -120,22 +120,6 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <select name="zone_id" id="zone_id"
-                                            class="select2 form-select @error('zone_id') is-invalid @enderror"
-                                            data-placeholder="Select Zone">
-                                            <option value="">Select Zone</option>
-                                            @foreach($zones as $zone)
-                                                <option value="{{ $zone->id }}" {{ old('zone_id', $customer->zone_id ?? '') == $zone->id ? 'selected' : '' }}>{{ $zone->zone_name }}</option>
-                                            @endforeach
-                                        </select>
-                                        <label for="zone_id">Zone <span class="text-danger">*</span> </label>
-                                    </div>
-                                    @error('zone_id')
-                                        <div class="text-danger mt-1">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline">
                                         <select name="store_id" id="store_id"
                                             class="select2 form-select @error('store_id') is-invalid @enderror"
                                             data-placeholder="Select Store">
@@ -159,7 +143,7 @@
                                             <option value="Active" {{ old('status', $customer->status ?? '') == 'Active' ? 'selected' : '' }}>Active</option>
                                             <option value="Inactive" {{ old('status', $customer->status ?? '') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
                                         </select>
-                                        <label for="status">Status</label>
+                                        <label for="status">Status <span class="text-danger">*</span></label>
                                     </div>
                                     @error('status')
                                         <div class="text-danger mt-1">{{ $message }}</div>
@@ -216,6 +200,22 @@
                                         <label for="place_id">Place <span class="text-danger">*</span></label>
                                     </div>
                                     @error('place_id')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="form-floating form-floating-outline">
+                                        <select name="zone_id" id="zone_id"
+                                            class="select2 form-select @error('zone_id') is-invalid @enderror"
+                                            data-placeholder="Select Zone">
+                                            <option value="">Select Zone</option>
+                                            @foreach($zones as $zone)
+                                                <option value="{{ $zone->id }}" {{ old('zone_id', $customer->zone_id ?? '') == $zone->id ? 'selected' : '' }}>{{ $zone->zone_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <label for="zone_id">Zone <span class="text-danger">*</span> </label>
+                                    </div>
+                                    @error('zone_id')
                                         <div class="text-danger mt-1">{{ $message }}</div>
                                     @enderror
                                 </div>

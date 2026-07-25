@@ -5,7 +5,6 @@ $(document).ready(function () {
     $('#state_id').on('change', function () {
         var state_id = $(this).val();
         $('#city_id').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
-        $('#zone_id').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
 
         if (state_id) {
             $.ajax({
@@ -22,33 +21,17 @@ $(document).ready(function () {
                     $('#city_id').prop('disabled', false).trigger('change.select2').trigger('change');
                 }
             });
-
-            $.ajax({
-                url: APP_URL + '/get-zones/' + state_id,
-                type: 'GET',
-                dataType: 'json',
-                success: function (data) {
-                    $('#zone_id').empty().append('<option value="">-- Select Zone --</option>');
-
-                    $.each(data, function (key, zone) {
-                        $('#zone_id').append(
-                            '<option value="' + zone.id + '">' + zone.zone_name + '</option>'
-                        );
-                    });
-                    $('#zone_id').prop('disabled', false).trigger('change.select2').trigger('change');
-                }
-            });
         } else {
             $('#city_id').empty().append('<option value="">Select City</option>').prop('disabled', false).trigger('change.select2').trigger('change');
-            $('#zone_id').empty().append('<option value="">Select Zone</option>').prop('disabled', false).trigger('change.select2').trigger('change');
         }
     });
 
 
-    /* Fetch Places */
+    /* Fetch Places and Zones */
     $('#city_id').on('change', function () {
         var city_id = $(this).val();
         $('#place_id').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
+        $('#zone_id').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
         if (city_id) {
             $.ajax({
                 url: APP_URL + '/get-places/' + city_id,
@@ -62,31 +45,24 @@ $(document).ready(function () {
                     $('#place_id').prop('disabled', false).trigger('change.select2').trigger('change');
                 }
             });
-        } else {
-            $('#place_id').empty().append('<option value="">Select Place</option>').prop('disabled', false).trigger('change.select2').trigger('change');
-        }
-    });
 
-    /* Fetch Multiple Cities for Zones */
-    $('#zone_state_id').on('change', function () {
-        var state_id = $(this).val();
-        $('#city_ids').empty().append('<option value="">Loading...</option>').prop('disabled', true).trigger('change.select2');
-
-        if (state_id) {
             $.ajax({
-                url: APP_URL + '/get-cities/' + state_id,
+                url: APP_URL + '/get-zones-by-city/' + city_id,
                 type: 'GET',
                 dataType: 'json',
                 success: function (data) {
-                    $('#city_ids').empty().append('<option value="">-- Select City --</option>');
-                    $.each(data, function (key, city) {
-                        $('#city_ids').append('<option value="' + city.id + '">' + city.city_name + '</option>');
+                    $('#zone_id').empty().append('<option value="">-- Select Zone --</option>');
+                    $.each(data, function (key, zone) {
+                        $('#zone_id').append(
+                            '<option value="' + zone.id + '">' + zone.zone_name + '</option>'
+                        );
                     });
-                    $('#city_ids').prop('disabled', false).trigger('change.select2').trigger('change');
+                    $('#zone_id').prop('disabled', false).trigger('change.select2').trigger('change');
                 }
             });
         } else {
-            $('#city_ids').empty().append('<option value="">Select City</option>').prop('disabled', false).trigger('change.select2').trigger('change');
+            $('#place_id').empty().append('<option value="">Select Place</option>').prop('disabled', false).trigger('change.select2').trigger('change');
+            $('#zone_id').empty().append('<option value="">Select Zone</option>').prop('disabled', false).trigger('change.select2').trigger('change');
         }
     });
 

@@ -322,19 +322,28 @@
                         term: request.term
                     },
                     success: function(data) {
-                        response($.map(data, function(item) {
-                            return {
-                                label: item.text,
-                                value: item.text,
-                                id: item.id,
-                                code: item.code,
-                                name: item.name
-                            };
-                        }));
+                        if (data.length === 0) {
+                            response([{ label: 'No records found', value: '', id: '', no_record: true }]);
+                        } else {
+                            response($.map(data, function(item) {
+                                return {
+                                    label: item.text,
+                                    value: item.text,
+                                    id: item.id,
+                                    code: item.code,
+                                    name: item.name
+                                };
+                            }));
+                        }
                     }
                 });
             },
             select: function(event, ui) {
+                if (ui.item.no_record) {
+                    event.preventDefault();
+                    $('#item_search').val('');
+                    return false;
+                }
                 $('#item_id').val(ui.item.id);
                 $('#finished_item_code').val(ui.item.code);
                 $('#item_search').val(ui.item.code);
@@ -347,6 +356,12 @@
 
         if (itemAutocomplete.data("ui-autocomplete")) {
             itemAutocomplete.data("ui-autocomplete")._renderItem = function(ul, item) {
+                if (item.no_record) {
+                    return $("<li>")
+                        .append(`
+                            <div class="p-2 text-danger" style="font-size: 13px;">${item.label}</div>
+                        `).appendTo(ul);
+                }
                 let displayName = item.name ? item.name : item.code;
                 return $("<li>")
                     .append(`
@@ -358,8 +373,12 @@
                     `).appendTo(ul);
             };
         }
-        $('#item_search').on('input', function() {
-            if ($(this).val() === "") {
+
+        $('#item_search').on('input blur', function(e) {
+            if ($(this).val() === "" || (e.type === 'blur' && $('#finished_item_code').val() === "")) {
+                if (e.type === 'blur') {
+                    $(this).val("");
+                }
                 $('#item_id').val("");
                 $('#finished_item_code').val("");
                 $('#art_no').empty().append('<option value="">Select Art No</option>').prop('disabled', true);

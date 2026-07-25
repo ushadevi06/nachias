@@ -888,6 +888,8 @@ $isSuper = $user->id == 1;
                                         <div>Update Page</div>
                                     </a>
                                 </li>
+                                <!-- Spacer to prevent last item from being hidden by the next arrow -->
+                                <li class="menu-item d-none d-lg-block" style="width: 50px; pointer-events: none; visibility: hidden;"></li>
                             </ul>
                         </div>
                         <a href="#" class="menu-horizontal-next"></a>

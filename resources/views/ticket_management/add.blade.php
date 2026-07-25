@@ -22,7 +22,7 @@
                                     <div class="form-floating form-floating-outline">
                                         <input type="text" class="form-control" id="subject" placeholder="Ticket Title" name="subject" value="{{ old('subject', $ticket->subject ?? '') }}">
                                         <label for="subject">Ticket Title <span class="text-danger">*</span></label>
-                                        @error('subject') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('subject') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-3 mb-4">
@@ -34,7 +34,7 @@
                                             @endforeach
                                         </select>
                                         <label for="ticket_cat_id">Category <span class="text-danger">*</span></label>
-                                        @error('ticket_cat_id') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('ticket_cat_id') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-3 mb-4">
@@ -46,7 +46,7 @@
                                             @endforeach
                                         </select>
                                         <label for="priority">Priority <span class="text-danger">*</span></label>
-                                        @error('priority') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('priority') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                             </div>
@@ -63,7 +63,7 @@
                                             @endforeach
                                         </select>
                                         <label for="requester_id">Created By <span class="text-danger">*</span></label>
-                                        @error('requester_id') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('requester_id') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-4">
@@ -75,7 +75,7 @@
                                             @endforeach
                                         </select>
                                         <label for="department_id">Department <span class="text-danger">*</span></label>
-                                        @error('department_id') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('department_id') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-4">
@@ -87,7 +87,7 @@
                                             @endforeach
                                         </select>
                                         <label for="operation_stage_id">Operation Stage</label>
-                                        @error('operation_stage_id') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('operation_stage_id') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                             </div>
@@ -99,8 +99,8 @@
                                     <div class="form-floating form-floating-outline">
                                         <select name="assigned_to_id" id="assigned_to_id" class="select2 form-select" data-placeholder="Assign To">
                                             <option value="">Select Assignee</option>
-                                            @foreach($users as $user)
-                                                <option value="{{ $user->id }}" {{ (old('assigned_to_id', $ticket->assigned_to_id ?? '') == $user->id) ? 'selected' : '' }}>{{ $user->name }} {{ $user->emp_id ? '[' . $user->emp_id . ']' : '' }}</option>
+                                            @foreach($assignees as $assignee)
+                                                <option value="{{ $assignee->id }}" {{ (old('assigned_to_id', $ticket->assigned_to_id ?? '') == $assignee->id) ? 'selected' : '' }}>{{ $assignee->name }} {{ $assignee->emp_id ? '[' . $assignee->emp_id . ']' : '' }}</option>
                                             @endforeach
                                         </select>
                                         <label for="assigned_to_id">Assigned To</label>
@@ -119,7 +119,7 @@
                                             <option value="Inactive" {{ (old('status', $ticket->status ?? '') == 'Inactive') ? 'selected' : '' }}>Inactive</option>
                                         </select>
                                         <label for="status">Status <span class="text-danger">*</span></label>
-                                        @error('status') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('status') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                             </div>
@@ -127,9 +127,9 @@
                                 <div class="col-12"><h6 class="border-bottom pb-2 mb-3">Detailed Description & Attachments</h6></div>
                                 <div class="col-md-4 mb-4">
                                     <div class="form-floating form-floating-outline">
-                                        <textarea class="form-control" id="description" name="description" placeholder="Description" maxlength="255" style="height: 100px;">{{ old('description', $ticket->description ?? '') }}</textarea>
+                                        <textarea class="form-control" id="description" name="description" placeholder="Description" style="height: 100px;">{{ old('description', $ticket->description ?? '') }}</textarea>
                                         <label for="description">Issue Description <span class="text-danger">*</span></label>
-                                        @error('description') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('description') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-4">
@@ -140,14 +140,14 @@
                                         @if($ticket && $ticket->attachment)
                                             <div class="mt-2"><a href="{{ url($ticket->attachment) }}" target="_blank"><i class="ri ri-image-line"></i> View</a></div>
                                         @endif
-                                        @error('attachment') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('attachment') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-4">
                                     <div class="form-floating form-floating-outline">
-                                        <textarea class="form-control" id="remarks" name="remarks" placeholder="Remarks" maxlength="255" style="height: 100px;">{{ old('remarks', $ticket->remarks ?? '') }}</textarea>
+                                        <textarea class="form-control" id="remarks" name="remarks" placeholder="Remarks"  style="height: 100px;">{{ old('remarks', $ticket->remarks ?? '') }}</textarea>
                                         <label for="remarks">Remarks</label>
-                                        @error('remarks') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('remarks') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                             </div>
@@ -157,9 +157,9 @@
                                 <div class="col-12"><h6 class="border-bottom pb-2 mb-3">Resolution Details</h6></div>
                                 <div class="col-md-4 mb-4">
                                     <div class="form-floating form-floating-outline">
-                                        <textarea class="form-control" id="resolution_details" name="resolution_details" placeholder="How was it resolved?" maxlength="255" style="height: 100px;">{{ old('resolution_details', $ticket->resolution_details ?? '') }}</textarea>
+                                        <textarea class="form-control" id="resolution_details" name="resolution_details" placeholder="How was it resolved?"  style="height: 100px;">{{ old('resolution_details', $ticket->resolution_details ?? '') }}</textarea>
                                         <label for="resolution_details">Resolution Details</label>
-                                        @error('resolution_details') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        @error('resolution_details') <div class="text-danger mt-1">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-4">

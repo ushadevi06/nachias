@@ -115,26 +115,99 @@ class SupplierController extends Controller
             $request = request();
 
             $rules = [
-                'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:25|alpha_num|unique:suppliers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|numeric|digits_between:10,15|unique:suppliers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
-                'email' => 'nullable|email|max:128|unique:suppliers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'code' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:25',
+                    'not_in:0',
+                    'regex:/^[a-zA-Z0-9\-_]+$/',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:suppliers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
+                'mobile_no' => [
+                    'required',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/',
+                    'unique:suppliers,mobile_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
+                ],
+                'email' => 'nullable|email:rfc,dns|max:128|unique:suppliers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
-                'transport_name' => 'nullable|string|min:3|max:50',
-                'booking_area' => 'nullable|string|min:3|max:50',
+                'transport_name' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'booking_area' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'store_id' => 'nullable|exists:store_types,id',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'place_id' => 'required|exists:places,id',
-                'address_line_1' => 'required|string|min:5|max:150',
-                'address_line_2' => 'nullable|string|min:5|max:150',
-                'address_line_3' => 'nullable|string|min:5|max:150',
-                'zip_code' => 'nullable|string|min:6|max:10',
-                'contact_person_name' => 'nullable|string|min:3|max:50',
-                'designation' => 'nullable|string|min:3|max:50',
-                'contact_mobile_no' => 'nullable|numeric|digits_between:10,15',
-                'contact_email' => 'nullable|email|max:128',
+                'address_line_1' => [
+                    'required',
+                    'string',
+                    'min:5',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'address_line_2' => [
+                    'nullable',
+                    'string',
+                    'min:5',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'address_line_3' => [
+                    'nullable',
+                    'string',
+                    'min:5',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'zip_code' => [
+                    'nullable',
+                    'numeric',
+                    'digits:6',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_person_name' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'designation' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_mobile_no' => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_email' => 'nullable|email:rfc,dns|max:128',
                 'commission' => 'nullable|numeric|min:0|max:100',
                 'purchase_commission_agent_id' => 'nullable|exists:purchase_commission_agents,id',
                 'commission_percentage' => 'nullable|numeric|min:0|max:100',
@@ -155,11 +228,18 @@ class SupplierController extends Controller
                 'ecc_no' => 'nullable|string|max:15',
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
-                'bank_name' => 'nullable|string|min:3|max:50',
+                'bank_name' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'branch' => 'nullable|string|min:3|max:50',
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
+                    'regex:/^(?!0+$).*$/',
                     'unique:suppliers,account_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'ifsc_code' => [
@@ -171,13 +251,24 @@ class SupplierController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format',
-                '*.alpha_num' => 'This field should contain only letters and numbers.',
+                'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
+                'code.not_in' => 'This field is an invalid format.',
+                'gst_no.regex' => 'Please enter a valid GSTIN.',
+                'pan_no.regex' => 'Please enter a valid PAN number (e.g., ABCDE1234F).',
+                '*.regex' => 'This field is an invalid format.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',
+                '*.digits' => 'This field must be exactly :digits digits.',
                 '*.numeric' => 'This field must be a number.',
                 '*.url' => 'This field is an invalid URL.',
+                '*.email' => 'Please enter a valid email address.',
+                'commission.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'commission_percentage.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'igst_percent.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'cgst_percent.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'sgst_percent.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'credit_limit.min' => 'Please enter a valid numeric value greater than or equal to 0.',
             ];
             $validated = $request->validate($rules, $messages);
 

@@ -75,12 +75,20 @@ class FabricSizeController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'width'  => 'required|string|min:1|max:50|unique:fabric_sizes,width,' . $id . ',id,deleted_at,NULL',
+                'width'  => [
+                    'required',
+                    'string',
+                    'min:1',
+                    'max:50',
+                    'regex:/^[0-9,\s.]+$/',
+                    'unique:fabric_sizes,width,' . $id . ',id,deleted_at,NULL'
+                ],
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'width.regex' => 'Fabric size can only contain numbers, commas, and dots.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

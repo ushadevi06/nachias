@@ -305,9 +305,15 @@ class StockEntryController extends Controller
             ];
             $messages = [
                 '*.required' => 'This field is required.',
+                '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
+                '*.numeric' => 'This field must be a valid number.',
                 'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
-                'items.*.store_location_id.required' => 'Location is required.',
+                'items.*.store_location_id.required' => 'This field is required.',
+                'items.*.qty_in.required' => 'This field is required.',
+                'items.*.qty_in.min' => 'Quantity must be greater than 0.',
+                'items.*.price.required' => 'This field is required.',
+                'items.*.price.min' => 'Price cannot be negative.',
             ];
 
             $rules['reference_document'] = 'nullable|mimes:pdf,doc,docx,jpg,jpeg,png,webp|max:2048';
@@ -318,6 +324,7 @@ class StockEntryController extends Controller
                     if (isset($item['selected'])) {
                         $hasSelectedItem = true;
                         $rules["items.$index.qty_in"] = 'required|numeric|min:0.01';
+                        $rules["items.$index.price"] = 'required|numeric|min:0';
                         $rules["items.$index.store_location_id"] = 'required|exists:store_locations,id';
                     }
                 }
@@ -340,7 +347,7 @@ class StockEntryController extends Controller
                         $availableBalance = $grnItem->qty_accepted - $totalStocked;
 
                         if ($item['qty_in'] > $availableBalance) {
-                            return back()->withInput()->withErrors(['items' => "The quantity entered ({$item['qty_in']}) exceeds the available balance ($availableBalance) for a GRN item."]);
+                            return back()->withInput()->withErrors(["items.$index.qty_in" => "Quantity exceeds the available GRN balance of $availableBalance."]);
                         }
                     }
                 }

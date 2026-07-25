@@ -175,11 +175,12 @@ class GrnEntryController extends Controller
             }
 
             $messages = [
-                '*.required' => 'This field is required',
-                '*.numeric' => 'This field must be a number',
-                '*.min' => 'This field must be at least :min',
+                '*.required' => 'This field is required.',
+                '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
+                '*.numeric' => 'This field must be a valid number.',
+                '*.min' => 'This field must be at least :min.',
                 '*.max' => 'This field should not be more than :max characters.',
-                '*.exists' => 'This field is invalid',
+                '*.exists' => 'This field is invalid.',
             ];
 
             $request->validate($headerRules, $messages);

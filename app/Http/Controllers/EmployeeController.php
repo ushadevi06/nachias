@@ -117,23 +117,31 @@ class EmployeeController extends Controller
         }
         if (request()->isMethod('post')) {
             $rules = [
-                'name' => 'required|string|min:3|max:50',
+                'name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'email' => [
                     'required',
-                    'email',
+                    'email:filter',
                     'max:128',
-                    Rule::unique('users', 'email')->ignore($id ?? null)->whereNull('deleted_at'),
+                    Rule::unique('users', 'email')->ignore($id ?? null),
                 ],
                 'phone' => [
                     'required',
                     'numeric',
                     'digits_between:10,15',
-                    Rule::unique('users', 'phone')->ignore($id ?? null)->whereNull('deleted_at'),
+                    'regex:/^(?!0+$).*$/',
+                    Rule::unique('users', 'phone')->ignore($id ?? null),
                 ],
                 'emp_id' => [
                     'required',
                     'max:20',
-                    Rule::unique('users', 'emp_id')->ignore($id ?? null)->whereNull('deleted_at'),
+                    'not_in:0',
+                    Rule::unique('users', 'emp_id')->ignore($id ?? null),
                 ],
                 'department_id' => 'required|exists:departments,id',
                 'device' => 'required|exists:devices,serial_number',
@@ -145,30 +153,97 @@ class EmployeeController extends Controller
                 'state_id' => 'required|exists:states,id',
                 'city_id' => 'required|exists:cities,id',
                 'status' => 'required|in:Active,Inactive',
-                'father_name' => 'nullable|string|min:3|max:50',
-                'father_phone' => 'nullable|numeric|digits_between:10,15',
+                'father_name' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'father_phone' => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:1024',
                 'esi' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
                 'pf' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
                 'aadhaar' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
                 'pan' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:2048',
-                'address_line1' => 'required|string|min:3|max:150',
-                'contact_person_name' => 'nullable|string|min:3|max:100',
-                'contact_person_phone' => 'nullable|numeric|digits_between:10,15',
-                'contact_person_email' => 'nullable|email|max:128',
-                'pf_no'   => 'nullable|max:30',
-                'esi_no'   => 'nullable|max:30',
-                'fixed_gross'   => 'nullable|numeric|min:0|max:9999999',
-                'bus_fare'       => 'nullable|numeric|min:0|max:1000',
+                'address_line1' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'address_line2' => [
+                    'nullable',
+                    'string',
+                    'max:150',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'zipcode' => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:4,10',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_person_name' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:100',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_person_phone' => [
+                    'nullable',
+                    'numeric',
+                    'digits_between:10,15',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'contact_person_email' => 'nullable|email:rfc,dns|max:128',
+                'pf_no' => [
+                    'nullable',
+                    'max:30',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'esi_no' => [
+                    'nullable',
+                    'max:30',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'fixed_gross' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                    'max:9999999',
+                    'regex:/^(?!0+$).*$/'
+                ],
+                'bus_fare' => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                    'max:1000',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'hra'            => 'nullable|numeric|min:0|max:9999999',
                 'allowances'     => 'nullable|numeric|min:0|max:9999999',
                 'deductions'     => 'nullable|numeric|min:0|max:9999999',
                 'gross_salary'   => 'nullable|numeric|min:0|max:9999999',
                 'net_salary'     => 'nullable|numeric|min:0|max:9999999',
-                'bank_name'      => 'nullable|string|min:3|max:50',
+                'bank_name' => [
+                    'nullable',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'regex:/^(?!0+$).*$/'
+                ],
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
+                    'regex:/^(?!0+$).*$/',
                     'unique:users,account_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
                 'ifsc_code' => [
@@ -176,12 +251,14 @@ class EmployeeController extends Controller
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
                     'unique:users,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
+                'date_of_joining' => 'nullable|date_format:d-m-Y',
             ];
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
                 '*.numeric' => 'This field must be a number.',
+                'emp_id.not_in' => 'Employee ID cannot be 0.',
                 'image.max' => 'Profile picture should not be more than 1MB.',
                 'esi.max' => 'ESI file should not be more than 2MB.',
                 'pf.max' => 'PF file should not be more than 2MB.',
@@ -189,6 +266,17 @@ class EmployeeController extends Controller
                 'pan.max' => 'Pan file should not be more than 2MB.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                '*.digits_between' => 'This field must be between :min and :max digits.',
+                '*.digits' => 'This field must be exactly :digits digits.',
+                '*.email' => 'Please enter a valid email address.',
+                '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
+                'fixed_gross.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'bus_fare.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'hra.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'allowances.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'deductions.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'gross_salary.min' => 'Please enter a valid numeric value greater than or equal to 0.',
+                'net_salary.min' => 'Please enter a valid numeric value greater than or equal to 0.',
             ];
             if (!$id) {
                 $rules['password'] = 'required|string|min:6|max:15';
@@ -315,12 +403,12 @@ class EmployeeController extends Controller
             }
             if ($id) {
                 $newData = User::find($employeeId)->toArray();
-                addLog('update', 'User', 'users', $employeeId, $oldData, $newData);
-                $message = 'User updated successfully';
+                addLog('update', 'Employee', 'users', $employeeId, $oldData, $newData);
+                $message = 'Employee updated successfully';
             } else {
                 $newEmployee = User::find($employeeId);
-                addLog('create', 'User', 'users', $employeeId, null, $newEmployee->toArray());
-                $message = 'User added successfully';
+                addLog('create', 'Employee', 'users', $employeeId, null, $newEmployee->toArray());
+                $message = 'Employee added successfully';
             }
             return redirect('employees')->with('success', $message);
         }

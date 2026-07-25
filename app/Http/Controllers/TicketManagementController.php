@@ -43,6 +43,27 @@ class TicketManagementController extends Controller
                 });
             }
 
+            if ($request->has('filter_priority') && !empty($request->filter_priority)) {
+                $query->where('priority', $request->filter_priority);
+            }
+
+            if ($request->has('filter_assigned_to') && !empty($request->filter_assigned_to)) {
+                $query->where('assigned_to_id', $request->filter_assigned_to);
+            }
+
+            if ($request->has('filter_date_range') && !empty($request->filter_date_range)) {
+                $dates = explode(' to ', $request->filter_date_range);
+                if (count($dates) == 2) {
+                    $startDate = trim($dates[0]) . ' 00:00:00';
+                    $endDate = trim($dates[1]) . ' 23:59:59';
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                } elseif (count($dates) == 1) {
+                    $startDate = trim($dates[0]) . ' 00:00:00';
+                    $endDate = trim($dates[0]) . ' 23:59:59';
+                    $query->whereBetween('created_at', [$startDate, $endDate]);
+                }
+            }
+
             $filteredRecords = $query->count();
 
             $start = $request->input('start', 0);
@@ -105,7 +126,9 @@ class TicketManagementController extends Controller
             ]);
         }
 
-        return view('ticket_management.index');
+        $users = User::active()->get();
+        $assignees = User::active()->where('id', '!=', 1)->get();
+        return view('ticket_management.index', compact('users', 'assignees'));
     }
 
     public function add(Request $request, $id = null)
@@ -124,7 +147,7 @@ class TicketManagementController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'subject'            => 'required|string|max:150',
-                'description'        => 'required|string|max:255|regex:/^[^<>]*$/',
+                'description'        => 'required|string|regex:/^[^<>]*$/',
                 'ticket_cat_id'      => 'required|exists:ticket_categories,id',
                 'priority'           => 'required|in:Low,Medium,High,Critical',
                 'department_id'      => 'required|exists:departments,id',
@@ -133,8 +156,8 @@ class TicketManagementController extends Controller
                 'due_date'           => 'nullable|date',
                 'status'             => 'required',
                 'attachment'         => 'nullable|file|max:2048|mimes:jpg,jpeg,png,pdf,doc,docx,webp',
-                'remarks'            => 'nullable|string|max:255|regex:/^[^<>]*$/',
-                'resolution_details' => 'nullable|string|max:255|regex:/^[^<>]*$/',
+                'remarks'            => 'nullable|string|regex:/^[^<>]*$/',
+                'resolution_details' => 'nullable|string|regex:/^[^<>]*$/',
                 'resolved_date'      => 'nullable|date',
             ];
 
@@ -164,6 +187,10 @@ class TicketManagementController extends Controller
                 $filename = time() . '_' . $file->getClientOriginalName();
                 $file->move($destinationPath, $filename);
                 $data['attachment'] = 'uploads/tickets/' . $filename;
+
+                if ($ticket && $ticket->attachment && file_exists(public_path($ticket->attachment))) {
+                    @unlink(public_path($ticket->attachment));
+                }
             }
 
             if ($id) {
@@ -194,6 +221,7 @@ class TicketManagementController extends Controller
         }
 
         $users = User::active()->get();
+        $assignees = User::active()->where('id', '!=', 1)->get();
         $departments = Department::active()->get();
         $categories = TicketCategory::active()->get();
         $operationStages = OperationStage::active()->get();
@@ -208,7 +236,7 @@ class TicketManagementController extends Controller
             $ticketNo = 'TLT-' . $year . '-' . str_pad($lastNum + 1, 3, '0', STR_PAD_LEFT);
         }
 
-        return view('ticket_management.add', compact('ticket', 'users', 'departments', 'categories', 'priorities', 'operationStages', 'ticketNo'));
+        return view('ticket_management.add', compact('ticket', 'users', 'assignees', 'departments', 'categories', 'priorities', 'operationStages', 'ticketNo'));
     }
 
     public function destroy($id)
