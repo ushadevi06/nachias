@@ -79,8 +79,8 @@ class BrandCategoryController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'code' => ['required','string','min:3','max:50',Rule::unique('brand_categories', 'code')->ignore($id)->whereNull('deleted_at')],
-                'name' => ['required','string','min:3','max:100',Rule::unique('brand_categories', 'name')->ignore($id)->whereNull('deleted_at')],
+                'code' => ['required','string','min:3','max:50','regex:/^(?!0+$).*$/',Rule::unique('brand_categories', 'code')->ignore($id)->whereNull('deleted_at')],
+                'name' => ['required','string','min:3','max:100','regex:/^(?!0+$).*$/',Rule::unique('brand_categories', 'name')->ignore($id)->whereNull('deleted_at')],
                 // 'description' => 'nullable|string',
                 'status' => 'required|in:Active,Inactive',
             ];
@@ -89,6 +89,9 @@ class BrandCategoryController extends Controller
                 '*.unique'   => 'This field already exists.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
+                'code.regex' => 'Brand Category Code cannot be zero.',
+                'name.regex' => 'Brand Category Name cannot be zero.',
+                '*.regex' => 'This field is an invalid format.',
             ];
             $validated = $request->validate($rules, $messages);
             $data = [

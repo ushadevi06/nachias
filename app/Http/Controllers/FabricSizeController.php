@@ -88,7 +88,7 @@ class FabricSizeController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                'width.regex' => 'Fabric size can only contain numbers, commas, and dots.',
+                '*.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

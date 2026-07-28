@@ -13,7 +13,7 @@
                             <h4>{{ $customer ? 'Edit' : 'Add' }} Customer</h4>
                         </div>
                         <form action="{{ url('customers/add' . ($customer ? '/' . $customer->id : '')) }}" method="POST"
-                            class="common-form" autocomplete="off">
+                            class="common-form" autocomplete="off" novalidate>
                             @csrf
                             <div class="row g-4">
                                 <div class="col-lg-12">

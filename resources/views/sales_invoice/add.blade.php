@@ -18,6 +18,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}">
+                                    <input type="hidden" name="is_manual_inv_no" id="is_manual_inv_no" value="{{ old('is_manual_inv_no', '0') }}">
                                     <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
                                     @error('inv_no')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -2242,7 +2243,12 @@
             return (month >= 4) ? year : (year - 1);
         }
 
+        $('#inv_no').on('input', function() {
+            $('#is_manual_inv_no').val('1');
+        });
+
         function updateInvoiceNo() {
+
             let brandId = $('#brand_id').val();
             let invDate = $('input[name="inv_date"]').val();
 
@@ -2266,6 +2272,7 @@
                 success: function(response) {
                     if (response.success) {
                         $('#inv_no').val(response.inv_no);
+                        $('#is_manual_inv_no').val('0');
                     } else {
                         console.error(response.message);
                     }

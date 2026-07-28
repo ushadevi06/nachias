@@ -12,7 +12,7 @@
                         <div class="card-header-box">
                             <h4>{{ $employee ? 'Edit' : 'Add' }} Employee</h4>
                         </div>
-                        <form action="{{ url('employees/add' . ($employee ? '/' . $employee->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off">
+                        <form action="{{ url('employees/add' . ($employee ? '/' . $employee->id : '')) }}" method="POST" class="common-form" enctype="multipart/form-data" autocomplete="off" novalidate>
                             @csrf
                             <div class="row g-4 mb-4">
                                 <div class="col-lg-12">

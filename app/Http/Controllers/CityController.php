@@ -103,6 +103,7 @@ class CityController extends Controller
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format.',
                 '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',

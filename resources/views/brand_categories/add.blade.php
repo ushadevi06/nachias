@@ -66,7 +66,7 @@
                             </div>
                             <div class="col-lg-12 text-end">
                                 <button type="submit"
-                                    class="btn btn-primary">{{ $brandCategory ? 'Update' : 'Submit' }}</button>
+                                    class="btn btn-primary">Submit</button>
                                 <a href="{{ url('brand_categories') }}" class="btn btn-secondary">Cancel</a>
                             </div>
                         </div>

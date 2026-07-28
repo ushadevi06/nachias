@@ -119,6 +119,7 @@ class PlaceController extends Controller
             ], [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                '*.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
                 'latitude.between' => 'Latitude must be between -90 and 90.',

@@ -88,6 +88,10 @@ class PurchaseOrderController extends Controller
 
                     $disabled = '';
 
+                    if ($po->status === 'Draft' && in_array($status, ['Dispatched', 'Received'])) {
+                        $disabled = 'disabled';
+                    }
+
                     if ($po->status === 'Approved' && $status === 'Draft') {
                         $disabled = 'disabled';
                     }
@@ -570,6 +574,13 @@ class PurchaseOrderController extends Controller
                     'success'      => false,
                     'rate_missing' => true,
                     'message'      => 'Please update rate for all items before changing status.',
+                ]);
+            }
+
+            if (in_array($request->status, ['Dispatched', 'Received'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A Draft Purchase Order must be Approved before it can be Dispatched or Received.'
                 ]);
             }
         }

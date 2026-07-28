@@ -173,47 +173,7 @@ class SalesInvoiceController extends Controller
             }
         }
 
-        $brand = \App\Models\Brand::find($brandId);
-        if (!$brand) {
-            return response()->json(['success' => false, 'message' => 'Brand not found.']);
-        }
-
-        $brandCode = trim($brand->code);
-        if (empty($brandCode)) {
-            $brandCode = strtoupper(substr($brand->brand_name, 0, 2));
-        }
-
-        $year = (int)$date->format('Y');
-        $month = (int)$date->format('m');
-        $startYear = ($month >= 4) ? $year : ($year - 1);
-        $endYear = $startYear + 1;
-        $financialYear = substr($startYear, -2) . '-' . substr($endYear, -2);
-
-        $maxRunningNo = 0;
-        if ($financialYear === '26-27') {
-            if ($brandCode === 'CW') {
-                $maxRunningNo = 1157;
-            } elseif ($brandCode === 'CDS') {
-                $maxRunningNo = 735;
-            } elseif ($brandCode === 'CB') {
-                $maxRunningNo = 506;
-            }
-        }
-
-        $invoices = SalesInvoice::where('brand_id', $brandId)->where('inv_no', 'like', "%/%/{$financialYear}")->get(['inv_no']);
-
-        foreach ($invoices as $inv) {
-            $parts = explode('/', $inv->inv_no);
-            if (count($parts) === 3) {
-                $runningNo = (int)$parts[1];
-                if ($runningNo > $maxRunningNo) {
-                    $maxRunningNo = $runningNo;
-                }
-            }
-        }
-
-        $nextRunningNo = $maxRunningNo + 1;
-        $generatedInvNo = "{$brandCode}/{$nextRunningNo}/{$financialYear}";
+        $generatedInvNo = $this->generateInvoiceNumber($brandId, $date);
 
         return response()->json([
             'success' => true,
@@ -233,6 +193,13 @@ class SalesInvoiceController extends Controller
             }
         }
 
+        if ($id) {
+            $existingInvoice = SalesInvoice::findOrFail($id);
+            if ($existingInvoice->einvoice_status === 'cancelled' || $existingInvoice->invoice_status === 'Cancelled') {
+                return redirect()->route('sales_invoices.index')->with('error', 'Cannot edit a cancelled invoice.');
+            }
+        }
+
         if ($request->isMethod('post')) {
             $selectedBrandId = $request->brand_id;
             if ($selectedBrandId && $request->inv_date) {
@@ -245,7 +212,9 @@ class SalesInvoiceController extends Controller
                     }
 
                     $regenerate = false;
-                    if (!$id) {
+                    if ($request->is_manual_inv_no == '1') {
+                        $regenerate = false;
+                    } else if (!$id) {
                         $regenerate = true;
                     } else {
                         $invoice = SalesInvoice::findOrFail($id);
@@ -266,50 +235,8 @@ class SalesInvoiceController extends Controller
                     }
 
                     if ($regenerate) {
-                        $brand = \App\Models\Brand::find($selectedBrandId);
-                        if ($brand) {
-                            $brandCode = trim($brand->code);
-                            if (empty($brandCode)) {
-                                $brandCode = strtoupper(substr($brand->brand_name, 0, 2));
-                            }
-                            $selYear = (int)$selectedDate->format('Y');
-                            $selMonth = (int)$selectedDate->format('m');
-                            $startFY = ($selMonth >= 4) ? $selYear : ($selYear - 1);
-                            $endFY = $startFY + 1;
-                            $financialYear = substr($startFY, -2) . '-' . substr($endFY, -2);
-
-                            $maxRunningNo = 0;
-                            if ($financialYear === '26-27') {
-                                if ($brandCode === 'CW') {
-                                    $maxRunningNo = 1157;
-                                } elseif ($brandCode === 'CDS') {
-                                    $maxRunningNo = 735;
-                                } elseif ($brandCode === 'CB') {
-                                    $maxRunningNo = 506;
-                                }
-                            }
-
-                            $invoices = SalesInvoice::where('brand_id', $selectedBrandId)
-                                ->where('inv_no', 'like', "%/%/{$financialYear}")
-                                ->when($id, function($q) use ($id) {
-                                    $q->where('id', '!=', $id);
-                                })
-                                ->get(['inv_no']);
-
-                            foreach ($invoices as $inv) {
-                                $parts = explode('/', $inv->inv_no);
-                                if (count($parts) === 3) {
-                                    $runningNo = (int)$parts[1];
-                                    if ($runningNo > $maxRunningNo) {
-                                        $maxRunningNo = $runningNo;
-                                    }
-                                }
-                            }
-
-                            $nextRunningNo = $maxRunningNo + 1;
-                            $generatedInvNo = "{$brandCode}/{$nextRunningNo}/{$financialYear}";
-                            $request->merge(['inv_no' => $generatedInvNo]);
-                        }
+                        $generatedInvNo = $this->generateInvoiceNumber($selectedBrandId, $selectedDate, $id);
+                        $request->merge(['inv_no' => $generatedInvNo]);
                     }
                 } catch (\Exception $e) {
                 }
@@ -1317,12 +1244,46 @@ class SalesInvoiceController extends Controller
         $result = $eInvoiceService->cancelEInvoice($invoice, $cancelReason, $cancelRemarks);
 
         if ($result['success']) {
-            $invoice->refresh();
-            $newData = $invoice->toArray();
-            addLog('cancel_einvoice', 'Sales Invoice E-Invoice Cancelled', 'sales_invoices', $id, $oldData, $newData);
+            try {
+                \DB::beginTransaction();
+                
+                $invoice->refresh();
 
-            if (!empty($oldData['eway_bill_no'])) {
-                $result['message'] = 'E-Way Bill and E-Invoice cancelled successfully.';
+                if (!$invoice->stock_reverted) {
+                    $this->adjustStock($invoice->id, true);
+                    
+                    $invoice->update([
+                        'invoice_status' => 'Cancelled',
+                        'cancellation_date' => now(),
+                        'cancel_reason' => $cancelReason,
+                        'cancel_remarks' => $cancelRemarks,
+                        'cancelled_by' => auth()->id() ?? 1,
+                        'stock_reverted' => true,
+                    ]);
+                } else {
+                    $invoice->update([
+                        'invoice_status' => 'Cancelled',
+                        'cancellation_date' => now(),
+                        'cancel_reason' => $cancelReason,
+                        'cancel_remarks' => $cancelRemarks,
+                        'cancelled_by' => auth()->id() ?? 1,
+                    ]);
+                }
+
+                $newData = $invoice->toArray();
+                addLog('cancel_einvoice', 'Sales Invoice E-Invoice Cancelled', 'sales_invoices', $id, $oldData, $newData);
+
+                \DB::commit();
+
+                if (!empty($oldData['eway_bill_no'])) {
+                    $result['message'] = 'E-Way Bill and E-Invoice cancelled successfully, and stock reverted.';
+                } else {
+                    $result['message'] = 'E-Invoice cancelled successfully, and stock reverted.';
+                }
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                \Log::error('Failed to update local records after E-Invoice cancellation: ' . $e->getMessage());
+                $result['message'] = 'E-Invoice cancelled on portal, but local stock reversion failed. Please contact admin.';
             }
         }
 
@@ -1375,8 +1336,7 @@ class SalesInvoiceController extends Controller
 
         DB::beginTransaction();
         try {
-            $lastInv = SalesInvoice::orderBy('id', 'desc')->first();
-            $nextInvNumber = 'SV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+            $nextInvNumber = $this->generateInvoiceNumber($original->brand_id, now());
 
             $newInvoice = $original->replicate();
             $newInvoice->inv_no = $nextInvNumber;
@@ -2022,5 +1982,55 @@ class SalesInvoiceController extends Controller
         }
         $filters = $request->only(['customer_id', 'brand_id', 'inv_date_range', 'inv_no']);
         return Excel::download(new SalesInvoiceItemsExport($filters), 'Sales_Invoice_Items.xlsx');
+    }
+
+    private function generateInvoiceNumber($brandId, $date, $ignoreId = null)
+    {
+        $brand = \App\Models\Brand::find($brandId);
+        if (!$brand) {
+            return '';
+        }
+
+        $brandCode = trim($brand->code);
+        if (empty($brandCode)) {
+            $brandCode = strtoupper(substr($brand->brand_name, 0, 2));
+        }
+
+        $year = (int)$date->format('Y');
+        $month = (int)$date->format('m');
+        $startYear = ($month >= 4) ? $year : ($year - 1);
+        $endYear = $startYear + 1;
+        $financialYear = substr($startYear, -2) . '-' . substr($endYear, -2);
+
+        $maxRunningNo = 0;
+        if ($financialYear === '26-27') {
+            if ($brandCode === 'CW') {
+                $maxRunningNo = 1157;
+            } elseif ($brandCode === 'CDS') {
+                $maxRunningNo = 735;
+            } elseif ($brandCode === 'CB') {
+                $maxRunningNo = 506;
+            }
+        }
+
+        $invoices = SalesInvoice::where('brand_id', $brandId)
+            ->where('inv_no', 'like', "%/%/{$financialYear}")
+            ->when($ignoreId, function ($q) use ($ignoreId) {
+                $q->where('id', '!=', $ignoreId);
+            })
+            ->get(['inv_no']);
+
+        foreach ($invoices as $inv) {
+            $parts = explode('/', $inv->inv_no);
+            if (count($parts) === 3) {
+                $runningNo = (int)$parts[1];
+                if ($runningNo > $maxRunningNo) {
+                    $maxRunningNo = $runningNo;
+                }
+            }
+        }
+
+        $nextRunningNo = $maxRunningNo + 1;
+        return "{$brandCode}/{$nextRunningNo}/{$financialYear}";
     }
 }

@@ -110,7 +110,7 @@ class TicketManagementController extends Controller
                     'DT_RowIndex' => $i++,
                     'ticket_no'   => $row->ticket_no,
                     'subject'     => '<strong>' . $row->subject . '</strong><br><small class="text-muted">' . ($row->requester->name ?? 'N/A') . ' (' . ($row->category->category_name ?? 'N/A') . ')</small>',
-                    'assigned_to' => ($row->assignedTo->name ?? 'Unassigned') . ($row->assignedTo->emp_id ? ' (' . $row->assignedTo->emp_id . ')' : ''),
+                    'assigned_to' => ($row->assignedTo->name ?? 'Unassigned') . ($row->assignedTo?->emp_id ? ' (' . $row->assignedTo->emp_id . ')' : ''),
                     'priority'    => $priorityBadge,
                     'created_at'  => $row->created_at->format('d-M-Y'),
                     'status'      => $status,

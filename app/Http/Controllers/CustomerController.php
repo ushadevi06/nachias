@@ -106,7 +106,7 @@ class CustomerController extends Controller
             $rules = [
                 'category' => 'required|in:Retailer,Wholesaler',
                 'name' => 'required|string|min:3|max:50|regex:/[a-zA-Z]/',
-                'code' => ['required', 'string', 'min:3', 'max:20', 'not_regex:/^0+$/', 'regex:/^[a-zA-Z0-9\-_]+$/', 'unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
+                'code' => ['required', 'string', 'min:3', 'max:20', 'not_in:0', 'not_regex:/^0+$/', 'regex:/^[a-zA-Z0-9\-_]+$/', 'unique:customers,code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'mobile_no' => 'required|numeric|digits_between:10,15|regex:/[1-9]/',
                 'email' => 'nullable|email:rfc,dns|max:128|unique:customers,email,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'website_url' => 'nullable|url|max:255',
@@ -158,8 +158,10 @@ class CustomerController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                'code.not_in' => 'This field is an invalid format.',
                 '*.regex' => 'This field is an invalid format.',
+                'code.not_in' => 'Code cannot be 0.',
+                'code.not_regex' => 'Code cannot be 0.',
+                'code.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',
