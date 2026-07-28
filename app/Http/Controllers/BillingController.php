@@ -23,7 +23,8 @@ class BillingController extends Controller
             if ($request->has('search') && !empty($request->input('search')['value'])) {
                 $search = $request->input('search')['value'];
                 $query->where(function ($q) use ($search) {
-                    $q->where('bill_no', 'like', "%{$search}%")
+                    $q->where('billing_name', 'like', "%{$search}%")
+                        ->orWhere('bill_no', 'like', "%{$search}%")
                         ->orWhere('billing_type', 'like', "%{$search}%")
                         ->orWhere('reason', 'like', "%{$search}%");
                 });
@@ -51,7 +52,7 @@ class BillingController extends Controller
 
                     if ($row->status === 'Paid' && $option !== 'Paid') {
                         $disabled = 'disabled';
-                    } elseif ($row->status === 'Cancelled' && $option !== 'Cancelled') {
+                    } elseif ($row->status === 'Cancelled' && !in_array($option, ['Cancelled', 'Paid'])) {
                         $disabled = 'disabled';
                     }
 
@@ -74,6 +75,7 @@ class BillingController extends Controller
 
                 $data[] = [
                     'DT_RowIndex' => $i++,
+                    'billing_name' => $row->billing_name ?? '-',
                     'bill_no' => $row->bill_no,
                     'billing_type' => $row->billing_type ?? '-',
                     'bill_date' => $row->bill_date ? $row->bill_date->format('d-m-Y') : '',
@@ -109,10 +111,11 @@ class BillingController extends Controller
 
         if ($request->isMethod('POST')) {
             $request->validate([
-                'bill_no' => 'required|string|max:100',
+                'billing_name' => 'required|string|max:255',
+                'bill_no' => 'required|string|max:100|not_in:0',
                 'billing_type' => 'nullable|string',
                 'bill_date' => 'required|date',
-                'amount' => 'nullable|numeric|min:0',
+                'amount' => 'required|numeric|not_in:0|min:0.01',
                 'reason' => 'nullable|string',
                 'status' => [
                     'required',
@@ -123,17 +126,21 @@ class BillingController extends Controller
                             if ($currentStatus === 'Paid' && $value !== 'Paid') {
                                 $fail('Cannot change status from Paid.');
                             }
-                            if ($currentStatus === 'Cancelled' && $value !== 'Cancelled') {
-                                $fail('Cannot change status from Cancelled.');
+                            if ($currentStatus === 'Cancelled' && !in_array($value, ['Cancelled', 'Paid'])) {
+                                $fail('Status can only be changed to Paid from Cancelled.');
                             }
                         }
                     }
                 ],
             ], [
                 'required' => 'This field is required.',
+                'amount.not_in' => 'Amount cannot be 0.',
+                'bill_no.not_in' => 'Bill Number cannot be 0.',
+                '*.min'      => 'This field must be at least :min characters.',
+                '*.max'      => 'This field should not be more than :max characters.',
             ]);
 
-            $data = $request->only(['bill_no', 'billing_type', 'bill_date', 'amount', 'reason', 'status']);
+            $data = $request->only(['billing_name', 'bill_no', 'billing_type', 'bill_date', 'amount', 'reason', 'status']);
 
             if ($billing) {
                 $oldData = $billing->toArray();
@@ -182,10 +189,10 @@ class BillingController extends Controller
         $newStatus = $request->status;
 
         if ($currentStatus === 'Paid' && $newStatus !== 'Paid') {
-            return response()->json(['success' => false, 'message' => 'Cannot change status from Paid'], 422);
+            return response()->json(['success' => false, 'message' => 'Cannot change status from Paid.'], 422);
         }
-        if ($currentStatus === 'Cancelled' && $newStatus !== 'Cancelled') {
-            return response()->json(['success' => false, 'message' => 'Cannot change status from Cancelled'], 422);
+        if ($currentStatus === 'Cancelled' && !in_array($newStatus, ['Cancelled', 'Paid'])) {
+            return response()->json(['success' => false, 'message' => 'Cancelled status can only be changed to Paid.'], 422);
         }
 
         $oldData = $billing->toArray();

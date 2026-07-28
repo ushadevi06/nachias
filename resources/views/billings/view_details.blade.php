@@ -45,6 +45,10 @@
                 <div class="card-body p-4">
                     <div class="row g-5">
                         <div class="col-md-4">
+                            <div class="mb-1 text-muted small fw-bold text-uppercase ls-1">Billing Name</div>
+                            <div class="h5 fw-bold text-dark mb-0">{{ $billing->billing_name }}</div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="mb-1 text-muted small fw-bold text-uppercase ls-1">Bill Number</div>
                             <div class="h5 fw-bold text-dark mb-0">{{ $billing->bill_no }}</div>
                         </div>

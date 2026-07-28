@@ -123,12 +123,12 @@
                                     <label for="agent_id">Sales Executive</label>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" step="0.01" class="form-control" id="commission_percent" name="commission_percent" placeholder="Commission %" value="{{ old('commission_percent', isset($invoice) ? $invoice->commission_percent : '') }}">
                                     <label for="commission_percent">Commission %</label>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" min="1" step="1" class="form-control @error('no_of_box') is-invalid @enderror"
@@ -863,11 +863,11 @@
                                         <span class="fw-bold h5 mb-0" id="total_val">{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="total" id="total" value="{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-5">
+                                    {{-- <div class="d-flex justify-content-between align-items-center mb-5">
                                         <span class="text-secondary fw-medium">Commission Amount:</span>
                                         <span class="fw-bold" id="commission_amount_val">{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="commission_amount" id="commission_amount" value="{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}">
-                                    </div>
+                                    </div> --}}
                                     <div class="mb-4 pt-2 border-top">
                                         <label class="text-secondary fw-medium mb-2 d-block">Other State?</label>
                                         <div class="d-flex gap-4">
@@ -957,6 +957,18 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
+                                    <select name="transport_mode" id="transport_mode" class="form-select select2" data-placeholder="Select Transport Mode">
+                                        <option value="">Select Transport Mode</option>
+                                        <option value="1" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '1' ? 'selected' : '' }}>Road</option>
+                                        <option value="2" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '2' ? 'selected' : '' }}>Rail</option>
+                                        <option value="3" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '3' ? 'selected' : '' }}>Air</option>
+                                        <option value="4" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '4' ? 'selected' : '' }}>Ship</option>
+                                    </select>
+                                    <label for="transport_mode">Transport Mode</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="transporter_name" name="transporter_name" placeholder="Transporter Name" value="{{ old('transporter_name', isset($invoice) ? $invoice->transporter_name : '') }}">
                                     <label for="transporter_name">Transporter Name</label>
                                 </div>
@@ -969,25 +981,15 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="transport_mode" id="transport_mode" class="form-select select2">
-                                        <option value="1" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '1') == '1' ? 'selected' : '' }}>Road</option>
-                                        <option value="2" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '2' ? 'selected' : '' }}>Rail</option>
-                                        <option value="3" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '3' ? 'selected' : '' }}>Air</option>
-                                        <option value="4" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '4' ? 'selected' : '' }}>Ship</option>
-                                    </select>
-                                    <label for="transport_mode">Transport Mode</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="vehicle_no" name="vehicle_no" placeholder="Vehicle No" value="{{ old('vehicle_no', isset($invoice) ? $invoice->vehicle_no : '') }}">
                                     <label for="vehicle_no">Vehicle No</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="veh_type" id="veh_type" class="form-select select2">
-                                        <option value="R" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : 'R') == 'R' ? 'selected' : '' }}>Regular</option>
+                                    <select name="veh_type" id="veh_type" class="form-select select2" data-placeholder="Select Vehicle Type">
+                                        <option value="">Select Vehicle Type</option>
+                                        <option value="R" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : '') == 'R' ? 'selected' : '' }}>Regular</option>
                                         <option value="O" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : '') == 'O' ? 'selected' : '' }}>ODC (Over Dimensional Cargo)</option>
                                     </select>
                                     <label for="veh_type">Vehicle Type</label>
@@ -995,7 +997,18 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control" id="transport_distance" name="transport_distance" placeholder="Distance (in km)" value="{{ old('transport_distance', isset($invoice) ? $invoice->transport_distance : '') }}">
+                                    <style>
+                                        /* Hide spinners for number input */
+                                        input[type=number].no-spinners::-webkit-inner-spin-button, 
+                                        input[type=number].no-spinners::-webkit-outer-spin-button { 
+                                            -webkit-appearance: none; 
+                                            margin: 0; 
+                                        }
+                                        input[type=number].no-spinners {
+                                            -moz-appearance: textfield;
+                                        }
+                                    </style>
+                                    <input type="number" step="any" class="form-control no-spinners" id="transport_distance" name="transport_distance" placeholder="Distance (in km)" value="{{ old('transport_distance', isset($invoice) ? $invoice->transport_distance : '') }}" onkeydown="if(event.key==='ArrowUp' || event.key==='ArrowDown') event.preventDefault();">
                                     <label for="transport_distance">Distance (in km)</label>
                                 </div>
                             </div>
@@ -1025,7 +1038,60 @@
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
+    function updateColorFromArtNo($row) {
+        let artNo = $row.find('input[name$="[art_no]"]').val();
+        if (!artNo) {
+            artNo = $row.find('.art-no-text').text();
+        }
+        if (!artNo) {
+            artNo = $row.find('.art-no').val();
+        }
+        artNo = String(artNo || '').trim();
+        
+        let color = 'A';
+        if (artNo) {
+            let parts = artNo.split('-');
+            if (parts.length > 1) {
+                color = parts[parts.length - 1];
+            }
+        }
+        
+        let $colorSpan = $row.find('.color-text');
+        if ($colorSpan.length) $colorSpan.text(color);
+        
+        let $colorInput = $row.find('input[name$="[api_color]"], .api-color');
+        if ($colorInput.length) {
+            $colorInput.val(color);
+            $colorInput.prop('readonly', true).attr('tabindex', '-1');
+        }
+        
+        let $colorName = $row.find('input[name$="[color_name]"], .color-name');
+        if ($colorName.length) $colorName.val(color);
+    }
+
     $(document).ready(function() {
+        $('.item-row').each(function() {
+            updateColorFromArtNo($(this));
+        });
+
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                    $(mutation.addedNodes).each(function() {
+                        if (typeof $(this).hasClass === 'function' && $(this).hasClass('item-row')) {
+                            updateColorFromArtNo($(this));
+                        }
+                    });
+                }
+            });
+        });
+        
+        if (document.getElementById('item-rows')) {
+            observer.observe(document.getElementById('item-rows'), { childList: true, subtree: true });
+        }
+        if (document.getElementById('open-order-item-rows')) {
+            observer.observe(document.getElementById('open-order-item-rows'), { childList: true, subtree: true });
+        }
         $('.select2').select2({
             width: '100%',
             dropdownParent: $('body')
@@ -1184,12 +1250,10 @@
             }
             var existingRow = null;
             $('#item-rows .item-row').each(function() {
-                var rowArtNo = $(this).find('.art-no').val();
-                if (rowArtNo == matchedItem.art_no && 
-                    $(this).find('.size-id').val() == matchedItem.size_id && 
-                    $(this).find('.color-id').val() == matchedItem.color_id &&
-                    $(this).find('.sleeve-type').val() == matchedItem.sleeve &&
-                    $(this).find('.sku').val() == matchedItem.sku) {
+                if ($(this).find('.sku').val() == (matchedItem.sku || '') && 
+                    $(this).find('.art-no').val() == (matchedItem.art_no || '') && 
+                    $(this).find('.size-id').val() == (matchedItem.size_id || '') && 
+                    $(this).find('.sleeve-type').val() == (matchedItem.sleeve || matchedItem.sleeve_type || '')) {
                     existingRow = $(this);
                 }
             });
@@ -1342,14 +1406,23 @@
                 response(formatted);
             },
             minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+                $(this).val(ui.item.label);
+            },
             select: function (event, ui) {
+                event.preventDefault();
                 if (ui.item && ui.item.noResult) {
-                    event.preventDefault();
+                    return false;
+                }
+                if (ui.item && ui.item.disabled) {
                     return false;
                 }
 
                 addInvoiceItem(ui.item.itemData);
-                $(this).val(ui.item.value).focus();
+                setTimeout(function() {
+                    $(event.target).val('').focus();
+                }, 10);
                 return false;
             }
         }).autocomplete("instance")._renderItem = function (ul, item) {
@@ -1362,15 +1435,33 @@
             var it = item.itemData;
             var skuInfo = it.sku ? ` | SKU: ${it.sku}` : '';
             var sizeInfo = it.size_name ? ` | Size: ${it.size_name}` : (it.size_id ? ` | Size: ${it.size_id}` : '');
-            return $("<li>")
+            
+            var stockQty = parseFloat(it.stock_qty || 0);
+            var outOfStock = stockQty <= 0;
+            if (outOfStock) {
+                item.disabled = true;
+            }
+            
+            var stockHtml = outOfStock 
+                ? `<span class="search-item-balance text-danger fw-bold">Stock: ${stockQty.toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance">SO Qty: ${parseFloat(it.qty).toFixed(2)} | Stock: ${stockQty.toFixed(2)}</span>`;
+
+            var $li = $("<li>")
                 .append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
-                    <span class="search-item-balance">SO Qty: ${parseFloat(it.qty).toFixed(2)}</span>
+                    ${stockHtml}
                     <div class="search-item-info">
                         Art No: ${it.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(it.rate || it.mrp || 0).toFixed(2)}
                     </div>
                 </div>`)
                 .appendTo(ul);
+                
+            if (outOfStock) {
+                $li.addClass('ui-state-disabled');
+                // Ensure readability by resetting opacity if jQuery UI drops it too low
+                $li.css('opacity', '0.6');
+            }
+            return $li;
         };
 
         $('#barcode_scanner').on('keypress', function(e) {
@@ -1389,7 +1480,7 @@
                         title: 'No Items',
                         text: 'Please select a Sales Order first, or no items exist in the selected Sales Order.',
                     });
-                    $(this).val('');
+                    $(this).focus();
                     return;
                 }
 
@@ -1401,6 +1492,7 @@
 
                 if (matchedItem) {
                     addInvoiceItem(matchedItem);
+                    $(this).val('');
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -1411,7 +1503,6 @@
                     });
                 }
 
-                $(this).val('');
                 $(this).focus();
                 if ($(this).data('ui-autocomplete')) {
                     $(this).autocomplete('close');
@@ -1962,10 +2053,17 @@
                 });
             },
             minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+                $(this).val(ui.item.label);
+            },
             select: function(event, ui) {
+                event.preventDefault();
                 let $this = $(this);
                 if (ui.item && ui.item.noResult) {
-                    event.preventDefault();
+                    return false;
+                }
+                if (ui.item && ui.item.disabled) {
                     return false;
                 }
                 
@@ -1978,14 +2076,21 @@
                         success: function(res) {
                             if (res.success) {
                                 handleOpenOrderScan(res);
-                                $this.val(ui.item.value).focus();
+                                setTimeout(function() {
+                                    $this.val('');
+                                    if ($this.data('ui-autocomplete')) {
+                                        $this.autocomplete('close');
+                                    }
+                                    $this.focus();
+                                }, 50);
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
-                                $this.val(ui.item.value).focus();
+                                $this.focus();
                             }
                         },
                         error: function() {
                             Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                            $this.focus();
                         }
                     });
                 }
@@ -1998,16 +2103,30 @@
                     .appendTo(ul);
             }
 
+            let balance = parseFloat(item.balance || 0);
+            let outOfStock = balance <= 0;
+            if (outOfStock) {
+                item.disabled = true;
+            }
+
             let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
-            return $("<li>")
-                .append(`<div class="ui-menu-item-wrapper">
+            let stockHtml = outOfStock 
+                ? `<span class="search-item-balance text-danger fw-bold">Stock: ${balance.toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance">Stock: ${balance.toFixed(2)}</span>`;
+
+            let $li = $("<li>").append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
-                    <span class="search-item-balance">Stock: ${parseFloat(item.balance).toFixed(2)}</span>
+                    ${stockHtml}
                     <div class="search-item-info">
                         Art No: ${item.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(item.price).toFixed(2)}
                     </div>
-                </div>`)
-                .appendTo(ul);
+                </div>`).appendTo(ul);
+                
+            if (outOfStock) {
+                $li.addClass('ui-state-disabled');
+                $li.css('opacity', '0.6');
+            }
+            return $li;
         };
 
         $('#open_order_barcode_scanner').on('keypress', function(e) {
@@ -2022,14 +2141,21 @@
                         success: function(res) {
                             if (res.success) {
                                 handleOpenOrderScan(res);
-                                $('#open_order_barcode_scanner').val('').focus();
+                                setTimeout(function() {
+                                    $('#open_order_barcode_scanner').val('');
+                                    if ($('#open_order_barcode_scanner').data('ui-autocomplete')) {
+                                        $('#open_order_barcode_scanner').autocomplete('close');
+                                    }
+                                    $('#open_order_barcode_scanner').focus();
+                                }, 50);
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
-                                $('#open_order_barcode_scanner').val('').focus();
+                                $('#open_order_barcode_scanner').focus();
                             }
                         },
                         error: function() {
                             Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                            $('#open_order_barcode_scanner').focus();
                         }
                     });
                 }
@@ -2038,9 +2164,10 @@
 
         function handleOpenOrderScan(res) {
             let $existing = $('#open-order-item-rows .item-row').filter(function() {
-                return $(this).find('.sku-input').val() === res.sku &&
-                    $(this).find('.size-input').val() == res.size &&
-                    $(this).find('.color-id-input').val() == res.color_id;
+                return $(this).find('.sku-input').val() == (res.sku || '') &&
+                    $(this).find('input[name$="[art_no]"]').val() == (res.art_no || '') &&
+                    $(this).find('input[name$="[sleeve_type]"]').val() == (res.sleeve_type || res.sleeve || '') &&
+                    $(this).find('.size-input').val() == (res.size || '');
             }).first();
 
             if ($existing.length) {

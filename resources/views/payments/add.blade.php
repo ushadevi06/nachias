@@ -292,15 +292,23 @@
             let mode = $(this).val();
             $('#cheque_div, #cheque_date_div, #bank_div, #upi_div').addClass('d-none');
             
+            // Remove existing dynamic mandatory indicators
+            $('#cheque_div label, #cheque_date_div label, #bank_div label, #upi_div label').find('.required-indicator').remove();
+            
             if (mode === 'Bank (Cheque)') {
                 $('#cheque_div, #cheque_date_div, #bank_div').removeClass('d-none');
+                $('#cheque_div label, #cheque_date_div label, #bank_div label').append('<span class="text-danger required-indicator"> *</span>');
             } else if (mode === 'Online (UPI)' || mode === 'NEFT/RTGS') {
                 $('#upi_div, #bank_div').removeClass('d-none');
+                $('#upi_div label, #bank_div label').append('<span class="text-danger required-indicator"> *</span>');
             }
         });
 
         if ($('#payment_type').val()) {
             $('#payment_type').trigger('change');
+        }
+        if ($('#payment_mode').val()) {
+            $('#payment_mode').trigger('change');
         }
     });
 </script>

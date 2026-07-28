@@ -66,6 +66,7 @@ class SettingController extends Controller
             'branch_location' => 'nullable|string|max:255',
             'account_no' => 'nullable|string|max:50',
             'ifsc_code' => 'nullable|string|max:20',
+            'upi_id' => 'nullable|string|max:255',
             'terms_and_conditions' => 'required|string',
         ];
 
@@ -105,6 +106,7 @@ class SettingController extends Controller
             'branch_location' => $request->branch_location,
             'account_no' => $request->account_no,
             'ifsc_code' => $request->ifsc_code,
+            'upi_id' => $request->upi_id,
         ];
 
         if ($request->hasFile('logo')) {

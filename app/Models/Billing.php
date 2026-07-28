@@ -11,6 +11,7 @@ class Billing extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'billing_name',
         'bill_no',
         'billing_type',
         'bill_date',

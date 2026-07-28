@@ -46,9 +46,11 @@ th.sticky-col-employee {
                             <h4>Monthly Payroll</h4>
                         </div>
                         <div class="card">
+                            @if(!isset($salary))
                             <div class="d-flex justify-content-end mb-2">
                                 <input type="text" id="employeeSearch" class="form-control" placeholder="Search Emp Name / Emp Code" style="width:250px;">
                             </div>
+                            @endif
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Monthly Salary Generation</h5>
                                 <div class="d-flex align-items-center gap-2">
@@ -132,7 +134,7 @@ th.sticky-col-employee {
                                                         <input type="hidden" class="salary_id" value="{{ $salary->id }}">
                                                         <input type="hidden" class="employee_id" value="{{ $salary->employee_id }}">
                                                         <input type="hidden" class="total_days" value="{{ $salary->total_days }}">
-                                                        <input type="checkbox" class="form-check-input employee_checkbox">
+                                                        <input type="checkbox" class="form-check-input employee_checkbox" checked>
                                                     </td>
                                                     {{-- Employee --}}
                                                     <td class="sticky-col-employee">

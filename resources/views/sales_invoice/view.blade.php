@@ -374,8 +374,9 @@
                     <div class="mb-3 text-start">
                         <label for="cancel_reason" class="form-label font-semibold text-dark">Cancellation Reason <span class="text-danger">*</span></label>
                         <select id="cancel_reason" class="form-select">
+                            <option value="">Select Reason</option>
                             <option value="1">1 - Duplicate</option>
-                            <option value="2" selected>2 - Data Entry Mistake</option>
+                            <option value="2">2 - Data Entry Mistake</option>
                             <option value="3">3 - Order Cancelled</option>
                             <option value="4">4 - Others</option>
                         </select>

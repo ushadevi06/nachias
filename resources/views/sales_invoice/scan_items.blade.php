@@ -285,14 +285,17 @@
                                     @endphp
                                     <tr class="item-row" data-item-id="{{ $item->id }}" data-sku="{{ $item->sku }}" data-req="{{ $req }}" data-scan="{{ $scan }}" data-item-name="{{ $itemName }}" data-size="{{ $sizeStr }}" data-color="{{ $colorStr }}">
                                         <td>
-                                            {{ $itemName ?: ($item->art_no ?: 'Unknown Item') }}
+                                            @php
+                                                $displayArtNo = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : $item->art_no;
+                                            @endphp
+                                            {{ $itemName ?: ($displayArtNo ?: 'Unknown Item') }}
                                             <br>
                                             <small class="text-muted">
                                                 Size: {{ $sizeStr }} | 
                                                 Color: {{ $colorStr }}
                                             </small>
                                         </td>
-                                        <td>{{ $item->art_no ?? '-' }}</td>
+                                        <td>{{ $displayArtNo ?? '-' }}</td>
                                         <td>{{ $item->sku ?? '-' }}</td>
                                         <td>{{ number_format($req, 0) }}</td>
                                         <td class="scan-val fw-bold">{{ number_format($scan, 0) }}</td>

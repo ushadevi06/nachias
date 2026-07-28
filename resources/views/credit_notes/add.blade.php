@@ -44,7 +44,7 @@
                                     <select class="select2 form-select" name="customer_id" id="customer_id" data-placeholder="Select Customer/Buyer" {{ isset($creditNote) ? 'disabled' : '' }}>
                                         <option value="">Select Customer/Buyer</option>
                                         @foreach($customers as $customer)
-                                            <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-zone-id="{{ $customer->zone_id }}" {{ (old('customer_id', $creditNote->customer_id ?? '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }}</option>
+                                            <option value="{{ $customer->id }}" data-state-id="{{ $customer->state_id }}" data-zone-id="{{ $customer->zone_id }}" {{ (old('customer_id', $creditNote->customer_id ?? '') == $customer->id) ? 'selected' : '' }}>{{ $customer->name }}{{ $customer->code ? '(' . $customer->code . ')' : '' }}</option>
                                         @endforeach
                                     </select>
                                     @if(isset($creditNote))
@@ -593,7 +593,7 @@ $(document).ready(function() {
                     if (response.success) {
                         let options = '';
                         response.invoices.forEach(inv => {
-                            options += `<option value="${inv.id}">${inv.inv_no} (${moment(inv.inv_date).format('d-m-Y')})</option>`;
+                            options += `<option value="${inv.id}">${inv.inv_no} (${moment(inv.inv_date).format('DD-MM-YYYY')})</option>`;
                         });
                         $('#sales_invoice_ids').html(options).val([]).trigger('change');
                         $('#item-rows').html('<tr class="empty-row text-center"><td colspan="15">Invoices loaded. Select invoice(s) to fetch items.</td></tr>');
@@ -701,7 +701,7 @@ $(document).ready(function() {
                     <input type="hidden" name="items[${index}][sales_invoice_item_id]" value="${item.id}">
                     <input type="hidden" name="items[${index}][item_id]" value="${item.item_id}">
                     <input type="hidden" name="items[${index}][sleeve_type]" value="${item.sleeve_type || ''}">
-                    <span class="d-block fw-bold" style="font-size: 13px;">${item.item_name}${item.sleeve_type ? '-' + item.sleeve_type : ''}</span>
+                    <span class="d-block fw-bold" style="font-size: 13px;">${item.item_name}</span>
                     <small class="text-muted">
                         ${item.product_barcode ? '<i class="ri-barcode-line"></i> ' + item.product_barcode : ''}
                     </small>

@@ -37,7 +37,7 @@ $user = Auth::user();
                     </div>
 
                     <!-- Back Button -->
-                    <a href="{{ url()->previous() }}" class="btn btn-primary mt-3">
+                    <a href="{{ url('dashboard') }}" class="btn btn-primary mt-3">
                         <i class="ri ri-arrow-left-line"></i> Go Back
                     </a>
 

@@ -17,6 +17,12 @@
         * {
             box-sizing: border-box;
         }
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
         .table-wrapper {
             width: 100%;
             border: 1px solid #d6dce5;
@@ -389,7 +395,7 @@
                         </tr>
                         <tr>
                             <td><b>Total Deductions:</b></td>
-                            <td class="right"> ₹ {{ number_format($salary->pf + $salary->esi + $salary->salary_advance, 2)}}</td>
+                            <td class="right"> ₹ {{ number_format($salary->pf + $salary->esi + $salary->salary_advance + $salary->late_fine, 2)}}</td>
                         </tr>
                         <tr>
                             <td style="padding-top:10px;border-top:1px dotted #808080;"><b>Net Pay: </b></td>

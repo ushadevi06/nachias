@@ -309,7 +309,26 @@ if ($showPrice) $colsAfterQty++;
     }
 
     $qrBase64 = '';
-    if (!empty($setting->qr_code)) {
+    if (!empty($setting->upi_id) || (!empty($setting->account_no) && !empty($setting->ifsc_code))) {
+        $payeeName = !empty($setting->company_name) ? rawurlencode($setting->company_name) : 'Merchant';
+        
+        if (!empty($setting->upi_id)) {
+            $upiString = "upi://pay?pa=" . trim($setting->upi_id) . "&pn=" . $payeeName . "&cu=INR";
+        } else {
+            $upiString = "upi://pay?pa=" . $setting->account_no . "@" . $setting->ifsc_code . ".ifsc.npci&pn=" . $payeeName . "&cu=INR";
+        }
+        
+        if (isset($invoice) && $invoice->grand_total) {
+            $upiString .= "&am=" . number_format($invoice->grand_total, 2, '.', '');
+        }
+        try {
+            $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(85)->generate($upiString));
+        } catch (\Exception $e) {
+            \Log::error('UPI QR Generation failed: ' . $e->getMessage());
+        }
+    }
+    
+    if (!$qrBase64 && !empty($setting->qr_code)) {
         $uploadedQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
         if (file_exists($uploadedQrPath)) {
             $qrData = file_get_contents($uploadedQrPath);
@@ -678,7 +697,12 @@ if ($showPrice) $colsAfterQty++;
                             @endphp
                             <div class="bold">{{ $itemName }}</div>
                         </td>
-                        <td class="text-center">{{ $item->art_no }}</td>
+                        <td class="text-center">
+                            @php
+                                $displayArtNo = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : $item->art_no;
+                            @endphp
+                            {{ $displayArtNo ?? '-' }}
+                        </td>
                         <td class="text-center">{{ $item->uom->uom_code ?? 'PCS' }}</td>
                         <td class="text-center">{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                         <td class="text-center">{{ number_format($item->quantity, 2) }}</td>

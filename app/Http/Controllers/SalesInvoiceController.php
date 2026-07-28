@@ -279,30 +279,7 @@ class SalesInvoiceController extends Controller
                 'items.*.mrp.min' => 'Please enter a valid numeric value greater than or equal to 0.',
                 'extra_input' => 'nullable|min:3|max:100',
             ]);
-            if ($request->invoice_status === 'Paid') {
-                $referenceId = $id ?? null;
-
-                if ($referenceId) {
-                    $totalPaid = DB::table('payments')->where('reference_id', $referenceId)->where('reference_type', 'Customer Collection')->whereNull('deleted_at')->sum('amount');
-                } else {
-                    $totalPaid = 0;
-                }
-
-                $grandTotal = (float) $request->grand_total;
-                $balance = $grandTotal - (float) $totalPaid;
-
-                if ($totalPaid <= 0) {
-                    return back()->withInput()->withErrors([
-                        'invoice_status' => 'Cannot set status to Paid. No payments found for this invoice.',
-                    ]);
-                }
-
-                if ($balance > 0) {
-                    return back()->withInput()->withErrors([
-                        'invoice_status' => 'Cannot set status to Paid. Outstanding balance of ' . number_format($balance, 2) . ' still remaining. Total Invoice: ' . number_format($grandTotal, 2) . ', Total Paid: ' . number_format($totalPaid, 2),
-                    ]);
-                }
-            }
+            // Paid status validation has been removed to allow manual selection, aligning with the index page behavior.
 
             try {
                 $this->validateStockAvailability($request->items, $id);
@@ -930,18 +907,7 @@ class SalesInvoiceController extends Controller
                 ], 422);
             }
         }
-        if (in_array($newStatus, ['Paid', 'Partially Paid', 'Unpaid/Credit'])) {
-            $totalPaid = DB::table('payments')->where('reference_id', $id)->where('reference_type', 'Customer Collection')->whereNull('deleted_at')->sum('amount');
-            $balance = $invoice->grand_total - $totalPaid;
-
-            if ($totalPaid <= 0) {
-                $newStatus = 'Unpaid/Credit';
-            } elseif ($balance <= 0) {
-                $newStatus = 'Paid';
-            } else {
-                $newStatus = 'Partially Paid';
-            }
-        }
+        // Allow the user to manually set the status, unless it's Paid without full payment (handled above)
         $oldData = $invoice->toArray();
         $invoice->invoice_status = $newStatus;
         $invoice->save();

@@ -7,7 +7,7 @@
             <div class="col-lg-12">
                 @include('flash_messages')
             </div>
-            <form action="{{ url('billing/add/' . ($billing->id ?? '')) }}" method="POST" class="common-form">
+            <form action="{{ url('billing/add/' . ($billing->id ?? '')) }}" method="POST" class="common-form" autocomplete="off" novalidate>
                 @csrf
                 <div class="card mb-6">
                     <div class="card-body">
@@ -17,10 +17,21 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-6">
                                 <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control" name="billing_name" id="billing_name"
+                                        placeholder="Enter Billing Name"
+                                        value="{{ old('billing_name', $billing->billing_name ?? '') }}">
+                                    <label for="billing_name">Billing Name <span class="text-danger">*</span></label>
+                                </div>
+                                @error('billing_name')
+                                    <small class="text-danger">{{ $message }}</small>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 col-xl-6">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" name="bill_no" id="bill_no"
                                         placeholder="Enter Bill Number"
                                         value="{{ old('bill_no', $billing->bill_no ?? '') }}">
-                                    <label for="bill_no">Bill Number *</label>
+                                    <label for="bill_no">Bill Number <span class="text-danger">*</span></label>
                                 </div>
                                 @error('bill_no')
                                     <small class="text-danger">{{ $message }}</small>
@@ -43,7 +54,7 @@
                             <div class="col-md-6 col-xl-6">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control bill_date" id="bill_date" placeholder="Enter Bill Date" name="bill_date" value="{{ old('bill_date', isset($billing) ? $billing->bill_date->format('d-m-Y') : '') }}">
-                                    <label for="bill_date">Bill Date *</label>
+                                    <label for="bill_date">Bill Date <span class="text-danger">*</span></label>
                                 </div>
                                 @error('bill_date')
                                     <small class="text-danger">{{ $message }}</small>
@@ -59,7 +70,7 @@
                                                 if (isset($billing)) {
                                                     if ($billing->status === 'Paid' && $st !== 'Paid') {
                                                         $optionDisabled = 'disabled';
-                                                    } elseif ($billing->status === 'Cancelled' && $st !== 'Cancelled') {
+                                                    } elseif ($billing->status === 'Cancelled' && !in_array($st, ['Cancelled', 'Paid'])) {
                                                         $optionDisabled = 'disabled';
                                                     }
                                                 }
@@ -67,7 +78,7 @@
                                             <option value="{{ $st }}" {{ old('status', $billing->status ?? '') == $st ? 'selected' : '' }} {{ $optionDisabled }}>{{ $st }}</option>
                                         @endforeach
                                     </select>
-                                    <label for="status">Status *</label>
+                                    <label for="status">Status <span class="text-danger">*</span></label>
                                 </div>
                                 @error('status')
                                     <small class="text-danger">{{ $message }}</small>
@@ -75,8 +86,8 @@
                             </div>
                             <div class="col-md-6 col-xl-6">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control" name="amount" id="amount" placeholder="Enter Amount" step="0.01" min="0" value="{{ old('amount', $billing->amount ?? '') }}">
-                                    <label for="amount">Amount</label>
+                                    <input type="number" class="form-control" name="amount" id="amount" placeholder="Enter Amount" step="0.01" min="0.01" value="{{ old('amount', $billing->amount ?? '') }}">
+                                    <label for="amount">Amount <span class="text-danger">*</span></label>
                                 </div>
                                 @error('amount')
                                     <small class="text-danger">{{ $message }}</small>

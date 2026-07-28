@@ -46,6 +46,7 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
+                                    <th>Billing Name</th>
                                     <th>Bill Number</th>
                                     <th>Bill Type</th>
                                     <th>Bill Date</th>
@@ -86,6 +87,7 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex' },
+                    { data: 'billing_name' },
                     { data: 'bill_no' },
                     { data: 'billing_type' },
                     { data: 'bill_date' },
@@ -115,8 +117,10 @@
             });
 
             $(document).on('change', '.status-dropdown', function() {
-                var id = $(this).data('id');
-                var status = $(this).val();
+                var $select = $(this);
+                var id = $select.data('id');
+                var status = $select.val();
+                var previousStatus = $select.data('previous-status');
                 var $msg = $('.status-msg-' + id);
 
                 $.ajax({
@@ -127,10 +131,16 @@
                         status: status
                     },
                     success: function(response) {
-                        $msg.html('<span class="text-success">Status Changed!</span>').fadeIn().delay(3000).fadeOut();
+                        table.ajax.reload(null, false); // refresh datatable, keep current page
                     },
-                    error: function() {
-                        $msg.html('<span class="text-danger">Error!</span>').fadeIn().delay(3000).fadeOut();
+                    error: function(xhr) {
+                        // Revert dropdown to previous value
+                        $select.val(previousStatus).trigger('change.select2');
+                        var message = 'Cannot change status.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                        $msg.html('<span class="text-danger">' + message + '</span>').fadeIn().delay(4000).fadeOut();
                     }
                 });
             });

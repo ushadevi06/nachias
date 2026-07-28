@@ -7,16 +7,14 @@
             <div class="table-header-box">
                 <h4>Monthly Payroll</h4>
                 <div class="d-flex gap-2 align-items-center">
-                    <input type="month" id="export_month" class="form-control" style="width: 180px;" title="Select month to export" max="{{ now()->format('Y-m') }}">
+                    <input type="month" id="export_month" class="form-control" style="width: 180px;" title="Select month to export" max="{{ now()->format('Y-m') }}" value="{{ now()->format('Y-m') }}">
                     <button type="button" id="exportPayroll" class="btn btn-outline-success"><i class="menu-icon icon-base ri ri-file-excel-2-line"></i> Export</button>
                     <a class="btn btn-primary" href="{{ url('add_monthly_payroll') }}"><i class="menu-icon icon-base ri ri-add-circle-line"></i> Add</a>
                 </div>
             </div>
-            @if(request()->success)
-                <div class="alert alert-success alert-dismissible fade show" role="alert">{{ request()->success }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            @endif
+            <div class="col-lg-12">
+                @include('flash_messages')
+            </div>
             <div class="card">
                 <div class="card-body">
                     <div class="filter-box mb-4">
@@ -32,7 +30,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4 col-lg-3">
-                                <input type="month" id="filter_month" class="form-control" placeholder="Select Month" max="{{ now()->format('Y-m') }}">
+                                <input type="month" id="filter_month" class="form-control" placeholder="Select Month" max="{{ now()->format('Y-m') }}" value="{{ now()->format('Y-m') }}">
                             </div>
                             <div class="col-md-3">
                                 <button type="button" id="filterBtn" class="btn btn-primary">FILTER</button>
@@ -125,7 +123,25 @@
                 orderable: false,
                 searchable: false
             }
-        ]
+        ],
+        drawCallback: function (settings) {
+            let api = this.api();
+            let hasDraft = false;
+            let data = api.rows().data();
+            for (let i = 0; i < data.length; i++) {
+                if (data[i].status && data[i].status.includes('Draft')) {
+                    hasDraft = true;
+                    break;
+                }
+            }
+            if (hasDraft) {
+                $('#generatePdfBtn').show();
+                $('#selectAll').show();
+            } else {
+                $('#generatePdfBtn').hide();
+                $('#selectAll').hide();
+            }
+        }
     });
     $('#filterBtn').click(function () {
         table.ajax.reload();

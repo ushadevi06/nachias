@@ -118,10 +118,10 @@ class PaymentController extends Controller
                 '*.required' => 'This field is required.',
                 'amount_paid.numeric' => 'Amount paid must be a number.',
                 'amount_paid.min' => 'Amount paid must be at least 0.01.',
-                'bank_name.required_if' => 'Bank name is required for the selected payment mode.',
-                'cheque_no.required_if' => 'Cheque number is required.',
-                'cheque_date.required_if' => 'Cheque date is required.',
-                'transaction_no.required_if' => 'Transaction/UTR number is required.',
+                'bank_name.required_if' => 'This field is required.',
+                'cheque_no.required_if' => 'This field is required.',
+                'cheque_date.required_if' => 'This field is required.',
+                'transaction_no.required_if' => 'This field is required.',
             ];
 
             $validator = Validator::make($request->all(), $rules, $messages);

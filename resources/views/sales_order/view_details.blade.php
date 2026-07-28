@@ -390,10 +390,22 @@
                                 <span class="fw-bold">₹{{ number_format($salesOrder->sub_total_qty, 2) }}</span>
                             </div>
 
-                            @if($salesOrder->discount_amount > 0)
+                            @php
+                                $boxDiscountValue = $salesOrder->apply_box_discount ? ($salesOrder->total_qty * $salesOrder->box_discount_amount) : 0;
+                                $salesDiscountValue = ($salesOrder->sub_total_qty * $salesOrder->sales_discount_percent) / 100;
+                            @endphp
+
+                            @if($salesDiscountValue > 0)
                             <div class="d-flex justify-content-between mb-3 text-danger">
-                                <span class="fw-medium">{{ $salesOrder->apply_box_discount ? 'Box Discount (Per PCS)' : 'Discount' }} ({{ number_format($salesOrder->box_discount_amount, 2) }})</span>
-                                <span class="fw-bold">-₹{{ number_format($salesOrder->discount_amount, 2) }}</span>
+                                <span class="fw-medium">Sales Discount ({{ number_format($salesOrder->sales_discount_percent, 2) }}%)</span>
+                                <span class="fw-bold">-₹{{ number_format($salesDiscountValue, 2) }}</span>
+                            </div>
+                            @endif
+
+                            @if($boxDiscountValue > 0)
+                            <div class="d-flex justify-content-between mb-3 text-danger">
+                                <span class="fw-medium">Box Discount (Per PCS) ({{ number_format($salesOrder->box_discount_amount, 2) }})</span>
+                                <span class="fw-bold">-₹{{ number_format($boxDiscountValue, 2) }}</span>
                             </div>
                             @endif
                             @if($salesOrder->commission_amount > 0)

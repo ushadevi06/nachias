@@ -142,7 +142,7 @@ class SalaryController extends Controller
         $salary = null;
         if($id) {
             $salary = DB::table('salary_generations')
-                ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
+                ->join('users', DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'), '=', DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'))
                 ->whereNull('users.deleted_at')
                 ->select(
                     'salary_generations.*',
@@ -542,7 +542,7 @@ class SalaryController extends Controller
     public function viewPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
+            ->join('users', DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'), '=', DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'))
             ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
             ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
             ->select(
@@ -568,7 +568,7 @@ class SalaryController extends Controller
     public function printPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
+            ->join('users', DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'), '=', DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'))
             ->leftJoin(
                 'departments',
                 'users.department_id',
@@ -599,7 +599,7 @@ class SalaryController extends Controller
     public function downloadPayslip($id)
     {
         $salary = DB::table('salary_generations')
-            ->join('users', 'salary_generations.employee_id', '=', 'users.emp_id')
+            ->join('users', DB::raw('salary_generations.employee_id COLLATE utf8mb4_unicode_ci'), '=', DB::raw('users.emp_id COLLATE utf8mb4_unicode_ci'))
             ->leftJoin('departments', 'users.department_id', '=', 'departments.id')
             ->leftJoin('roles', 'users.role_id', '=', 'roles.id')
             ->select(

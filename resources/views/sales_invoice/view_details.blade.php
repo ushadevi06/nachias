@@ -238,7 +238,12 @@
                                                         @endif
                                                     </td>
                                                     <td>{{ $item->api_color ?: ($item->color ? $item->color->color_name : '-') }}</td>
-                                                    <td>{{ $item->art_no ?? '-' }}</td>
+                                                    <td>
+                                                        @php
+                                                            $displayArtNo = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : $item->art_no;
+                                                        @endphp
+                                                        {{ $displayArtNo ?? '-' }}
+                                                    </td>
                                                     <td>{{ $item->uom_id ?? '-' }}</td>
                                                     <td>{{ $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-') }}</td>
                                                     <td class="text-end">{{ number_format($item->quantity, 2) }}</td>
@@ -349,18 +354,17 @@
                                                 <div class="text-muted fw-bold">₹{{ number_format($invoice->sub_total, 2) }}
                                                 </div>
                                             </div>
+                                            @php
+                                                $salesDiscountAmount = ($invoice->sub_total * (float)$invoice->sales_discount) / 100;
+                                                $boxDiscountTotal = (float)$invoice->discount - $salesDiscountAmount;
+                                            @endphp
                                             <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Sales Discount (Reference):</label>
-                                                <div class="text-muted">{{ number_format($invoice->sales_discount, 2) }}%</div>
+                                                <label class="detail-title">Sales Discount ({{ number_format((float)$invoice->sales_discount, 2) }}%):</label>
+                                                <div class="text-muted">₹{{ number_format($salesDiscountAmount, 2) }}</div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Box Discount Amount (Reference):</label>
-                                                <div class="text-muted">₹{{ number_format($invoice->box_discount_amount, 2) }}</div>
-                                            </div>
-                                            <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Discount
-                                                    ({{ number_format($invoice->discount_percent, 2) }}%):</label>
-                                                <div class="text-muted">₹{{ number_format($invoice->discount, 2) }}</div>
+                                                <label class="detail-title">Box Discount:</label>
+                                                <div class="text-muted">₹{{ number_format($boxDiscountTotal, 2) }}</div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                                                 <label class="detail-title">Total:</label>
@@ -593,8 +597,9 @@
                     <div class="mb-3 text-start">
                         <label for="cancel_reason" class="form-label font-semibold text-dark">Cancellation Reason <span class="text-danger">*</span></label>
                         <select id="cancel_reason" class="form-select">
+                            <option value="">Select Reason</option>
                             <option value="1">1 - Duplicate</option>
-                            <option value="2" selected>2 - Data Entry Mistake</option>
+                            <option value="2">2 - Data Entry Mistake</option>
                             <option value="3">3 - Order Cancelled</option>
                             <option value="4">4 - Others</option>
                         </select>
@@ -702,8 +707,9 @@
                     <div class="mb-3 text-start">
                         <label for="ewb_cancel_reason" class="form-label font-semibold text-dark">Cancellation Reason <span class="text-danger">*</span></label>
                         <select id="ewb_cancel_reason" class="form-select">
+                            <option value="">Select Reason</option>
                             <option value="1">1 - Duplicate</option>
-                            <option value="2" selected>2 - Data Entry Mistake</option>
+                            <option value="2">2 - Data Entry Mistake</option>
                             <option value="3">3 - Order Cancelled</option>
                             <option value="4">4 - Others</option>
                         </select>

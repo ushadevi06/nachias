@@ -280,6 +280,16 @@
                                     @enderror
                                 </div>
                             </div>
+                            
+                            <div class="col-md-6 col-xl-4">
+                                <div class="form-floating form-floating-outline">
+                                    <input type="text" class="form-control @error('upi_id') is-invalid @enderror" id="upi_id" placeholder="Enter Merchant UPI ID" name="upi_id" value="{{ old('upi_id', $setting->upi_id ?? '') }}">
+                                    <label for="upi_id">Merchant UPI ID (VPA)</label>
+                                    @error('upi_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
 
                             <div class="col-lg-12">
                                 <hr>

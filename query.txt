@@ -7,3 +7,6 @@ ADD COLUMN `cancel_reason` VARCHAR(255) NULL,
 ADD COLUMN `cancel_remarks` VARCHAR(255) NULL,
 ADD COLUMN `cancelled_by` BIGINT UNSIGNED NULL,
 ADD COLUMN `stock_reverted` TINYINT(1) NOT NULL DEFAULT 0;
+
+ALTER TABLE `settings`
+ADD COLUMN `upi_id` VARCHAR(255) NULL AFTER `account_no`;

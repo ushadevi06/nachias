@@ -107,14 +107,18 @@
         <div class="billing-info">
             <table class="no-border" style="margin-bottom: 0;">
                 <tr>
+                    <td width="20%" class="bold">Billing Name:</td>
+                    <td width="30%">{{ $billing->billing_name }}</td>
                     <td width="20%" class="bold">Bill Number:</td>
                     <td width="30%">{{ $billing->bill_no }}</td>
-                    <td width="20%" class="bold">Bill Date:</td>
-                    <td width="30%">{{ $billing->bill_date->format('d-M-Y') }}</td>
                 </tr>
                 <tr>
+                    <td class="bold">Bill Date:</td>
+                    <td>{{ $billing->bill_date->format('d-M-Y') }}</td>
                     <td class="bold">Bill Type:</td>
                     <td>{{ $billing->billing_type }}</td>
+                </tr>
+                <tr>
                     <td class="bold">Status:</td>
                     <td>
                         <span class="badge {{ 
@@ -125,6 +129,8 @@
                             {{ $billing->status }}
                         </span>
                     </td>
+                    <td></td>
+                    <td></td>
                 </tr>
             </table>
         </div>

@@ -60,6 +60,18 @@
             vertical-align: top;
             width: 50%;
         }
+        .group-header-bar {
+            background-color: #60a5fa;
+            color: #000;
+            padding: 0px;
+            border: 1px solid #60a5fa;
+            border-bottom: none;
+            margin: 15px 0 5px;
+            text-transform: uppercase;
+            font-size: 14px;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
         .items-table {
             width: 100%;
             border-collapse: collapse;
@@ -198,12 +210,8 @@
         </tr>
     </table>
 
-    <div style="position: relative; margin-bottom: 10px;">
-        <div class="doc-title" style="margin: 0; text-align: center;">Delivery Order</div>
-        <div style="position: absolute; right: 0; bottom: 0; font-size: 11px;">
-            Page: &nbsp; <span class="page-num"></span> / <span class="page-total"></span>
-        </div>
-    </div>
+    <div class="doc-title">Delivery Order</div>
+    <div class="page-info" style="color: transparent;">Page: &nbsp; 1 / 1</div>
 
     <table class="meta-table">
         <tr>
@@ -443,7 +451,7 @@
                 $uom = ($item->uom && $item->uom->uom_code) ? $item->uom->uom_code : 'PCS';
                 $mrp = $item->mrp ?? 0;
                 $rate = $item->rate ?? 0;
-                $art = $item->art_no ?? '-';
+                $art = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : ($item->art_no ?? '-');
                 $size = $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-');
                 $qty = $item->quantity;
 
@@ -480,19 +488,9 @@
             $groupGrandTotal = 0;
         @endphp
 
+        <div class="group-header-bar">{{ $groupName }}</div>
         <table class="items-table" style="margin-bottom: 15px;">
             <thead>
-                <tr style="background-color: #60a5fa;">
-                    @php
-                        $headerColspan = 3;
-                        if(empty($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $headerColspan++;
-                        if(empty($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $headerColspan++;
-                        if(empty($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields)) $headerColspan++;
-                    @endphp
-                    <th colspan="{{ $headerColspan + count($allSizes) }}" style="text-align: left; padding: 6px 10px; font-size: 14px; text-transform: uppercase; color: #000000; background-color: #60a5fa; border: 1px solid #000000; border-bottom: none;">
-                        {{ $groupName }}
-                    </th>
-                </tr>
                 <tr>
                     <th rowspan="2" style="text-align: center; padding-left: 6px;">Description</th>
                     <th rowspan="2" style="width: 6%;">UOM</th>
@@ -591,5 +589,22 @@
             </tr>
         </table>
     </div>
+    <script type="text/php">
+        if (isset($pdf)) {
+            $pdf->page_script('
+                $text = "Page: " . $PAGE_NUM . " / " . $PAGE_COUNT;
+                $size = 11;
+                $font = $fontMetrics->getFont("Helvetica");
+                $width = $fontMetrics->get_text_width($text, $font, $size);
+                $x = ($pdf->get_width() - $width - 20);
+                
+                // On page 1, position exactly where the hardcoded text was
+                // On subsequent pages, position in the safe top right margin
+                $y = ($PAGE_NUM == 1) ? 110 : 12;
+                
+                $pdf->text($x, $y, $text, $font, $size);
+            ');
+        }
+    </script>
 </body>
 </html>

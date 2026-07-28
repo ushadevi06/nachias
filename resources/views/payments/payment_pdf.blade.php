@@ -89,7 +89,7 @@
                 <tr>
                     <td class="label">{{ $payment->cheque_no ? 'Cheque No' : 'Transaction No' }}:</td>
                     <td class="value">{{ $payment->cheque_no ?: $payment->transaction_no }}</td>
-                    <td class="label">{{ $payment->cheque_date ? 'Cheque Date' : '' }}:</td>
+                    <td class="label">{{ $payment->cheque_date ? 'Cheque Date :' : '' }}</td>
                     <td class="value">{{ $payment->cheque_date ? date('d-m-Y', strtotime($payment->cheque_date)) : '' }}</td>
                 </tr>
                 @endif

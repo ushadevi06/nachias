@@ -418,9 +418,9 @@
             $sleeveFull = '';
             if ($invoiceItem && $invoiceItem->sleeve_type) {
                 $st = strtolower(trim($invoiceItem->sleeve_type));
-                if ($st == 'full' || $st == 'f/s') {
+                if ($st == 'full' || $st == 'f/s' || $st == 'fs') {
                   $sleeveFull = ' Full Sleeve';
-                } elseif ($st == 'half' || $st == 'h/s') {
+                } elseif ($st == 'half' || $st == 'h/s' || $st == 'hs') {
                   $sleeveFull = ' Half Sleeve';
                 } else {
                   $sleeveFull = ' ' . trim($invoiceItem->sleeve_type) . ' Sleeve';

@@ -37,6 +37,7 @@
         .doc-title {
             text-align: center;
             font-size: 18px;
+            font-weight: bold;
             margin: 15px 0 5px 0;
             font-family: 'Helvetica', Arial, sans-serif;
             color: #000000;
@@ -219,7 +220,7 @@
     </table>
 
     <div class="doc-title">Delivery Order</div>
-    <div class="page-info">Page: &nbsp; 1 / 1</div>
+    <div class="page-info" style="color: transparent;">Page: &nbsp; 1 / 1</div>
 
     <table class="meta-table">
         <tr>
@@ -456,7 +457,7 @@
                 }
                 $desc = $itemName;
                 $uom = $item->uom_id ?? '-';
-                $art = $item->art_no ?? '-';
+                $art = $item->stockEntryItem ? ($item->stockEntryItem->art_no ?: $item->art_no) : ($item->art_no ?? '-');
                 $mrp = $item->mrp ?? 0;
                 $rate = $item->rate ?? 0;
                 $size = $item->sizeRatio ? $item->sizeRatio->size : ($item->size ?? '-');
@@ -572,5 +573,22 @@
             </tr>
         </table>
     </div>
+    <script type="text/php">
+        if (isset($pdf)) {
+            $pdf->page_script('
+                $text = "Page: " . $PAGE_NUM . " / " . $PAGE_COUNT;
+                $size = 11;
+                $font = $fontMetrics->getFont("Helvetica");
+                $width = $fontMetrics->get_text_width($text, $font, $size);
+                $x = ($pdf->get_width() - $width - 20);
+                
+                // On page 1, position exactly where the hardcoded text was
+                // On subsequent pages, position in the safe top right margin
+                $y = ($PAGE_NUM == 1) ? 110 : 12;
+                
+                $pdf->text($x, $y, $text, $font, $size);
+            ');
+        }
+    </script>
 </body>
 </html>
