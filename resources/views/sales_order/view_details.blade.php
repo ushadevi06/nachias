@@ -408,16 +408,19 @@
                                 <span class="fw-bold">-₹{{ number_format($boxDiscountValue, 2) }}</span>
                             </div>
                             @endif
-                            @if($salesOrder->commission_amount > 0)
+                            {{-- @if($salesOrder->commission_amount > 0)
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="fw-medium">Commission</span>
                                 <span class="fw-bold">₹{{ number_format($salesOrder->commission_amount, 2) }}</span>
                             </div>
-                            @endif
-                            @if(!empty($salesOrder->pre_gst_total) && $salesOrder->pre_gst_total > 0)
+                            @endif --}}
+                            @php
+                                $preGstTotal = $salesOrder->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
+                            @endphp
+                            @if($preGstTotal > 0)
                                 <div class="d-flex justify-content-between mb-3">
                                     <span class="text-muted fw-medium">Pre-GST Charges</span>
-                                    <span class="fw-bold">₹{{ number_format($salesOrder->pre_gst_total, 2) }}</span>
+                                    <span class="fw-bold">₹{{ number_format($preGstTotal, 2) }}</span>
                                 </div>
                             @endif
                             <div class="d-flex justify-content-between mb-3 pt-3 border-top">

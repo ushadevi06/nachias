@@ -36,6 +36,7 @@ class Setting extends Model
         'bank_name',
         'branch_location',
         'account_no',
+		'upi_id',
         'ifsc_code',
         'terms_and_conditions',
     ];

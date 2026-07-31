@@ -73,7 +73,14 @@ class ColorController extends Controller
             $request = request();
 
             $rules = [
-                'color_name' => ['required','string','min:3','max:50',Rule::unique('colors', 'color_name')->ignore($id)->whereNull('deleted_at')],
+                'color_name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'not_regex:/^0+$/',
+                    Rule::unique('colors', 'color_name')->ignore($id)->whereNull('deleted_at')
+                ],
                 // 'description' => 'nullable|string|min:3|max:255|regex:/^[^<>]*$/',
                 'status' => 'required|in:Active,Inactive'
             ];
@@ -81,7 +88,7 @@ class ColorController extends Controller
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format.',
+                'color_name.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

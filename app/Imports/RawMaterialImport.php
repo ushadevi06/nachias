@@ -76,6 +76,17 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
                 'max'      => 'This field should not be more than :max characters.',
             ];
 
+            $existingId = null;
+            if (!empty($data['code'])) {
+                $existing = RawMaterial::where('code', $data['code'])->first();
+                $existingId = $existing ? $existing->id : null;
+            }
+
+            if ($existingId) {
+                $errors[] = "Row {$rowNumber}: Raw Material Code '{$data['code']}' already exists.";
+                continue;
+            }
+
             $validator = Validator::make($data, [
                 'store_category_id' => 'required|exists:store_categories,id',
                 'code' => 'required|string|min:3|max:50|not_in:0|regex:/^[a-zA-Z0-9\-_]+$/',
@@ -106,14 +117,8 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
         }
 
         foreach ($validData as $d) {
-            $existing = RawMaterial::where('code', $d['code'])->first();
-            if ($existing) {
-                $d['updated_by'] = auth()->id() ?? 1;
-                $existing->update($d);
-            } else {
-                $d['created_by'] = auth()->id() ?? 1;
-                RawMaterial::create($d);
-            }
+            $d['created_by'] = auth()->id() ?? 1;
+            RawMaterial::create($d);
         }
     }
 }

@@ -115,7 +115,7 @@ class StoreCategoryController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
-                'code.not_in' => 'This field is an invalid format.',
+                'code.not_in' => 'Code cannot be 0.',
                 '*.regex'    => 'This field is an invalid format.',
                 'min'      => 'This field must be at least :min characters.',
                 'max'      => 'This field should not be more than :max characters.',

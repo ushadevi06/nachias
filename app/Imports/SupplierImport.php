@@ -34,7 +34,7 @@ class SupplierImport implements ToCollection, WithHeadingRow
                 if ($state) {
                     $stateId = $state->id;
                 } else {
-                    $errors[] = "Row {$rowNumber}: State '{$row['state']}' does not exist in master table.";
+                    $errors[] = "Row {$rowNumber}: {$row['state']} does not exist in state table";
                     $stateId = -1;
                 }
             }
@@ -46,7 +46,7 @@ class SupplierImport implements ToCollection, WithHeadingRow
                     if ($city) {
                         $cityId = $city->id;
                     } else {
-                        $errors[] = "Row {$rowNumber}: City '{$row['city']}' does not exist in master table for the given State.";
+                        $errors[] = "Row {$rowNumber}: {$row['city']} does not exist in city table";
                         $cityId = -1;
                     }
                 } else {
@@ -61,7 +61,7 @@ class SupplierImport implements ToCollection, WithHeadingRow
                     if ($place) {
                         $placeId = $place->id;
                     } else {
-                        $errors[] = "Row {$rowNumber}: Place '{$row['place']}' does not exist in master table for the given City and State.";
+                        $errors[] = "Row {$rowNumber}: {$row['place']} does not exist in place table";
                         $placeId = -1;
                     }
                 } else {
@@ -141,6 +141,11 @@ class SupplierImport implements ToCollection, WithHeadingRow
                 $supplierId = $existing ? $existing->id : null;
             }
 
+            if ($supplierId) {
+                $errors[] = "Row {$rowNumber}: Supplier Code '{$data['code']}' already exists.";
+                continue;
+            }
+
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
@@ -153,9 +158,9 @@ class SupplierImport implements ToCollection, WithHeadingRow
 
             $validator = Validator::make($data, [
                 'name' => 'required|string|min:3|max:50',
-                'code' => 'required|string|min:3|max:20|not_in:0|unique:suppliers,code,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
-                'mobile_no' => 'required|numeric|digits_between:10,15|unique:suppliers,mobile_no,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
-                'email' => 'nullable|email|max:128|unique:suppliers,email,' . ($supplierId ?? 'NULL') . ',id,deleted_at,NULL',
+                'code' => 'required|string|min:3|max:20|not_in:0|unique:suppliers,code',
+                'mobile_no' => 'required|numeric|digits_between:10,15|unique:suppliers,mobile_no',
+                'email' => 'nullable|email|max:128|unique:suppliers,email',
                 'status' => 'required|in:Active,Inactive',
                 'state_id' => 'required',
                 'city_id' => 'required',
@@ -185,10 +190,7 @@ class SupplierImport implements ToCollection, WithHeadingRow
 
         foreach ($validData as $d) {
             $d['created_by'] = auth()->id() ?? 1;
-            Supplier::updateOrCreate(
-                ['code' => $d['code']],
-                $d
-            );
+            Supplier::create($d);
         }
     }
 }

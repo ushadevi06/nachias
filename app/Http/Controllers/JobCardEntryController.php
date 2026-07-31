@@ -134,7 +134,7 @@ class JobCardEntryController extends Controller
     }
     public function add(Request $request, $id = null)
     {
-        $restrictedRoleIds = [4, 9, 12, 18, 28]; // 4: CUTTING SUPERVISOR, 9: UNIT INCHARGE, 12: CUTTING INCHARGE, 18: PRODUCTION SUPERVISOR
+        $restrictedRoleIds = [4, 9, 12, 18, 28]; 
         $hasRestrictedRole = false;
         if (auth()->check() && auth()->id() != 1) {
             $hasRestrictedRole = in_array(auth()->user()->role_id, $restrictedRoleIds);
@@ -159,8 +159,8 @@ class JobCardEntryController extends Controller
         }
 
         if ($request->isMethod('post')) {
-            set_time_limit(600); // Allow up to 10 minutes for large saves
-            ini_set('memory_limit', '1024M'); // Increase memory limit
+            set_time_limit(600); 
+            ini_set('memory_limit', '1024M'); 
 
             if ($isRestrictedEdit && $id) {
                 $jobCard = JobCardEntry::with('issueItems.fabricDetail')->findOrFail($id);
@@ -200,16 +200,14 @@ class JobCardEntryController extends Controller
             }
 
             $rules = [
-                'job_card_no' => 'required|string|min:5|max:50|unique:job_card_entries,job_card_no' . ($id ? ',' . $id : ''),
+                'job_card_no' => ['required', 'string', 'min:5', 'max:50', 'not_regex:/^0+$/', 'unique:job_card_entries,job_card_no' . ($id ? ',' . $id : '')],
                 'purchase_order_id' => 'nullable|exists:purchase_orders,id',
-                'stock_entry_ids' => 'nullable|array',
-
                 'service_provider_id' => 'required|exists:service_providers,id',
                 'issue_store_id' => 'required|exists:store_types,id',
                 'issue_date' => 'required|date_format:d-m-Y',
                 'delivery_date' => 'required|date_format:d-m-Y',
                 'washing' => 'nullable|in:Yes,No',
-                'width' => 'nullable|string|min:1|max:50',
+                'width' => 'nullable|exists:fabric_sizes,id',
                 'mrp' => 'nullable|numeric',
                 'total_qty_fs' => 'nullable|numeric',
                 'total_qty_hs' => 'nullable|numeric',
@@ -219,7 +217,7 @@ class JobCardEntryController extends Controller
                 'process_group_id' => 'required|exists:process_groups,id',
                 'reference_no' => 'required|string|max:255|same:job_card_no',
                 'status' => 'required|string',
-                'job_card_type' => 'nullable|string|in:Regular,Urgent,Sample,Special Order',
+                'job_card_type' => 'required|string|in:Regular,Urgent,Sample,Special Order',
                 'remarks' => 'nullable|string',
                 'attachment' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx,csv|max:5120',
                 'fit_id' => 'nullable|exists:fits,id',
@@ -228,13 +226,24 @@ class JobCardEntryController extends Controller
                 'cuff_type_id' => 'nullable|exists:cuff_types,id',
                 'pocket_type_id' => 'nullable|exists:pocket_types,id',
                 'bottom_cut_id' => 'nullable|exists:bottom_cuts,id',
-                'production_stages' => 'nullable|array',
+                'stock_entry_ids' => 'nullable|array',
+                'stock_entry_ids.*' => 'distinct',
+                'sleeve_instances' => [
+                    $isCanvas ? 'nullable' : 'required',
+                    function ($attribute, $value, $fail) use ($isCanvas) {
+                        if ($isCanvas) return;
+                        $decoded = json_decode($value, true);
+                        if (!$decoded || empty($decoded['instances'])) {
+                            $fail('Please add at least one Sleeve Configuration.');
+                        }
+                    },
+                ],
+                'production_stages' => 'required|array|min:1',
                 'production_stages.*.stage_id' => 'required|exists:operation_stages,id',
                 'production_stages.*.service_provider_id' => $isCanvas ? 'nullable|exists:service_providers,id' : 'required|exists:service_providers,id',
                 'production_stages.*.issue_date' => $isCanvas ? 'nullable|date_format:d-m-Y' : 'required|date_format:d-m-Y',
                 'production_stages.*.deadline_date' => $isCanvas ? 'nullable|date_format:d-m-Y' : 'required|date_format:d-m-Y',
                 'production_stages.*.rate' => $isCanvas ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
-                'stages' => 'nullable|array|min:1',
                 'fabrics.*.mtr' => 'nullable|numeric|min:0.01',
                 'fabrics.*.lay_marks.*.sizes' => 'required|array|min:1',
                 'fabrics.*.lay_marks.*.sleeve' => 'required|string',
@@ -244,6 +253,7 @@ class JobCardEntryController extends Controller
 
             $messages = [
                 '*.required' => 'This field is required',
+                '*.not_regex' => 'This field is an invalid format.',
                 'job_card_no.unique' => 'This field already exists.',
                 'reference_no.same' => 'Reference No must be the same as Job Card No.',
                 'production_stages.*.stage_id.required' => 'This field is required',
@@ -251,7 +261,9 @@ class JobCardEntryController extends Controller
                 'production_stages.*.issue_date.required' => 'This field is required',
                 'production_stages.*.deadline_date.required' => 'This field is required',
                 'production_stages.*.rate.required' => 'This field is required',
-                'stages.min' => 'At least one stage is required',
+                'production_stages.required' => 'At least one production stage is required',
+                'production_stages.min' => 'At least one production stage is required',
+                'stock_entry_ids.*.distinct' => 'Duplicate Stock Entries are not allowed.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 'fabrics.*.mtr.min' => 'The Issued Meters must be greater than 0 for fabric material.',
@@ -780,6 +792,7 @@ class JobCardEntryController extends Controller
         $plants = ServiceProvider::active()->orderBy('id', 'desc')->get();
         $storeTypes = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
         $operationStages = OperationStage::active()->orderBy('id', 'desc')->get();
+        $fabricSizes = \App\Models\FabricSize::active()->orderBy('id','desc')->get();
 
         $stageTaskStatus = [];
         if ($jobCard) {
@@ -819,7 +832,8 @@ class JobCardEntryController extends Controller
             'hasTasks',
             'hasIssuedItems',
             'colors',
-            'isRestrictedEdit'
+            'isRestrictedEdit',
+            'fabricSizes'
         ));
     }
     public function view_details($id)
@@ -1238,12 +1252,17 @@ class JobCardEntryController extends Controller
                             'qrcode_data' => json_encode($qrData),
                         ];
 
-                        if ($existingItem) {
-                            $existingItem->update($data);
-                        } else {
+                        $match = [
+                            'job_card_entry_id' => $jobCard->id,
+                            'job_card_article_matrix_id' => $matrixId,
+                        ];
+                        
+                        $checkExisting = JobCardIssueItem::where($match)->first();
+                        if (!$checkExisting) {
                             $data['created_by'] = auth()->id();
-                            JobCardIssueItem::create($data);
                         }
+
+                        JobCardIssueItem::updateOrCreate($match, $data);
 
                         $matrixQuantities = JobCardMatrixQuantity::where('job_card_fabric_detail_id', $matrixId)->get();
                         $brand = $jobCard->brand;
@@ -1399,7 +1418,9 @@ class JobCardEntryController extends Controller
                                 $q3->where('name', 'like', "%{$term}%");
                             });
                     });
-            })->orderBy('id', 'desc')->limit(30)->get();
+            });
+
+        $entries = $entries->orderBy('id', 'desc')->limit(30)->get();
 
         $results = [];
         foreach ($entries as $entry) {
@@ -1546,12 +1567,17 @@ class JobCardEntryController extends Controller
                 'updated_by' => auth()->id()
             ];
 
-            if ($issueItem) {
-                $issueItem->update($issueData);
-            } else {
+            $match = [
+                'job_card_entry_id' => $jobCard->id,
+                'job_card_article_matrix_id' => $fabricDetail->id,
+            ];
+            
+            $checkExisting = JobCardIssueItem::where($match)->first();
+            if (!$checkExisting) {
                 $issueData['created_by'] = auth()->id();
-                JobCardIssueItem::create($issueData);
             }
+            
+            JobCardIssueItem::updateOrCreate($match, $issueData);
         }
 
         $this->updateJobCardOverallPricing($jobCard);
@@ -1716,7 +1742,7 @@ class JobCardEntryController extends Controller
                 'store_category_id' => $rawMaterial ? $rawMaterial->store_category_id : 1,
                 'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                 'fabric_type_id' => $firstItem ? ($firstItem->fabric_type_id ?? ($firstItem->grnEntryItem->fabric_type_id ?? null)) : null,
-                'width' => $firstItem && $firstItem->grnEntryItem && $firstItem->grnEntryItem->purchaseInvoiceItem && $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth ? $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth->width : null,
+                'width' => $firstItem && $firstItem->grnEntryItem && $firstItem->grnEntryItem->purchaseInvoiceItem && $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth ? $firstItem->grnEntryItem->purchaseInvoiceItem->fabricWidth->id : null,
                 'fs_cons' => $rawMaterial && $rawMaterial->standardConsumption ? $rawMaterial->standardConsumption->fs_qty : null,
                 'hs_cons' => $rawMaterial && $rawMaterial->standardConsumption ? $rawMaterial->standardConsumption->hs_qty : null,
             ];
@@ -1767,7 +1793,7 @@ class JobCardEntryController extends Controller
                     'store_category_id' => $catId,
                     'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                     'grn_no' => $firstItem->grnEntry->grn_number ?? null,
-                    'width' => $firstItem->purchaseInvoiceItem->fabricWidth->width ?? null
+                    'width' => $firstItem->purchaseInvoiceItem->fabricWidth->id ?? null
                 ];
             })->values();
 
@@ -1799,7 +1825,7 @@ class JobCardEntryController extends Controller
                     'store_category_id' => $catId,
                     'raw_material_id' => $item->raw_material_id,
                     'grn_no' => $item->grn_no,
-                    'width' => $item->fabricWidth->width ?? null
+                    'width' => $item->fabricWidth->id ?? null
                 ];
             })->unique('art_no')->values();
         }
@@ -1858,7 +1884,7 @@ class JobCardEntryController extends Controller
                 'raw_material_id' => $rawMaterial ? $rawMaterial->id : null,
                 'grn_no' => $firstItem->grnEntry->grn_number ?? null,
                 'uom_code' => $rawMaterial->uom->uom_code ?? null,
-                'width' => $firstItem->purchaseInvoiceItem->fabricWidth->width ?? null
+                'width' => $firstItem->purchaseInvoiceItem->fabricWidth->id ?? null
             ];
         })->values();
 
@@ -1895,7 +1921,7 @@ class JobCardEntryController extends Controller
                     'raw_material_id' => $item->raw_material_id,
                     'grn_no' => $item->grn_no,
                     'uom_code' => $item->rawMaterial->uom->uom_code ?? null,
-                    'width' => $item->fabricWidth->width ?? null
+                    'width' => $item->fabricWidth->id ?? null
                 ];
             })->unique('art_no')->values();
         }
@@ -1996,6 +2022,10 @@ class JobCardEntryController extends Controller
                 }
             }
 
+            $width = $items->map(function ($item) {
+                return $item->fabricDetail && $item->fabricDetail->fabricSize ? $item->fabricDetail->fabricSize->width : null;
+            })->filter()->first();
+
             return (object) [
                 'art_no' => $artNo,
                 'raw_material_id' => $items->pluck('raw_material_id')->filter()->first(),
@@ -2007,6 +2037,7 @@ class JobCardEntryController extends Controller
                 'balance' => $items->sum('balance'),
                 'unit_price' => $finalPrice,
                 'size_label' => $sizeLabel,
+                'width' => $width,
             ];
         })->values();
         $invoiceIds = PurchaseInvoice::where('purchase_order_id', $jobCard->purchase_order_id)->pluck('id');
@@ -2471,7 +2502,11 @@ class JobCardEntryController extends Controller
         $fabricIssueItems = $jobCard->issueItems->filter(fn($i) => ($i->rawMaterial?->store_category_id == 1));
 
         if ($fabricIssueItems->count() > 0) {
-            $totalFabricCost = $fabricIssueItems->sum(fn($i) => ($i->qty_used + $i->qty_wastage) * ($i->stockEntryItem->price ?? 0));
+            $totalFabricCost = $fabricIssueItems->sum(function($i) use ($totalProduced) {
+                $qtyPerPc = $totalProduced > 0 ? ($i->qty_used + $i->qty_wastage) / $totalProduced : 0;
+                $costPerPc = round($qtyPerPc * ($i->stockEntryItem->price ?? 0), 2);
+                return $costPerPc * $totalProduced;
+            });
         } else {
             foreach ($jobCard->fabricDetails as $fd) {
                 if ($fd->store_category_id == 1) {
@@ -2488,7 +2523,11 @@ class JobCardEntryController extends Controller
         $accessoryIssueItems = $jobCard->issueItems->filter(fn($i) => ($i->rawMaterial?->store_category_id != 1));
 
         if ($accessoryIssueItems->count() > 0) {
-            $totalAccessoryCost = $accessoryIssueItems->sum(fn($i) => ($i->qty_used + $i->qty_wastage) * ($i->stockEntryItem->price ?? 0));
+            $totalAccessoryCost = $accessoryIssueItems->sum(function($i) use ($totalProduced) {
+                $qtyPerPc = $totalProduced > 0 ? ($i->qty_used + $i->qty_wastage) / $totalProduced : 0;
+                $costPerPc = round($qtyPerPc * ($i->stockEntryItem->price ?? 0), 2);
+                return $costPerPc * $totalProduced;
+            });
         }
         $totalProcessCost = $jobCard->operations->sum(function ($op) use ($totalProduced) {
             if ($op->total_cost > 0)
@@ -2687,7 +2726,7 @@ class JobCardEntryController extends Controller
             $priceRecord = \App\Models\ItemPrice::where('status', 'Active')
                 ->where('art_no', $artNo)
                 ->where('size', $selectedSize)
-                ->where(function($q) use ($jobCard) {
+                ->where(function($q) use ($jobCard, $selectedSleeve) {
                     if ($jobCard->item) {
                         $q->where('finished_item_code', $jobCard->item->code)
                           ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
@@ -2696,6 +2735,12 @@ class JobCardEntryController extends Controller
                                        ->where('item_id', $jobCard->item->id)
                                        ->whereNull('deleted_at');
                           });
+                    } else if ($selectedSleeve && $selectedSleeve !== 'All Sleeves') {
+                        if ($selectedSleeve == 'F/S') {
+                            $q->where('finished_item_code', 'like', '%-FS%');
+                        } elseif ($selectedSleeve == 'H/S') {
+                            $q->where('finished_item_code', 'like', '%-HS%');
+                        }
                     }
                 })
                 ->whereDate('effective_from', '<=', now())
@@ -2793,7 +2838,7 @@ class JobCardEntryController extends Controller
             ->when(is_numeric($selectedSize), function($q) use ($selectedSize) {
                 $q->where('size', $selectedSize);
             })
-            ->where(function($q) use ($jobCard) {
+            ->where(function($q) use ($jobCard, $selectedSleeve) {
                 if ($jobCard->item) {
                     $q->where('finished_item_code', $jobCard->item->code)
                       ->orWhereIn('finished_item_code', function($subQuery) use ($jobCard) {
@@ -2802,6 +2847,12 @@ class JobCardEntryController extends Controller
                                    ->where('item_id', $jobCard->item->id)
                                    ->whereNull('deleted_at');
                       });
+                } else if ($selectedSleeve && $selectedSleeve !== 'All Sleeves') {
+                    if ($selectedSleeve == 'F/S') {
+                        $q->where('finished_item_code', 'like', '%-FS%');
+                    } elseif ($selectedSleeve == 'H/S') {
+                        $q->where('finished_item_code', 'like', '%-HS%');
+                    }
                 }
             })
             ->whereDate('effective_from', '<=', now())

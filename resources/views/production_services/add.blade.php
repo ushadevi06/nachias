@@ -52,7 +52,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control @error('sequence') is-invalid @enderror" id="sequence" name="sequence" placeholder="Enter Sequence" min="1" value="{{ old('sequence', $service->sequence ?? '') }}">
+                                    <input type="number" class="form-control @error('sequence') is-invalid @enderror" id="sequence" name="sequence" placeholder="Enter Sequence" value="{{ old('sequence', $service->sequence ?? '') }}">
                                     <label for="sequence">Sequence <span class="text-danger">*</span></label>
                                 </div>
                                 @error('sequence')

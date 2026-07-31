@@ -1,0 +1,409 @@
+{
+    "_id": "6a4ca8725f4a6c090be48be4",
+    "distributor": {
+        "org_address": {
+            "address_line1": "Zone-2",
+            "country": "India",
+            "city": "Chennai",
+            "state": "Tamil Nadu"
+        },
+        "reference_id": "Zone-2"
+    },
+    "retailer": {
+        "alias": {
+            "name": "Mock Retailer"
+        },
+        "reference_id": "6122"
+    },
+    "party_type": "retailer",
+    "total_rate_amount": 35350,
+    "total_amount_currency": 53025,
+    "total_rate_amount_currency": 35350,
+    "total_pieces": 80,
+    "overall_quantity": 80,
+    "order_no": "100008826",
+    "order_currency": "INR",
+    "created_at": 1783375200000,
+    "order_date": 1783375200000,
+    "delivery_date": 1783375200000,
+    "remarks": "Urgent refill full set despatch\nDespatch today immediately",
+    "products": [
+        {
+            "name": "SUN LIGHT 010 Aero Cut",
+            "active": true,
+            "overall_quantity": 15,
+            "total_pieces": 15,
+            "total_amount": 8325,
+            "total_rate_amount": 5550,
+            "category": {
+                "_id": "mock_id_d41d8cd98f00b204e9800998ecf8427e",
+                "name": "",
+                "id": "mock_id_d41d8cd98f00b204e9800998ecf8427e",
+                "top_perent_id": "mock_id_d41d8cd98f00b204e9800998ecf8427e"
+            },
+            "categories_path_val": "",
+            "categories": [
+                {
+                    "_id": "mock_id_d41d8cd98f00b204e9800998ecf8427e",
+                    "category_path": "mock_id_d41d8cd98f00b204e9800998ecf8427e",
+                    "name": "",
+                    "id": "mock_id_d41d8cd98f00b204e9800998ecf8427e"
+                }
+            ],
+            "combinations": [
+                {
+                    "barcode": "BC13757",
+                    "attributes": [
+                        {
+                            "val": "38"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "555.00",
+                    "rate": "370.00",
+                    "quantity": 10,
+                    "overall_quantity": 10,
+                    "remaining_quantity": 10
+                },
+                {
+                    "barcode": "BC13760",
+                    "attributes": [
+                        {
+                            "val": "44"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "555.00",
+                    "rate": "370.00",
+                    "quantity": 5,
+                    "overall_quantity": 5,
+                    "remaining_quantity": 5
+                }
+            ]
+        },
+        {
+            "name": "SNOW FALL 010 Aero Cut",
+            "active": true,
+            "overall_quantity": 35,
+            "total_pieces": 35,
+            "total_amount": 24150,
+            "total_rate_amount": 16100,
+            "category": {
+                "_id": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                "name": "PLAIN F\/s",
+                "id": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                "top_perent_id": "mock_id_83168e6cb289d732cc78427b51f93153"
+            },
+            "categories_path_val": "Core>PLAIN F\/s",
+            "categories": [
+                {
+                    "_id": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "category_path": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "name": "Core",
+                    "id": "mock_id_83168e6cb289d732cc78427b51f93153"
+                },
+                {
+                    "_id": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                    "category_path": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                    "name": "PLAIN F\/s",
+                    "id": "mock_id_18ca815c903e0987d5656a680b4ef3d3"
+                }
+            ],
+            "combinations": [
+                {
+                    "barcode": "BC83114",
+                    "attributes": [
+                        {
+                            "val": "36"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 5,
+                    "overall_quantity": 5,
+                    "remaining_quantity": 5
+                },
+                {
+                    "barcode": "BC83115",
+                    "attributes": [
+                        {
+                            "val": "38"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 10,
+                    "overall_quantity": 10,
+                    "remaining_quantity": 10
+                },
+                {
+                    "barcode": "BC83116",
+                    "attributes": [
+                        {
+                            "val": "40"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 15,
+                    "overall_quantity": 15,
+                    "remaining_quantity": 15
+                },
+                {
+                    "barcode": "BC83123",
+                    "attributes": [
+                        {
+                            "val": "44"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 5,
+                    "overall_quantity": 5,
+                    "remaining_quantity": 5
+                }
+            ]
+        },
+        {
+            "name": "SNOW FALL 010 Aero Cut",
+            "active": true,
+            "overall_quantity": 10,
+            "total_pieces": 10,
+            "total_amount": 6750,
+            "total_rate_amount": 4500,
+            "category": {
+                "_id": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                "name": "PLAIN H\/s",
+                "id": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                "top_perent_id": "mock_id_83168e6cb289d732cc78427b51f93153"
+            },
+            "categories_path_val": "Core>PLAIN H\/s",
+            "categories": [
+                {
+                    "_id": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "category_path": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "name": "Core",
+                    "id": "mock_id_83168e6cb289d732cc78427b51f93153"
+                },
+                {
+                    "_id": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                    "category_path": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                    "name": "PLAIN H\/s",
+                    "id": "mock_id_7d2c52db8db377386baa644b2cb20f93"
+                }
+            ],
+            "combinations": [
+                {
+                    "barcode": "BC83121",
+                    "attributes": [
+                        {
+                            "val": "42"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Hs"
+                        }
+                    ],
+                    "mrp": "675.00",
+                    "rate": "450.00",
+                    "quantity": 5,
+                    "overall_quantity": 5,
+                    "remaining_quantity": 5
+                },
+                {
+                    "barcode": "BC83122",
+                    "attributes": [
+                        {
+                            "val": "44"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Hs"
+                        }
+                    ],
+                    "mrp": "675.00",
+                    "rate": "450.00",
+                    "quantity": 5,
+                    "overall_quantity": 5,
+                    "remaining_quantity": 5
+                }
+            ]
+        },
+        {
+            "name": "NAWABI COTTON Aero Cut",
+            "active": true,
+            "overall_quantity": 18,
+            "total_pieces": 18,
+            "total_amount": 12420,
+            "total_rate_amount": 8280,
+            "category": {
+                "_id": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                "name": "PLAIN F\/s",
+                "id": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                "top_perent_id": "mock_id_83168e6cb289d732cc78427b51f93153"
+            },
+            "categories_path_val": "Core>PLAIN F\/s",
+            "categories": [
+                {
+                    "_id": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "category_path": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "name": "Core",
+                    "id": "mock_id_83168e6cb289d732cc78427b51f93153"
+                },
+                {
+                    "_id": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                    "category_path": "mock_id_18ca815c903e0987d5656a680b4ef3d3",
+                    "name": "PLAIN F\/s",
+                    "id": "mock_id_18ca815c903e0987d5656a680b4ef3d3"
+                }
+            ],
+            "combinations": [
+                {
+                    "barcode": "BC13687",
+                    "attributes": [
+                        {
+                            "val": "36"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 5,
+                    "overall_quantity": 5,
+                    "remaining_quantity": 5
+                },
+                {
+                    "barcode": "BC13688",
+                    "attributes": [
+                        {
+                            "val": "38"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 10,
+                    "overall_quantity": 10,
+                    "remaining_quantity": 10
+                },
+                {
+                    "barcode": "BC13691",
+                    "attributes": [
+                        {
+                            "val": "44"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Fs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 3,
+                    "overall_quantity": 3,
+                    "remaining_quantity": 3
+                }
+            ]
+        },
+        {
+            "name": "NAWABI COTTON Aero Cut",
+            "active": true,
+            "overall_quantity": 2,
+            "total_pieces": 2,
+            "total_amount": 1380,
+            "total_rate_amount": 920,
+            "category": {
+                "_id": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                "name": "PLAIN H\/s",
+                "id": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                "top_perent_id": "mock_id_83168e6cb289d732cc78427b51f93153"
+            },
+            "categories_path_val": "Core>PLAIN H\/s",
+            "categories": [
+                {
+                    "_id": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "category_path": "mock_id_83168e6cb289d732cc78427b51f93153",
+                    "name": "Core",
+                    "id": "mock_id_83168e6cb289d732cc78427b51f93153"
+                },
+                {
+                    "_id": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                    "category_path": "mock_id_7d2c52db8db377386baa644b2cb20f93",
+                    "name": "PLAIN H\/s",
+                    "id": "mock_id_7d2c52db8db377386baa644b2cb20f93"
+                }
+            ],
+            "combinations": [
+                {
+                    "barcode": "BC13698",
+                    "attributes": [
+                        {
+                            "val": "44"
+                        },
+                        {
+                            "val": "A"
+                        },
+                        {
+                            "val": "Hs"
+                        }
+                    ],
+                    "mrp": "690.00",
+                    "rate": "460.00",
+                    "quantity": 2,
+                    "overall_quantity": 2,
+                    "remaining_quantity": 2
+                }
+            ]
+        }
+    ]
+}

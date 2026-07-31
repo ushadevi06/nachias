@@ -139,8 +139,8 @@
                     $materialName = $artMaterialMap[trim($artNo)] ?? $artNo;
                     $qtyConsumed = $item->qty_used + $item->qty_adjusted;
                     $qtyPerPc = $item->produced_qty > 0 ? ($item->qty_used) / $item->produced_qty : 0;
-                    $costPerPc = $qtyPerPc * $item->unit_price;
-                    $lineCost = ($item->qty_used ) * $item->unit_price;
+                    $costPerPc = round($qtyPerPc * $item->unit_price, 2);
+                    $lineCost = $costPerPc * $item->produced_qty;
                     
                     $totalQtyProduced += $item->produced_qty;
                     $totalQtyIssued += $item->qty_issue;
@@ -169,15 +169,15 @@
         <tfoot>
             <tr class="footer-row">
                 <td colspan="3" class="text-end">Total</td>
-                <td>{{ number_format($totalQtyProduced, 0) }}</td>
+                <td>{{ number_format($jobCard->grand_total_qty, 0) }}</td>
                 <td class="text-end">{{ number_format($totalQtyIssued, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyUsed, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyAdjusted, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyBalance, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format(($totalQtyUsed) / $totalQtyProduced, 4) : '-' }}</td>
+                <td class="text-end">{{ $jobCard->grand_total_qty > 0 ? number_format(($totalQtyUsed) / $jobCard->grand_total_qty, 4) : '-' }}</td>
                 <td class="text-end">-</td>
                 <td class="text-end">{{ number_format($totalCost, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td>
+                <td class="text-end">{{ $jobCard->grand_total_qty > 0 ? number_format($totalCost / $jobCard->grand_total_qty, 2) : '-' }}</td>
             </tr>
         </tfoot>
     </table>

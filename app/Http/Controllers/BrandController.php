@@ -94,6 +94,7 @@ class BrandController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
+                'code.regex' => 'Code cannot be 0',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
             ];

@@ -42,7 +42,7 @@
                                     <select name="purchase_order_id" id="purchase_order" class="form-select select2 @error('purchase_order_id') is-invalid @enderror" data-placeholder="Select Purchase Order" {{ isset($invoice) ? 'disabled' : '' }}>
                                         <option value="">Select Purchase Order</option>
                                         @foreach($purchaseOrders as $po)
-                                            <option value="{{ $po->id }}" {{ old('purchase_order_id', $invoice->purchase_order_id ?? '') == $po->id ? 'selected' : '' }}>{{ $po->po_number }} - {{ $po->supplier->name }}
+                                            <option value="{{ $po->id }}" {{ old('purchase_order_id', $invoice->purchase_order_id ?? '') == $po->id ? 'selected' : '' }}>{{ $po->po_number }} - ({{ $po->supplier->name }} - {{ $po->supplier->code ?? '' }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -57,8 +57,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('supplier_name') is-invalid @enderror" id="supplier_name" readonly value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
-                                    <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', $invoice->supplier->name ?? '') }}">
+                                    <input type="text" class="form-control @error('supplier_name') is-invalid @enderror" id="supplier_name" readonly value="{{ old('supplier_name', isset($invoice) && $invoice->supplier ? $invoice->supplier->name . ($invoice->supplier->code ? ' - ' . $invoice->supplier->code : '') : '') }}">
+                                    <input type="hidden" name="supplier_name" id="supplier_name_hidden" value="{{ old('supplier_name', isset($invoice) && $invoice->supplier ? $invoice->supplier->name . ($invoice->supplier->code ? ' - ' . $invoice->supplier->code : '') : '') }}">
                                     <input type="hidden" name="supplier_id" id="supplier_id" value="{{ old('supplier_id', $invoice->supplier_id ?? '') }}">
                                     <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
                                 </div>
@@ -68,8 +68,8 @@
                             </div>
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter PO Reference" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}">
-                                    <label for="po_reference">PO Reference</label>
+                                    <input type="text" class="form-control @error('po_reference') is-invalid @enderror" id="po_reference" placeholder="Enter Purchase Order No" name="po_reference" value="{{ old('po_reference', $invoice->po_reference ?? '') }}">
+                                    <label for="po_reference">Purchase Order No</label>
                                 </div>
                                 @error('po_reference')
                                     <div class="text-danger mt-1">{{ $message }}</div>
@@ -850,6 +850,17 @@
             dropdownParent: $('body')
         });
 
+        // Initialize manual commission flag if it was customized
+        let initCommAmt = parseFloat($('#commission_amount_input').val()) || 0;
+        let initCommPct = parseFloat($('#commission_input').val()) || 0;
+        let initSubTotal = parseFloat($('#sub_total_input').val()) || 0;
+        if (initCommPct > 0) {
+            let expectedCommAmt = (initSubTotal * initCommPct) / 100;
+            if (Math.abs(initCommAmt - expectedCommAmt) > 0.01) {
+                $('#commission_amount_input').data('manual', true);
+            }
+        }
+
         function toggleTransactionId() {
             const mode = $('#payment_mode').val();
             const $div = $('#transaction_id_div');
@@ -903,7 +914,7 @@
                             let commissionVal = parseFloat(response.commission || 0);
                             $('#commission_input').val(commissionVal);
                             $('#commission_percent_display').text(commissionVal.toFixed(2));
-                            $('#commission_amount_input').val('0.00');
+                            $('#commission_amount_input').val('0.00').removeData('manual');
                             $('#commission_value').text('0.00');
                             $('#purchase_commission_agent_id').val(response.purchase_commission_agent_id);
                             $('#purchase_commission_agent_name').val(response.purchase_commission_agent_name);
@@ -1227,6 +1238,7 @@
             if (chargeText === 'BROKERAGE') {
                 let manualAmount = parseFloat($(this).val()) || 0;
                 $('#commission_amount_input').val(manualAmount.toFixed(2));
+                $('#commission_amount_input').data('manual', true);
                 $('#commission_value').text(manualAmount.toFixed(2));
                 calculateSummaryOnly();
             }
@@ -1305,7 +1317,8 @@
 
             let commissionPercent = parseFloat($('#commission_input').val()) || 0;
             let commissionAmount = 0;
-            if (commissionPercent > 0) {
+            let isManualCommission = $('#commission_amount_input').data('manual') === true;
+            if (commissionPercent > 0 && !isManualCommission) {
                 commissionAmount = (subTotal * commissionPercent) / 100;
                 $('#commission_amount_input').val(commissionAmount.toFixed(2));
             } else {
@@ -1721,7 +1734,8 @@
 
             let commissionPercent = parseFloat($('#commission_input').val()) || 0;
             let commissionAmount = 0;
-            if (commissionPercent > 0) {
+            let isManualCommission = $('#commission_amount_input').data('manual') === true;
+            if (commissionPercent > 0 && !isManualCommission) {
                 commissionAmount = (subTotal * commissionPercent) / 100;
                 $('#commission_amount_input').val(commissionAmount.toFixed(2));
             } else {

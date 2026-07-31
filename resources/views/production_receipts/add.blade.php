@@ -405,16 +405,29 @@
                         } else {
                             $('#items-section').hide();
                         }
+                    } else if (response.success === false && response.message) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Validation Error',
+                            text: response.message,
+                            confirmButtonColor: '#8c57ff',
+                        });
+                        $('#job_card_id').val('').trigger('change.select2');
                     }
                 },
                 error: function(xhr) {
                     console.error('Error fetching job card details:', xhr);
+                    let errorMessage = 'Error loading job card details';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Error loading job card details',
+                        text: errorMessage,
                         confirmButtonColor: '#8c57ff',
                     });
+                    $('#job_card_id').val('').trigger('change.select2');
                 }
             });
         });

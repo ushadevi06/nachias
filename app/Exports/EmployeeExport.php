@@ -31,7 +31,7 @@ class EmployeeExport extends StringValueBinder implements FromCollection, WithHe
             'Phone',
             'Email',
             'Department',
-            'Designation',
+            'Role',
             'Device',
             'ESI No',
             'PF No',

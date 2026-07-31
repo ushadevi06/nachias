@@ -32,7 +32,7 @@
                                     <select id="purchase_invoice_id" name="purchase_invoice_id" class="form-select select2" data-placeholder="Select Invoice" {{ isset($debitNote) ? 'disabled' : '' }}>
                                         <option value="">Select Invoice</option>
                                         @foreach($purchaseInvoices as $invoice)
-                                            <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>{{ $invoice->invoice_no }}</option>
+                                            <option value="{{ $invoice->id }}" {{ (old('purchase_invoice_id', $debitNote->purchase_invoice_id ?? '') == $invoice->id) ? 'selected' : '' }}>{{ $invoice->invoice_no }}  ({{ $invoice->supplier->name ?? '' }} - {{ $invoice->supplier->code ?? '' }})</option>
                                         @endforeach
                                     </select>
                                     @if(isset($debitNote))
@@ -45,7 +45,7 @@
                             <div class="col-md-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="hidden" id="supplier_id_hidden" name="supplier_id" value="{{ old('supplier_id', $debitNote->supplier_id ?? '') }}">
-                                    <input type="text" id="supplier_name" class="form-control" value="{{ old('supplier_id') ? \App\Models\Supplier::find(old('supplier_id'))?->name : ($debitNote->supplier->name ?? '') }}" readonly>
+                                    <input type="text" id="supplier_name" class="form-control" value="{{ old('supplier_id') ? (\App\Models\Supplier::find(old('supplier_id'))?->name . (\App\Models\Supplier::find(old('supplier_id'))?->code ? ' - ' . \App\Models\Supplier::find(old('supplier_id'))?->code : '')) : (isset($debitNote) && $debitNote->supplier ? $debitNote->supplier->name . ($debitNote->supplier->code ? ' - ' . $debitNote->supplier->code : '') : '') }}" readonly>
                                     <label for="supplier_name">Supplier <span class="text-danger">*</span></label>
                                 </div>
                                 @error('supplier_id') <div class="text-danger">{{ $message }}</div> @enderror

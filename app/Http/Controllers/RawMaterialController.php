@@ -148,7 +148,7 @@ class RawMaterialController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
-                'code.not_in' => 'This field is an invalid format.',
+                'code.not_in' => 'Code cannot be 0.',
                 '*.regex' => 'This field is an invalid format.',
                 'size_width' => 'Width must be a number.',
                 '*.min'      => 'This field must be at least :min characters.',

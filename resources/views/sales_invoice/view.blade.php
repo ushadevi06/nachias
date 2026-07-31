@@ -333,7 +333,11 @@
                                 }
                                 table.ajax.reload(null, false);
                             } else {
-                                Swal.fire('Error!', response.message, 'error');
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    html: response.message
+                                });
                                 btn.prop('disabled', false).html(originalHtml);
                             }
                         },

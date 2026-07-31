@@ -220,11 +220,11 @@ class TicketManagementController extends Controller
             return redirect('ticket_management')->with('success', $msg);
         }
 
-        $users = User::active()->get();
-        $assignees = User::active()->where('id', '!=', 1)->get();
-        $departments = Department::active()->get();
-        $categories = TicketCategory::active()->get();
-        $operationStages = OperationStage::active()->get();
+        $users = User::active()->orderBy('id','desc')->get();
+        $assignees = User::active()->where('id', '!=', 1)->orderBy('id','desc')->get();
+        $departments = Department::active()->orderBy('id','desc')->get();
+        $categories = TicketCategory::active()->orderBy('id','desc')->get();
+        $operationStages = OperationStage::active()->orderBy('id','desc')->get();
         $priorities = ['Low', 'Medium', 'High', 'Critical'];
         
         if ($id) {

@@ -104,14 +104,14 @@ class PaymentController extends Controller
             $rules = [
                 'payment_type' => 'required',
                 'reference_document' => 'required',
-                'reference_no' => 'required',
+                'reference_no' => 'required|max:50',
                 'amount_paid' => 'required|numeric|min:0.01',
                 'payment_date' => 'required',
                 'payment_mode' => 'required',
-                'bank_name' => 'required_if:payment_mode,Bank (Cheque),Online (UPI),NEFT/RTGS',
-                'cheque_no' => 'required_if:payment_mode,Bank (Cheque)',
+                'bank_name' => 'required_if:payment_mode,Bank (Cheque),Online (UPI),NEFT/RTGS|nullable|max:25',
+                'cheque_no' => ['required_if:payment_mode,Bank (Cheque)', 'nullable', 'regex:/^\d{6}$/'],
                 'cheque_date' => 'required_if:payment_mode,Bank (Cheque)',
-                'transaction_no' => 'required_if:payment_mode,Online (UPI),NEFT/RTGS',
+                'transaction_no' => ['required_if:payment_mode,Online (UPI),NEFT/RTGS', 'nullable', 'regex:/^[A-Za-z0-9\/-]{6,50}$/'],
             ];
 
             $messages = [
@@ -120,8 +120,10 @@ class PaymentController extends Controller
                 'amount_paid.min' => 'Amount paid must be at least 0.01.',
                 'bank_name.required_if' => 'This field is required.',
                 'cheque_no.required_if' => 'This field is required.',
+                'cheque_no.regex' => 'The cheque number must be exactly 6 digits.',
                 'cheque_date.required_if' => 'This field is required.',
                 'transaction_no.required_if' => 'This field is required.',
+                'transaction_no.regex' => 'This field is an invalid format.',
             ];
 
             $validator = Validator::make($request->all(), $rules, $messages);
@@ -274,18 +276,18 @@ class PaymentController extends Controller
 
         if ($paymentType == 'Supplier Payment') {
             if ($docType == 'po-invoice') {
-                $references = PurchaseInvoice::where('invoice_status', '!=', 'Paid')->whereNull('deleted_at')->select('id', 'invoice_no as text')->get();
+                $references = PurchaseInvoice::where('invoice_status', '!=', 'Paid')->whereNull('deleted_at')->select('id', 'invoice_no as text')->orderBy('id', 'desc')->get();
             }
             elseif ($docType == 'debit-note') {
-                $references = DebitNote::where('status', 'Approved')->whereNull('deleted_at')->select('id', 'debit_note_no as text')->get();
+                $references = DebitNote::where('status', 'Approved')->whereNull('deleted_at')->select('id', 'debit_note_no as text')->orderBy('id', 'desc')->get();
             }
         }
         elseif ($paymentType == 'Customer Collection') {
             if ($docType == 'so-invoice') {
-                $references = SalesInvoice::where('invoice_status', '!=', 'Paid')->whereNull('deleted_at')->select('id', 'inv_no as text')->get();
+                $references = SalesInvoice::where('invoice_status', '!=', 'Paid')->whereNull('deleted_at')->select('id', 'inv_no as text')->orderBy('id', 'desc')->get();
             }
             elseif ($docType == 'credit-note') {
-                $references = CreditNote::where('status', 'Approved')->whereNull('deleted_at')->select('id', 'note_no as text')->get();
+                $references = CreditNote::where('status', 'Approved')->whereNull('deleted_at')->select('id', 'note_no as text')->orderBy('id', 'desc')->get();
             }
         }
         elseif ($paymentType == 'Agent Commission') {
@@ -302,7 +304,7 @@ class PaymentController extends Controller
                         AND p.reference_type = "Purchase Invoice" 
                         AND p.reference_id = purchase_invoices.id 
                         AND p.deleted_at IS NULL
-                    )')->select('purchase_invoices.id', 'purchase_invoices.invoice_no as text')->get();
+                    )')->select('purchase_invoices.id', 'purchase_invoices.invoice_no as text')->orderBy('purchase_invoices.id', 'desc')->get();
             }
             elseif ($docType == 'so-invoice') {
                 $references = SalesInvoice::join('sales_orders', 'sales_invoices.so_id', '=', 'sales_orders.id')
@@ -317,7 +319,7 @@ class PaymentController extends Controller
                         AND p.reference_type = "Sales Invoice" 
                         AND p.reference_id = sales_invoices.id 
                         AND p.deleted_at IS NULL
-                    )')->select('sales_invoices.id', 'sales_invoices.inv_no as text')->get();
+                    )')->select('sales_invoices.id', 'sales_invoices.inv_no as text')->orderBy('sales_invoices.id', 'desc')->get();
             }
         }
 

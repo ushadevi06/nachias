@@ -102,6 +102,7 @@ class ZoneController extends Controller
                     'string',
                     'min:1',
                     'max:50',
+                    'not_regex:/^0+$/',
                     Rule::unique('zones', 'zone_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')
@@ -112,6 +113,7 @@ class ZoneController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'zone_name.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

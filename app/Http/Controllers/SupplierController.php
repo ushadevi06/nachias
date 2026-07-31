@@ -212,9 +212,9 @@ class SupplierController extends Controller
                 'purchase_commission_agent_id' => 'nullable|exists:purchase_commission_agents,id',
                 'commission_percentage' => 'nullable|numeric|min:0|max:100',
                 'tax_id' => 'nullable|exists:taxes,id',
-                'igst_percent' => 'nullable|numeric|min:0|max:100',
-                'cgst_percent' => 'nullable|numeric|min:0|max:100',
-                'sgst_percent' => 'nullable|numeric|min:0|max:100',
+                'igst_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'not_regex:/^0+$/'],
+                'cgst_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'not_regex:/^0+$/'],
+                'sgst_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'not_regex:/^0+$/'],
                 'gst_no' => [
                     'nullable',
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
@@ -225,9 +225,9 @@ class SupplierController extends Controller
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                     'unique:suppliers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'ecc_no' => 'nullable|string|max:15',
+                'ecc_no' => ['nullable', 'string', 'max:15', 'not_regex:/^0+$/'],
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
-                'payment_terms' => 'nullable|string|max:255|regex:/^[^<>]*$/',
+                'payment_terms' => ['nullable', 'string', 'max:255', 'regex:/^[^<>]*$/', 'not_regex:/^0+$/'],
                 'bank_name' => [
                     'nullable',
                     'string',
@@ -235,7 +235,7 @@ class SupplierController extends Controller
                     'max:50',
                     'regex:/^(?!0+$).*$/'
                 ],
-                'branch' => 'nullable|string|min:3|max:50',
+                'branch' => ['nullable', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/'],
                 'account_number' => [
                     'nullable',
                     'digits_between:9,20',
@@ -251,11 +251,11 @@ class SupplierController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
+                '*.url' => 'This field is an invalid URL.',
                 'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
                 'code.not_in' => 'This field is an invalid format.',
-                'gst_no.regex' => 'Please enter a valid GSTIN.',
-                'pan_no.regex' => 'Please enter a valid PAN number (e.g., ABCDE1234F).',
                 '*.regex' => 'This field is an invalid format.',
+                '*.not_regex' => 'This field is an invalid format.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',

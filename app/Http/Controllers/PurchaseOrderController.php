@@ -195,7 +195,7 @@ class PurchaseOrderController extends Controller
             $request = request();
 
             $rules = [
-                'po_number' => 'required|string|min:3|max:50|unique:purchase_orders,po_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'po_number' => ['required', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:purchase_orders,po_number,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'po_date' => 'required|date_format:d-m-Y',
                 'purchase_commission_agent_id' => 'nullable|exists:purchase_commission_agents,id',
                 'commission' => 'nullable|numeric|min:0|max:100',
@@ -248,6 +248,7 @@ class PurchaseOrderController extends Controller
                 '*.numeric' => 'This field must be a valid number.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
+                'items.*.style_id.required_if' => 'Please select a Style for the Fabric store category.',
                 'items.required' => 'At least one item is required.',
                 'items.*.quantity.min' => 'Please enter a valid numeric value greater than or equal to 0.01.',
                 'items.*.rate.min' => 'Please enter a valid numeric value greater than or equal to 0.',
@@ -261,6 +262,7 @@ class PurchaseOrderController extends Controller
                 'items.*.attached_file.mimes' => 'Upload a valid file (e.g., .jpg, .png, .jpeg, .webp).',
                 'items.*.attached_file.max' => 'Uploaded file cannot exceed 2MB.',
                 'regex' => 'This field is an invalid format',
+                'not_regex' => 'This field is an invalid format',
                 'additional_attachments.max' => 'You can upload a maximum of 5 files.',
                 'additional_attachments.*.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'additional_attachments.*.max' => 'Uploaded file cannot exceed 2MB.',
@@ -419,16 +421,16 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        $purchaseCommissionAgents = PurchaseCommissionAgent::active()->get();
-        $suppliers = Supplier::active()->get();
-        $storeTypes = StoreType::active()->get();
-        $storeCategories = StoreCategory::active()->get();
-        $uoms = Uom::active()->get();
-        $colors = Color::active()->get();
-        $styles = Style::active()->get();
-        $brands = Brand::active()->get();
-        $fabricSizes = FabricSize::active()->get();
-        $fabricTypes = FabricType::active()->get();
+        $purchaseCommissionAgents = PurchaseCommissionAgent::active()->orderBy('id','desc')->get();
+        $suppliers = Supplier::active()->orderBy('id','desc')->get();
+        $storeTypes = StoreType::active()->orderBy('id','desc')->get();
+        $storeCategories = StoreCategory::active()->orderBy('id','desc')->get();
+        $uoms = Uom::active()->orderBy('id','desc')->get();
+        $colors = Color::active()->orderBy('id','desc')->get();
+        $styles = Style::active()->orderBy('id','desc')->get();
+        $brands = Brand::active()->orderBy('id','desc')->get();
+        $fabricSizes = FabricSize::active()->orderBy('id','desc')->get();
+        $fabricTypes = FabricType::active()->orderBy('id','desc')->get();
 
         $nextPoNumber = '';
         if (!$id) {

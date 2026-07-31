@@ -77,14 +77,15 @@ class StandardConsumptionController extends Controller
         if ($request->isMethod('post')) {
             $rules = [
                 'raw_material_id' => 'required|exists:raw_materials,id|unique:standard_consumptions,raw_material_id,' . $id . ',id,deleted_at,NULL',
-                'fs_qty' => 'required|numeric|min:0',
-                'hs_qty' => 'required|numeric|min:0',
+                'fs_qty' => ['required', 'numeric', 'min:0', 'not_regex:/^0+(\\.0+)?$/'],
+                'hs_qty' => ['required', 'numeric', 'min:0', 'not_regex:/^0+(\\.0+)?$/'],
                 'status'   => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.min'      => 'This field must be at least :min.',
+                '*.not_regex' => 'This field cannot be zero.',
             ];
             $request->validate($rules, $messages);
 

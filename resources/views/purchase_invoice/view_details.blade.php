@@ -68,7 +68,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="mb-1 text-muted text-uppercase small fw-bold">Commission Agent</div>
-                                <div class="fw-bold text-dark">{{ $invoice->purchaseCommissionAgent->name ?? '-' }}</div>
+                                <div class="fw-bold text-dark">{{ $invoice->purchaseCommissionAgent ? $invoice->purchaseCommissionAgent->name . ' (' . $invoice->purchaseCommissionAgent->code . ')' : '-' }}</div>
                             </div>
 
                             <!-- Transport Fields -->
@@ -358,7 +358,7 @@
                                 @if($invoice->commission_amount > 0)
                                     <div class="d-flex justify-content-between mb-3">
                                         <span class="text-muted small fw-bold">Commission ({{ number_format($invoice->commission, 2) }}%)</span>
-                                        <span class="fw-bold text-dark">-₹{{ number_format($invoice->commission_amount, 2) }}</span>
+                                        <span class="fw-bold text-danger">-₹{{ number_format($invoice->commission_amount, 2) }}</span>
                                     </div>
                                 @endif
 
@@ -366,7 +366,7 @@
                                     <span class="text-muted small fw-bold">Discount
                                         ({{ number_format($invoice->discount_percent, 2) }}%)</span>
                                     <span
-                                        class="fw-bold text-dark">-₹{{ number_format($invoice->discount_amount, 2) }}</span>
+                                        class="fw-bold text-danger">-₹{{ number_format($invoice->discount_amount, 2) }}</span>
                                 </div>
 
                                 <div class="d-flex justify-content-between mb-3">

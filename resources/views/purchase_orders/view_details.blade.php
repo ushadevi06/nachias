@@ -298,8 +298,8 @@
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small uppercase">Commission Amount
                                     ({{ number_format($purchaseOrder->commission, 2) }}%)</span>
-                                {{-- <span class="fw-bold text-dark">₹{{ number_format($purchaseOrder->taxable_amount * ($purchaseOrder->commission / 100), 2) }}</span> --}}
-                                <span class="fw-bold text-dark">₹{{ number_format(($purchaseOrder->sub_total * $purchaseOrder->commission/100),2) }}</span>
+                                <span class="fw-bold text-danger">-
+                                    ₹{{ number_format((($purchaseOrder->sub_total * $purchaseOrder->commission) / 100), 2) }}</span>
                             </div>
                             @endif
                             @if($purchaseOrder->other_state)

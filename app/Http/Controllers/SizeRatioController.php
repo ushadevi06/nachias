@@ -89,13 +89,15 @@ class SizeRatioController extends Controller
                     'required',
                     'string',
                     'max:255',
-                    'regex:/^[0-9,\s.]+$/'
+                    'regex:/^[0-9,\s.]+$/',
+                    'not_regex:/^[0,\s.]+$/'
                 ],
                 'ratio'  => [
                     'required',
                     'string',
                     'max:255',
-                    'regex:/^[0-9,\s.]+$/'
+                    'regex:/^[0-9,\s.]+$/',
+                    'not_regex:/^[0,\s.]+$/'
                 ],
                 'status' => 'required|in:Active,Inactive'
             ];
@@ -104,6 +106,8 @@ class SizeRatioController extends Controller
                 '*.unique'   => 'This field already exists.',
                 'size.regex' => 'Size can only contain numbers, commas, and dots.',
                 'ratio.regex' => 'Ratio can only contain numbers, commas, and dots.',
+                'size.not_regex' => 'This field is an invalid format.',
+                'ratio.not_regex' => 'This field is an invalid format.',
             ];
             $validator = validator($request->all(), $rules, $messages);
             $validator->after(function ($validator) use ($request) {

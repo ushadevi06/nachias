@@ -1,0 +1,2384 @@
+{
+    "status": "Success",
+    "data": [
+        {
+            "_id": "68fe0e8301ea130dfafcedb4",
+            "distributor": {
+                "org_address": {
+                    "address_line1": "Zone-4",
+                    "country": "India",
+                    "city": "Chennai",
+                    "state": "Tamil Nadu"
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "Zone-4",
+                "id": "6734972e17bb010ffa01ec26",
+                "_id": "6734972e17bb010ffa01ec26",
+                "name": "Manikandan",
+                "org_name": "Manikandan",
+                "distributor_org_id": "67349818c7c7d10f67a1e073"
+            },
+            "retailer": {
+                "alias": {
+                    "name": "Siva Jothi Garments",
+                    "email": "",
+                    "phone": "91-7667073555",
+                    "address": {
+                        "address_line1": "12j\/1 Kattagopura Veethi",
+                        "address_line2": "Kallakurichi",
+                        "city": "Thirukovilur",
+                        "state": "Tamilnadu",
+                        "country": "India",
+                        "zip": "605757"
+                    }
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "6166",
+                "distributor_marked": false,
+                "gst_tin": "33AAGPC3171L1ZX",
+                "id": "67358f500be5ee2cf510590e",
+                "retailer_groups": []
+            },
+            "party_type": "retailer",
+            "total_rate_amount": 9000,
+            "status": "New",
+            "order_type": "submitted",
+            "is_processing": false,
+            "order_replicated": false,
+            "replicated_from": "",
+            "products": [
+                {
+                    "_id": "68fe0df9fe08354fbf583745",
+                    "client_object_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380672d9a34a4af6e35050547fa_W09023-FS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "40",
+                                "36",
+                                "38",
+                                "44"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "A"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Fs"
+                            ]
+                        }
+                    ],
+                    "category_id": "6746ba477361ee0dd775e8e5",
+                    "has_variation": true,
+                    "name": "Linen Wear Aero Cut",
+                    "order_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380",
+                    "overall_quantity": 20,
+                    "pictures": [
+                        {
+                            "_id": "68fe0e76b1de5b0e00bb267b",
+                            "l": "products\/672d9a34a4af6e35050547fa_W09023-FS\/l_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                            "m": "products\/672d9a34a4af6e35050547fa_W09023-FS\/m_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                            "s": "products\/672d9a34a4af6e35050547fa_W09023-FS\/s_89e9fbdc-a028-4860-a007-a10384b77176.jpeg"
+                        }
+                    ],
+                    "product_id": "672d9a34a4af6e35050547fa_W09023-FS",
+                    "short_description": "Linen wear -aero cut",
+                    "sku": "W09023-FS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 13500,
+                    "total_pieces": 20,
+                    "total_rate_amount": 9000,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 675,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 0,
+                    "min_wsp_per_pcs": 0,
+                    "category": {
+                        "_id": "6746ba477361ee0dd775e8e5",
+                        "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                        "name": "Cg-white F\/s",
+                        "id": "6746ba477361ee0dd775e8e5",
+                        "top_perent_id": "6811c203eb64080da2df3282"
+                    },
+                    "categories_path_id": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                    "categories_path_val": "White>Cg-white F\/s",
+                    "categories": [
+                        {
+                            "_id": "6811c203eb64080da2df3282",
+                            "category_path": "6811c203eb64080da2df3282",
+                            "name": "White",
+                            "id": "6811c203eb64080da2df3282"
+                        },
+                        {
+                            "_id": "6746ba477361ee0dd775e8e5",
+                            "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                            "name": "Cg-white F\/s",
+                            "id": "6746ba477361ee0dd775e8e5",
+                            "top_perent_id": "6811c203eb64080da2df3282"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68fe0df9fe08354fbf583751",
+                            "barcode": "BC13701",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "36"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380673b1d5b2476a90697935a02",
+                            "combiLocation": "Linen Wear Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-23-FS",
+                            "mrp": 675,
+                            "ord_product_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380672d9a34a4af6e35050547fa_W09023-FS",
+                            "overall_quantity": 5,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09023-FS\/o_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09023-FS\/l_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09023-FS\/m_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09023-FS\/s_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "11",
+                                        "200",
+                                        "565",
+                                        "938"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "36",
+                            "product_combination_id": "673b1d5b2476a90697935a02",
+                            "quantity": 5,
+                            "quantity_in_single_set": 1,
+                            "rate": 450,
+                            "remaining_quantity": 5,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 450,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fe0df9fe08354fbf583753",
+                            "barcode": "BC13702",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "38"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380673b1d5b2476a90697935a04",
+                            "combiLocation": "Linen Wear Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-23-FS",
+                            "mrp": 675,
+                            "ord_product_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380672d9a34a4af6e35050547fa_W09023-FS",
+                            "overall_quantity": 8,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09023-FS\/o_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09023-FS\/l_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09023-FS\/m_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09023-FS\/s_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "11",
+                                        "200",
+                                        "565",
+                                        "938"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "38",
+                            "product_combination_id": "673b1d5b2476a90697935a04",
+                            "quantity": 8,
+                            "quantity_in_single_set": 1,
+                            "rate": 450,
+                            "remaining_quantity": 8,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 450,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fe0df9fe08354fbf583756",
+                            "barcode": "BC13703",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "40"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380673b1d5b2476a90697935a06",
+                            "combiLocation": "Linen Wear Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-23-FS",
+                            "mrp": 675,
+                            "ord_product_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380672d9a34a4af6e35050547fa_W09023-FS",
+                            "overall_quantity": 4,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09023-FS\/o_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09023-FS\/l_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09023-FS\/m_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09023-FS\/s_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "11",
+                                        "200",
+                                        "565",
+                                        "938"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "40",
+                            "product_combination_id": "673b1d5b2476a90697935a06",
+                            "quantity": 4,
+                            "quantity_in_single_set": 1,
+                            "rate": 450,
+                            "remaining_quantity": 4,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 450,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fe0df9fe08354fbf583759",
+                            "barcode": "BC13705",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "44"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380673b1d5b2476a90697935a0a",
+                            "combiLocation": "Linen Wear Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-23-FS",
+                            "mrp": 675,
+                            "ord_product_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380672d9a34a4af6e35050547fa_W09023-FS",
+                            "overall_quantity": 3,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09023-FS\/o_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09023-FS\/l_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09023-FS\/m_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09023-FS\/s_89e9fbdc-a028-4860-a007-a10384b77176.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "11",
+                                        "200",
+                                        "565",
+                                        "938"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "44",
+                            "product_combination_id": "673b1d5b2476a90697935a0a",
+                            "quantity": 3,
+                            "quantity_in_single_set": 1,
+                            "rate": 450,
+                            "remaining_quantity": 3,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 450,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                }
+            ],
+            "finalOrderStatus": "transferred to erp",
+            "client_object_id": "6731c5fe03e2f02cc33441704496ee81-feb1-48df-b383-b1802ed9bbc01761480110380",
+            "created_at": 1761480116287,
+            "order_date": 1761480110391,
+            "order_no": "100004521",
+            "overall_quantity": 20,
+            "party_id": "67358f500be5ee2cf510590e",
+            "total_amount": 13500,
+            "total_pieces": 20,
+            "updated_at": 1765192731734,
+            "updated_by": [
+                {
+                    "name": "Srivarshan",
+                    "id": "672d999c2012ed3e660360fd"
+                }
+            ],
+            "remarks": "Customer order please immediate despecthed by Proffetional courier without box",
+            "submitted_on": 1765192731734,
+            "synced_on": 1761480323426,
+            "owned_by": "brand",
+            "__v": 0,
+            "transfer_to_erp_on": 1765192731734,
+            "delivery_date": ""
+        },
+        {
+            "_id": "68fe0fff01ea130dfafcedc7",
+            "distributor": {
+                "org_address": {
+                    "address_line1": "Zone-4",
+                    "country": "India",
+                    "city": "Chennai",
+                    "state": "Tamil Nadu"
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "Zone-4",
+                "id": "6734972e17bb010ffa01ec26",
+                "_id": "6734972e17bb010ffa01ec26",
+                "name": "Manikandan",
+                "org_name": "Manikandan",
+                "distributor_org_id": "67349818c7c7d10f67a1e073"
+            },
+            "retailer": {
+                "alias": {
+                    "name": "Sri Venkateswara Silks",
+                    "email": "",
+                    "phone": "91-9047039696",
+                    "address": {
+                        "address_line1": "No:48,east Parallel Road,near K Theater",
+                        "address_line2": "Krishnagiri",
+                        "city": "Krishnagiri",
+                        "state": "Tamilnadu",
+                        "country": "India",
+                        "zip": "635001"
+                    }
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "6323",
+                "distributor_marked": false,
+                "gst_tin": "33AEKFS8412C1Z7",
+                "id": "67358f500be5ee2cf5105916",
+                "retailer_groups": []
+            },
+            "party_type": "retailer",
+            "total_rate_amount": 2760,
+            "status": "New",
+            "order_type": "submitted",
+            "is_processing": false,
+            "order_replicated": false,
+            "replicated_from": "",
+            "products": [
+                {
+                    "_id": "68fe0faefe08354fbf594b8d",
+                    "client_object_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e0611761480555642672d9a34a4af6e35050547fa_CC6009-FS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "3"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "42",
+                                "44",
+                                "40"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Fs"
+                            ]
+                        }
+                    ],
+                    "category_id": "673b12372476a9069791398c",
+                    "has_variation": true,
+                    "name": "CC6009-FS",
+                    "order_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e0611761480555642",
+                    "overall_quantity": 6,
+                    "product_id": "672d9a34a4af6e35050547fa_CC6009-FS",
+                    "sku": "CC6009-FS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 4140,
+                    "total_pieces": 6,
+                    "total_rate_amount": 2760,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 690,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 0,
+                    "min_wsp_per_pcs": 0,
+                    "short_description": "",
+                    "category": {
+                        "_id": "673b12372476a9069791398c",
+                        "category_path": "673b12202476a90697913336|673b12372476a9069791398c",
+                        "name": "Cds-plain F\/s",
+                        "id": "673b12372476a9069791398c",
+                        "top_perent_id": "673b12202476a90697913336"
+                    },
+                    "categories_path_id": "673b12202476a90697913336|673b12372476a9069791398c",
+                    "categories_path_val": "Dhoti>Cds-plain F\/s",
+                    "categories": [
+                        {
+                            "_id": "673b12202476a90697913336",
+                            "category_path": "673b12202476a90697913336",
+                            "name": "Dhoti",
+                            "id": "673b12202476a90697913336"
+                        },
+                        {
+                            "_id": "673b12372476a9069791398c",
+                            "category_path": "673b12202476a90697913336|673b12372476a9069791398c",
+                            "name": "Cds-plain F\/s",
+                            "id": "673b12372476a9069791398c",
+                            "top_perent_id": "673b12202476a90697913336"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68fe0faefe08354fbf594b9a",
+                            "barcode": "BC59565",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "40"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "3"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e061176148055564268246d687d2dcd1052ba5f74",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "3,Fs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 690,
+                            "ord_product_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e0611761480555642672d9a34a4af6e35050547fa_CC6009-FS",
+                            "overall_quantity": 1,
+                            "pictures": [],
+                            "primary_att_val": "40",
+                            "product_combination_id": "68246d687d2dcd1052ba5f74",
+                            "quantity": 1,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 1,
+                            "secondary_att_val": "3",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fe0faefe08354fbf594b9e",
+                            "barcode": "BC59566",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "42"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "3"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e061176148055564268246d687d2dcd1052ba5f80",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "3,Fs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 690,
+                            "ord_product_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e0611761480555642672d9a34a4af6e35050547fa_CC6009-FS",
+                            "overall_quantity": 2,
+                            "pictures": [],
+                            "primary_att_val": "42",
+                            "product_combination_id": "68246d687d2dcd1052ba5f80",
+                            "quantity": 2,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 2,
+                            "secondary_att_val": "3",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fe0faefe08354fbf594ba2",
+                            "barcode": "BC59567",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "44"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "3"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e061176148055564268246d687d2dcd1052ba5f8a",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "3,Fs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 690,
+                            "ord_product_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e0611761480555642672d9a34a4af6e35050547fa_CC6009-FS",
+                            "overall_quantity": 3,
+                            "pictures": [],
+                            "primary_att_val": "44",
+                            "product_combination_id": "68246d687d2dcd1052ba5f8a",
+                            "quantity": 3,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 3,
+                            "secondary_att_val": "3",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "pictures": [],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                }
+            ],
+            "finalOrderStatus": "transferred to erp",
+            "client_object_id": "6731c5fe03e2f02cc3344170b3541131-0710-4c8c-95be-6796b8b9e0611761480555642",
+            "created_at": 1761480558123,
+            "order_date": 1761480555646,
+            "order_no": "100004522",
+            "overall_quantity": 6,
+            "party_id": "67358f500be5ee2cf5105916",
+            "total_amount": 4140,
+            "total_pieces": 6,
+            "updated_at": 1765192731734,
+            "updated_by": [
+                {
+                    "name": "Srivarshan",
+                    "id": "672d999c2012ed3e660360fd"
+                }
+            ],
+            "remarks": "Marriage customer order please immediate despecth tomorrow by courier ST",
+            "submitted_on": 1765192731734,
+            "synced_on": 1761480703432,
+            "owned_by": "brand",
+            "__v": 0,
+            "transfer_to_erp_on": 1765192731734,
+            "delivery_date": ""
+        },
+        {
+            "_id": "68fca492c8651a0e064f1466",
+            "distributor": {
+                "org_address": {
+                    "address_line1": "Zone-1",
+                    "country": "India",
+                    "city": "Chennai",
+                    "state": "Tamil Nadu"
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "Zone-1",
+                "id": "67349673c7c7d10f67a1d43f",
+                "_id": "67349673c7c7d10f67a1d43f",
+                "name": "Muthupandi",
+                "org_name": "Muthupandi",
+                "distributor_org_id": "6734987d2560d67b3ee5d94a"
+            },
+            "retailer": {
+                "alias": {
+                    "name": "K.chinnadurai & Co",
+                    "email": "",
+                    "phone": "91-8675145002",
+                    "address": {
+                        "address_line1": "130\/ 1 North Car Street\r\nThiruchendur",
+                        "address_line2": "Tuticorin",
+                        "city": "Thiruchendur",
+                        "state": "Tamilnadu",
+                        "country": "India",
+                        "zip": "628215"
+                    }
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "6163",
+                "distributor_marked": false,
+                "gst_tin": "33AAEFK6150F1ZO",
+                "id": "67358d97b7d64e1b3fa2504b",
+                "retailer_groups": []
+            },
+            "party_type": "retailer",
+            "total_rate_amount": 4590,
+            "status": "New",
+            "order_type": "submitted",
+            "is_processing": false,
+            "order_replicated": false,
+            "replicated_from": "",
+            "products": [
+                {
+                    "_id": "68fca433de083acfaedaded2",
+                    "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031672d9a34a4af6e35050547fa_CC6009-FS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "1"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "38",
+                                "40",
+                                "42",
+                                "36"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Fs"
+                            ]
+                        }
+                    ],
+                    "category_id": "673b12372476a9069791398c",
+                    "has_variation": true,
+                    "name": "CC6009-FS",
+                    "order_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031",
+                    "overall_quantity": 9,
+                    "product_id": "672d9a34a4af6e35050547fa_CC6009-FS",
+                    "sku": "CC6009-FS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 6210,
+                    "total_pieces": 9,
+                    "total_rate_amount": 4140,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 690,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 0,
+                    "min_wsp_per_pcs": 0,
+                    "short_description": "",
+                    "category": {
+                        "_id": "673b12372476a9069791398c",
+                        "category_path": "673b12202476a90697913336|673b12372476a9069791398c",
+                        "name": "Cds-plain F\/s",
+                        "id": "673b12372476a9069791398c",
+                        "top_perent_id": "673b12202476a90697913336"
+                    },
+                    "categories_path_id": "673b12202476a90697913336|673b12372476a9069791398c",
+                    "categories_path_val": "Dhoti>Cds-plain F\/s",
+                    "categories": [
+                        {
+                            "_id": "673b12202476a90697913336",
+                            "category_path": "673b12202476a90697913336",
+                            "name": "Dhoti",
+                            "id": "673b12202476a90697913336"
+                        },
+                        {
+                            "_id": "673b12372476a9069791398c",
+                            "category_path": "673b12202476a90697913336|673b12372476a9069791398c",
+                            "name": "Cds-plain F\/s",
+                            "id": "673b12372476a9069791398c",
+                            "top_perent_id": "673b12202476a90697913336"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68fca433de083acfaedadede",
+                            "barcode": "BC59542",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "36"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "1"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d2446650176138727903168246d687d2dcd1052ba5f68",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "1,Fs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 690,
+                            "ord_product_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031672d9a34a4af6e35050547fa_CC6009-FS",
+                            "overall_quantity": 3,
+                            "pictures": [],
+                            "primary_att_val": "36",
+                            "product_combination_id": "68246d687d2dcd1052ba5f68",
+                            "quantity": 3,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 3,
+                            "secondary_att_val": "1",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fca433de083acfaedadedf",
+                            "barcode": "BC59543",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "38"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "1"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d2446650176138727903168246d687d2dcd1052ba5f6e",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "1,Fs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 690,
+                            "ord_product_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031672d9a34a4af6e35050547fa_CC6009-FS",
+                            "overall_quantity": 2,
+                            "pictures": [],
+                            "primary_att_val": "38",
+                            "product_combination_id": "68246d687d2dcd1052ba5f6e",
+                            "quantity": 2,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 2,
+                            "secondary_att_val": "1",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fca433de083acfaedadee2",
+                            "barcode": "BC59544",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "40"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "1"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d2446650176138727903168246d687d2dcd1052ba5f78",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "1,Fs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 690,
+                            "ord_product_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031672d9a34a4af6e35050547fa_CC6009-FS",
+                            "overall_quantity": 3,
+                            "pictures": [],
+                            "primary_att_val": "40",
+                            "product_combination_id": "68246d687d2dcd1052ba5f78",
+                            "quantity": 3,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 3,
+                            "secondary_att_val": "1",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68fca433de083acfaedadee3",
+                            "barcode": "BC59545",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "42"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "1"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d2446650176138727903168246d687d2dcd1052ba5f7e",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "1,Fs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 690,
+                            "ord_product_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031672d9a34a4af6e35050547fa_CC6009-FS",
+                            "overall_quantity": 1,
+                            "pictures": [],
+                            "primary_att_val": "42",
+                            "product_combination_id": "68246d687d2dcd1052ba5f7e",
+                            "quantity": 1,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 1,
+                            "secondary_att_val": "1",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "pictures": [],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                },
+                {
+                    "_id": "68fca445de083acfaedb09fb",
+                    "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031672d9a34a4af6e35050547fa_CC6009-HS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "1"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Hs"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "44"
+                            ]
+                        }
+                    ],
+                    "category_id": "673b126c2476a906979144c9",
+                    "has_variation": true,
+                    "name": "CC6009-HS",
+                    "order_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031",
+                    "overall_quantity": 1,
+                    "product_id": "672d9a34a4af6e35050547fa_CC6009-HS",
+                    "sku": "CC6009-HS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 675,
+                    "total_pieces": 1,
+                    "total_rate_amount": 450,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 675,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 0,
+                    "min_wsp_per_pcs": 0,
+                    "short_description": "",
+                    "category": {
+                        "_id": "673b126c2476a906979144c9",
+                        "category_path": "673b12202476a90697913336|673b126c2476a906979144c9",
+                        "name": "Cds-plain H\/s",
+                        "id": "673b126c2476a906979144c9",
+                        "top_perent_id": "673b12202476a90697913336"
+                    },
+                    "categories_path_id": "673b12202476a90697913336|673b126c2476a906979144c9",
+                    "categories_path_val": "Dhoti>Cds-plain H\/s",
+                    "categories": [
+                        {
+                            "_id": "673b12202476a90697913336",
+                            "category_path": "673b12202476a90697913336",
+                            "name": "Dhoti",
+                            "id": "673b12202476a90697913336"
+                        },
+                        {
+                            "_id": "673b126c2476a906979144c9",
+                            "category_path": "673b12202476a90697913336|673b126c2476a906979144c9",
+                            "name": "Cds-plain H\/s",
+                            "id": "673b126c2476a906979144c9",
+                            "top_perent_id": "673b12202476a90697913336"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68fca445de083acfaedb0a07",
+                            "barcode": "BC59551",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "44"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "1"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Hs"
+                                }
+                            ],
+                            "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d2446650176138727903168246d687d2dcd1052ba5fb4",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "1,Hs",
+                            "have_multiple_units_in_set": false,
+                            "mrp": 675,
+                            "ord_product_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031672d9a34a4af6e35050547fa_CC6009-HS",
+                            "overall_quantity": 1,
+                            "pictures": [],
+                            "primary_att_val": "44",
+                            "product_combination_id": "68246d687d2dcd1052ba5fb4",
+                            "quantity": 1,
+                            "quantity_in_single_set": 1,
+                            "rate": 450,
+                            "remaining_quantity": 1,
+                            "secondary_att_val": "1",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 450,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "pictures": [],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                }
+            ],
+            "finalOrderStatus": "transferred to erp",
+            "client_object_id": "673498652560d67b3ee5d8160f6605e9-b4d6-4c6f-97f6-4063d24466501761387279031",
+            "created_at": 1761387281263,
+            "order_date": 1761387279034,
+            "order_no": "100004518",
+            "overall_quantity": 10,
+            "party_id": "67358d97b7d64e1b3fa2504b",
+            "total_amount": 6885,
+            "total_pieces": 10,
+            "updated_at": 1765192731734,
+            "updated_by": [
+                {
+                    "name": "Srivarshan",
+                    "id": "672d999c2012ed3e660360fd"
+                }
+            ],
+            "delivery_date": 1761646851649,
+            "remarks": "Add 48Half-1 \nCustomer Order Dispatch Date 28.10.2025",
+            "submitted_on": 1765192731734,
+            "synced_on": 1761387666427,
+            "owned_by": "brand",
+            "__v": 0,
+            "transfer_to_erp_on": 1765192731734
+        },
+        {
+            "_id": "68ff42a4f96f2e0df0ad054d",
+            "distributor": {
+                "org_address": {
+                    "address_line1": "Zone-2",
+                    "country": "India",
+                    "city": "Chennai",
+                    "state": "Tamil Nadu"
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "Zone-2",
+                "id": "673496a417bb010ffa01e693",
+                "_id": "673496a417bb010ffa01e693",
+                "name": "Moorthi",
+                "org_name": "Moorthi",
+                "distributor_org_id": "673498522560d67b3ee5d7bf"
+            },
+            "retailer": {
+                "alias": {
+                    "name": "Sri Neevi Silk & Emporium",
+                    "email": "",
+                    "phone": "91-8610453447",
+                    "address": {
+                        "address_line1": "Avanam Road",
+                        "address_line2": "Thanjavur",
+                        "city": "Peravurani",
+                        "state": "Tamilnadu",
+                        "country": "India",
+                        "zip": "614804"
+                    }
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "6122",
+                "distributor_marked": false,
+                "gst_tin": "33CDSPS7842H1ZW",
+                "id": "67358e1a0be5ee2cf5103a0a",
+                "retailer_groups": []
+            },
+            "party_type": "retailer",
+            "total_rate_amount": 17570,
+            "status": "New",
+            "order_type": "submitted",
+            "is_processing": false,
+            "order_replicated": false,
+            "replicated_from": "",
+            "products": [
+                {
+                    "_id": "68ff4242aea537b703f70517",
+                    "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09006-FS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "A"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "36",
+                                "38",
+                                "44"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Fs"
+                            ]
+                        }
+                    ],
+                    "category_id": "6746ba477361ee0dd775e8e5",
+                    "has_variation": true,
+                    "name": "Sun Light 010 Aero Cut",
+                    "order_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431",
+                    "overall_quantity": 18,
+                    "pictures": [
+                        {
+                            "_id": "68ff4299eb095f09a2757803",
+                            "l": "products\/672d9a34a4af6e35050547fa_W09006-FS\/l_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                            "m": "products\/672d9a34a4af6e35050547fa_W09006-FS\/m_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                            "s": "products\/672d9a34a4af6e35050547fa_W09006-FS\/s_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg"
+                        }
+                    ],
+                    "product_id": "672d9a34a4af6e35050547fa_W09006-FS",
+                    "sku": "W09006-FS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 9990,
+                    "total_pieces": 18,
+                    "total_rate_amount": 6660,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 555,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 370,
+                    "min_wsp_per_pcs": 0,
+                    "short_description": "",
+                    "category": {
+                        "_id": "6746ba477361ee0dd775e8e5",
+                        "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                        "name": "Cg-white F\/s",
+                        "id": "6746ba477361ee0dd775e8e5",
+                        "top_perent_id": "6811c203eb64080da2df3282"
+                    },
+                    "categories_path_id": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                    "categories_path_val": "White>Cg-white F\/s",
+                    "categories": [
+                        {
+                            "_id": "6811c203eb64080da2df3282",
+                            "category_path": "6811c203eb64080da2df3282",
+                            "name": "White",
+                            "id": "6811c203eb64080da2df3282"
+                        },
+                        {
+                            "_id": "6746ba477361ee0dd775e8e5",
+                            "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                            "name": "Cg-white F\/s",
+                            "id": "6746ba477361ee0dd775e8e5",
+                            "top_perent_id": "6811c203eb64080da2df3282"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68ff4242aea537b703f70524",
+                            "barcode": "BC13756",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "36"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431673b1d5b2476a906979359ea",
+                            "combiLocation": "Sun Light 010 Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-06-FS",
+                            "mrp": 555,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09006-FS",
+                            "overall_quantity": 5,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09006-FS\/o_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09006-FS\/l_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09006-FS\/m_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09006-FS\/s_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "13",
+                                        "208",
+                                        "563",
+                                        "940"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "36",
+                            "product_combination_id": "673b1d5b2476a906979359ea",
+                            "quantity": 5,
+                            "quantity_in_single_set": 1,
+                            "rate": 370,
+                            "remaining_quantity": 5,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 370,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68ff4242aea537b703f70525",
+                            "barcode": "BC13757",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "38"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431673b1d5b2476a906979359ec",
+                            "combiLocation": "Sun Light 010 Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-06-FS",
+                            "mrp": 555,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09006-FS",
+                            "overall_quantity": 10,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09006-FS\/o_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09006-FS\/l_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09006-FS\/m_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09006-FS\/s_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "13",
+                                        "208",
+                                        "563",
+                                        "940"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "38",
+                            "product_combination_id": "673b1d5b2476a906979359ec",
+                            "quantity": 10,
+                            "quantity_in_single_set": 1,
+                            "rate": 370,
+                            "remaining_quantity": 10,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 370,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68ff4242aea537b703f70526",
+                            "barcode": "BC13760",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "44"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431673b1d5b2476a906979359f0",
+                            "combiLocation": "Sun Light 010 Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-06-FS",
+                            "mrp": 555,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09006-FS",
+                            "overall_quantity": 3,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09006-FS\/o_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09006-FS\/l_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09006-FS\/m_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09006-FS\/s_3b09bc39-3a37-4277-a2ba-0d3b7a4ba9da.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "13",
+                                        "208",
+                                        "563",
+                                        "940"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "44",
+                            "product_combination_id": "673b1d5b2476a906979359f0",
+                            "quantity": 3,
+                            "quantity_in_single_set": 1,
+                            "rate": 370,
+                            "remaining_quantity": 3,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 370,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                },
+                {
+                    "_id": "68ff4273aea537b703f76340",
+                    "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09005-FS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "A"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Fs"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "42",
+                                "38",
+                                "36"
+                            ]
+                        }
+                    ],
+                    "category_id": "6746ba477361ee0dd775e8e5",
+                    "has_variation": true,
+                    "name": "Snowfall 010 Aero Cut",
+                    "order_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431",
+                    "overall_quantity": 13,
+                    "pictures": [
+                        {
+                            "_id": "68ff4299eb095f09a2757804",
+                            "l": "products\/672d9a34a4af6e35050547fa_W09005-FS\/l_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                            "m": "products\/672d9a34a4af6e35050547fa_W09005-FS\/m_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                            "s": "products\/672d9a34a4af6e35050547fa_W09005-FS\/s_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg"
+                        }
+                    ],
+                    "product_id": "672d9a34a4af6e35050547fa_W09005-FS",
+                    "sku": "W09005-FS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 8385,
+                    "total_pieces": 13,
+                    "total_rate_amount": 5590,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 645,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 430,
+                    "min_wsp_per_pcs": 0,
+                    "short_description": "",
+                    "category": {
+                        "_id": "6746ba477361ee0dd775e8e5",
+                        "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                        "name": "Cg-white F\/s",
+                        "id": "6746ba477361ee0dd775e8e5",
+                        "top_perent_id": "6811c203eb64080da2df3282"
+                    },
+                    "categories_path_id": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                    "categories_path_val": "White>Cg-white F\/s",
+                    "categories": [
+                        {
+                            "_id": "6811c203eb64080da2df3282",
+                            "category_path": "6811c203eb64080da2df3282",
+                            "name": "White",
+                            "id": "6811c203eb64080da2df3282"
+                        },
+                        {
+                            "_id": "6746ba477361ee0dd775e8e5",
+                            "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                            "name": "Cg-white F\/s",
+                            "id": "6746ba477361ee0dd775e8e5",
+                            "top_perent_id": "6811c203eb64080da2df3282"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68ff4273aea537b703f7635c",
+                            "barcode": "209005013601",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "36"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc517615590324316746a7913c591c1fa8cf8df9",
+                            "combiLocation": "Snowfall 010 Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-05-FS",
+                            "mrp": 645,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09005-FS",
+                            "overall_quantity": 3,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09005-FS\/o_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09005-FS\/l_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09005-FS\/m_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09005-FS\/s_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "1",
+                                        "208",
+                                        "554",
+                                        "946"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "36",
+                            "product_combination_id": "6746a7913c591c1fa8cf8df9",
+                            "quantity": 3,
+                            "quantity_in_single_set": 1,
+                            "rate": 430,
+                            "remaining_quantity": 3,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 430,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68ff4273aea537b703f76362",
+                            "barcode": "209005013801",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "38"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc517615590324316746a7913c591c1fa8cf8dfb",
+                            "combiLocation": "Snowfall 010 Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-05-FS",
+                            "mrp": 645,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09005-FS",
+                            "overall_quantity": 5,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09005-FS\/o_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09005-FS\/l_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09005-FS\/m_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09005-FS\/s_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "1",
+                                        "208",
+                                        "554",
+                                        "946"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "38",
+                            "product_combination_id": "6746a7913c591c1fa8cf8dfb",
+                            "quantity": 5,
+                            "quantity_in_single_set": 1,
+                            "rate": 430,
+                            "remaining_quantity": 5,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 430,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68ff4273aea537b703f76369",
+                            "barcode": "209005014201",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "42"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc517615590324316746a7913c591c1fa8cf8dff",
+                            "combiLocation": "Snowfall 010 Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-05-FS",
+                            "mrp": 645,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09005-FS",
+                            "overall_quantity": 5,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09005-FS\/o_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09005-FS\/l_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09005-FS\/m_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09005-FS\/s_85d67c08-fba7-4f34-b53b-5b7b8a7a217c.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "1",
+                                        "208",
+                                        "554",
+                                        "946"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "42",
+                            "product_combination_id": "6746a7913c591c1fa8cf8dff",
+                            "quantity": 5,
+                            "quantity_in_single_set": 1,
+                            "rate": 430,
+                            "remaining_quantity": 5,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 430,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                },
+                {
+                    "_id": "68ff4273aea537b703f76345",
+                    "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09005-HS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "A"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "40"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Hs"
+                            ]
+                        }
+                    ],
+                    "category_id": "673b1ee4c6d6790d47dfe997",
+                    "has_variation": true,
+                    "name": "Snowfall 010 Aero Cut",
+                    "order_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431",
+                    "overall_quantity": 5,
+                    "pictures": [
+                        {
+                            "_id": "68ff4299eb095f09a2757805",
+                            "l": "products\/672d9a34a4af6e35050547fa_W09005-HS\/l_13f4f4ff-73a4-486b-9e9d-691f06c1e4e3.jpeg",
+                            "m": "products\/672d9a34a4af6e35050547fa_W09005-HS\/m_13f4f4ff-73a4-486b-9e9d-691f06c1e4e3.jpeg",
+                            "s": "products\/672d9a34a4af6e35050547fa_W09005-HS\/s_13f4f4ff-73a4-486b-9e9d-691f06c1e4e3.jpeg"
+                        }
+                    ],
+                    "product_id": "672d9a34a4af6e35050547fa_W09005-HS",
+                    "short_description": "W09005 asnow fall 010 h\/s-aero cut46",
+                    "sku": "W09005-HS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 3150,
+                    "total_pieces": 5,
+                    "total_rate_amount": 2100,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 630,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 470,
+                    "min_wsp_per_pcs": 0,
+                    "category": {
+                        "_id": "673b1ee4c6d6790d47dfe997",
+                        "category_path": "6811c203eb64080da2df3282|673b1ee4c6d6790d47dfe997",
+                        "name": "Cg-white H\/s",
+                        "id": "673b1ee4c6d6790d47dfe997",
+                        "top_perent_id": "6811c203eb64080da2df3282"
+                    },
+                    "categories_path_id": "6811c203eb64080da2df3282|673b1ee4c6d6790d47dfe997",
+                    "categories_path_val": "White>Cg-white H\/s",
+                    "categories": [
+                        {
+                            "_id": "6811c203eb64080da2df3282",
+                            "category_path": "6811c203eb64080da2df3282",
+                            "name": "White",
+                            "id": "6811c203eb64080da2df3282"
+                        },
+                        {
+                            "_id": "673b1ee4c6d6790d47dfe997",
+                            "category_path": "6811c203eb64080da2df3282|673b1ee4c6d6790d47dfe997",
+                            "name": "Cg-white H\/s",
+                            "id": "673b1ee4c6d6790d47dfe997",
+                            "top_perent_id": "6811c203eb64080da2df3282"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68ff4273aea537b703f7636c",
+                            "barcode": "209005014002",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "40"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Hs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc517615590324316746a7913c591c1fa8cf8e07",
+                            "combiLocation": "Snowfall 010 Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Hs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-05-HS",
+                            "mrp": 630,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09005-HS",
+                            "overall_quantity": 5,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09005-HS\/o_13f4f4ff-73a4-486b-9e9d-691f06c1e4e3.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09005-HS\/l_13f4f4ff-73a4-486b-9e9d-691f06c1e4e3.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09005-HS\/m_13f4f4ff-73a4-486b-9e9d-691f06c1e4e3.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09005-HS\/s_13f4f4ff-73a4-486b-9e9d-691f06c1e4e3.jpeg",
+                                    "primary": true,
+                                    "_id": "674ea7e99100777c9079a620",
+                                    "cd": [
+                                        "7",
+                                        "202",
+                                        "547",
+                                        "923"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "40",
+                            "product_combination_id": "6746a7913c591c1fa8cf8e07",
+                            "quantity": 5,
+                            "quantity_in_single_set": 1,
+                            "rate": 420,
+                            "remaining_quantity": 5,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 420,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                },
+                {
+                    "_id": "68ff4284aea537b703f78cc9",
+                    "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09038-FS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "A"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "42",
+                                "36"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Fs"
+                            ]
+                        }
+                    ],
+                    "category_id": "6746ba477361ee0dd775e8e5",
+                    "has_variation": true,
+                    "name": "Nawabi Cotton Aero Cut",
+                    "order_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431",
+                    "overall_quantity": 7,
+                    "pictures": [
+                        {
+                            "_id": "68ff4299eb095f09a2757806",
+                            "l": "products\/672d9a34a4af6e35050547fa_W09038-FS\/l_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                            "m": "products\/672d9a34a4af6e35050547fa_W09038-FS\/m_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                            "s": "products\/672d9a34a4af6e35050547fa_W09038-FS\/s_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg"
+                        }
+                    ],
+                    "product_id": "672d9a34a4af6e35050547fa_W09038-FS",
+                    "sku": "W09038-FS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 4830,
+                    "total_pieces": 7,
+                    "total_rate_amount": 3220,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 690,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 460,
+                    "min_wsp_per_pcs": 0,
+                    "short_description": "",
+                    "category": {
+                        "_id": "6746ba477361ee0dd775e8e5",
+                        "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                        "name": "Cg-white F\/s",
+                        "id": "6746ba477361ee0dd775e8e5",
+                        "top_perent_id": "6811c203eb64080da2df3282"
+                    },
+                    "categories_path_id": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                    "categories_path_val": "White>Cg-white F\/s",
+                    "categories": [
+                        {
+                            "_id": "6811c203eb64080da2df3282",
+                            "category_path": "6811c203eb64080da2df3282",
+                            "name": "White",
+                            "id": "6811c203eb64080da2df3282"
+                        },
+                        {
+                            "_id": "6746ba477361ee0dd775e8e5",
+                            "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                            "name": "Cg-white F\/s",
+                            "id": "6746ba477361ee0dd775e8e5",
+                            "top_perent_id": "6811c203eb64080da2df3282"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68ff4284aea537b703f78cf8",
+                            "barcode": "BC13687",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "36"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431673b1d5b2476a90697935a14",
+                            "combiLocation": "Nawabi Cotton Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-38-FS",
+                            "mrp": 690,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09038-FS",
+                            "overall_quantity": 2,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09038-FS\/o_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09038-FS\/l_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09038-FS\/m_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09038-FS\/s_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "24",
+                                        "209",
+                                        "552",
+                                        "914"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "36",
+                            "product_combination_id": "673b1d5b2476a90697935a14",
+                            "quantity": 2,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 2,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        },
+                        {
+                            "_id": "68ff4284aea537b703f78d05",
+                            "barcode": "BC13690",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "42"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431673b1d5b2476a90697935a1a",
+                            "combiLocation": "Nawabi Cotton Aero Cut-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-38-FS",
+                            "mrp": 690,
+                            "ord_product_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431672d9a34a4af6e35050547fa_W09038-FS",
+                            "overall_quantity": 5,
+                            "pictures": [
+                                {
+                                    "o": "products\/672d9a34a4af6e35050547fa_W09038-FS\/o_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "l": "products\/672d9a34a4af6e35050547fa_W09038-FS\/l_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "m": "products\/672d9a34a4af6e35050547fa_W09038-FS\/m_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "s": "products\/672d9a34a4af6e35050547fa_W09038-FS\/s_77db8814-c0e5-4f65-ae59-d5e3b1a749a7.jpeg",
+                                    "primary": true,
+                                    "_id": null,
+                                    "cd": [
+                                        "24",
+                                        "209",
+                                        "552",
+                                        "914"
+                                    ]
+                                }
+                            ],
+                            "primary_att_val": "42",
+                            "product_combination_id": "673b1d5b2476a90697935a1a",
+                            "quantity": 5,
+                            "quantity_in_single_set": 1,
+                            "rate": 460,
+                            "remaining_quantity": 5,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 460,
+                            "ready_stock": 999
+                        }
+                    ],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                }
+            ],
+            "finalOrderStatus": "transferred to erp",
+            "client_object_id": "673498362560d67b3ee5d6f1accc2a7e-4c17-4010-8960-87ca95c18cc51761559032431",
+            "created_at": 1761559036285,
+            "order_date": 1761559032441,
+            "order_no": "100004525",
+            "overall_quantity": 43,
+            "party_id": "67358e1a0be5ee2cf5103a0a",
+            "total_amount": 26355,
+            "total_pieces": 43,
+            "updated_at": 1765192731734,
+            "updated_by": [
+                {
+                    "name": "Srivarshan",
+                    "id": "672d999c2012ed3e660360fd"
+                }
+            ],
+            "delivery_date": 1761559190759,
+            "remarks": "Urgent refill full set despatch \nDespatch today ",
+            "submitted_on": 1765192731734,
+            "synced_on": 1761559204722,
+            "owned_by": "brand",
+            "__v": 0,
+            "transfer_to_erp_on": 1765192731734
+        },
+        {
+            "_id": "68fe112701ea130dfafceddc",
+            "distributor": {
+                "org_address": {
+                    "address_line1": "Zone-4",
+                    "country": "India",
+                    "city": "Chennai",
+                    "state": "Tamil Nadu"
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "Zone-4",
+                "id": "6734972e17bb010ffa01ec26",
+                "_id": "6734972e17bb010ffa01ec26",
+                "name": "Manikandan",
+                "org_name": "Manikandan",
+                "distributor_org_id": "67349818c7c7d10f67a1e073"
+            },
+            "retailer": {
+                "alias": {
+                    "name": "Sri Krishna Silks & Readymades",
+                    "phone": "91-9488710430",
+                    "address": {
+                        "address_line1": "Bazaar Road, 2nd Cross Corner,opp. To Radio Maidana Entrance,",
+                        "address_line2": "Kr Nagara,mysore - 571602",
+                        "city": "Mysore",
+                        "state": "Karnataka",
+                        "country": "India",
+                        "zip": 571602
+                    }
+                },
+                "third_party_client_id": "",
+                "third_party_obj_id": "",
+                "reference_id": "6483",
+                "distributor_marked": false,
+                "gst_tin": "29BDBPK8142G1ZI",
+                "retailer_groups": [],
+                "id": "67d6c1ca5b5bfc1a9b39f810"
+            },
+            "party_type": "retailer",
+            "total_rate_amount": 14310,
+            "status": "New",
+            "order_type": "submitted",
+            "is_processing": false,
+            "order_replicated": false,
+            "replicated_from": "",
+            "products": [
+                {
+                    "_id": "68fe10f5fe08354fbf5ab269",
+                    "client_object_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197672d9a34a4af6e35050547fa_W09008-FS",
+                    "active": true,
+                    "attributes_tags": [
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fe",
+                            "val": [
+                                "A"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547ff",
+                            "val": [
+                                "Fs"
+                            ]
+                        },
+                        {
+                            "attr_id": "672d9a34a4af6e35050547fd",
+                            "val": [
+                                "36",
+                                "40",
+                                "44",
+                                "38",
+                                "42"
+                            ]
+                        }
+                    ],
+                    "category_id": "6746ba477361ee0dd775e8e5",
+                    "has_variation": true,
+                    "name": "Subamuhurtha Fs",
+                    "order_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197",
+                    "overall_quantity": 27,
+                    "product_id": "672d9a34a4af6e35050547fa_W09008-FS",
+                    "short_description": "W09008 asubamuhurtha f\/s-aero cut44",
+                    "sku": "W09008-FS",
+                    "third_party_client_id": "",
+                    "third_party_obj_id": "",
+                    "total_amount": 21465,
+                    "total_pieces": 27,
+                    "total_rate_amount": 14310,
+                    "trashed": false,
+                    "internalDescription": "",
+                    "min_mrp": 795,
+                    "min_mrp_per_pcs": 0,
+                    "min_wsp": 0,
+                    "min_wsp_per_pcs": 0,
+                    "category": {
+                        "_id": "6746ba477361ee0dd775e8e5",
+                        "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                        "name": "Cg-white F\/s",
+                        "id": "6746ba477361ee0dd775e8e5",
+                        "top_perent_id": "6811c203eb64080da2df3282"
+                    },
+                    "categories_path_id": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                    "categories_path_val": "White>Cg-white F\/s",
+                    "categories": [
+                        {
+                            "_id": "6811c203eb64080da2df3282",
+                            "category_path": "6811c203eb64080da2df3282",
+                            "name": "White",
+                            "id": "6811c203eb64080da2df3282"
+                        },
+                        {
+                            "_id": "6746ba477361ee0dd775e8e5",
+                            "category_path": "6811c203eb64080da2df3282|6746ba477361ee0dd775e8e5",
+                            "name": "Cg-white F\/s",
+                            "id": "6746ba477361ee0dd775e8e5",
+                            "top_perent_id": "6811c203eb64080da2df3282"
+                        }
+                    ],
+                    "combinations": [
+                        {
+                            "_id": "68fe10f5fe08354fbf5ab276",
+                            "barcode": "BC25539",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "36"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197675ac28c8de7bf4867b17013",
+                            "combiLocation": "W09008-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-08-FS",
+                            "mrp": 795,
+                            "ord_product_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197672d9a34a4af6e35050547fa_W09008-FS",
+                            "overall_quantity": 6,
+                            "pictures": [],
+                            "primary_att_val": "36",
+                            "product_combination_id": "675ac28c8de7bf4867b17013",
+                            "quantity": 6,
+                            "quantity_in_single_set": 1,
+                            "rate": 530,
+                            "remaining_quantity": 6,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 530,
+                            "ready_stock": 996
+                        },
+                        {
+                            "_id": "68fe10f5fe08354fbf5ab278",
+                            "barcode": "BC25540",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "38"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197675ac28c8de7bf4867b17015",
+                            "combiLocation": "W09008-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-08-FS",
+                            "mrp": 795,
+                            "ord_product_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197672d9a34a4af6e35050547fa_W09008-FS",
+                            "overall_quantity": 6,
+                            "pictures": [],
+                            "primary_att_val": "38",
+                            "product_combination_id": "675ac28c8de7bf4867b17015",
+                            "quantity": 6,
+                            "quantity_in_single_set": 1,
+                            "rate": 530,
+                            "remaining_quantity": 6,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 530,
+                            "ready_stock": 991
+                        },
+                        {
+                            "_id": "68fe10f5fe08354fbf5ab27b",
+                            "barcode": "BC25541",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "40"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197675ac28c8de7bf4867b17017",
+                            "combiLocation": "W09008-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-08-FS",
+                            "mrp": 795,
+                            "ord_product_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197672d9a34a4af6e35050547fa_W09008-FS",
+                            "overall_quantity": 6,
+                            "pictures": [],
+                            "primary_att_val": "40",
+                            "product_combination_id": "675ac28c8de7bf4867b17017",
+                            "quantity": 6,
+                            "quantity_in_single_set": 1,
+                            "rate": 530,
+                            "remaining_quantity": 6,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 530,
+                            "ready_stock": 993
+                        },
+                        {
+                            "_id": "68fe10f5fe08354fbf5ab27e",
+                            "barcode": "BC25542",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "42"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197675ac28c8de7bf4867b17019",
+                            "combiLocation": "W09008-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-08-FS",
+                            "mrp": 795,
+                            "ord_product_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197672d9a34a4af6e35050547fa_W09008-FS",
+                            "overall_quantity": 6,
+                            "pictures": [],
+                            "primary_att_val": "42",
+                            "product_combination_id": "675ac28c8de7bf4867b17019",
+                            "quantity": 6,
+                            "quantity_in_single_set": 1,
+                            "rate": 530,
+                            "remaining_quantity": 6,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 530,
+                            "ready_stock": 995
+                        },
+                        {
+                            "_id": "68fe10f5fe08354fbf5ab282",
+                            "barcode": "BC25543",
+                            "active": true,
+                            "attributes": [
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fd",
+                                    "val": "44"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547fe",
+                                    "val": "A"
+                                },
+                                {
+                                    "attr_id": "672d9a34a4af6e35050547ff",
+                                    "val": "Fs"
+                                }
+                            ],
+                            "client_object_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197675ac28c8de7bf4867b1701b",
+                            "combiLocation": "W09008-A",
+                            "dispatched_quantity": 0,
+                            "grade": "",
+                            "grouped_att_vals": "A,Fs",
+                            "have_multiple_units_in_set": false,
+                            "location": "CG-WHT-08-FS",
+                            "mrp": 795,
+                            "ord_product_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197672d9a34a4af6e35050547fa_W09008-FS",
+                            "overall_quantity": 3,
+                            "pictures": [],
+                            "primary_att_val": "44",
+                            "product_combination_id": "675ac28c8de7bf4867b1701b",
+                            "quantity": 3,
+                            "quantity_in_single_set": 1,
+                            "rate": 530,
+                            "remaining_quantity": 3,
+                            "secondary_att_val": "A",
+                            "set_unit": "pieces",
+                            "third_party_client_id": "",
+                            "third_party_obj_id": "",
+                            "trashed": false,
+                            "wsp": 530,
+                            "ready_stock": 997
+                        }
+                    ],
+                    "pictures": [],
+                    "cover_picture": {
+                        "cd": []
+                    }
+                }
+            ],
+            "finalOrderStatus": "transferred to erp",
+            "client_object_id": "6731c5fe03e2f02cc33441701d833f03-8f94-48b7-b35c-f09968678d9d1761480885197",
+            "created_at": 1761480887670,
+            "order_date": 1761480885198,
+            "order_no": "100004523",
+            "overall_quantity": 27,
+            "party_id": "67d6c1ca5b5bfc1a9b39f810",
+            "total_amount": 21465,
+            "total_pieces": 27,
+            "updated_at": 1765192731734,
+            "updated_by": [
+                {
+                    "name": "Srivarshan",
+                    "id": "672d999c2012ed3e660360fd"
+                }
+            ],
+            "remarks": "Regular refilling tomorrow despecthed ",
+            "submitted_on": 1765192731734,
+            "synced_on": 1761480999586,
+            "owned_by": "brand",
+            "__v": 0,
+            "transfer_to_erp_on": 1765192731734,
+            "delivery_date": ""
+        }
+    ]
+}

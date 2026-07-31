@@ -10,3 +10,6 @@ ADD COLUMN `stock_reverted` TINYINT(1) NOT NULL DEFAULT 0;
 
 ALTER TABLE `settings`
 ADD COLUMN `upi_id` VARCHAR(255) NULL AFTER `account_no`;
+
+ALTER TABLE `billings`
+ADD COLUMN `billing_name` VARCHAR(255) NULL AFTER `id`;

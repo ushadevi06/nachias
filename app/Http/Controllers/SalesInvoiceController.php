@@ -244,7 +244,7 @@ class SalesInvoiceController extends Controller
 
             $request->validate([
                 'brand_id' => 'required|exists:brands,id',
-                'inv_no' => 'required|min:3|max:50|unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'inv_no' => ['required', 'string', 'min:1', 'max:16', 'regex:/^[a-zA-Z1-9][a-zA-Z0-9\/\-]*$/', 'unique:sales_invoices,inv_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'inv_date' => 'required|date_format:d-m-Y',
                 'so_ids' => 'required|array',
                 'so_ids.*' => 'exists:sales_orders,id',
@@ -270,6 +270,8 @@ class SalesInvoiceController extends Controller
                 '*.date_format'   => 'Please enter a valid date in DD-MM-YYYY format.',
                 '*.numeric'       => 'This field must be a number.',
                 '*.regex'         => 'This field is an invalid format.',
+                'inv_no.regex'    => 'The Invoice Number must start with a letter or 1-9, and can only contain letters, numbers, hyphens, or forward slashes.',
+                '*.not_regex'     => 'This field is an invalid format.',
                 '*.min'           => 'This field must be at least :min characters.',
                 '*.max'           => 'This field must be at most :max characters.',
                 'items.*.quantity.required' => 'This field is required.',
@@ -279,7 +281,6 @@ class SalesInvoiceController extends Controller
                 'items.*.mrp.min' => 'Please enter a valid numeric value greater than or equal to 0.',
                 'extra_input' => 'nullable|min:3|max:100',
             ]);
-            // Paid status validation has been removed to allow manual selection, aligning with the index page behavior.
 
             try {
                 $this->validateStockAvailability($request->items, $id);
@@ -297,7 +298,7 @@ class SalesInvoiceController extends Controller
                     'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'sales_discount', 'box_discount_amount', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
-                    'other_charges', 'round_off_type', 'round_off',
+                    'other_charges', 'pre_gst_charges', 'post_gst_charges', 'round_off_type', 'round_off',
                     'grand_total', 'due_amount'
                 ]);
                 if ($request->tran_doc_date) {
@@ -452,7 +453,8 @@ class SalesInvoiceController extends Controller
             $nextInvNumber = 'SV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
         }
 
-        $brands = \App\Models\Brand::active()->orderBy('brand_name', 'asc')->get();
+        $brands = \App\Models\Brand::active()->orderBy('id', 'desc')->get();
+        $transportModes = \App\Models\TransportMode::where('status', 'Active')->orderBy('id', 'desc')->get();
 
         if ($invoice) {
             $soIds = $invoice->so_ids ? json_decode($invoice->so_ids, true) : ($invoice->so_id ? [$invoice->so_id] : []);
@@ -461,7 +463,7 @@ class SalesInvoiceController extends Controller
             $saleOrders = collect(); 
         }
 
-        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent', 'brands'));
+        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent', 'brands', 'transportModes'));
     }
 
     public function view($id)
@@ -597,7 +599,8 @@ class SalesInvoiceController extends Controller
             'items.uom', 
             'items.size', 
             'items.color', 
-            'customer'
+            'customer',
+            'charges'
         ])->whereIn('id', $soIds)->get();
 
         if ($saleOrders->isEmpty()) {
@@ -614,13 +617,16 @@ class SalesInvoiceController extends Controller
         $transporterName = '';
         $transportModeId = null;
 
+        $transportModes = [];
         foreach ($saleOrders as $so) {
+            if (!empty($so->transport_mode_id)) {
+                $transportModes[] = $so->transport_mode_id;
+            }
             if (empty($billingAddress) && $so->customer) {
                 $c = $so->customer;
                 $billingAddress = implode(', ', array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3, $c->city, $c->state, $c->pincode]));
                 $shippingAddress = $so->shipping_address;
                 $transporterName = $so->transporter_name;
-                $transportModeId = $so->transport_mode_id;
             }
 
             foreach ($so->items as $item) {
@@ -720,13 +726,32 @@ class SalesInvoiceController extends Controller
             }
         }
 
+        $transportModes = array_unique($transportModes);
+        $transportModeId = (count($transportModes) === 1) ? reset($transportModes) : null;
+
         $firstSo = $saleOrders->first();
 
         $totalSubTotal = 0;
         $totalDiscountAmount = 0;
+        $totalPreGstCharges = 0;
+        $totalCourierCharges = 0;
+        $totalOtherPostGstCharges = 0;
         foreach ($saleOrders as $so) {
             $totalSubTotal += $so->sub_total ?? 0;
             $totalDiscountAmount += $so->discount_amount ?? 0;
+            if ($so->charges) {
+                $totalPreGstCharges += $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
+                
+                $totalCourierCharges += $so->charges->where('tax_type', 'Post-GST')
+                    ->filter(function($charge) {
+                        return stripos($charge->charge_name, 'COURIER') !== false;
+                    })->sum('charge_amount');
+                
+                $totalOtherPostGstCharges += $so->charges->where('tax_type', 'Post-GST')
+                    ->filter(function($charge) {
+                        return stripos($charge->charge_name, 'COURIER') === false;
+                    })->sum('charge_amount');
+            }
         }
         $weightedDiscountPercent = $totalSubTotal > 0 ? round(($totalDiscountAmount / $totalSubTotal) * 100, 2) : ($firstSo->discount_percent ?? 0);
         return response()->json([
@@ -747,6 +772,9 @@ class SalesInvoiceController extends Controller
             'transport_mode_id' => $transportModeId,
             'sales_discount' => (!empty($firstSo->sales_discount_percent) && (float)$firstSo->sales_discount_percent > 0) ? $firstSo->sales_discount_percent : ($firstSo->customer->sales_discount ?? 0),
             'box_discount_amount' => (!empty($firstSo->box_discount_amount) && (float)$firstSo->box_discount_amount > 0) ? $firstSo->box_discount_amount : ($firstSo->customer->box_discount_amount ?? 0),
+            'pre_gst_charges' => $totalPreGstCharges,
+            'courier_charge' => $totalCourierCharges,
+            'post_gst_charges' => $totalOtherPostGstCharges,
             'items' => $allItems->values()
         ]);
     }
@@ -762,7 +790,8 @@ class SalesInvoiceController extends Controller
             'items.uom', 
             'items.size', 
             'items.color', 
-            'customer'
+            'customer',
+            'charges'
         ])->find($id);
         if (!$so) {
             return response()->json(['success' => false, 'message' => 'Sale Order not found']);
@@ -866,6 +895,21 @@ class SalesInvoiceController extends Controller
             $billingAddress = implode(', ', array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3, $c->city, $c->state, $c->pincode]));
         }
 
+        $preGstCharges = 0;
+        $courierCharge = 0;
+        $postGstCharges = 0;
+        if ($so->charges) {
+            $preGstCharges = $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
+            $courierCharge = $so->charges->where('tax_type', 'Post-GST')
+                ->filter(function($charge) {
+                    return stripos($charge->charge_name, 'COURIER') !== false;
+                })->sum('charge_amount');
+            $postGstCharges = $so->charges->where('tax_type', 'Post-GST')
+                ->filter(function($charge) {
+                    return stripos($charge->charge_name, 'COURIER') === false;
+                })->sum('charge_amount');
+        }
+
         return response()->json([
             'success' => true,
             'customer_id' => $so->customer_id,
@@ -884,6 +928,9 @@ class SalesInvoiceController extends Controller
             'transport_mode_id' => $so->transport_mode_id,
             'sales_discount' => $so->sales_discount_percent ?? ($so->customer->sales_discount ?? 0),
             'box_discount_amount' => $so->box_discount_amount ?? ($so->customer->box_discount_amount ?? 0),
+            'pre_gst_charges' => $preGstCharges,
+            'courier_charge' => $courierCharge,
+            'post_gst_charges' => $postGstCharges,
             'items' => $items
         ]);
     }
@@ -1125,6 +1172,13 @@ class SalesInvoiceController extends Controller
         if ($invoice->irn) {
             return response()->json(['success' => false, 'message' => 'E-Invoice already generated']);
         }
+        
+        if (strlen($invoice->inv_no) < 1 || strlen($invoice->inv_no) > 16 || !preg_match('/^[a-zA-Z1-9][a-zA-Z0-9\/\-]*$/', $invoice->inv_no)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The Sales Invoice Number is invalid for e-Invoice API. It must be 1-16 characters long, start with a letter or 1-9, and contain only letters, numbers, hyphens, or forward slashes.'
+            ]);
+        }
 
         $transporterData = [];
         if (!empty($invoice->vehicle_no)) {
@@ -1141,6 +1195,30 @@ class SalesInvoiceController extends Controller
         }
 
         $result = $eInvoiceService->generateEInvoice($invoice, $transporterData);
+        
+        if (!$result['success'] && isset($result['message'])) {
+            if (strpos($result['message'], 'is cancelled and document date') !== false) {
+                preg_match('/GSTIN - ([A-Z0-9]+)/', $result['message'], $matches);
+                $gstin = $matches[1] ?? 'Unknown';
+                $invoiceDate = \Carbon\Carbon::parse($invoice->inv_date)->format('d-m-Y');
+                
+                $result['message'] = "<strong>e-Invoice Generation Failed</strong><br><br>"
+                                   . "<strong>Reason:</strong> The customer's GSTIN has been cancelled before the invoice date. Therefore, an e-Invoice cannot be generated for this invoice.<br><br>"
+                                   . "<strong>Customer GSTIN:</strong> " . $gstin . "<br>"
+                                   . "<strong>Invoice Date:</strong> " . $invoiceDate . "<br><br>"
+                                   . "Please verify the customer's GST registration status or update the GSTIN before generating the e-Invoice.";
+            } elseif (strpos($result['message'], 'field POS must match') !== false || strpos($result['message'], 'field State must') !== false) {
+                $result['message'] = "<strong>e-Invoice Generation Failed</strong><br><br>"
+                                   . "<strong>Reason:</strong> The customer's State or Place of Supply (POS) State Code is invalid or missing.<br><br>"
+                                   . "<strong>Please verify the following before generating the e-Invoice:</strong><br>"
+                                   . "<ul style='text-align: left; margin-bottom: 0; padding-left: 20px;'>"
+                                   . "<li>Ensure the State is selected correctly.</li>"
+                                   . "<li>Ensure the State Code (POS) is a valid 2-digit GST State Code (e.g., 33 for Tamil Nadu, 29 for Karnataka).</li>"
+                                   . "<li>Update the customer master if the State or State Code is incorrect.</li>"
+                                   . "</ul>";
+            }
+        }
+        
         return response()->json($result);
     }
 

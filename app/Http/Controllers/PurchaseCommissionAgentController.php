@@ -253,7 +253,7 @@ class PurchaseCommissionAgentController extends Controller
             return redirect('purchase_commission_agent')->with('success', $message);
         }
 
-        $states = State::where('status', 'Active')->get();
+        $states = State::where('status', 'Active')->orderBy('id','desc')->get();
         $cities = [];
         $servicePoints = [];
 

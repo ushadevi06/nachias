@@ -63,7 +63,7 @@ th.sticky-col-employee {
                                             <option value="range">Date Range</option>
                                         </select>
                                         <div id="month_picker_wrapper">
-                                            <input type="month" id="salary_month" class="form-control" max="{{ now()->format('Y-m') }}">
+                                            <input type="month" id="salary_month" class="form-control" max="{{ now()->format('Y-m') }}" value="{{ isset($salary) ? $salary->salary_year . '-' . str_pad($salary->salary_month, 2, '0', STR_PAD_LEFT) : now()->format('Y-m') }}">
                                         </div>
                                         <div id="date_range_wrapper" style="display: none;" class="gap-2">
                                             <input type="date" id="salary_from_date" class="form-control" max="{{ now()->format('Y-m-d') }}">
@@ -105,6 +105,7 @@ th.sticky-col-employee {
                                                 <th>Lop Days</th>
                                                 <th>Holidays</th>
                                                 <th>Fixed Gross</th>
+                                                <th>Amount Payable</th>
                                                 <th>Basic Pay</th>
                                                 <th>HRA</th>
                                                 <th>DA</th>
@@ -157,6 +158,10 @@ th.sticky-col-employee {
                                                     {{-- Fixed Gross --}}
                                                     <td>
                                                         <input type="text" readonly class="form-control fixed_gross" value="{{ $salary->fixed_gross }}">
+                                                    </td>
+                                                    {{-- Amount Payable --}}
+                                                    <td>
+                                                        <input type="text" readonly class="form-control amount_payable" value="{{ $salary->amount_payable ?? 0 }}">
                                                     </td>
                                                     {{-- Basic Pay --}}
                                                     <td>
@@ -346,11 +351,15 @@ th.sticky-col-employee {
                     currentPage = 1;
                     renderPayrollPage();
                 },
-                error: function () {
+                error: function (xhr) {
+                    let errorMessage = 'Something went wrong';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
                     Swal.fire({
                         icon: 'error',
                         title: 'Failed',
-                        text: 'Something went wrong',
+                        text: errorMessage,
                         confirmButtonText: 'OK'
                     });
                 },
@@ -398,6 +407,11 @@ th.sticky-col-employee {
                     <!-- Fixed Gross -->
                     <td>
                         <input type="number" class="form-control fixed_gross" value="${item.fixed_gross}" readonly>
+                    </td>
+
+                    <!-- Amount Payable -->
+                    <td>
+                        <input type="number" class="form-control amount_payable" value="${item.amount_payable ?? 0}" readonly>
                     </td>
 
                     <!-- Basic Pay -->

@@ -132,9 +132,9 @@ class ProductionReceiptController extends Controller
             $usedJobCardIds = ProductionReceipt::whereNotNull('job_card_id')->pluck('job_card_id')->toArray();
             $jobCards = JobCardEntry::with('serviceProvider')->whereNotIn('id', $usedJobCardIds)->orderBy('id', 'desc')->get();
         }
-        $storeTypes = StoreType::where('status', 'Active')->orderBy('store_type_name')->get();
-        $storeLocations = StoreLocation::where('status', 'Active')->get();
-        $employees = User::where('status', 'Active')->where('id', '!=', 1)->get();
+        $storeTypes = StoreType::where('status', 'Active')->orderBy('id','desc')->get();
+        $storeLocations = StoreLocation::where('status', 'Active')->orderBy('id','desc')->get();
+        $employees = User::where('status', 'Active')->where('id', '!=', 1)->orderBy('id','desc')->get();
 
         if ($request->isMethod('post')) {
             $rules = [
@@ -529,6 +529,14 @@ class ProductionReceiptController extends Controller
             return response()->json(['success' => false, 'message' => 'Job Card not found'], 404);
         }
 
+        $issueItemsCount = \App\Models\JobCardIssueItem::where('job_card_entry_id', $jobCard->id)->count();
+        if ($issueItemsCount == 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The selected Job Card has not been issued yet. Please issue the Job Card before creating a Production Receipt.'
+            ]);
+        }
+
         $getStoreCategoryIdForArtNo = function ($artNo) {
             $normalizedArtNo = trim($artNo ?? '');
             if ($normalizedArtNo === '') {
@@ -784,7 +792,9 @@ class ProductionReceiptController extends Controller
             'consumption_details' => $consumptionDetails
             ];
         };
-        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap, $isCanvas) {
+        $missingItemPrice = false;
+        
+        $processQty = function ($artNo, $sleeve, $size, $qty, $color = null, $colorId = null) use (&$tempGrouped, $jobCard, $serviceName, $calculateItemUnitPrice, $fallbackStyleCode, $fallbackStyleName, $artColorMap, $isCanvas, &$missingItemPrice) {
             if ($qty > 0) {
                 $sizeVariant = $sleeve ? $size . ' - ' . $sleeve : $size;
                 $itemKey = $jobCard->item_id ?? '0';
@@ -848,6 +858,10 @@ class ProductionReceiptController extends Controller
                         ->orderBy('effective_from', 'desc')
                         ->orderBy('id', 'desc')
                         ->first();
+
+                    if (!$itemPrice) {
+                        $missingItemPrice = true;
+                    }
 
                     $unitPrice = $itemPrice ? $itemPrice->unit_price : $pricing['total_cost'];
                     $mrp = $itemPrice ? $itemPrice->selling_price : $pricing['total_cost'];
@@ -960,6 +974,13 @@ class ProductionReceiptController extends Controller
 
                 $items[] = $itemData;
             }
+        }
+
+        if ($missingItemPrice) {
+            return response()->json([
+                'success' => false,
+                'message' => 'One or more items from the selected Job Card do not exist in the Item Price Master. Please configure the Item Price before creating the Production Receipt.'
+            ]);
         }
 
         return response()->json([

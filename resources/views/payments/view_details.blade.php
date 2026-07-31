@@ -60,19 +60,19 @@
                         <div class="card-body p-4">
                             <h6 class="text-uppercase text-primary small font-bold tracking-wider mb-4">Billing & Tracking Details</h6>
                             <div class="row g-4">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="text-muted small d-block mb-1">Payment Mode</label>
                                     <p class="font-medium text-dark mb-0">{{ $payment->payment_mode }}</p>
                                 </div>
                                 @if($payment->bank_name)
-                                <div class="col-md-8">
+                                <div class="col-md-3">
                                     <label class="text-muted small d-block mb-1">Bank Name</label>
                                     <p class="font-medium text-dark mb-0">{{ $payment->bank_name }}</p>
                                 </div>
                                 @endif
                                 
                                 @if($payment->transaction_no)
-                                <div class="col-md-6">
+                                <div class="col-md-3">
                                     <label class="text-muted small d-block mb-1">Transaction / UTR No</label>
                                     <code class="text-primary font-bold fs-6">{{ $payment->transaction_no }}</code>
                                 </div>

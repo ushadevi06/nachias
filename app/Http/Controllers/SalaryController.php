@@ -164,6 +164,22 @@ class SalaryController extends Controller
         $toDate = $request->to_date;
         $type = $request->type ?: 'monthly';
 
+        $today = \Carbon\Carbon::today()->toDateString();
+        $calcEndDate = '';
+        
+        if ($type === 'range' && $fromDate && $toDate) {
+            $calcEndDate = \Carbon\Carbon::parse($toDate)->toDateString();
+        } else {
+            $calcEndDate = \Carbon\Carbon::parse($month)->endOfMonth()->toDateString();
+        }
+
+        if ($calcEndDate > $today) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot generate payroll for future dates. Please wait until the period ends or select a custom date range up to today.'
+            ], 422);
+        }
+
         if ($type === 'range' && $fromDate && $toDate) {
             $startDate = Carbon::parse($fromDate)->toDateString();
             $endDate = Carbon::parse($toDate)->toDateString();
@@ -232,6 +248,7 @@ class SalaryController extends Controller
                     'absent_days'      => $absentDays,
                     'holidays'         => $totHolidays,
                     'fixed_gross'      => 0,
+                    'amount_payable'   => 0,
                     'basic_salary'     => 0,
                     'hra'              => 0,
                     'da'               => 0,
@@ -286,19 +303,19 @@ class SalaryController extends Controller
             $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
             $perDaySalary = $fixedGross > 0 ? $fixedGross / $monthTotalDays : 0;
             $perHourSalary = $perDaySalary / 8;
-            $otAmount = $perHourSalary * $otHours;
-            $lopAmount = $perDaySalary * $absentDays;
+            $otAmount = round($perHourSalary * $otHours, 2);
+            $lopAmount = round($perDaySalary * $absentDays, 2);
 
-            $payable = $fixedGross - $lopAmount;
+            $payable = round($fixedGross - $lopAmount, 2);
 
-            $basic = ($payable * 50) / 100;
-            $da    = ($payable * 20) / 100;
-            $hra   = ($payable * 20) / 100;
-            $oa    = ($payable * 10) / 100;
+            $basic = round(($payable * 50) / 100, 2);
+            $da    = round(($payable * 20) / 100, 2);
+            $hra   = round(($payable * 20) / 100, 2);
+            $oa    = round(($payable * 10) / 100, 2);
 
             $wage = $basic + $da;
-            $pf   = ($wage * 12) / 100;
-            $esi  = ($wage <= 21000) ? ($wage * 0.75) / 100 : (21000 * 0.75) / 100;
+            $pf   = round(($wage * 12) / 100, 2);
+            $esi  = round(($wage <= 21000) ? ($wage * 0.75) / 100 : (21000 * 0.75) / 100, 2);
             $totalPermissionHours = 0;
             foreach ($attendance as $att) {
                 if (!empty($att->permission_hours)) {
@@ -312,8 +329,15 @@ class SalaryController extends Controller
             } else {
                 $lateHours = $totalPermissionHours;
             }
-            $lateFine = $lateHours * $perHourSalary;
+            $lateFine = round($lateHours * $perHourSalary, 2);
+            
+            $otherDeduction = round($otherDeduction, 2);
+            $salaryAdvance = round($salaryAdvance, 2);
             $totalDeduction = $pf + $esi + $otherDeduction + $salaryAdvance + $lateFine;
+            
+            $incentive = round($incentive, 2);
+            $misc = round($misc, 2);
+            $busFare = round($busFare, 2);
             $totalEarnings = $payable + $otAmount + $incentive + $misc + $busFare;
             $netSalary = $totalEarnings - $totalDeduction;
             $payroll[] = [
@@ -325,6 +349,7 @@ class SalaryController extends Controller
                 'absent_days'      => $absentDays,
                 'holidays'         => $totHolidays,
                 'fixed_gross'      => round($fixedGross, 2),
+                'amount_payable'   => round($payable, 2),
                 'basic_salary'     => round($basic, 2),
                 'hra'              => round($hra, 2),
                 'da'               => round($da, 2),
@@ -631,6 +656,22 @@ class SalaryController extends Controller
         $toDate = $request->to_date;
         $type = $request->type ?: 'monthly';
 
+        $today = \Carbon\Carbon::today()->toDateString();
+        $calcEndDate = '';
+        
+        if ($type === 'range' && $fromDate && $toDate) {
+            $calcEndDate = \Carbon\Carbon::parse($toDate)->toDateString();
+        } else {
+            $calcEndDate = \Carbon\Carbon::parse($month)->endOfMonth()->toDateString();
+        }
+
+        if ($calcEndDate > $today) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot search/generate payroll for future dates. Please wait until the period ends or select a custom date range up to today.'
+            ], 422);
+        }
+
         if ($type === 'range' && $fromDate && $toDate) {
             $startDate = Carbon::parse($fromDate)->toDateString();
             $endDate = Carbon::parse($toDate)->toDateString();
@@ -755,27 +796,27 @@ class SalaryController extends Controller
             $fixedGross = $employee->fixed_gross ?? 0;
             $perDaySalary = $fixedGross > 0 ? $fixedGross / $monthTotalDays : 0;
             $perHourSalary = $perDaySalary / 8;
-            $otAmount = $perHourSalary * $otHours;
-            $lopAmount = $perDaySalary * $absentDays;
+            $otAmount = round($perHourSalary * $otHours, 2);
+            $lopAmount = round($perDaySalary * $absentDays, 2);
 
-            $payable = $fixedGross - $lopAmount;
+            $payable = round($fixedGross - $lopAmount, 2);
 
-            $basic = ($payable * 50) / 100;
-            $da    = ($payable * 20) / 100;
-            $hra   = ($payable * 20) / 100;
-            $oa    = ($payable * 10) / 100;
+            $basic = round(($payable * 50) / 100, 2);
+            $da    = round(($payable * 20) / 100, 2);
+            $hra   = round(($payable * 20) / 100, 2);
+            $oa    = round(($payable * 10) / 100, 2);
 
             $grossSalary = $payable;
-            $incentive = DB::table('task_assign_employees')->where('issued_to', $employee->id)->whereBetween('issue_date', [$startDate, $endDate])->sum('total_cost') ?? 0; 
-            $misc = $employee->bus_fare ? $otDays * $employee->bus_fare : 0;
+            $incentive = round(DB::table('task_assign_employees')->where('issued_to', $employee->id)->whereBetween('issue_date', [$startDate, $endDate])->sum('total_cost') ?? 0, 2); 
+            $misc = round($employee->bus_fare ? $otDays * $employee->bus_fare : 0, 2);
             $otherDeduction = 0;
             $salaryAdvance = 0;
             $workingDays = $presentDays - $otDays;
-            $busFare = $employee->bus_fare ? $workingDays * $employee->bus_fare : 0;
+            $busFare = round($employee->bus_fare ? $workingDays * $employee->bus_fare : 0, 2);
             $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
             $wage = $basic + $da;
-            $pf = ($wage * 12) / 100;
-            $esi = ($wage <= 21000) ? ($wage * 0.75) / 100 : (21000 * 0.75) / 100;
+            $pf = round(($wage * 12) / 100, 2);
+            $esi = round(($wage <= 21000) ? ($wage * 0.75) / 100 : (21000 * 0.75) / 100, 2);
             $totalPermissionHours = 0;
             foreach ($attendance as $att) {
                 if (!empty($att->permission_hours)) {
@@ -789,7 +830,10 @@ class SalaryController extends Controller
             } else {
                 $lateHours = $totalPermissionHours;
             }
-            $lateFine = $lateHours * $perHourSalary;
+            $lateFine = round($lateHours * $perHourSalary, 2);
+            
+            $otherDeduction = round($otherDeduction, 2);
+            $salaryAdvance = round($salaryAdvance, 2);
             $totalDeduction = $pf + $esi + $otherDeduction + $salaryAdvance + $lateFine;
             $totalEarnings = $grossSalary + $otAmount + $incentive + $misc + $busFare;
             $netSalary = $totalEarnings - $totalDeduction;

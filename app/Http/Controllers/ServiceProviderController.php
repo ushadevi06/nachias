@@ -209,13 +209,15 @@ class ServiceProviderController extends Controller
                     'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/',
                     'unique:service_providers,ifsc_code,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'payment_terms' => 'nullable|string|min:5|max:255|regex:/^[a-zA-Z0-9\s.,-]*$/',
+                'payment_terms' => ['nullable', 'string', 'min:5', 'max:255', 'regex:/^[a-zA-Z0-9\s.,-]*$/', 'not_regex:/^0+$/'],
             ];
 
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format',
+                '*.not_regex' => 'This field is an invalid format.',
+                '*.url' => 'This field is an invalid URL.',
                 '*.alpha_num' => 'This field should contain only letters and numbers.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',

@@ -88,7 +88,7 @@ class PermissionSeeder extends Seeder
             'stock-consumable-return' => ['view', 'view_details'],
 
             /* Production */
-            'job-card' => ['create', 'edit', 'view', 'view_details', 'fabric-consumption-pdf', 'work-order-pdf', 'issue-item','assign-task'],
+            'job-card' => ['create', 'edit', 'view', 'view_details', 'fabric-consumption-pdf', 'accessories-consumption-pdf', 'work-order-pdf', 'issue-item','assign-task', 'costing-analysis-pdf'],
             'task-management' => ['edit', 'view', 'view_details'],
             'production-receipts' => ['create', 'edit', 'view', 'view_details'],
 

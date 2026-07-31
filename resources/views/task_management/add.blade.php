@@ -2048,6 +2048,62 @@
                 $('.bulk-qty-input').next('.invalid-feedback').text('');
                 $('#btn-apply-bulk').prop('disabled', false);
             });
+            var assignmentProgress = {
+                @if(isset($task) && $task->assignments)
+                    @foreach($task->assignments as $assign)
+                        "{{ $assign->id }}": {{ (float)$assign->completed_qty + (float)$assign->wastage_qty }},
+                    @endforeach
+                @endif
+            };
+
+            $('#content-issue form').on('submit', function(e) {
+                var statusVal = $('#status').val();
+                if (statusVal === 'Completed') {
+                    var fullyCompleted = true;
+                    var hasAssignments = false;
+                    var totalIssueQty = 0;
+                    var totalCompletedQty = 0;
+
+                    $('#content-issue .assignment-row').each(function(index, row) {
+                        hasAssignments = true;
+                        var issueQty = parseFloat($(row).find('input[name*="[issue_qty]"]').val()) || 0;
+                        var assignIdInput = $(row).find('input[type="hidden"][name*="[id]"]'); // In case it exists
+                        
+                        // We also need to get the assignment ID if we are editing
+                        // Since #content-issue dynamically manages rows, maybe it doesn't have ID in DOM.
+                        // We can just rely on total quantities across all rows if we can't match IDs easily.
+                    });
+                    
+                    // Actually, a simpler way is to sum all issueQty from the form
+                    // and compare with the total completed from assignmentProgress.
+                    // Because completedQty isn't editable in #content-issue anyway.
+                    $('#content-issue .assignment-row input[name*="[issue_qty]"]').each(function() {
+                        hasAssignments = true;
+                        totalIssueQty += parseFloat($(this).val()) || 0;
+                    });
+                    
+                    for (var id in assignmentProgress) {
+                        totalCompletedQty += assignmentProgress[id];
+                    }
+
+                    if (!hasAssignments || totalIssueQty <= 0 || totalCompletedQty < totalIssueQty) {
+                        e.preventDefault();
+                        var msg = 'This task cannot be marked as Completed because it is not fully finished. Please complete the remaining quantity before changing the status to Completed.';
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                title: 'Validation Error',
+                                text: msg,
+                                icon: 'error',
+                                customClass: { confirmButton: 'btn btn-primary' },
+                                buttonsStyling: false
+                            });
+                        } else {
+                            alert(msg);
+                        }
+                        return false;
+                    }
+                }
+            });
         });
     </script>
     @endsection

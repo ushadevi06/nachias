@@ -279,7 +279,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" min="0.01" value="{{ $item['quantity'] ?? '' }}">
+                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" value="{{ $item['quantity'] ?? '' }}">
                                                     @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -436,7 +436,7 @@
                                                     @enderror
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" min="0.01" value="{{ $item->quantity }}">
+                                                    <input type="number" class="form-control quantity @error('items.' . $index . '.quantity') is-invalid @enderror" name="items[{{ $index }}][quantity]" step="0.01" value="{{ $item->quantity }}">
                                                     @error('items.' . $index . '.quantity')
                                                         <div class="text-danger small mt-1">{{ $message }}</div>
                                                     @enderror
@@ -580,7 +580,7 @@
                                                 <input type="hidden" name="items[0][uom_id]" value="" class="uom_hidden">
                                             </td>
                                             <td>
-                                                <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
+                                                <input type="number" class="form-control quantity" name="items[0][quantity]" step="0.01" placeholder="Enter Quantity">
                                             </td>
                                             <td>
                                                 <input type="number" class="form-control rate" name="items[0][rate]" step="any" min="0" placeholder="Enter Rate">
@@ -925,7 +925,7 @@
                         <input type="hidden" name="items[${itemIndex}][uom_id]" value="" class="uom_hidden">
                     </td>
                     <td>
-                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" min="0.01" placeholder="Enter Quantity">
+                        <input type="number" class="form-control quantity" name="items[${itemIndex}][quantity]" step="0.01" placeholder="Enter Quantity">
                     </td>
                     <td>
                         <input type="number" class="form-control rate" name="items[${itemIndex}][rate]" step="any" min="0" placeholder="Enter Rate">

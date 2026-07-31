@@ -65,12 +65,20 @@ class CuffTypeController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'cuff_type_name' => 'required|string|min:3|max:50|unique:cuff_types,cuff_type_name,' . $id . ',id,deleted_at,NULL',
+                'cuff_type_name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'not_regex:/^0+$/',
+                    'unique:cuff_types,cuff_type_name,' . $id . ',id,deleted_at,NULL'
+                ],
                 'status'        => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'cuff_type_name.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

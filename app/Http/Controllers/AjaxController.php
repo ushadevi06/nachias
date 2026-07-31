@@ -24,7 +24,7 @@ class AjaxController extends Controller
     public function fetchCities($state_id)
     {
         $stateIds = explode(',', $state_id);
-        $cities = City::active()->whereIn('state_id', $stateIds)->select('id', 'city_name', 'state_id')->get();
+        $cities = City::active()->whereIn('state_id', $stateIds)->select('id', 'city_name', 'state_id')->orderBy('id', 'desc')->get();
         return response()->json($cities);
     }
 
@@ -65,13 +65,13 @@ class AjaxController extends Controller
 
     public function getRawMaterialsByCategory($categoryId)
     {
-        $rawMaterials = RawMaterial::where('store_category_id', $categoryId)->where('status', 'Active')->get(['id', 'name', 'code', 'uom_id']);
+        $rawMaterials = RawMaterial::where('store_category_id', $categoryId)->where('status', 'Active')->orderBy('id', 'desc')->get(['id', 'name', 'code', 'uom_id']);
         return response()->json($rawMaterials);
     }
 
     public function getCharges()
     {
-        $charges = Charge::where('status', 'Active')->orderBy('charge_name')->get(['id', 'charge_name']);
+        $charges = Charge::where('status', 'Active')->orderBy('id', 'desc')->get(['id', 'charge_name']);
         return response()->json($charges);
     }
     
@@ -80,7 +80,7 @@ class AjaxController extends Controller
         if (!$categoryId) {
             return response()->json(['materials' => []], 400);
         }
-        $materials = RawMaterial::where('store_category_id', $categoryId)->whereNull('deleted_at')->select('id', 'name', 'code', 'uom_id')->get();
+        $materials = RawMaterial::where('store_category_id', $categoryId)->whereNull('deleted_at')->select('id', 'name', 'code', 'uom_id')->orderBy('id', 'desc')->get();
         return response()->json(['materials' => $materials]);
     }
     public function getEmployeesByPlant($plantId = null, $stageId = null)

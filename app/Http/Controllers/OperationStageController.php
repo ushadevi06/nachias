@@ -85,6 +85,7 @@ class OperationStageController extends Controller
                     'string',
                     'min:3',
                     'max:50',
+                    'not_regex:/^0+$/',
                     Rule::unique('operation_stages', 'operation_stage_name')
                         ->ignore($id)
                         ->whereNull('deleted_at')
@@ -96,6 +97,7 @@ class OperationStageController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
+                'operation_stage_name.not_regex' => 'This field is an invalid format.',
                 '*.min' => 'This field must be at least :min characters.',
                 '*.max' => 'This field should not be more than :max characters.',
             ];

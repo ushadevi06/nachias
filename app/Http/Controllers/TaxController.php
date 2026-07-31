@@ -82,14 +82,28 @@ class TaxController extends Controller
         if ($request->isMethod('post')) {
 
             $rules = [
-                'item_name' => 'required|string|max:255|unique:taxes,item_name,' . $id . ',id,deleted_at,NULL',
-                'tax_rate'  => 'required|numeric|min:0|max:100',
+                'item_name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    'not_regex:/^[0\s.]+$/',
+                    'unique:taxes,item_name,' . $id . ',id,deleted_at,NULL'
+                ],
+                'tax_rate'  => [
+                    'required',
+                    'numeric',
+                    'min:0',
+                    'max:100',
+                    'not_regex:/^[0\s.]+$/'
+                ],
                 'status'    => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.numeric'  => 'This field must be a valid number.',
+                'item_name.not_regex' => 'This field is an invalid format.',
+                'tax_rate.not_regex'  => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

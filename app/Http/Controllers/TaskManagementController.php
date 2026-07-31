@@ -246,6 +246,36 @@ class TaskManagementController extends Controller
                 ];
             }
 
+            if ($request->status == 'Completed') {
+                $totalIssue = 0;
+                $totalCompleted = 0;
+                $totalWastage = 0;
+
+                if ($id) {
+                    $task = Task::with('assignments')->find($id);
+                    $existingAssignments = $task ? $task->assignments->keyBy('id') : collect();
+                } else {
+                    $existingAssignments = collect();
+                }
+
+                foreach ($assignments as $index => $assign) {
+                    if (empty($assign['issued_to'])) continue;
+                    
+                    $issueQty = (float)($assign['issue_qty'] ?? 0);
+                    $totalIssue += $issueQty;
+                    
+                    if ($id && isset($assign['id']) && $existingAssignments->has($assign['id'])) {
+                        $existing = $existingAssignments->get($assign['id']);
+                        $totalCompleted += (float) $existing->completed_qty;
+                        $totalWastage += (float) $existing->wastage_qty;
+                    }
+                }
+                
+                if ($totalIssue <= 0 || round($totalCompleted + $totalWastage, 2) < round($totalIssue, 2)) {
+                    return back()->withInput()->withErrors(['status' => 'This task cannot be marked as Completed because it is not fully finished. Please complete the remaining quantity before changing the status to Completed.'])->with('active_tab', 'issue');
+                }
+            }
+
             // Validate service quantity sums against stage planned quantity
             $stageId = $request->input('stage_id');
             $stage = ProcessSchedule::find($stageId);
@@ -541,11 +571,27 @@ class TaskManagementController extends Controller
             $task = Task::with('assignments')->findOrFail($request->task_id);
             
             if ($request->status === 'Completed') {
-                $incompleteAssignments = $task->assignments->where('status', '!=', 'Completed');
-                if ($incompleteAssignments->count() > 0) {
+                if ($task->assignments->isEmpty()) {
                     return response()->json([
                         'success' => false, 
-                        'message' => 'Please complete full task. There are still ' . $incompleteAssignments->count() . ' incomplete assignments.'
+                        'message' => 'This task cannot be marked as Completed because it has no assignments.'
+                    ], 200);
+                }
+
+                $totalIssue = 0;
+                $totalCompleted = 0;
+                $totalWastage = 0;
+
+                foreach ($task->assignments as $assignment) {
+                    $totalIssue += (float) $assignment->issue_qty;
+                    $totalCompleted += (float) $assignment->completed_qty;
+                    $totalWastage += (float) $assignment->wastage_qty;
+                }
+
+                if ($totalIssue <= 0 || round($totalCompleted + $totalWastage, 2) < round($totalIssue, 2)) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'This task cannot be marked as Completed because it is not fully finished. Please complete the remaining quantity before changing the status to Completed.'
                     ], 200);
                 }
             }

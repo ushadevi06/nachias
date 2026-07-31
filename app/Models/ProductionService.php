@@ -21,6 +21,7 @@ class ProductionService extends Model
         'status',
         'applies_to',
         'base_quantity_source',
+        'cost',
         'created_by',
         'updated_by',
     ];

@@ -266,7 +266,7 @@ class EmployeeController extends Controller
                 'pan.max' => 'Pan file should not be more than 2MB.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
-                '*.digits_between' => 'This field must be between :min and :max digits.',
+                '*.digits_between' => 'This field must be between :min and :max digits.',   
                 '*.digits' => 'This field must be exactly :digits digits.',
                 '*.email' => 'Please enter a valid email address.',
                 '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
@@ -278,8 +278,30 @@ class EmployeeController extends Controller
                 'gross_salary.min' => 'Please enter a valid numeric value greater than or equal to 0.',
                 'net_salary.min' => 'Please enter a valid numeric value greater than or equal to 0.',
             ];
+            $passwordRules = [
+                'string',
+                'min:6',
+                'max:15',
+                function ($attribute, $value, $fail) {
+                    if (!preg_match('/[A-Z]/', $value)) {
+                        $fail('The password must contain at least one uppercase letter.');
+                    }
+                    if (!preg_match('/[a-z]/', $value)) {
+                        $fail('The password must contain at least one lowercase letter.');
+                    }
+                    if (!preg_match('/[0-9]/', $value)) {
+                        $fail('The password must contain at least one number.');
+                    }
+                    if (!preg_match('/[^A-Za-z0-9]/', $value)) {
+                        $fail('The password must contain at least one special character.');
+                    }
+                },
+            ];
+
             if (!$id) {
-                $rules['password'] = 'required|string|min:6|max:15';
+                $rules['password'] = array_merge(['required'], $passwordRules);
+            } else if ($request->filled('password')) {
+                $rules['password'] = array_merge(['nullable'], $passwordRules);
             }
             $validated = $request->validate($rules, $messages);
             $dateOfJoining = $request->date_of_joining ? date('Y-m-d', strtotime($request->date_of_joining)) : null;
@@ -322,7 +344,6 @@ class EmployeeController extends Controller
             if ($request->password) {
                 $data['password'] = Hash::make($request->password);
             }
-            // dd($data);
             if ($id) {
                 $oldData = $employee->toArray();
                 $data['updated_by'] = auth()->id();

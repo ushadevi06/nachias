@@ -263,6 +263,16 @@ class OrderaxeService
 
                         $updateItemData = [];
                         
+                        $categoryName = $product['category']['name'] ?? null;
+                        if ($categoryName) {
+                            $updateItemData['category_name'] = $categoryName;
+                        }
+
+                        $categoriesPathVal = $product['categories_path_val'] ?? null;
+                        if ($categoriesPathVal) {
+                            $updateItemData['categories_path_val'] = $categoriesPathVal;
+                        }
+                        
                         if ($apiColor) {
                             $updateItemData['api_color'] = $apiColor;
                         }

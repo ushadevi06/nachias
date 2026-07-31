@@ -88,14 +88,14 @@ class ProductionServiceController extends Controller
                     'required',
                     'string',
                     'max:50',
-                    'regex:/^(?!0+$).*$/',
+                    'not_regex:/^0+$/',
                     'unique:production_services,service_name,' . $id . ',id,deleted_at,NULL'
                 ],
                 'service_code' => [
                     'required',
                     'string',
                     'max:75',
-                    'regex:/^(?!0+$).*$/',
+                    'not_regex:/^0+$/',
                     'unique:production_services,service_code,' . $id . ',id,deleted_at,NULL'
                 ],
                 'operation_stage_id' => 'required|exists:operation_stages,id',
@@ -120,7 +120,8 @@ class ProductionServiceController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
-                '*.regex' => 'This field is an invalid format.',
+                'service_name.not_regex' => 'This field is an invalid format.',
+                'service_code.not_regex' => 'This field is an invalid format.',
                 'cost.numeric' => 'Cost must be a valid number.',
                 'cost.min' => 'Cost must be 0 or greater.',
                 'sequence.unique' => 'This sequence already exists for selected production stage.',
@@ -133,7 +134,7 @@ class ProductionServiceController extends Controller
                 'applies_to', 'base_quantity_source'
             ]);
             $data['process_group_id'] = $request->process_group_ids[0] ?? null;
-            if (empty($data['cost'])) {
+            if ($data['cost'] === null || $data['cost'] === '') {
                 $data['cost'] = null;
             }
 

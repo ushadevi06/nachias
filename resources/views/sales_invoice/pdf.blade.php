@@ -805,6 +805,9 @@ if ($showPrice) $colsAfterQty++;
                                         @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Discount</td></tr>
                                         @endif
+                                        @if(isset($invoice->pre_gst_charges) && $invoice->pre_gst_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Pre-GST Charges</td></tr>
+                                        @endif
                                         @if($showSubTotal)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Taxable Value</td></tr>
                                         @endif
@@ -817,7 +820,10 @@ if ($showPrice) $colsAfterQty++;
                                             @endif
                                         @endif
                                         @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Other Charges</td></tr>
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Courier Charge</td></tr>
+                                        @endif
+                                        @if(isset($invoice->post_gst_charges) && $invoice->post_gst_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Post GST charges</td></tr>
                                         @endif
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right; white-space: nowrap;">Round Off</td></tr>
                                     </table>
@@ -828,8 +834,11 @@ if ($showPrice) $colsAfterQty++;
                                         @if($showDiscount && isset($invoice->discount) && $invoice->discount > 0)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->discount, 2) }}</td></tr>
                                         @endif
+                                        @if(isset($invoice->pre_gst_charges) && $invoice->pre_gst_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->pre_gst_charges, 2) }}</td></tr>
+                                        @endif
                                         @if($showSubTotal)
-                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0), 2) }}</td></tr>
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->sub_total - ($invoice->discount ?? 0) + ($invoice->pre_gst_charges ?? 0), 2) }}</td></tr>
                                         @endif
                                         @if($showTax)
                                             @if(!$invoice->other_state)
@@ -841,6 +850,9 @@ if ($showPrice) $colsAfterQty++;
                                         @endif
                                         @if(isset($invoice->other_charges) && $invoice->other_charges > 0)
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->other_charges, 2) }}</td></tr>
+                                        @endif
+                                        @if(isset($invoice->post_gst_charges) && $invoice->post_gst_charges > 0)
+                                        <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ number_format($invoice->post_gst_charges, 2) }}</td></tr>
                                         @endif
                                         <tr><td style="border: none; padding: 2px 4px; text-align: right;">{{ (in_array(strtolower($invoice->round_off_type ?? ''), ['less', 'minus']) ? ' - ' : '') . number_format($invoice->round_off ?? 0, 2) }}</td></tr>
                                     </table>
@@ -956,17 +968,13 @@ if ($showPrice) $colsAfterQty++;
                     </div>
                     <div style="font-weight: bold; font-size: 10px;">Terms & Conditions :</div>
                     <div style="font-size: 9px; line-height: 1.4;">
-                        1. Goods once sold will not be taken back or exchange<br>
-                        2. Our responsibility ceases on delivery of goods to carriers.<br>
-                        3. Cheque or DD only in favour of NACHIAS FASHION PRIVATE LIMITED<br>
-                        4. Discount should be deducted from Gross Amount only<br>
-                        5. Payment with in 45 days, Subject to Madurai Jurisdiction
+                        {!! nl2br(e(\App\Models\Setting::first()->terms_and_conditions ?? '')) !!}
                     </div>
                 </td>
                 <td width="40%" class="text-right" style="vertical-align: bottom;">
                     <br>
                     <div style="border: 2px solid #000; border-radius: 2px; text-align: center; height: 90px; position: relative;">
-                        <div style="padding-top: 5px; font-size: 11px;">For Nachias Fashion Private Limited</div>
+                        <div style="padding-top: 5px; font-size: 11px;">For {{ $setting->company_name }}</div>
                         
                         <div style="position: absolute; bottom: 0; width: 100%; border-top: 1px dotted #000; padding: 4px 0; font-size: 10px;">
                             Authorised Signatory

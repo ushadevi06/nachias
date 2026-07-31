@@ -308,7 +308,12 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control" id="width" placeholder="Enter Width" name="width" value="{{ old('width', $jobCard ? $jobCard->width : '') }}">
+                                        <select class="form-select select2 text-center" id="width" name="width" data-placeholder="Select Width">
+                                            <option value="">Select Width</option>
+                                            @foreach($fabricSizes as $fs)
+                                                <option value="{{ $fs->id }}" {{ old('width', $jobCard ? $jobCard->width : '') == $fs->id ? 'selected' : '' }}>{{ $fs->width }}</option>
+                                            @endforeach
+                                        </select>
                                         <label for="width">Width</label>
                                     </div>
                                     @error('width') <span class="text-danger">{{ $message }}</span> @enderror
@@ -355,7 +360,7 @@
                                 </div>
                                 <div class="col-md-6 col-xl-4">
                                     <div class="form-floating form-floating-outline">
-                                        <input type="text" class="form-control" id="reference_no" placeholder="Enter Reference No" name="reference_no" value="{{ old('reference_no', $jobCard ? $jobCard->reference_no : '') }}">
+                                        <input type="text" class="form-control" id="reference_no" placeholder="Enter Reference No" name="reference_no" value="{{ old('reference_no', $jobCard ? $jobCard->reference_no : '') }}" readonly>
                                         <label for="reference_no">Reference No * </label>
                                     </div>
                                     @error('reference_no') <span class="text-danger">{{ $message }}</span> @enderror
@@ -708,7 +713,7 @@
                                             <i class="ri ri-information-line me-1"></i> No sleeves added yet.
                                         </div>
                                     </div>
-                                    @error('sleeve_types') <span class="text-danger">{{ $message }}</span> @enderror
+                                    @error('sleeve_instances') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="col-md-6 col-xl-8">
                                     <div id="size-selector-container" class="p-3 border rounded shadow-sm">
@@ -985,7 +990,7 @@
                                         <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Required</th>
                                         <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Available</th>
                                         <th class="py-3 text-center text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Shortage</th>
-                                        <th class="py-3 px-4 text-start text-secondary small fw-bold text-uppercase" style="letter-spacing: 1px;">Stock Analysis</th>
+
                                     </tr>
                                 </thead>
                                 <tbody class="fw-semibold">
@@ -1032,6 +1037,28 @@
         background-color: #5000d6 !important;
         border-color: #5000d6 !important;
         color: #ffffff !important;
+    }
+
+    /* Fix for Select2 multi-select wrapping */
+    .select2-container .select2-selection--multiple .select2-selection__rendered {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 4px !important;
+        padding: 4px !important;
+    }
+    .select2-container .select2-selection--multiple .select2-selection__choice {
+        float: none !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+    .select2-container .select2-selection--multiple .select2-search.select2-search--inline {
+        float: none !important;
+        margin: 0 !important;
+        display: inline-block !important;
+        flex-grow: 1;
     }
 
     .extra-small { font-size: 0.65rem; }
@@ -1469,9 +1496,6 @@
                                     <span class="extra-small text-danger fw-bold opacity-75 text-uppercase">Gap</span>
                                 </div>
                             </td>
-                            <td class="py-4 px-4">
-                                <div class="small text-secondary text-start" style="max-width: 250px;">${err.calc}</div>
-                            </td>
                         </tr>
                     `);
                 });
@@ -1795,6 +1819,7 @@
                 source: function (request, response) {
                     $.get(searchUrl, { q: request.term, brand_id: $('#brand').val() }, function (data) {
                         const mappedResults = data.results.map(function(item) {
+                            const isDisabled = selectedIds.includes(String(item.id));
                             return {
                                 label: item.text,
                                 value: item.text, 
@@ -1802,7 +1827,8 @@
                                 se_no: item.se_no,
                                 art_no: item.art_no,
                                 name: item.name,
-                                qty: item.qty
+                                qty: item.qty,
+                                disabled: isDisabled
                             };
                         });
                         response(mappedResults);
@@ -1811,6 +1837,7 @@
                 minLength: 1, 
                 select: function (event, ui) {
                     event.preventDefault(); 
+                    if (ui.item.disabled) return false;
                     addTag(ui.item.id, ui.item.label);
                     $input.val(''); 
                     return false;
@@ -1824,11 +1851,14 @@
             var acInstance = $ac.data("ui-autocomplete") || $ac.data("autocomplete");
             if (acInstance) {
                 acInstance._renderItem = function(ul, item) {
+                    const disabledStyle = item.disabled ? 'opacity: 0.5; cursor: not-allowed; pointer-events: none;' : 'cursor: pointer; transition: background-color 0.2s;';
+                    const disabledBadge = item.disabled ? '<span class="badge bg-secondary ms-2" style="font-size: 9px;">Selected</span>' : '';
+                    
                     return $("<li>")
                         .append(`
-                            <div class="d-flex justify-content-between align-items-center p-2 border autocomplete-custom-item mb-2 mx-2 rounded" style="cursor: pointer; transition: background-color 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); background: #fff;">
+                            <div class="d-flex justify-content-between align-items-center p-2 border autocomplete-custom-item mb-2 mx-2 rounded" style="${disabledStyle} box-shadow: 0 1px 2px rgba(0,0,0,0.02); background: #fff;">
                                 <div>
-                                    <div class="fw-bold text-primary mb-1" style="font-size: 13px;">${item.name} <span class="text-secondary ml-1">[${item.art_no}]</span></div>
+                                    <div class="fw-bold text-primary mb-1" style="font-size: 13px;">${item.name} <span class="text-secondary ml-1">[${item.art_no}]</span>${disabledBadge}</div>
                                     <div class="small text-muted" style="font-size: 11px;"><i class="ri-hashtag"></i> ${item.se_no}</div>
                                 </div>
                                 <div class="badge bg-success-subtle text-success px-2 py-1" style="font-size: 11px;">
@@ -2002,7 +2032,7 @@
 
             artNumbers.forEach((art, index) => {
                 art = String(art).trim();
-                const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).split('|')[0].trim() == String(art).split('|')[0].trim()) : null;
+                const existingRow = isEditMode && existingMatrix.length > 0 ? existingMatrix.find(r => String(r.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]) : null;
 
                 let oldRow = null;
                 if (oldMatrix && oldMatrix.length > 0) {
@@ -2572,8 +2602,9 @@
                 }
 
                 const isAllowed = (catId == 1) || (artName && /BUTTONS|LABEL/i.test(artName)) || isCanvas;
-                const currentArtInfo = currentArtData.find(d => String(d.art_no || '').trim() === String(art || '').trim());
-                const grnImageName = currentArtInfo?.grn_image || (grnImageMap[String(art || '').trim()] ? grnImageMap[String(art || '').trim()].image : '');
+                const currentArtInfo = currentArtData.find(d => String(d.art_no || '').replace(/\s+/g, '') === String(art || '').replace(/\s+/g, ''));
+                const grnImageKey = Object.keys(grnImageMap).find(k => String(k).replace(/\s+/g, '') === String(art || '').replace(/\s+/g, ''));
+                const grnImageName = currentArtInfo?.grn_image || (grnImageKey ? grnImageMap[grnImageKey].image : '');
                 if (!isAllowed) {
                     let extraHtml = `
                         <input type="hidden" name="fabrics[${index}][store_category_id]" value="${catId}">
@@ -2626,7 +2657,7 @@
 
                 let oldF = null;
                 if (oldFabrics && Object.keys(oldFabrics).length > 0) {
-                    oldF = Object.values(oldFabrics).find(f => String(f.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
+                    oldF = Object.values(oldFabrics).find(f => String(f.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]);
                 }
 
                 let vWidth = captured.width[art] || (oldF ? oldF.width : '') || '';
@@ -2635,18 +2666,22 @@
                 let vNPatti = captured.n_patti[art] || (oldF ? oldF.n_patti : '') || '';
 
                 if (!vWidth && currentArtData && currentArtData.length > 0) {
-                    const d = currentArtData.find(d => d.art_no == art);
+                    const d = currentArtData.find(d => String(d.art_no).replace(/\s+/g, '') == String(art).replace(/\s+/g, ''));
                     if (d && d.width) vWidth = d.width;
                 }
 
                 if (!vWidth && existingMatrix.length > 0) {
-                    const m = existingMatrix.find(m => String(m.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
+                    const m = existingMatrix.find(m => String(m.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]);
                     if (m) {
                         vWidth = m.width || '';
                         vMtr = m.used_qty !== undefined && m.used_qty !== null ? m.used_qty : (m.mtr || '');
                         vInOut = m.in_out || '';
                         vNPatti = m.n_patti || '';
                     }
+                }
+
+                if (!vWidth) {
+                    vWidth = $('#width').val() || '';
                 }
 
                 if (!vInOut) vInOut = 'NO';
@@ -2676,7 +2711,11 @@
                 }
 
                 const isTaskReadOnly = hasTasks ? 'readonly' : '';
-                widthRow += `<td class="fw-bold">WIDTH</td><td><input type="text" name="fabrics[${index}][width]" class="form-control form-control-sm text-center width-input" data-art="${art}" value="${vWidth}" ${isTaskReadOnly}></td>`;
+                let widthOptions = '<option value="">Select</option>';
+                @foreach($fabricSizes as $fs)
+                    widthOptions += `<option value="{{ $fs->id }}" ${vWidth == '{{ $fs->id }}' ? 'selected' : ''}>{{ $fs->width }}</option>`;
+                @endforeach
+                widthRow += `<td class="fw-bold">WIDTH</td><td><select name="fabrics[${index}][width]" class="form-select form-select-sm width-input text-center" data-art="${art}" ${isTaskReadOnly}>${widthOptions}</select></td>`;
 
                 /*if (sizes.length > 0) {
                     setTimeout(() => renderConsumptionTable(art, globalActiveSizes, []), 100);
@@ -2725,7 +2764,7 @@
                                 no_of_lay: e.no_of_lay || null
                             }));
                         } else if (isEditMode && existingMatrix.length > 0) {
-                            const m = existingMatrix.find(m => String(m.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
+                            const m = existingMatrix.find(m => String(m.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]);
                             if (m && m.lay_marks && m.lay_marks.length > 0) {
                                 savedLayMarks = m.lay_marks;
                             } else if (m && m.consumptions && m.consumptions.length > 0) {
@@ -2822,7 +2861,7 @@
                             }
 
                             if (!vSzFs && isEditMode && existingMatrix && existingMatrix.length > 0) {
-                                const m = existingMatrix.find(m => String(m.art_no).split('|')[0].trim() == String(art).split('|')[0].trim());
+                                const m = existingMatrix.find(m => String(m.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]);
                                 if (m && m.consumptions) {
                                     const c = m.consumptions.find(c => String(c.size) === String(sz));
                                     if (c) {
@@ -3659,7 +3698,7 @@
 
                 let oldVal = '';
                 if (oldFabrics && oldFabrics.length > 0) {
-                    const oldF = Object.values(oldFabrics).find(f => String(f.art_no).split('|')[0].trim() == String(artNo).split('|')[0].trim());
+                    const oldF = Object.values(oldFabrics).find(f => String(f.art_no).replace(/\s+/g, '').split('|')[0] == String(artNo).replace(/\s+/g, '').split('|')[0]);
                     if (oldF && oldF.mtr !== undefined && oldF.mtr !== '') {
                         oldVal = oldF.mtr;
                     }
@@ -3869,9 +3908,16 @@
             }
         }
         
-        $('#brand').on('change', function() {
-            applyCanvasLogic();
+        $('#purchase_order_id, #brand_id, #service_provider_id, #fit_id, #patti_type_id, #collar_type_id, #cuff_type_id, #pocket_type_id, #bottom_cut_id, #season_id').on('change', function() {
+            debouncedUpdateItemName();
         });
+
+        $(document).on('change', '#width', function() {
+            let commonWidth = $(this).val();
+            $('.width-input').val(commonWidth).trigger('change');
+        });
+
+        debouncedUpdateItemName();applyCanvasLogic();
         
         setTimeout(applyCanvasLogic, 500);
 

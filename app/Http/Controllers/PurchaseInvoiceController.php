@@ -165,7 +165,7 @@ class PurchaseInvoiceController extends Controller
             $request = request();
 
             $rules = [
-                'invoice_no' => ($id ? 'nullable' : 'required') . '|string|min:3|max:50|unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'invoice_no' => [($id ? 'nullable' : 'required'), 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:purchase_invoices,invoice_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'invoice_date' => 'required|date_format:d-m-Y',
                 'purchase_order_id' => 'required|exists:purchase_orders,id',
                 'supplier_id' => 'required|exists:suppliers,id',
@@ -207,6 +207,8 @@ class PurchaseInvoiceController extends Controller
                 '*.required' => 'This field is required.',
                 '*.exists' => 'Selected value is invalid.',
                 '*.unique' => 'This field already exists.',
+                'regex' => 'This field is an invalid format',
+                'not_regex' => 'This field is an invalid format',
                 '*.date' => 'Please enter a valid date.',
                 'items.required' => 'Please add at least one item.',
                 'items.*.quantity' => 'Quantity is required.',
@@ -636,7 +638,7 @@ class PurchaseInvoiceController extends Controller
             'po_number' => $purchaseOrder->po_number,
             'supplier_id' => $purchaseOrder->supplier_id,
             'supplier_state_id' => $purchaseOrder->supplier->state_id ?? null,
-            'supplier_name' => $purchaseOrder->supplier->name . ' (' . $purchaseOrder->supplier->code . ')',
+            'supplier_name' => $purchaseOrder->supplier->name . ($purchaseOrder->supplier->code ? ' - ' . $purchaseOrder->supplier->code : ''),
             'discount_percent' => $purchaseOrder->discount_percent,
             'commission' => $purchaseOrder->commission ?? 0,
             'purchase_commission_agent_id' => $purchaseOrder->purchase_commission_agent_id,

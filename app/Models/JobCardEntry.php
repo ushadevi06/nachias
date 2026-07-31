@@ -122,6 +122,11 @@ class JobCardEntry extends Model
         return $this->hasMany(JobCardSleeveMeter::class , 'job_card_id');
     }
 
+    public function fabricSize()
+    {
+        return $this->belongsTo(FabricSize::class, 'width');
+    }
+
     public function fit()
     {
         return $this->belongsTo(Fit::class , 'fit_id');

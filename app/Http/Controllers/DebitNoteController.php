@@ -128,7 +128,7 @@ class DebitNoteController extends Controller
             $request = request();
 
             $rules = [
-                'debit_note_no' => ($id ? 'nullable' : 'required') . '|string|max:50|unique:debit_notes,debit_note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'debit_note_no' => [($id ? 'nullable' : 'required'), 'string', 'max:50', 'not_regex:/^0+$/', 'unique:debit_notes,debit_note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'debit_note_date' => 'required|date',
                 'purchase_invoice_id' => 'required|exists:purchase_invoices,id',
                 'supplier_id' => 'required|exists:suppliers,id',
@@ -148,6 +148,7 @@ class DebitNoteController extends Controller
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
+                '*.not_regex' => 'This field is an invalid format.',
                 '*.regex' => 'This field is an invalid format',
                 'reference_document.mimes' => 'Upload a valid file (e.g., .pdf, .doc, .docx, .jpg, .png, .jpeg, .webp).',
                 'reference_document.max' => 'Uploaded file cannot exceed 2MB.',
@@ -281,10 +282,16 @@ class DebitNoteController extends Controller
             })
             ->orderBy('id', 'desc')->get();
 
-        $purchaseInvoices = $purchaseInvoices->filter(function ($invoice) {
+        $purchaseInvoices = $purchaseInvoices->filter(function ($invoice) use ($id) {
             foreach ($invoice->items as $item) {
                 $rejectedQty = \App\Models\GrnEntryItem::where('purchase_invoice_item_id', $item->id)->sum('qty_rejected');
-                $alreadyDebited = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id)->sum('quantity');
+                
+                $alreadyDebitedQuery = \App\Models\DebitNoteItem::where('purchase_invoice_item_id', $item->id);
+                if ($id) {
+                    $alreadyDebitedQuery->where('debit_note_id', '!=', $id);
+                }
+                $alreadyDebited = $alreadyDebitedQuery->sum('quantity');
+
                 if ($rejectedQty > $alreadyDebited) {
                     return true;
                 }
@@ -363,7 +370,7 @@ class DebitNoteController extends Controller
         return response()->json([
             'success' => true,
             'supplier_id' => $invoice->supplier_id,
-            'supplier_name' => $invoice->supplier ? $invoice->supplier->name : '-',
+            'supplier_name' => $invoice->supplier ? $invoice->supplier->name . ($invoice->supplier->code ? ' - ' . $invoice->supplier->code : '') : '-',
             'invoice_date' => $invoice->invoice_date->format('Y-m-d'),
             'items' => $items,
             'other_state' => $invoice->other_state ? 'Y' : 'N',

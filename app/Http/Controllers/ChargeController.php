@@ -80,12 +80,20 @@ class ChargeController extends Controller
         if (request()->isMethod('post')) {
             $request = request();
             $rules = [
-                'charge_name' => ['required','string','min:3','max:50', Rule::unique('charges', 'charge_name')->ignore($id)->whereNull('deleted_at')],
+                'charge_name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'not_regex:/^0+$/',
+                    Rule::unique('charges', 'charge_name')->ignore($id)->whereNull('deleted_at')
+                ],
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages =  [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'charge_name.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

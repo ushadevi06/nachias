@@ -663,8 +663,9 @@
                                         </div>
                                     </div>
 
+
                                     <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
+                                        <div class="form-floating form-floating-outline mb-4">
                                             <input type="number" step="any" class="form-control" id="other_charges" name="other_charges" placeholder="Courier Charge" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
                                             <label for="other_charges">Courier Charge</label>
                                         </div>
@@ -858,8 +859,13 @@
                                         <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
                                         <input type="hidden" name="discount_percent" id="discount_percent" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Pre-GST Charges:</span>
+                                        <span class="fw-bold mb-0" id="pre_gst_charges_val">{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="pre_gst_charges" id="pre_gst_charges" value="{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <span class="text-secondary fw-medium">Taxable Amount:</span>
+                                        <span class="text-secondary fw-medium">Net Amount (Before Tax):</span>
                                         <span class="fw-bold h5 mb-0" id="total_val">{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="total" id="total" value="{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}">
                                     </div>
@@ -923,6 +929,16 @@
                                         <span class="fw-bold" id="tax_amount_val">{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="tax_amount" id="tax_amount" value="{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Courier Charge:</span>
+                                        <span class="fw-bold mb-0" id="other_charges_val">{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="other_charges" id="other_charges" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Post GST charges:</span>
+                                        <span class="fw-bold mb-0" id="post_gst_charges_val">{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="post_gst_charges" id="post_gst_charges" value="{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
                                     <div class="row g-2 align-items-center mb-1 pb-1">
                                         <div class="col-4"><span class="text-secondary fw-medium">Total Before Round Off:</span></div>
                                         <div class="col-8 d-flex align-items-center justify-content-end">
@@ -959,10 +975,9 @@
                                 <div class="form-floating form-floating-outline">
                                     <select name="transport_mode" id="transport_mode" class="form-select select2" data-placeholder="Select Transport Mode">
                                         <option value="">Select Transport Mode</option>
-                                        <option value="1" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '1' ? 'selected' : '' }}>Road</option>
-                                        <option value="2" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '2' ? 'selected' : '' }}>Rail</option>
-                                        <option value="3" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '3' ? 'selected' : '' }}>Air</option>
-                                        <option value="4" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '4' ? 'selected' : '' }}>Ship</option>
+                                        @foreach($transportModes as $mode)
+                                            <option value="{{ $mode->id }}" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == $mode->id ? 'selected' : '' }}>{{ $mode->name }}</option>
+                                        @endforeach
                                     </select>
                                     <label for="transport_mode">Transport Mode</label>
                                 </div>
@@ -1192,8 +1207,10 @@
                             if(data.transport_gst_no && !$('#transporter_id').val()) {
                                 $('#transporter_id').val(data.transport_gst_no);
                             }
-                            if(data.transport_mode_id && !$('#transport_mode').val()) {
+                            if(data.transport_mode_id) {
                                 $('#transport_mode').val(data.transport_mode_id).trigger('change');
+                            } else {
+                                $('#transport_mode').val('').trigger('change');
                             }
                             if (data.other_state == 'yes') {
                                 $('#other_state_yes').prop('checked', true);
@@ -1211,6 +1228,18 @@
                             if (data.sales_discount !== undefined) {
                                 $('#sales_discount_val').text(parseFloat(data.sales_discount).toFixed(2) + '%');
                                 $('#sales_discount').val(parseFloat(data.sales_discount).toFixed(2));
+                            }
+                            if (data.pre_gst_charges !== undefined) {
+                                $('#pre_gst_charges_val').text(parseFloat(data.pre_gst_charges).toFixed(2));
+                                $('#pre_gst_charges').val(parseFloat(data.pre_gst_charges).toFixed(2));
+                            }
+                            if (data.courier_charge !== undefined) {
+                                $('#other_charges_val').text(parseFloat(data.courier_charge).toFixed(2));
+                                $('#other_charges').val(parseFloat(data.courier_charge).toFixed(2));
+                            }
+                            if (data.post_gst_charges !== undefined) {
+                                $('#post_gst_charges_val').text(parseFloat(data.post_gst_charges).toFixed(2));
+                                $('#post_gst_charges').val(parseFloat(data.post_gst_charges).toFixed(2));
                             }
                             if (data.box_discount_amount !== undefined) {
                                 $('#box_discount_amount_val').text('₹' + parseFloat(data.box_discount_amount).toFixed(2));
@@ -1616,7 +1645,8 @@
             $('#discount_val').text('- ₹' + discount.toFixed(2));
             $('#discount').val(discount.toFixed(2));
 
-            var total = subTotal - discount;
+            var preGstCharges = parseFloat($('#pre_gst_charges').val()) || 0;
+            var total = subTotal - discount + preGstCharges;
             $('#total_val').text(total.toFixed(2));
             $('#total').val(total.toFixed(2));
 
@@ -1655,8 +1685,9 @@
             $('#tax_amount').val(taxAmount.toFixed(2));
 
             var otherCharges = parseFloat($('#other_charges').val()) || 0;
+            var postGstCharges = parseFloat($('#post_gst_charges').val()) || 0;
 
-            var totalBeforeRoundOff = total + taxAmount + otherCharges;
+            var totalBeforeRoundOff = total + taxAmount + otherCharges + postGstCharges;
             $('#total_before_round_off').val(totalBeforeRoundOff.toFixed(2));
             
             var nearestWhole = Math.round(totalBeforeRoundOff);
@@ -1677,7 +1708,7 @@
             $('#grand_total').val(grandTotal.toFixed(2));
         }
 
-        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
+        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #pre_gst_charges, #post_gst_charges, #received_amount', function() {
             calculateTotals();
         });
 

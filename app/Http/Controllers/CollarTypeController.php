@@ -72,12 +72,20 @@ class CollarTypeController extends Controller
         $collarType = $id ? CollarType::findOrFail($id) : null;
         if ($request->isMethod('post')) {
             $rules = [
-                'collar_type_name' => 'required|string|min:3|max:50|unique:collar_types,collar_type_name,' . $id . ',id,deleted_at,NULL',
+                'collar_type_name' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'not_regex:/^0+$/',
+                    'unique:collar_types,collar_type_name,' . $id . ',id,deleted_at,NULL'
+                ],
                 'status'          => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'collar_type_name.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

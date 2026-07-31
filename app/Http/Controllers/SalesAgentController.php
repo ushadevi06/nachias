@@ -238,7 +238,7 @@ class SalesAgentController extends Controller
             return redirect('sales_agents')->with('success', $message);
         }
 
-        $states = State::active()->get();
+        $states = State::active()->orderBy('id','desc')->get();
         $cities = [];
         $places = [];
         $zones = [];

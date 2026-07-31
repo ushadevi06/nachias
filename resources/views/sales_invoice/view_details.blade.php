@@ -366,6 +366,10 @@
                                                 <label class="detail-title">Box Discount:</label>
                                                 <div class="text-muted">₹{{ number_format($boxDiscountTotal, 2) }}</div>
                                             </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <label class="detail-title">Pre-GST Charges:</label>
+                                                <div class="text-muted">₹{{ number_format($invoice->pre_gst_charges, 2) }}</div>
+                                            </div>
                                             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                                                 <label class="detail-title">Total:</label>
                                                 <div class="text-muted fw-bold">₹{{ number_format($invoice->total, 2) }}
@@ -399,8 +403,13 @@
                                                     ₹{{ number_format($invoice->tax_amount, 2) }}</div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">
-                                                <label class="detail-title">Other Charges:</label>
+                                                <label class="detail-title">Courier Charge:</label>
                                                 <div class="text-muted">₹{{ number_format($invoice->other_charges, 2) }}
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <label class="detail-title">Post GST charges from Sales Order:</label>
+                                                <div class="text-muted">₹{{ number_format($invoice->post_gst_charges, 2) }}
                                                 </div>
                                             </div>
                                             <div class="d-flex justify-content-between mb-2">

@@ -369,7 +369,7 @@
                                     @enderror
                                 </div>
                                 <div class="col-md-6 col-xl-4">
-                                    <div class="form-floating form-floating-outline mb-6">
+                                    <div class="form-floating form-floating-outline mb-3">
                                         <textarea class="form-control h-px-100 @error('payment_terms') is-invalid @enderror"
                                             id="payment_terms" placeholder="Enter Payment Terms"
                                             name="payment_terms">{{ old('payment_terms', $customer->payment_terms ?? '') }}</textarea>

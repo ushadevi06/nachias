@@ -27,6 +27,23 @@ class JobCardFabricDetail extends Model
         return $this->belongsTo(StockEntry::class, 'stock_entry_id');
     }
 
+    public function rawMaterial()
+    {
+        return $this->hasOneThrough(
+            RawMaterial::class,
+            StockEntryItem::class,
+            'id', 
+            'id', 
+            'stock_entry_id', 
+            'raw_material_id'
+        );
+    }
+
+    public function fabricSize()
+    {
+        return $this->belongsTo(FabricSize::class, 'width');
+    }
+
     public function quantities()
     {
         return $this->hasMany(JobCardMatrixQuantity::class, 'job_card_fabric_detail_id');

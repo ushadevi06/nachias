@@ -79,13 +79,21 @@ class SeasonController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'name'   => 'required|string|min:3|max:50|unique:seasons,name,' . $id . ',id,deleted_at,NULL',
-                'season_code' => 'nullable|string|max:50|regex:/^(?!0+$).*$/',
+                'name'   => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:50',
+                    'not_regex:/^0+$/',
+                    'unique:seasons,name,' . $id . ',id,deleted_at,NULL'
+                ],
+                'season_code' => ['nullable', 'string', 'max:50', 'regex:/^(?!0+$).*$/', 'unique:seasons,season_code,' . $id . ',id,deleted_at,NULL'],
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'name.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
                 'season_code.regex' => 'Season Code cannot be zero.',

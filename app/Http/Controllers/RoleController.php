@@ -74,6 +74,8 @@ class RoleController extends Controller
             $request->validate([
                 'name' => [
                     'required',
+                    'string',
+                    'not_regex:/^0+$/',
                     'min:2',
                     'max:50',
                     Rule::unique('roles', 'name')->ignore($id)->whereNull('deleted_at'),
@@ -81,6 +83,7 @@ class RoleController extends Controller
             ], [
                 'name.required' => 'This field is required.',
                 'name.unique'   => 'This role already exists.',
+                'name.not_regex' => 'This field is an invalid format.',
                 'min'      => 'This field must be at least :min characters.',
                 'max'      => 'This field should not be more than :max characters.',
             ]);

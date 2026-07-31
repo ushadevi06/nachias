@@ -115,6 +115,7 @@
                 <th>S.No</th>
                 <th>Size</th>
                 <th>Art No</th>
+                <th>Width</th>
                 <th>Qty Produced</th>
                 <th>Qty Issued</th>
                 <th>Qty Wastage</th>
@@ -143,7 +144,7 @@
                     $artNo = $item->art_no;
                     $qtyConsumed = $item->qty_used + $item->qty_adjusted + $item->qty_wastage;
                     $qtyPerPc = $item->produced_qty > 0 ? ($item->qty_used + $item->qty_wastage) / $item->produced_qty : 0;
-                    $costPerPc = $qtyPerPc * $item->unit_price;
+                    $costPerPc = round($qtyPerPc * $item->unit_price, 2);
                     $lineCost = $costPerPc * $item->produced_qty;
                     
                     $totalQtyProduced += $item->produced_qty;
@@ -159,6 +160,7 @@
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $item->size_label ?? '-' }}</td>
                     <td>{{ $artNo }}</td>
+                    <td>{{ $item->width ?? '-' }}</td>
                     <td>{{ number_format($item->produced_qty, 0) }}</td>
                     <td class="text-end">{{ number_format($item->qty_issue, 2) }}</td>
                     <td class="text-end">{{ number_format($item->qty_wastage, 2) }}</td>
@@ -174,17 +176,17 @@
         </tbody>
         <tfoot>
             <tr class="footer-row">
-                <td colspan="3" class="text-end">Total</td>
-                <td>{{ number_format($totalQtyProduced, 0) }}</td>
+                <td colspan="4" class="text-end">Total</td>
+                <td>{{ number_format($jobCard->grand_total_qty, 0) }}</td>
                 <td class="text-end">{{ number_format($totalQtyIssued, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyWastage, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyUsed, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyAdjusted, 2) }}</td>
                 <td class="text-end">{{ number_format($totalQtyBalance, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format(($totalQtyUsed + $totalQtyWastage) / $totalQtyProduced, 4) : '-' }}</td>
+                <td class="text-end">{{ $jobCard->grand_total_qty > 0 ? number_format(($totalQtyUsed + $totalQtyWastage) / $jobCard->grand_total_qty, 4) : '-' }}</td>
                 <td class="text-end">-</td>
                 <td class="text-end">{{ number_format($totalCost, 2) }}</td>
-                <td class="text-end">{{ $totalQtyProduced > 0 ? number_format($totalCost / $totalQtyProduced, 2) : '-' }}</td>
+                <td class="text-end">{{ $jobCard->grand_total_qty > 0 ? number_format($totalCost / $jobCard->grand_total_qty, 2) : '-' }}</td>
             </tr>
         </tfoot>
     </table>

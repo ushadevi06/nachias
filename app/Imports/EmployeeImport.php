@@ -112,12 +112,12 @@ class EmployeeImport implements ToCollection, WithHeadingRow
             $pfNo = trim((string)($row['pf_no'] ?? ''));
             $fixedGross = !empty($row['fixed_gross']) ? preg_replace('/[^0-9.]/', '', $row['fixed_gross']): 0;
             $busFare = !empty($row['bus_fare']) ? preg_replace('/[^0-9.]/', '', $row['bus_fare']): 0;
-            $designation = trim((string)($row['designation'] ?? ''));
+            $designation = trim((string)($row['role'] ?? ($row['designation'] ?? '')));
             $roleId = null;
             if(!empty($designation)) {
                 $roleId = DB::table('roles')->whereRaw('LOWER(name) = ?', [strtolower($designation)])->value('id');
                 if (!$roleId) {
-                    $rowErrors[] = "Designation '{$designation}' does not exist.";
+                    $rowErrors[] = "Role '{$designation}' does not exist.";
                 }
             }
             
@@ -162,12 +162,12 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 'service_provider_id' => 'nullable|exists:service_providers,id',
             ], [
                 'department_id.required' => 'Department is required.',
-                'department_id.exists' => 'Invalid Department provided.',
+                'department_id.exists' => 'Department does not exist.',
                 'role_id.required' => 'Designation is required.',
-                'role_id.exists' => 'Invalid Designation provided.',
+                'role_id.exists' => 'Designation does not exist.',
                 'device.required' => 'Device is required.',
-                'device.exists' => 'Invalid Device provided.',
-                'service_provider_id.exists' => 'Invalid Service Provider provided.',
+                'device.exists' => 'Device does not exist.',
+                'service_provider_id.exists' => 'Service Provider does not exist.',
                 'emp_id.required' => 'Employee ID (Emp Code) is required.',
                 'emp_id.max' => 'Employee ID (Emp Code) cannot be more than 30 characters.',
                 'emp_id.not_in' => 'Employee ID cannot be 0.',
@@ -187,23 +187,8 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                 continue;
             }
             if(isset($existingUsers[$empId])) {
-                $updateData[] = [
-                    'id' => $existingUsers[$empId]->id,
-                    'name' => $name,
-                    'phone' => $phone,
-                    'email' => $email,
-                    'date_of_joining' => $dateOfJoining,
-                    'department_id' => $departmentId,
-                    'service_provider_id' => $serviceProviderId,
-                    'esi_no' => $esiNo,
-                    'pf_no' => $pfNo,
-                    'fixed_gross' => $fixedGross,
-                    'bus_fare' => $busFare,
-                    'role_id' => $roleId,
-                    'device' => $deviceSerialNumber,
-                    'operation_stage_id' => !empty($operationStageIds) ? json_encode($operationStageIds) : null,
-                    'updated_at' => now(),
-                ];
+                $errors[] ="Row {$rowNumber}: Employee Code '{$empId}' already exists.";
+                continue;
             } else {
                 $insertData[] = [
                     'emp_id' => $empId,
@@ -232,11 +217,6 @@ class EmployeeImport implements ToCollection, WithHeadingRow
         }
         if(count($insertData) > 0) {
             DB::table('users')->insert($insertData);
-        }
-        if(count($updateData) > 0) {
-            foreach($updateData as $update) {
-                DB::table('users')->where('id', $update['id'])->update($update);
-            }
         }
     }
 }

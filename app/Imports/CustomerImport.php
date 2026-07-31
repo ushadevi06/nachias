@@ -34,7 +34,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
             if (!empty($row['state'])) {
                 $state = State::where('state_name', trim($row['state']))->first();
                 if (!$state) {
-                    $errors[] = "Row {$rowNumber}: State ({$row['state']}) does not exist. Please create it first.";
+                    $errors[] = "Row {$rowNumber}: {$row['state']} does not exist in state table";
                     continue;
                 }
                 $stateId = $state->id;
@@ -44,7 +44,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
             if (!empty($row['city']) && $stateId) {
                 $city = City::where('city_name', trim($row['city']))->where('state_id', $stateId)->first();
                 if (!$city) {
-                    $errors[] = "Row {$rowNumber}: City ({$row['city']}) does not exist in the specified state. Please create it first.";
+                    $errors[] = "Row {$rowNumber}: {$row['city']} does not exist in city table";
                     continue;
                 }
                 $cityId = $city->id;
@@ -54,7 +54,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
             if (!empty($row['place']) && $cityId && $stateId) {
                 $place = Place::where('place_name', trim($row['place']))->where('city_id', $cityId)->where('state_id', $stateId)->first();
                 if (!$place) {
-                    $errors[] = "Row {$rowNumber}: Place ({$row['place']}) does not exist. Please create it first.";
+                    $errors[] = "Row {$rowNumber}: {$row['place']} does not exist in place table";
                     continue;
                 }
                 $placeId = $place->id;
@@ -75,6 +75,9 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 $zone = Zone::where('zone_name', trim($row['zone']))->first();
                 if ($zone) {
                     $zoneId = $zone->id;
+                } else {
+                    $errors[] = "Row {$rowNumber}: {$row['zone']} does not exist in zone table";
+                    continue;
                 }
             }
 
@@ -164,8 +167,8 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 $customerId = $existing ? $existing->id : null;
             }
 
-            if (!$customerId) {
-                $errors[] = "Row {$rowNumber}: Customer with Code ({$data['code']}) does not exist. Only updates are allowed.";
+            if ($customerId) {
+                $errors[] = "Row {$rowNumber}: Customer Code '{$data['code']}' already exists.";
                 continue;
             }
 
@@ -182,9 +185,9 @@ class CustomerImport implements ToCollection, WithHeadingRow
             $validator = Validator::make($data, [
                 'category'       => 'required|in:Retailer,Wholesaler',
                 'name'           => 'required|string|min:2|max:100',
-                'code'           => 'required|string|min:2|max:50|not_in:0|unique:customers,code,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
+                'code'           => 'required|string|min:2|max:50|not_in:0|unique:customers,code',
                 'mobile_no'      => 'required|numeric|digits_between:10,15',
-                'email'          => 'nullable|email|max:128|unique:customers,email,' . ($customerId ?? 'NULL') . ',id,deleted_at,NULL',
+                'email'          => 'nullable|email|max:128|unique:customers,email',
                 'zone_id'        => 'nullable',
                 'status'         => 'required|in:Active,Inactive',
                 'state_id'       => 'required',
@@ -214,12 +217,9 @@ class CustomerImport implements ToCollection, WithHeadingRow
 				}
 
 				$existing = Customer::where('code', $d['code'])->first();   
-				if ($existing) {
-					$oldData  = $existing->toArray();
-					$action   = 'update';
-					$existing->update($d);
-					$customer = $existing;
-					addLog($action, 'Customer via Import', 'customers', $customer->id, $oldData, $customer->toArray());
+				if (!$existing) {
+					$customer = Customer::create($d);
+					addLog('create', 'Customer via Import', 'customers', $customer->id, null, $customer->toArray());
 				}
 			}
 			DB::commit();

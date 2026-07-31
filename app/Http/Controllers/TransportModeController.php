@@ -74,12 +74,20 @@ class TransportModeController extends Controller
 
         if ($request->isMethod('post')) {
             $rules = [
-                'name'   => 'required|string|min:2|max:50|unique:transport_modes,name,' . $id . ',id,deleted_at,NULL',
+                'name'   => [
+                    'required',
+                    'string',
+                    'min:2',
+                    'max:50',
+                    'not_regex:/^0+$/',
+                    'unique:transport_modes,name,' . $id . ',id,deleted_at,NULL'
+                ],
                 'status' => 'required|in:Active,Inactive'
             ];
             $messages = [
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
+                'name.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

@@ -15,6 +15,8 @@
             <a href="{{ route('job_card_entries.fabric_consumption_pdf', $jobCard->id) }}" target="_blank" class="btn btn-primary me-2">
                 <i class="ri ri-scissors-line me-1"></i> Fabric Consumption
             </a>
+            @endif  
+            @if(auth()->id() == 1 || auth()->user()->can('accessories-consumption-pdf job-card'))
             <a href="{{ route('job_card_entries.accessories_consumption_pdf', $jobCard->id) }}" target="_blank" class="btn btn-primary me-2">
                 <i class="ri ri-ink-bottle-line me-1"></i> Accessories Consumption
             </a>

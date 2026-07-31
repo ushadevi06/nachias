@@ -81,6 +81,7 @@ class FabricSizeController extends Controller
                     'min:1',
                     'max:50',
                     'regex:/^[0-9,\s.]+$/',
+                    'not_regex:/^[0,\s.]+$/',
                     'unique:fabric_sizes,width,' . $id . ',id,deleted_at,NULL'
                 ],
                 'status' => 'required|in:Active,Inactive'
@@ -89,6 +90,7 @@ class FabricSizeController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
+                'width.not_regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
             ];

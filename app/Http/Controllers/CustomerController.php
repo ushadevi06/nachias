@@ -137,7 +137,7 @@ class CustomerController extends Controller
                     'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
                     'unique:customers,pan_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'
                 ],
-                'payment_terms' => 'nullable|string|min:3|max:255|regex:/^[^<>]*$/',
+                'payment_terms' => ['nullable', 'string', 'min:3', 'max:255', 'regex:/^[^<>]*$/', 'not_regex:/^0+$/'],
                 'credit_limit' => 'nullable|numeric|min:0|max:100',
                 'sales_discount' => 'nullable|numeric|min:0|max:100',
                 'box_discount_amount' => 'nullable|numeric|min:0',
@@ -159,19 +159,19 @@ class CustomerController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
+                '*.not_regex' => 'This field is an invalid format.',
                 'code.not_in' => 'Code cannot be 0.',
                 'code.not_regex' => 'Code cannot be 0.',
                 'code.regex' => 'This field is an invalid format.',
-                '*.min'      => 'This field must be at least :min characters.',
-                '*.max'      => 'This field should not be more than :max characters.',
+                'min.string'      => 'This field must be at least :min characters.',
+                'min.numeric'     => 'Please enter a valid numeric value greater than or equal to :min.',
+                'max.string'      => 'This field should not be more than :max characters.',
+                'max.numeric'     => 'Please enter a valid numeric value less than or equal to :max.',
                 '*.digits_between' => 'This field must be between :min and :max digits.',
                 '*.digits' => 'This field must be exactly :digits digits.',
                 '*.numeric' => 'This field must be a number.',
                 '*.url' => 'This field is an invalid URL.',
                 '*.email' => 'Please enter a valid email address.',
-                'credit_limit.min' => 'Please enter a valid numeric value greater than or equal to 0.',
-                'sales_discount.min' => 'Please enter a valid numeric value greater than or equal to 0.',
-                'box_discount_amount.min' => 'Please enter a valid numeric value greater than or equal to 0.',
             ];
 
             $validated = $request->validate($rules,$messages);
@@ -233,11 +233,11 @@ class CustomerController extends Controller
         }
 
         $zones = [];
-        $states = State::active()->get();
+        $states = State::active()->orderBy('id', 'desc')->get();
         $cities = [];
         $places = [];
         $taxes = Tax::active()->get();
-        $store_types = StoreType::active()->get();
+        $store_types = StoreType::active()->orderBy('id', 'desc')->get();
 
         $stateId = old('state_id') ?? ($customer->state_id ?? null);
         $cityId  = old('city_id')  ?? ($customer->city_id ?? null);

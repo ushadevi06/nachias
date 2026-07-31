@@ -13,7 +13,7 @@ class SettingController extends Controller
     public function index()
     {
         $setting = Setting::with(['state', 'city'])->first();
-        $states = State::where('status', 'Active')->get();
+        $states = State::where('status', 'Active')->orderBy('id','desc')->get();
         $cities = [];
 
         $stateId = old('state_id', $setting->state_id ?? null);

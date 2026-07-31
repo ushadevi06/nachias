@@ -456,6 +456,7 @@ Route::middleware(['auth.admin', 'auth.session', 'role.active', 'employee.active
 
     /* Sales Order */
     Route::get('sales_orders/fix-old-items', [SalesOrderController::class, 'fixOldItems']);
+    Route::get('sales_orders/update-categories', [SalesOrderController::class, 'updateCategories']);
     Route::get('sales_orders', [SalesOrderController::class, 'index']);
     Route::match(['GET', 'POST'], 'sales_orders/add/{id?}', [SalesOrderController::class, 'add']);
     Route::get('sales_orders/view/{id}', [SalesOrderController::class, 'view']);

@@ -28,83 +28,113 @@ use App\Services\OrderaxeService;
 
 class SalesOrderController extends Controller
 {
-    public function fixOldItems(Request $request)
+    public function updateCategories(Request $request)
     {
-        $items = \App\Models\SalesOrderItem::all();
-        $changes = [];
+        $jsonPath = base_path('orderaxe_all_responses.json');
+        if (!file_exists($jsonPath)) {
+            return response()->json(['status' => 'error', 'message' => 'orderaxe_all_responses.json not found']);
+        }
+
+        $json = json_decode(file_get_contents($jsonPath), true);
+        if (!$json) {
+            return response()->json(['status' => 'error', 'message' => 'Failed to parse JSON file']);
+        }
+
+        $ordersByNo = [];
+        foreach ($json as $jo) {
+            $ordersByNo[$jo['order_no']] = $jo;
+        }
+
+        $items = \App\Models\SalesOrderItem::with('salesOrder')->get();
+        $fixed = 0;
+        $updatedItems = [];
 
         foreach ($items as $item) {
-            $oldItemName = $item->item_name;
-            $oldArtNo = $item->art_no;
+            $order = $item->salesOrder;
+            if (!$order) continue;
             
-            $newItemName = $oldItemName;
-            $newArtNo = $oldArtNo;
-
-            $barcode = $item->sku;
-            $size = $item->size_id;
+            $orderNo = $order->order_no;
             
-            $stockEntryItemQuery = \App\Models\StockEntryItem::where(function ($q) use ($barcode) {
-                $q->where('sku', $barcode)
-                  ->orWhere('barcode', $barcode);
-            })->where('stock_type', 'finished_goods');
-
-            if ($size) {
-                $stockEntryItemQuery->where('size', $size);
+            if (!isset($ordersByNo[$orderNo])) {
+                continue;
             }
             
-            $stockEntryItem = $stockEntryItemQuery->first();
-
-            if ($stockEntryItem) {
-                $newArtNo = $stockEntryItem->art_no;
-            } else {
-                if ($oldItemName) {
-                    $newArtNo = strtoupper(trim(str_ireplace('Aero Cut', '', $oldItemName)));
-                } else {
-                    $newArtNo = null;
+            $jsonOrder = $ordersByNo[$orderNo];
+            $foundMatch = false;
+            
+            foreach ($jsonOrder['products'] as $product) {
+                $combinations = $product['combinations'] ?? [];
+                foreach ($combinations as $itemData) {
+                    $barcode = $itemData['sku'] ?? $itemData['barcode'] ?? null;
+                    if ($barcode && $barcode === $item->sku) {
+                        $foundMatch = true;
+                        $expectedCatName = $product['category']['name'] ?? null;
+                        $expectedCatPath = $product['categories_path_val'] ?? null;
+                        
+                        if ($item->category_name !== $expectedCatName || $item->categories_path_val !== $expectedCatPath) {
+                            $item->category_name = $expectedCatName;
+                            $item->categories_path_val = $expectedCatPath;
+                            $item->save();
+                            
+                            $fixed++;
+                            $updatedItems[] = [
+                                'order_no' => $orderNo,
+                                'sku' => $barcode,
+                                'category_name' => $expectedCatName,
+                                'categories_path_val' => $expectedCatPath,
+                                'match_type' => 'sku_match'
+                            ];
+                        }
+                        break 2;
+                    }
                 }
             }
-
-            if ($oldItemName !== $newItemName || $oldArtNo !== $newArtNo) {
-                $changes[] = [
-                    'order_id' => $item->sale_order_id,
-                    'sku' => $item->sku,
-                    'old_item_name' => $oldItemName,
-                    'new_item_name' => $newItemName,
-                    'old_art_no' => $oldArtNo,
-                    'new_art_no' => $newArtNo,
-                    'item_model' => $item
-                ];
-            }
-        }
-
-        if ($request->has('confirm')) {
-            \Illuminate\Support\Facades\DB::beginTransaction();
-            try {
-                foreach ($changes as $change) {
-                    $item = $change['item_model'];
-                    $item->item_name = $change['new_item_name'];
-                    $item->art_no = $change['new_art_no'];
-                    $item->save();
+            
+            if (!$foundMatch) {
+                $dbSleeve = $item->sleeve;
+                $dbSleeveStr = is_array($dbSleeve) ? ($dbSleeve[0] ?? '') : $dbSleeve;
+                
+                foreach ($jsonOrder['products'] as $product) {
+                    $catName = $product['category']['name'] ?? '';
+                    $catSleeve = '';
+                    if (stripos($catName, 'F/s') !== false || stripos($catName, 'FS') !== false) $catSleeve = 'F/S';
+                    elseif (stripos($catName, 'H/s') !== false || stripos($catName, 'HS') !== false) $catSleeve = 'H/S';
+                    
+                    $itemSleeve = '';
+                    if (stripos($dbSleeveStr, 'F/s') !== false || stripos($dbSleeveStr, 'Full') !== false) $itemSleeve = 'F/S';
+                    elseif (stripos($dbSleeveStr, 'H/s') !== false || stripos($dbSleeveStr, 'Half') !== false) $itemSleeve = 'H/S';
+                    
+                    if ($itemSleeve && $catSleeve && $itemSleeve === $catSleeve) {
+                        $expectedCatName = $product['category']['name'] ?? null;
+                        $expectedCatPath = $product['categories_path_val'] ?? null;
+                        
+                        if ($item->category_name !== $expectedCatName || $item->categories_path_val !== $expectedCatPath) {
+                            $item->category_name = $expectedCatName;
+                            $item->categories_path_val = $expectedCatPath;
+                            $item->save();
+                            
+                            $fixed++;
+                            $updatedItems[] = [
+                                'order_no' => $orderNo,
+                                'sku' => $item->sku,
+                                'category_name' => $expectedCatName,
+                                'categories_path_val' => $expectedCatPath,
+                                'match_type' => 'sleeve_fallback_match'
+                            ];
+                        }
+                        break;
+                    }
                 }
-                \Illuminate\Support\Facades\DB::commit();
-                return response()->json(['success' => true, 'message' => count($changes) . ' items updated successfully!']);
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\DB::rollBack();
-                return response()->json(['success' => false, 'error' => $e->getMessage()]);
             }
         }
-
-        // Remove the eloquent model from response so it displays nicely
-        $preview = array_map(function($c) {
-            unset($c['item_model']);
-            return $c;
-        }, $changes);
 
         return response()->json([
-            'message' => 'This is a preview. ' . count($changes) . ' items will be updated. Append ?confirm=1 to the URL to apply these changes.',
-            'preview_changes' => $preview
+            'status' => 'success',
+            'message' => "Successfully updated $fixed items",
+            'updated_items' => $updatedItems
         ]);
     }
+
 
     public function index(Request $request)
     {
@@ -224,9 +254,9 @@ class SalesOrderController extends Controller
         $charges = collect();
         if ($id) {
             $salesOrder = SalesOrder::with(['items', 'charges'])->findOrFail($id);
-            if ($salesOrder->status !== 'Draft' && $salesOrder->status !== 'Pending') {
-                return redirect('sales_orders')->with('error', 'Only Draft or Pending Sales Orders can be edited.');
-            }
+            // if ($salesOrder->status !== 'Draft' && $salesOrder->status !== 'Pending') {
+            //     return redirect('sales_orders')->with('error', 'Only Draft or Pending Sales Orders can be edited.');
+            // }
             $charges = $salesOrder->charges;
         }
 
@@ -234,7 +264,7 @@ class SalesOrderController extends Controller
             $request = request();
 
             $rules = [
-                'so_no' => 'required|string|min:3|max:50|unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'so_no' => ['required', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'so_date' => 'required|date_format:d-m-Y',
                 'request_date' => 'nullable|date_format:d-m-Y',
                 'delivery_date' => 'nullable|date_format:d-m-Y',
@@ -278,6 +308,7 @@ class SalesOrderController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
                 '*.exists' => 'Selected value is invalid.',
+                '*.not_regex' => 'This field is an invalid format.',
                 '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
                 '*.numeric' => 'This field must be a valid number.',
                 '*.regex' => 'This field is an invalid format.',
@@ -683,9 +714,9 @@ class SalesOrderController extends Controller
         }
 
         $zones = Zone::where('status', 'Active')->get();
-        $shippingMethods = ShippingMethod::where('status', 'Active')->get();
-        $transportModes = TransportMode::where('status', 'Active')->get();
-        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
+        $shippingMethods = ShippingMethod::where('status', 'Active')->orderBy('id','desc')->get();
+        $transportModes = TransportMode::where('status', 'Active')->orderBy('id','desc')->get();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->orderBy('id','desc')->get();
 
         return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders', 'charges'));
 

@@ -343,13 +343,13 @@
 
             <tfoot>
                 <tr>
-                    <td colspan="8" class="text-right bold">Total</td>
+                    <td colspan="10" class="text-right bold">Total</td>
                     <td class="text-center bold">
                         {{ number_format($purchaseOrder->total_qty, 2) }}
                     </td>
-                    <td colspan="3"></td>
+                    <td></td>
                     <td class="text-right bold">
-                        {{ number_format($purchaseOrder->taxable_amount, 2) }}
+                        {{ number_format($purchaseOrder->sub_total, 2) }}
                     </td>
                     <td></td>
                 </tr>

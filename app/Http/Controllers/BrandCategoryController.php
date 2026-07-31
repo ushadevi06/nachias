@@ -89,8 +89,7 @@ class BrandCategoryController extends Controller
                 '*.unique'   => 'This field already exists.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',
-                'code.regex' => 'Brand Category Code cannot be zero.',
-                'name.regex' => 'Brand Category Name cannot be zero.',
+                'code.regex' => 'Code cannot be zero.',
                 '*.regex' => 'This field is an invalid format.',
             ];
             $validated = $request->validate($rules, $messages);

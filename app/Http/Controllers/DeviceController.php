@@ -78,7 +78,7 @@ class DeviceController extends Controller
             ];
             $messages = [
                 '*.required' => 'This field is required.',
-                '*.unique'   => 'This Field already exists.',
+                '*.unique'   => 'This field already exists.',
                 '*.regex' => 'This field is an invalid format.',
                 '*.min'      => 'This field must be at least :min characters.',
                 '*.max'      => 'This field should not be more than :max characters.',

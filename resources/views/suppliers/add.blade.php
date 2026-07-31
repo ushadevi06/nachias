@@ -12,7 +12,7 @@
                     <div class="card-header-box">
                         <h4>{{ $supplier ? 'Edit' : 'Add' }} Supplier</h4>
                     </div>
-                    <form action="{{ url('suppliers/add' . ($supplier ? '/' . $supplier->id : '')) }}" method="POST" class="common-form" autocomplete="off">
+                    <form action="{{ url('suppliers/add' . ($supplier ? '/' . $supplier->id : '')) }}" method="POST" class="common-form" autocomplete="off" novalidate>
                         @csrf
                         <div class="row g-4">
                             <div class="col-lg-12">
