@@ -39,10 +39,12 @@
     .page-wrapper {
       width: 100%;
       border: 1px solid #000;
+      overflow: hidden;
     }
 
     .header-section {
       width: 100%;
+      
     }
     
     .company-details {
@@ -110,10 +112,6 @@
       text-align: center;
     }
 
-    .invoice-items th:last-child {
-      border-right: none;
-    }
-
     .invoice-items td {
       border-right: 1px solid #000;
       padding: 4px;
@@ -122,13 +120,11 @@
       word-wrap: break-word;
     }
 
-    .invoice-items td:last-child {
-      border-right: none;
-    }
-
     /* Alternate row background */
     .invoice-items tr:nth-child(even) td {
       background-color: #f9f9f9;
+      background-clip: padding-box;
+      -webkit-background-clip: padding-box;
     }
 
     /* Footer Section */
@@ -236,8 +232,13 @@
     $showMrp = in_array('mrp', $showFields);
     $showPrice = in_array('price', $showFields);
     $showSalesAgent = in_array('sales_agent', $showFields);
+
+    $chunks = $creditNote->items->chunk(10);
+    if ($chunks->isEmpty()) { $chunks->push(collect([])); }
 @endphp
 
+@foreach($chunks as $chunkIndex => $chunk)
+<div class="page-wrapper" style="border:none !important;">
 <table class="table header-section">
     <tr>
       <td width="15%" style="padding: 10px; text-align: center; vertical-align: middle;">
@@ -289,7 +290,7 @@
 <!-- TITLE -->
 <div class="title-row">
   Credit Note
-  <div class="page-info">Page: 1/1</div>
+  <div class="page-info">Page: {{ $chunkIndex + 1 }}/{{ $chunks->count() }}</div>
 </div>
 
 <div class="page-wrapper" style="border-top: none;">
@@ -377,7 +378,7 @@
       @php
           $totalQty = 0;
       @endphp
-      @foreach($creditNote->items as $index => $item)
+      @foreach($chunk as $index => $item)
         @php
             $invoiceItem = $item->salesInvoiceItem;
 
@@ -456,8 +457,9 @@
         </tr>
       @endforeach
 
+            @if($loop->last)
       <!-- Empty rows to push footer down -->
-      @for($i = count($creditNote->items); $i < 15; $i++)
+      @for($i = count($chunk); $i < 10; $i++)
         <tr>
             <td style="height:25px;"></td>
             <td></td>
@@ -481,9 +483,11 @@
         <td class="center" style="border-right:1px solid #000;">Gross</td>
         <td class="right" style="border-top:1px solid #000;">{{ number_format($creditNote->sub_total, 2) }}</td>
       </tr>
+      @endif
     </tbody>
   </table>
 
+    @if($loop->last)
   <!-- FOOTER SECTION -->
   <table class="footer-section">
     <tr>
@@ -565,8 +569,10 @@
       </td>
     </tr>
   </table>
+  @endif
 </div> <!-- End page wrapper -->
 
+@if($loop->last)
 <table width="100%" cellpadding="0" cellspacing="0" style="border-bottom: 1px solid #000;">
   <tr>
       <td width="65%" style="padding: 10px; vertical-align:top; font-size:13px;">
@@ -582,6 +588,14 @@
       </td>
   </tr>
 </table>
+@else
+  <div style="text-align: right; padding: 10px; font-weight: bold; font-size: 13px;">
+      Continue to Page No. {{ $chunkIndex + 2 }}
+  </div>
+  <div style="page-break-after: always;"></div>
+@endif
+@endforeach
+
   @if(isset($is_print) && $is_print)
     <script>
         window.onload = function() {

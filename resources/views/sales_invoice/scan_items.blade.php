@@ -382,15 +382,29 @@
                 $(this).val('');
                 $('#scan_alert').hide();
                 
-                let row = $('#items_table tbody tr[data-sku="'+sku+'"]');
-                if(row.length > 0) {
-                    let req = parseInt(row.attr('data-req'));
-                    let scan = parseInt(row.attr('data-scan'));
-                    let iname = row.attr('data-item-name');
-                    let isize = row.attr('data-size');
-                    let icolor = row.attr('data-color');
-                    
-                    if(scan < req) {
+                let rows = $('#items_table tbody tr[data-sku="'+sku+'"]');
+                if(rows.length > 0) {
+                    let pendingRow = null;
+                    let fullyScanned = true;
+
+                    rows.each(function() {
+                        let r = parseInt($(this).attr('data-req'));
+                        let s = parseInt($(this).attr('data-scan'));
+                        if (s < r) {
+                            pendingRow = $(this);
+                            fullyScanned = false;
+                            return false; // Break the each loop
+                        }
+                    });
+
+                    if(pendingRow) {
+                        let row = pendingRow;
+                        let req = parseInt(row.attr('data-req'));
+                        let scan = parseInt(row.attr('data-scan'));
+                        let iname = row.attr('data-item-name');
+                        let isize = row.attr('data-size');
+                        let icolor = row.attr('data-color');
+                        
                         scan++;
                         row.attr('data-scan', scan);
                         row.find('.scan-val').text(scan);
@@ -416,7 +430,7 @@
                         playBeep(800, 0.2);
                         
                         saveProgress();
-                    } else {
+                    } else if(fullyScanned) {
                         $('#scan_alert').removeClass('alert-success').addClass('alert-danger').html('<strong>Error:</strong> Required quantity already scanned for ' + sku).show();
                         playBeep(150, 0.3, 'sawtooth');
                     }

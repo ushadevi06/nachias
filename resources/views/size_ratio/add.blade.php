@@ -1,5 +1,5 @@
 @extends('layouts.common')
-@section('title', ($sizeRatio ? 'Edit Size/Ratio' : 'Add Size/Ratio') . ' - ' . env('WEBSITE_NAME'))
+@section('title', ($sizeRatio ? 'Edit Size & Ratio' : 'Add Size & Ratio') . ' - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row justify-content-center">
@@ -10,7 +10,7 @@
             <div class="card">
                 <div class="card-body">
                     <div class="card-header-box mb-4">
-                        <h4 class="mb-0">{{ $sizeRatio ? 'Edit' : 'Add' }} Size/Ratio</h4>
+                        <h4 class="mb-0">{{ $sizeRatio ? 'Edit' : 'Add' }} Size & Ratio</h4>
                     </div>
                     <form action="{{ url('size_ratio/add' . ($sizeRatio ? '/' . $sizeRatio->id : '')) }}" method="POST" class="common-form" autocomplete="off">
                         @csrf

@@ -28,6 +28,84 @@ use App\Services\OrderaxeService;
 
 class SalesOrderController extends Controller
 {
+    public function fixOldItems(Request $request)
+    {
+        $items = \App\Models\SalesOrderItem::all();
+        $changes = [];
+
+        foreach ($items as $item) {
+            $oldItemName = $item->item_name;
+            $oldArtNo = $item->art_no;
+            
+            $newItemName = $oldItemName;
+            $newArtNo = $oldArtNo;
+
+            $barcode = $item->sku;
+            $size = $item->size_id;
+            
+            $stockEntryItemQuery = \App\Models\StockEntryItem::where(function ($q) use ($barcode) {
+                $q->where('sku', $barcode)
+                  ->orWhere('barcode', $barcode);
+            })->where('stock_type', 'finished_goods');
+
+            if ($size) {
+                $stockEntryItemQuery->where('size', $size);
+            }
+            
+            $stockEntryItem = $stockEntryItemQuery->first();
+
+            if ($stockEntryItem) {
+                $newArtNo = $stockEntryItem->art_no;
+            } else {
+                if ($oldItemName) {
+                    $newArtNo = strtoupper(trim(str_ireplace('Aero Cut', '', $oldItemName)));
+                } else {
+                    $newArtNo = null;
+                }
+            }
+
+            if ($oldItemName !== $newItemName || $oldArtNo !== $newArtNo) {
+                $changes[] = [
+                    'order_id' => $item->sale_order_id,
+                    'sku' => $item->sku,
+                    'old_item_name' => $oldItemName,
+                    'new_item_name' => $newItemName,
+                    'old_art_no' => $oldArtNo,
+                    'new_art_no' => $newArtNo,
+                    'item_model' => $item
+                ];
+            }
+        }
+
+        if ($request->has('confirm')) {
+            \Illuminate\Support\Facades\DB::beginTransaction();
+            try {
+                foreach ($changes as $change) {
+                    $item = $change['item_model'];
+                    $item->item_name = $change['new_item_name'];
+                    $item->art_no = $change['new_art_no'];
+                    $item->save();
+                }
+                \Illuminate\Support\Facades\DB::commit();
+                return response()->json(['success' => true, 'message' => count($changes) . ' items updated successfully!']);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\DB::rollBack();
+                return response()->json(['success' => false, 'error' => $e->getMessage()]);
+            }
+        }
+
+        // Remove the eloquent model from response so it displays nicely
+        $preview = array_map(function($c) {
+            unset($c['item_model']);
+            return $c;
+        }, $changes);
+
+        return response()->json([
+            'message' => 'This is a preview. ' . count($changes) . ' items will be updated. Append ?confirm=1 to the URL to apply these changes.',
+            'preview_changes' => $preview
+        ]);
+    }
+
     public function index(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view sales-order')) {
@@ -335,6 +413,7 @@ class SalesOrderController extends Controller
                 }
                 else {
                     $soData['created_by'] = auth()->id();
+                    $soData['submitted_by'] = auth()->user()->name;
                     $salesOrder = SalesOrder::create($soData);
                     $message = 'Sale Order created successfully';
                 }
@@ -574,9 +653,9 @@ class SalesOrderController extends Controller
         }
 
         $zones = Zone::where('status', 'Active')->get();
-        $shippingMethods = ShippingMethod::where('status', 'Active')->get();
-        $transportModes = TransportMode::where('status', 'Active')->get();
-        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
+        $shippingMethods = ShippingMethod::where('status', 'Active')->orderBy('id','desc')->get();
+        $transportModes = TransportMode::where('status', 'Active')->orderBy('id','desc')->get();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->orderBy('id','desc')->get();
 
         return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders', 'charges'));
 
@@ -791,8 +870,7 @@ class SalesOrderController extends Controller
         $soId = $request->so_id;
         $sleeveType = $request->sleeve_type;
         $size = $request->size;
-        $artNo = $request->art_no;
-        
+
         $exactMatchQuery = DB::table('stock_entry_items')->where('sku', $code)->where('stock_type', 'finished_goods')->whereNull('deleted_at');
         if ($itemCode) {
             $exactMatchQuery->where('finished_item_code', $itemCode);
@@ -803,18 +881,9 @@ class SalesOrderController extends Controller
         if ($size) {
             $exactMatchQuery->where('size', $size);
         }
-        if ($artNo) {
-            $exactMatchQuery->where('art_no', $artNo);
-        }
         $exactMatch = $exactMatchQuery->first();
 
-        $query = DB::table('stock_entry_items')
-            ->select('stock_entry_items.*', 'items.name as item_name', 'brands.brand_name', 'brand_categories.id as brand_cat_id')
-            ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
-            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
-            ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
-            ->where('stock_entry_items.stock_type', 'finished_goods')
-            ->whereNull('stock_entry_items.deleted_at');
+        $query = DB::table('stock_entry_items')->where('stock_type', 'finished_goods')->whereNull('deleted_at');
 
         if ($exactMatch) {
             $query->where('sku', $code);
@@ -823,12 +892,6 @@ class SalesOrderController extends Controller
             }
             if ($sleeveType) {
                 $query->where('sleeve_type', $sleeveType);
-            }
-            if ($size) {
-                $query->where('size', $size);
-            }
-            if ($artNo) {
-                $query->where('art_no', $artNo);
             }
         } else {
             $query->where(function($q) use ($code, $itemCode) {
@@ -844,8 +907,8 @@ class SalesOrderController extends Controller
             }
         }
 
-        $items = $query->select('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku', DB::raw('MAX(stock_entry_items.id) as stock_entry_item_id'), DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance'))
-            ->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku')
+        $items = $query->select('finished_item_code', 'color_id', 'item_id', 'art_no', 'size', 'price', 'uom_id', 'sleeve_type', 'sku', DB::raw('MAX(id) as stock_entry_item_id'), DB::raw('SUM(qty_in - qty_out) as balance'))
+            ->groupBy('finished_item_code', 'color_id', 'item_id', 'art_no', 'size', 'price', 'uom_id', 'sleeve_type', 'sku')
             ->get();
 
         if ($items->isNotEmpty()) {

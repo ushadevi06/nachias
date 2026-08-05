@@ -190,102 +190,9 @@
         })->values()->all();
 
         $totalPcs = $invoice->items->sum('quantity');
-    @endphp
 
-    <table class="header-table">
-        <tr>
-            <td style="width: 70px; text-align: left; padding-right: 15px; vertical-align: top;">
-                @php
-                    $logoPath = null;
-                    if (!empty($setting->logo_file) && file_exists(public_path($setting->logo_file))) {
-                        $logoPath = public_path($setting->logo_file);
-                    } elseif (file_exists(public_path('assets/images/jc_logo.png'))) {
-                        $logoPath = public_path('assets/images/jc_logo.png');
-                    }
-                @endphp
-                @if($logoPath)
-                    <img src="{{ $logoPath }}" style="width: 65px; height: auto;" alt="Logo">
-                @endif
-            </td>
-            <td style="text-align: left; vertical-align: top;">
-                <div style="font-size: 16px; font-weight: normal; margin: 0; line-height: 1.2;">{{ $setting->company_name ?? 'Nachias Fashion Private Limited' }}</div>
-                <div style="font-size: 12px; margin: 2px 0 0 0; line-height: 1.2; color: #000;">
-                    {!! nl2br(e($setting->address ?? "272/2, Somu Nagar, Siringeri Nagar\n(Sarathambal Kovil Backside),\nByepass Road, Madurai - 625016")) !!}
-                </div>
-                <div style="font-size: 12px; margin: 2px 0 0 0; line-height: 1.2; color: #000;">
-                    GSTIN: {{ $setting->gst_no ?? '33AADCN9342A1ZU' }}
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    <div class="doc-title">Delivery Order</div>
-    <div class="page-info" style="color: transparent;">Page: &nbsp; 1 / 1</div>
-
-    <table class="meta-table">
-        <tr>
-            <td style="padding: 6px 8px;">
-                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
-                    <tr>
-                        <td style="width: 50px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">M/S</td>
-                        <td style="width: 15px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">
-                            {{ $invoice->customer->name ?? '-' }}<br>
-                            {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
-                            @php
-                                $locParts = [];
-                                if($invoice->customer->city->city_name ?? false) $locParts[] = strtoupper($invoice->customer->city->city_name);
-                                if($invoice->customer->state->state_name ?? false) $locParts[] = strtoupper($invoice->customer->state->state_name);
-                                $locStr = implode(', ', $locParts);
-                                if($invoice->customer->zip_code ?? false) $locStr .= ($locStr ? ' - ' : '') . $invoice->customer->zip_code;
-                            @endphp
-                            @if($locStr)
-                                {{ $locStr }}<br>
-                            @endif
-                            @if($invoice->customer && $invoice->customer->mobile_no)
-                                {{ $invoice->customer->mobile_no }}
-                            @endif
-                        </td>
-                    </tr>
-                </table>
-                <div style="margin-top: 15px; font-size: 13px;">
-                    GSTIN: {{ $invoice->customer->gst_no ?? '-' }}
-                </div>
-            </td>
-            <td style="padding: 6px 8px;">
-                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
-                    <tr>
-                        <td style="width: 75px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">PL No.</td>
-                        <td style="width: 15px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->inv_no }}</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">Packed On</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->inv_date->format('d/m/Y') }}</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">Order No.</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->salesOrder->order_no ?? ($invoice->salesOrder->so_no ?? '-') }}</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">Total Qty</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ number_format($totalPcs, 0) }}</td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">No.of Units</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
-                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->no_of_box ?: 1 }}</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-
-    @foreach($groupedItems as $groupName => $items)
-        @php
+        $presentationRows = [];
+        foreach($groupedItems as $groupName => $items) {
             $rows = [];
             foreach ($items as $item) {
                 $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
@@ -484,12 +391,129 @@
                 $rows[$key]['total'] += $qty;
             }
 
-            $groupSizeTotals = array_fill_keys($allSizes, 0);
+            
+            $presentationRows[] = [
+                'type' => 'group_header',
+                'name' => $groupName
+            ];
             $groupGrandTotal = 0;
-        @endphp
+            $groupSizeTotals = array_fill_keys($allSizes, 0);
+            foreach($rows as $row) {
+                $presentationRows[] = [
+                    'type' => 'item',
+                    'data' => $row
+                ];
+                foreach($allSizes as $size) {
+                    $qty = $row['quantities'][$size] ?? 0;
+                    $groupSizeTotals[$size] += $qty;
+                }
+                $groupGrandTotal += $row['total'];
+            }
+            $presentationRows[] = [
+                'type' => 'group_subtotal',
+                'group' => $groupName,
+                'grand_total' => $groupGrandTotal,
+                'size_totals' => $groupSizeTotals
+            ];
+        }
+        $chunks = array_chunk($presentationRows, 20);
+    @endphp
 
-        <div class="group-header-bar">{{ $groupName }}</div>
-        <table class="items-table" style="margin-bottom: 15px;">
+    @foreach($chunks as $pageIndex => $chunk)
+<table class="header-table">
+        <tr>
+            <td style="width: 70px; text-align: left; padding-right: 15px; vertical-align: top;">
+                @php
+                    $logoPath = null;
+                    if (!empty($setting->logo_file) && file_exists(public_path($setting->logo_file))) {
+                        $logoPath = public_path($setting->logo_file);
+                    } elseif (file_exists(public_path('assets/images/jc_logo.png'))) {
+                        $logoPath = public_path('assets/images/jc_logo.png');
+                    }
+                @endphp
+                @if($logoPath)
+                    <img src="{{ $logoPath }}" style="width: 65px; height: auto;" alt="Logo">
+                @endif
+            </td>
+            <td style="text-align: left; vertical-align: top;">
+                <div style="font-size: 16px; font-weight: normal; margin: 0; line-height: 1.2;">{{ $setting->company_name ?? 'Nachias Fashion Private Limited' }}</div>
+                <div style="font-size: 12px; margin: 2px 0 0 0; line-height: 1.2; color: #000;">
+                    {!! nl2br(e($setting->address ?? "272/2, Somu Nagar, Siringeri Nagar\n(Sarathambal Kovil Backside),\nByepass Road, Madurai - 625016")) !!}
+                </div>
+                <div style="font-size: 12px; margin: 2px 0 0 0; line-height: 1.2; color: #000;">
+                    GSTIN: {{ $setting->gst_no ?? '33AADCN9342A1ZU' }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="doc-title">Delivery Order</div>
+    <div class="page-info">Page: &nbsp; {{ $pageIndex + 1 }} / {{ count($chunks) }}</div>
+
+    <table class="meta-table">
+        <tr>
+            <td style="padding: 6px 8px;">
+                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                    <tr>
+                        <td style="width: 50px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">M/S</td>
+                        <td style="width: 15px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">
+                            {{ $invoice->customer->name ?? '-' }}<br>
+                            {!! nl2br(e(strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address)))) !!}<br>
+                            @php
+                                $locParts = [];
+                                if($invoice->customer->city->city_name ?? false) $locParts[] = strtoupper($invoice->customer->city->city_name);
+                                if($invoice->customer->state->state_name ?? false) $locParts[] = strtoupper($invoice->customer->state->state_name);
+                                $locStr = implode(', ', $locParts);
+                                if($invoice->customer->zip_code ?? false) $locStr .= ($locStr ? ' - ' : '') . $invoice->customer->zip_code;
+                            @endphp
+                            @if($locStr)
+                                {{ $locStr }}<br>
+                            @endif
+                            @if($invoice->customer && $invoice->customer->mobile_no)
+                                {{ $invoice->customer->mobile_no }}
+                            @endif
+                        </td>
+                    </tr>
+                </table>
+                <div style="margin-top: 15px; font-size: 13px;">
+                    GSTIN: {{ $invoice->customer->gst_no ?? '-' }}
+                </div>
+            </td>
+            <td style="padding: 6px 8px;">
+                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                    <tr>
+                        <td style="width: 75px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">PL No.</td>
+                        <td style="width: 15px; border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->inv_no }}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">Packed On</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->inv_date->format('d/m/Y') }}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">Order No.</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->salesOrder->order_no ?? ($invoice->salesOrder->so_no ?? '-') }}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">Total Qty</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ number_format($totalPcs, 0) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">No.of Units</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">:</td>
+                        <td style="border: none; padding: 2px 0; vertical-align: top; font-size: 13px;">{{ $invoice->no_of_box ?: 1 }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    
+<table class="items-table" style="margin-bottom: 15px;">
             <thead>
                 <tr>
                     <th rowspan="2" style="width: 28%; text-align: left; padding-left: 6px;">Description</th>
@@ -513,49 +537,61 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($rows as $row)
-                    <tr>
-                        <td style="padding-left: 6px;">{{ $row['description'] }}</td>
-                        <td class="text-center">{{ $row['uom'] }}</td>
-                        @if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
-                        <td class="text-center">{{ $row['art'] }}</td>
-                        @endif
-                        @if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
-                        <td class="text-right" style="padding-right: 6px;">{{ number_format($row['mrp'], 2) }}</td>
-                        @endif
-                        @if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
-                        <td class="text-right" style="padding-right: 6px;">{{ number_format($row['rate'], 2) }}</td>
-                        @endif
-                        @foreach($allSizes as $size)
+                @foreach($chunk as $rowItem)
+                    @if($rowItem['type'] == 'group_header')
+                        <tr>
                             @php
-                                $qty = $row['quantities'][$size] ?? 0;
-                                $groupSizeTotals[$size] += $qty;
+                                $totalCols = 2 + count($allSizes) + 1; // Desc, UOM, sizes, Total
+                                if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields)) $totalCols++;
+                                if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $totalCols++;
+                                if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $totalCols++;
                             @endphp
-                            <td class="text-center">{{ $qty > 0 ? number_format($qty, 0) : '' }}</td>
-                        @endforeach
-                        <td class="text-center bold bg-light-blue">{{ number_format($row['total'], 0) }}</td>
-                        @php
-                            $groupGrandTotal += $row['total'];
-                        @endphp
-                    </tr>
+                            <td colspan="{{ $totalCols }}" class="group-header-bar" style="padding: 4px 6px; font-weight: bold; font-size: 14px; background-color: #60a5fa; color: #000; border: 1px solid #000;">
+                                {{ $rowItem['name'] }}
+                            </td>
+                        </tr>
+                    @elseif($rowItem['type'] == 'item')
+                        @php $row = $rowItem['data']; @endphp
+                        <tr>
+                            <td style="padding-left: 6px;">{{ $row['description'] }}</td>
+                            <td class="text-center">{{ $row['uom'] }}</td>
+                            @if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields))
+                            <td class="text-center">{{ $row['art'] }}</td>
+                            @endif
+                            @if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields))
+                            <td class="text-right" style="padding-right: 6px;">{{ number_format($row['mrp'], 2) }}</td>
+                            @endif
+                            @if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields))
+                            <td class="text-right" style="padding-right: 6px;">{{ number_format($row['rate'], 2) }}</td>
+                            @endif
+                            @foreach($allSizes as $size)
+                                @php $qty = $row['quantities'][$size] ?? 0; @endphp
+                                <td class="text-center">{{ $qty > 0 ? number_format($qty, 0) : '' }}</td>
+                            @endforeach
+                            <td class="text-center bold bg-light-blue">{{ number_format($row['total'], 0) }}</td>
+                        </tr>
+                    @elseif($rowItem['type'] == 'group_subtotal')
+                        <tr class="bold bg-light-blue">
+                            @php
+                                $leftColspan = 2;
+                                if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields)) $leftColspan++;
+                                if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $leftColspan++;
+                                if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $leftColspan++;
+                            @endphp
+                            <td colspan="{{ $leftColspan }}" class="text-right" style="padding-right: 8px;">Total</td>
+                            @foreach($allSizes as $size)
+                                <td class="text-center">{{ $rowItem['size_totals'][$size] > 0 ? number_format($rowItem['size_totals'][$size], 0) : '0' }}</td>
+                            @endforeach
+                            <td class="text-center">{{ number_format($rowItem['grand_total'], 0) }}</td>
+                        </tr>
+                    @endif
                 @endforeach
-                <tr class="bold bg-light-blue">
-                    @php
-                        $leftColspan = 2;
-                        if(is_null($invoice->delivery_show_fields) || in_array('art_no', $invoice->delivery_show_fields)) $leftColspan++;
-                        if(is_null($invoice->delivery_show_fields) || in_array('mrp', $invoice->delivery_show_fields)) $leftColspan++;
-                        if(is_null($invoice->delivery_show_fields) || in_array('price', $invoice->delivery_show_fields)) $leftColspan++;
-                    @endphp
-                    <td colspan="{{ $leftColspan }}" class="text-right" style="padding-right: 8px;">Total</td>
-                    @foreach($allSizes as $size)
-                        <td class="text-center">{{ $groupSizeTotals[$size] > 0 ? number_format($groupSizeTotals[$size], 0) : '0' }}</td>
-                    @endforeach
-                    <td class="text-center">{{ number_format($groupGrandTotal, 0) }}</td>
-                </tr>
+
             </tbody>
         </table>
-    @endforeach
-    <div style="position: absolute; bottom: 0; left: 0; width: 100%;">
+
+        @if($pageIndex == count($chunks) - 1)
+            <div style="position: absolute; bottom: 0; left: 0; width: 100%;">
         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
                 <td colspan="2" style="border: 1px solid #000000; height: 60px; padding: 6px; vertical-align: top;">
@@ -573,22 +609,13 @@
             </tr>
         </table>
     </div>
-    <script type="text/php">
-        if (isset($pdf)) {
-            $pdf->page_script('
-                $text = "Page: " . $PAGE_NUM . " / " . $PAGE_COUNT;
-                $size = 11;
-                $font = $fontMetrics->getFont("Helvetica");
-                $width = $fontMetrics->get_text_width($text, $font, $size);
-                $x = ($pdf->get_width() - $width - 20);
-                
-                // On page 1, position exactly where the hardcoded text was
-                // On subsequent pages, position in the safe top right margin
-                $y = ($PAGE_NUM == 1) ? 110 : 12;
-                
-                $pdf->text($x, $y, $text, $font, $size);
-            ');
-        }
-    </script>
+    
+        @else
+            <div style="text-align: right; padding: 10px; font-weight: bold; font-size: 13px;">
+            Continue to Page No. {{ $pageIndex + 2 }}
+        </div>
+        <div style="page-break-after: always;"></div>
+        @endif
+    @endforeach
 </body>
 </html>

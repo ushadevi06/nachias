@@ -178,7 +178,7 @@
                             </div>
                         </div>
                         <!-- Commission -->
-                        <div class="col-12 mt-4 pt-3 border-top">
+                        {{-- <div class="col-12 mt-4 pt-3 border-top">
                             <div class="row">
                                 <div class="col-md-6">
                                     <small class="text-muted">Commission Agent</small>
@@ -193,7 +193,7 @@
                                     <span class="text-dark">{{ $supplier->ecc_no ?? '-' }}</span>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                     </div>
                 </div>
             </div>

@@ -5,7 +5,14 @@
     <title>Open Delivery Order - {{ $invoice->inv_no }}</title>
     <style>
         @page {
-            margin: 25px 20px 20px 20px;
+            margin: 320px 20px 20px 20px;
+        }
+        header {
+            position: fixed;
+            top: -295px;
+            left: 0;
+            right: 0;
+            height: 280px;
         }
         body {
             font-family: 'Helvetica', Arial, sans-serif;
@@ -183,6 +190,7 @@
         $totalPcs = $invoice->items->sum('quantity');
     @endphp
 
+    <header>
     <table class="header-table" style="padding-bottom: 8px; margin-bottom: 8px;">
         <tr>
             <td style="width: 70px; text-align: left; padding-right: 15px; vertical-align: top;">
@@ -274,7 +282,9 @@
             </td>
         </tr>
     </table>
+    </header>
 
+    <main>
     @foreach($groupedItems as $groupName => $items)
         @php
             $rows = [];
@@ -488,6 +498,7 @@
             $groupGrandTotal = 0;
         @endphp
 
+        <div style="page-break-inside: avoid;">
         <div class="group-header-bar">{{ $groupName }}</div>
         <table class="items-table" style="margin-bottom: 15px;">
             <thead>
@@ -569,8 +580,10 @@
                 </tr>
             </tbody>
         </table>
+        </div>
     @endforeach
 
+    <div style="height: 160px; width: 100%; color: transparent; display: block;">.</div>
     <div style="position: absolute; bottom: 0; left: 0; width: 100%;">
         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
@@ -589,6 +602,7 @@
             </tr>
         </table>
     </div>
+    </main>
     <script type="text/php">
         if (isset($pdf)) {
             $pdf->page_script('
@@ -598,9 +612,8 @@
                 $width = $fontMetrics->get_text_width($text, $font, $size);
                 $x = ($pdf->get_width() - $width - 20);
                 
-                // On page 1, position exactly where the hardcoded text was
-                // On subsequent pages, position in the safe top right margin
-                $y = ($PAGE_NUM == 1) ? 110 : 12;
+                // Position exactly where the hardcoded text is on all pages
+                $y = 110;
                 
                 $pdf->text($x, $y, $text, $font, $size);
             ');

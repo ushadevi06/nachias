@@ -261,13 +261,20 @@ class ServiceProviderController extends Controller
                 $provider = ServiceProvider::find($id);
                 $provider->update($data);
                 $newData = $provider->toArray();
-                addLog('update', 'Service Provider', 'service_providers', $id, $oldData, $newData);
+                
+                $formattedOldData = formatLocationLogData($oldData);
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('update', 'Service Provider', 'service_providers', $id, $formattedOldData, $formattedNewData);
                 $message = 'Service Provider updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $provider = ServiceProvider::create($data);
                 $newData = $provider->toArray();
-                addLog('create', 'Service Provider', 'service_providers', $provider->id, null, $newData);
+                
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('create', 'Service Provider', 'service_providers', $provider->id, null, $formattedNewData);
                 $message = 'Service Provider added successfully';
             }
             return redirect('service_providers')->with('success', $message);

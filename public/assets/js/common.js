@@ -1,6 +1,11 @@
 $(document).ready(function () {
     const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
+    /* Global DataTable Mobile Pagination Fix */
+    if (window.innerWidth < 768 && $.fn.DataTable) {
+        $.fn.DataTable.ext.pager.numbers_length = 5;
+    }
+
     /*  Fetch Cities */
     $('#state_id').on('change', function () {
         var state_id = $(this).val();

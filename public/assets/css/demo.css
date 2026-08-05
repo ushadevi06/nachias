@@ -122,3 +122,19 @@
     text-align: center;
     margin-top: 1.25rem;
 }
+
+/* Responsive DataTables Pagination Fix */
+@media screen and (max-width: 767px) {
+    div.dataTables_wrapper div.dataTables_paginate ul.pagination {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 2px;
+        margin-top: 10px;
+    }
+    div.dataTables_wrapper div.dataTables_paginate ul.pagination .page-item .page-link {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.85rem !important;
+        min-width: 28px;
+        text-align: center;
+    }
+}

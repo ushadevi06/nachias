@@ -26,7 +26,12 @@ class CustomerImport implements ToCollection, WithHeadingRow
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
-            if (empty($row['name']) && empty($row['code']) && empty($row['mobile_number'])) {
+            // Check if the entire row is empty (ignore trailing empty rows in Excel)
+            $isEmpty = collect($row)->filter(function ($value) {
+                return !is_null($value) && trim($value) !== '';
+            })->isEmpty();
+
+            if ($isEmpty) {
                 continue;
             }
 
@@ -60,15 +65,6 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 $placeId = $place->id;
             }
 
-            if ($cityId && !$placeId) {
-                $firstPlace = Place::where('city_id', $cityId)->first();
-                if ($firstPlace) {
-                    $placeId = $firstPlace->id;
-                } else {
-                    $errors[] = "Row {$rowNumber}: No default Place found for the specified City. Please create one first.";
-                    continue;
-                }
-            }
 
             $zoneId = null;
             if (!empty($row['zone'])) {
@@ -81,10 +77,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
                 }
             }
 
-            if (!$zoneId && $cityId) {
-                $firstZone = Zone::active()->whereRaw("FIND_IN_SET(?, city_ids)", [$cityId])->first();
-                $zoneId = $firstZone ? $firstZone->id : null;
-            }
+
 
             $storeId = null;
             if (!empty($row['store'])) {
@@ -111,9 +104,9 @@ class CustomerImport implements ToCollection, WithHeadingRow
             }
 
             $mobileNo = null;
-            if (!empty($row['mobile_number'])) {
+            if (isset($row['mobile_number']) && trim((string)$row['mobile_number']) !== '') {
                 $mobileNo = preg_replace('/[^0-9]/', '', (string) $row['mobile_number']);
-            } elseif (!empty($row['phone'])) {
+            } elseif (isset($row['phone']) && trim((string)$row['phone']) !== '') {
                 $mobileNo = preg_replace('/[^0-9]/', '', (string) $row['phone']);
             }
 			
@@ -173,28 +166,46 @@ class CustomerImport implements ToCollection, WithHeadingRow
             }
 
             $messages = [
-                '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
-                'code.not_in' => 'This field is an invalid format.',
-                '*.numeric'  => 'This field must be a valid number.',
-                'min'      => 'This field must be at least :min characters.',
-                'max'      => 'This field should not be more than :max characters.',
+                '*.required' => 'The :attribute field is required.',
+                '*.unique'   => 'The :attribute field already exists.',
+                'code.not_regex' => 'Code cannot be 0.',
+                '*.not_regex' => 'The :attribute field is an invalid format.',
+                '*.numeric'  => 'The :attribute field must be a valid number.',
+                'min'      => 'The :attribute field must be at least :min characters.',
+                'max'      => 'The :attribute field should not be more than :max characters.',
                 '*.email'    => 'Please enter a valid email address.',
+                'gst_no.regex' => 'The GST number format is invalid.',
+            ];
+
+            $attributes = [
+                'state_id'  => 'state',
+                'city_id'   => 'city',
+                'place_id'  => 'place',
+                'zone_id'   => 'zone',
+                'mobile_no' => 'mobile number',
+                'email'     => 'email',
+                'website_url' => 'website url',
+                'address_line_1' => 'address',
+                'zip_code'  => 'zipcode',
+                'gst_no'    => 'GST number',
             ];
 
             $validator = Validator::make($data, [
-                'category'       => 'required|in:Retailer,Wholesaler',
-                'name'           => 'required|string|min:2|max:100',
-                'code'           => 'required|string|min:2|max:50|not_in:0|unique:customers,code',
-                'mobile_no'      => 'required|numeric|digits_between:10,15',
-                'email'          => 'nullable|email|max:128|unique:customers,email',
-                'zone_id'        => 'nullable',
-                'status'         => 'required|in:Active,Inactive',
-                'state_id'       => 'required',
-                'city_id'        => 'required',
-                'place_id'       => 'required',
-                'address_line_1' => 'nullable|string|min:3|max:150',
-            ], $messages);
+                'category'       => ['bail', 'required', 'in:Retailer,Wholesaler'],
+                'name'           => ['bail', 'required', 'string', 'min:2', 'max:100', 'not_regex:/^0+$/'],
+                'code'           => ['bail', 'required', 'string', 'min:2', 'max:50', 'not_regex:/^0+$/', 'unique:customers,code'],
+                'mobile_no'      => ['bail', 'required', 'numeric', 'digits_between:10,15', 'not_regex:/^0+$/'],
+                'email'          => ['bail', 'nullable', 'email', 'max:128', 'unique:customers,email', 'not_regex:/^0+$/'],
+                'website_url'    => ['bail', 'nullable', 'max:255', 'not_regex:/^0+$/'],
+                'zone_id'        => ['bail', 'required'],
+                'status'         => ['bail', 'required', 'in:Active,Inactive'],
+                'state_id'       => ['bail', 'required'],
+                'city_id'        => ['bail', 'required'],
+                'place_id'       => ['bail', 'required'],
+                'address_line_1' => ['bail', 'required', 'string', 'min:3', 'max:150', 'not_regex:/^0+$/'],
+                'zip_code'       => ['bail', 'required', 'digits:6', 'not_regex:/^0+$/'],
+                'gst_no'         => ['bail', 'required', 'string', 'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/', 'not_regex:/^0+$/'],
+            ], $messages, $attributes);
 
             if ($validator->fails()) {
                 $errors[] = "Row {$rowNumber}: " . implode(', ', $validator->errors()->all());

@@ -1,11 +1,11 @@
 @extends('layouts.common')
-@section('title', 'Size/Ratio - ' . env('WEBSITE_NAME'))
+@section('title', 'Size & Ratio - ' . env('WEBSITE_NAME'))
 @section('content')
 <div class="container-xxl section-padding">
     <div class="row">
         <div class="col-lg-12">
             <div class="table-header-box">
-                <h4>Size/Ratio</h4>
+                <h4>Size & Ratio</h4>
                 @if(auth()->id() == 1 || auth()->user()->can('create size-ratio'))
 
                 <a class="btn btn-primary" href="{{ url('size_ratio/add') }}">

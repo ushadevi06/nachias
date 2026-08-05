@@ -123,7 +123,8 @@
                     data: 'name'
                 },
                 {
-                    data: 'category'
+                    data: 'category',
+                    searchable: false
                 },
                 {
                     data: 'contact_info',

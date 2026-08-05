@@ -224,7 +224,24 @@
                                                         @endforeach
                                                     </select>
                                                 </td>
-                                                <td class="fabric-only-cell">{{ $item['fabric_type_name'] ?? '-' }}</td>
+                                                <td class="fabric-only-cell">
+                                                    @php
+                                                        $fabricTypeName = $item['fabric_type_name'] ?? '-';
+                                                        $fabricTypeId = $item['fabric_type_id'] ?? null;
+                                                    @endphp
+                                                    @if($fabricTypeName === '-')
+                                                        <select name="items[{{ $index }}][fabric_type_id]" class="select2 form-select form-select-sm">
+                                                            <option value="">Select Type</option>
+                                                            @foreach($fabricTypes as $type)
+                                                                <option value="{{ $type->id }}" {{ $fabricTypeId == $type->id ? 'selected' : '' }}>
+                                                                    {{ $type->fabric_type }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    @else
+                                                        {{ $fabricTypeName }}
+                                                    @endif
+                                                </td>
                                                 <td class="qty-ordered-display">{{ $item['qty_ordered'] ?? 0 }}</td>
                                                 <td class="balanced-qty-display">
                                                     {{ ($item['qty_ordered'] ?? 0) - ($item['qty_invoiced'] ?? 0) }}
@@ -314,7 +331,24 @@
                                                     </select>
                                                 </td>
 
-                                                <td class="fabric-only-cell">{{ $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-' }}</td>
+                                                <td class="fabric-only-cell">
+                                                    @php
+                                                        $fabricTypeName = $invItem->purchaseOrderItem->fabricType->fabric_type ?? '-';
+                                                        $selectedTypeId = $invItem->purchaseOrderItem->fabric_type_id ?? null;
+                                                    @endphp
+                                                    @if($fabricTypeName === '-')
+                                                        <select name="items[{{ $index }}][fabric_type_id]" class="select2 form-select form-select-sm">
+                                                            <option value="">Select Type</option>
+                                                            @foreach($fabricTypes as $type)
+                                                                <option value="{{ $type->id }}" {{ $selectedTypeId == $type->id ? 'selected' : '' }}>
+                                                                    {{ $type->fabric_type }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    @else
+                                                        {{ $fabricTypeName }}
+                                                    @endif
+                                                </td>
 
                                                 <td class="qty-ordered-display">{{ $invItem->qty_ordered }}</td>
                                                 <td class="balanced-qty-display">{{ $balancedQty }}</td>
@@ -664,13 +698,21 @@
                                         <input type="hidden" name="sub_total" id="sub_total_input" value="{{ $subTotal }}">
                                     </div>
                                     <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
-                                        <span>Commission:</span>
+                                        <span>PO Commission (<strong id="commission_percent_display">{{ number_format(old('commission', $invoice->commission ?? 0), 2) }}</strong>%):</span>
                                         <div class="d-flex gap-2 align-items-center">
-                                            <div class="d-flex align-items-center gap-1">
-                                                <strong id="commission_percent_display">{{ number_format(old('commission', $invoice->commission ?? 0), 2) }}</strong>
-                                                <span>%</span>
-                                            </div>
                                             <input type="hidden" name="commission" id="commission_input" value="{{ old('commission', $invoice->commission ?? 0) }}">
+                                            <strong id="po_commission_value">0.00</strong>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center" id="brokerage_row" style="display: none;">
+                                        <span>Additional Brokerage:</span>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <strong id="brokerage_value">0.00</strong>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between py-2 border-bottom align-items-center">
+                                        <span>Total Commission:</span>
+                                        <div class="d-flex gap-2 align-items-center">
                                             <strong id="commission_value">{{ number_format(old('commission_amount', $invoice->commission_amount ?? 0), 2) }}</strong>
                                             <input type="hidden" name="commission_amount" id="commission_amount_input" value="{{ old('commission_amount', $invoice->commission_amount ?? 0) }}">
                                         </div>
@@ -958,6 +1000,13 @@
                                 });
                             }
 
+                            let typeOptions = '<option value="">Select Type</option>';
+                            if (response.all_fabric_types) {
+                                response.all_fabric_types.forEach(function(t) {
+                                    typeOptions += `<option value="${t.id}">${t.name}</option>`;
+                                });
+                            }
+
                             response.items.forEach(function (item, index) {
                                 const balancedQty = item.qty_ordered - item.qty_invoiced;
                                 let itemBrandSelect = `<select name="items[${index}][brand_id]" class="select2 form-select form-select-sm">${brandOptions}</select>`;
@@ -970,6 +1019,12 @@
                                 let widthSelectObj = $(itemWidthSelect);
                                 widthSelectObj.find(`option[value="${item.fabric_width_id}"]`).attr('selected', 'selected');
                                 itemWidthSelect = widthSelectObj.prop('outerHTML');
+
+                                let fabricTypeCell = item.fabric_type_name && item.fabric_type_name !== '-' ? item.fabric_type_name : '';
+                                if (!fabricTypeCell) {
+                                    let itemTypeSelect = `<select name="items[${index}][fabric_type_id]" class="select2 form-select form-select-sm">${typeOptions}</select>`;
+                                    fabricTypeCell = itemTypeSelect;
+                                }
 
                                 itemsHtml += `
                                     <tr class="item-row">
@@ -996,7 +1051,7 @@
                                             <input type="text" name="items[${index}][hsn_code]" class="form-control form-control-sm item-hsn" value="${item.hsn_code || ''}" placeholder="Enter HSN" readonly>
                                         </td>
                                         <td class="fabric-only-cell">${itemWidthSelect}</td>
-                                        <td class="fabric-only-cell">${item.fabric_type_name || '-'}</td>
+                                        <td class="fabric-only-cell">${fabricTypeCell}</td>
 
                                         <!-- Ordered Qty -->
                                         <td class="qty-ordered-display">${item.qty_ordered}</td>
@@ -1223,27 +1278,6 @@
             calculateSummaryOnly();
         });
 
-        $('#charges_select').on('change', function () {
-            let chargeText = $('#charges_select option:selected').text().trim().toUpperCase();
-            if (chargeText === 'BROKERAGE') {
-                let currentVal = parseFloat($('#commission_amount_input').val()) || 0;
-                $('#charge_amount').val(currentVal > 0 ? currentVal.toFixed(2) : '');
-            } else {
-                $('#charge_amount').val('');
-            }
-        });
-
-        $('#charge_amount').on('input', function () {
-            let chargeText = $('#charges_select option:selected').text().trim().toUpperCase();
-            if (chargeText === 'BROKERAGE') {
-                let manualAmount = parseFloat($(this).val()) || 0;
-                $('#commission_amount_input').val(manualAmount.toFixed(2));
-                $('#commission_amount_input').data('manual', true);
-                $('#commission_value').text(manualAmount.toFixed(2));
-                calculateSummaryOnly();
-            }
-        });
-
         $('input[name="other_state"]').on('change', function () {
             if ($(this).val() === 'Y') {
                 $('#igst_div').show();
@@ -1315,30 +1349,55 @@
             $('#discount_value').text(discountAmount.toFixed(2));
             $('#discount_amount_input').val(discountAmount.toFixed(2));
 
-            let commissionPercent = parseFloat($('#commission_input').val()) || 0;
-            let commissionAmount = 0;
-            let isManualCommission = $('#commission_amount_input').data('manual') === true;
-            if (commissionPercent > 0 && !isManualCommission) {
-                commissionAmount = (subTotal * commissionPercent) / 100;
-                $('#commission_amount_input').val(commissionAmount.toFixed(2));
-            } else {
-                commissionAmount = parseFloat($('#commission_amount_input').val()) || 0;
-            }
-            $('#commission_value').text(commissionAmount.toFixed(2));
-
-            let itemTotal = subTotal - discountAmount - commissionAmount;
-
             let preGstCharges = 0;
             let postGstCharges = 0;
+            let brokerageAmount = 0;
             $('.charge-row').each(function () {
+                let chargeNameNode = $(this).find('input[name="charges[name][]"]').val();
+                let cName = chargeNameNode ? chargeNameNode.trim().toUpperCase() : '';
                 let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
-                if (taxType === 'Pre-GST') {
-                    preGstCharges += amount;
+                
+                if (cName === 'BROKERAGE') {
+                    brokerageAmount += amount;
                 } else {
-                    postGstCharges += amount;
+                    let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                    if (taxType === 'Pre-GST') {
+                        preGstCharges += amount;
+                    } else {
+                        postGstCharges += amount;
+                    }
                 }
             });
+
+            let commissionPercent = parseFloat($('#commission_input').val()) || 0;
+            let baseCommissionAmount = 0;
+            
+            if (commissionPercent > 0) {
+                baseCommissionAmount = (subTotal * commissionPercent) / 100;
+            } else {
+                let storedBase = $('#commission_amount_input').data('base-amount');
+                if (typeof storedBase === 'undefined') {
+                    storedBase = parseFloat($('#commission_amount_input').val()) || 0;
+                    $('#commission_amount_input').data('base-amount', storedBase);
+                }
+                baseCommissionAmount = storedBase;
+            }
+            
+            let totalCommission = baseCommissionAmount + brokerageAmount;
+            
+            $('#po_commission_value').text(baseCommissionAmount.toFixed(2));
+            
+            if (brokerageAmount > 0) {
+                $('#brokerage_value').text(brokerageAmount.toFixed(2));
+                $('#brokerage_row').show();
+            } else {
+                $('#brokerage_row').hide();
+            }
+            
+            $('#commission_amount_input').val(totalCommission.toFixed(2));
+            $('#commission_value').text(totalCommission.toFixed(2));
+
+            let itemTotal = subTotal - discountAmount - totalCommission;
 
             let taxableAmount = itemTotal + preGstCharges;
             $('#total').text(taxableAmount.toFixed(2));
@@ -1463,12 +1522,6 @@
 
             if (!amount || amount <= 0) {
                 alert("Please enter a valid amount");
-                return;
-            }
-
-            if (chargeText.trim().toUpperCase() === 'BROKERAGE') {
-                $('#charges_select').val('').trigger('change');
-                $('#charge_amount').val('');
                 return;
             }
 
@@ -1732,30 +1785,55 @@
             $('#discount_value').text(discountAmount.toFixed(2));
             $('#discount_amount_input').val(discountAmount.toFixed(2));
 
-            let commissionPercent = parseFloat($('#commission_input').val()) || 0;
-            let commissionAmount = 0;
-            let isManualCommission = $('#commission_amount_input').data('manual') === true;
-            if (commissionPercent > 0 && !isManualCommission) {
-                commissionAmount = (subTotal * commissionPercent) / 100;
-                $('#commission_amount_input').val(commissionAmount.toFixed(2));
-            } else {
-                commissionAmount = parseFloat($('#commission_amount_input').val()) || 0;
-            }
-            $('#commission_value').text(commissionAmount.toFixed(2));
-
-            let itemTotal = subTotal - discountAmount - commissionAmount;
-
             let preGstCharges = 0;
             let postGstCharges = 0;
+            let brokerageAmount = 0;
             $('.charge-row').each(function () {
+                let chargeNameNode = $(this).find('input[name="charges[name][]"]').val();
+                let cName = chargeNameNode ? chargeNameNode.trim().toUpperCase() : '';
                 let amount = parseFloat($(this).find('input[name="charges[amount][]"]').val()) || 0;
-                let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
-                if (taxType === 'Pre-GST') {
-                    preGstCharges += amount;
+                
+                if (cName === 'BROKERAGE') {
+                    brokerageAmount += amount;
                 } else {
-                    postGstCharges += amount;
+                    let taxType = $(this).attr('data-tax-type') || $(this).data('tax-type') || 'Post-GST';
+                    if (taxType === 'Pre-GST') {
+                        preGstCharges += amount;
+                    } else {
+                        postGstCharges += amount;
+                    }
                 }
             });
+
+            let commissionPercent = parseFloat($('#commission_input').val()) || 0;
+            let baseCommissionAmount = 0;
+            
+            if (commissionPercent > 0) {
+                baseCommissionAmount = (subTotal * commissionPercent) / 100;
+            } else {
+                let storedBase = $('#commission_amount_input').data('base-amount');
+                if (typeof storedBase === 'undefined') {
+                    storedBase = parseFloat($('#commission_amount_input').val()) || 0;
+                    $('#commission_amount_input').data('base-amount', storedBase);
+                }
+                baseCommissionAmount = storedBase;
+            }
+            
+            let totalCommission = baseCommissionAmount + brokerageAmount;
+            
+            $('#po_commission_value').text(baseCommissionAmount.toFixed(2));
+            
+            if (brokerageAmount > 0) {
+                $('#brokerage_value').text(brokerageAmount.toFixed(2));
+                $('#brokerage_row').show();
+            } else {
+                $('#brokerage_row').hide();
+            }
+            
+            $('#commission_amount_input').val(totalCommission.toFixed(2));
+            $('#commission_value').text(totalCommission.toFixed(2));
+
+            let itemTotal = subTotal - discountAmount - totalCommission;
 
             let taxableAmount = itemTotal + preGstCharges;
             $('#total').text(taxableAmount.toFixed(2));
@@ -1826,6 +1904,7 @@
                 return false;
             }
         });
+        calculateTotals();
     });
 </script>
 @endsection

@@ -131,13 +131,13 @@ class PlaceController extends Controller
             if ($id) {
                 $validated['updated_by'] = auth()->id();
                 $place->update($validated);
-                $newData = Place::find($id)->toArray();
-                addLog('update', 'Place', 'places', $place->id, $oldData, $newData);
+                $newData = formatLocationLogData(Place::find($id)->toArray());
+                addLog('update', 'Place', 'places', $place->id, formatLocationLogData($oldData), $newData);
                 $message = 'Place updated successfully';
             } else {
                 $validated['created_by'] = auth()->id();
                 $newPlace = Place::create($validated);
-                $newData = Place::find($newPlace->id)->toArray();
+                $newData = formatLocationLogData(Place::find($newPlace->id)->toArray());
                 addLog('create', 'Place', 'places', $newPlace->id, null, $newData);
                 $message = 'Place added successfully';
             }
@@ -175,7 +175,7 @@ class PlaceController extends Controller
                 return redirect('places');
             }
         }
-        $oldData = $place->toArray();
+        $oldData = formatLocationLogData($place->toArray());
         $place->delete();
         addLog('delete', 'Place', 'places', $id, $oldData, null);
         return redirect('places')->with('success', 'Place deleted successfully');
@@ -184,10 +184,10 @@ class PlaceController extends Controller
     public function updateStatus($id)
     {
         $place = Place::findOrFail($id);
-        $oldData = $place->toArray();
+        $oldData = formatLocationLogData($place->toArray());
         $place->status = request('status');
         $place->save();
-        $newData = $place->toArray();
+        $newData = formatLocationLogData($place->toArray());
         addLog('update_status', 'Place Status', 'places', $place->id, $oldData, $newData);
         return response()->json([
             'success' => true,

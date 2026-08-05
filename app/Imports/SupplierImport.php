@@ -25,7 +25,11 @@ class SupplierImport implements ToCollection, WithHeadingRow
 
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
-            if (!isset($row['name']) && !isset($row['code']) && !isset($row['mobile_number'])) {
+            $isEmpty = collect($row)->filter(function ($value) {
+                return !is_null($value) && trim($value) !== '';
+            })->isEmpty();
+
+            if ($isEmpty) {
                 continue;
             }
             $stateId = null;
@@ -147,13 +151,21 @@ class SupplierImport implements ToCollection, WithHeadingRow
             }
 
             $messages = [
-                '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
-                'code.not_in' => 'This field is an invalid format.',
-                '*.numeric'  => 'This field must be a valid number.',
-                'min'      => 'This field must be at least :min characters.',
-                'max'      => 'This field should not be more than :max characters.',
+                '*.required' => 'The :attribute field is required.',
+                '*.unique'   => 'The :attribute field already exists.',
+                'code.not_in' => 'The :attribute field is an invalid format.',
+                '*.numeric'  => 'The :attribute field must be a valid number.',
+                'min'      => 'The :attribute field must be at least :min characters.',
+                'max'      => 'The :attribute field should not be more than :max characters.',
                 '*.email'    => 'Please enter a valid email address.',
+            ];
+
+            $attributes = [
+                'state_id'  => 'state',
+                'city_id'   => 'city',
+                'place_id'  => 'place',
+                'mobile_no' => 'mobile number',
+                'address_line_1' => 'address',
             ];
 
             $validator = Validator::make($data, [
@@ -166,7 +178,7 @@ class SupplierImport implements ToCollection, WithHeadingRow
                 'city_id' => 'required',
                 'place_id' => 'required',
                 'address_line_1' => 'required|string|min:3|max:150',
-            ], $messages);
+            ], $messages, $attributes);
 
             if (!empty($data['code'])) {
                 if (in_array($data['code'], $seenCodes)) {

@@ -27,7 +27,11 @@ class EmployeeImport implements ToCollection, WithHeadingRow
             $rowNumber = $index + 2;
             $empId = trim((string)($row['emp_code'] ?? ''));
             $name = trim((string)($row['name'] ?? ''));
-            if (empty($empId) && empty($name)) {
+            $isEmpty = collect($row)->filter(function ($value) {
+                return !is_null($value) && trim($value) !== '';
+            })->isEmpty();
+
+            if ($isEmpty) {
                 continue;
             }
             if (strtolower($name) === 'admin' || $empId === '-') {

@@ -297,7 +297,7 @@ class SalesInvoiceController extends Controller
                     'lr_no', 'no_of_box', 'hsn_sac', 'sub_total', 'sales_discount', 'box_discount_amount', 'discount_percent', 'discount', 
                     'commission_percent', 'commission_amount', 'total', 'other_state',
                     'tax_amount', 'igst_percent', 'igst', 'cgst_percent', 'cgst', 'sgst_percent', 'sgst',
-                    'other_charges', 'pre_gst_charges', 'post_gst_charges','round_off_type', 'round_off',
+                    'other_charges', 'pre_gst_charges', 'post_gst_charges', 'round_off_type', 'round_off',
                     'grand_total', 'due_amount'
                 ]);
                 if ($request->tran_doc_date) {
@@ -385,8 +385,8 @@ class SalesInvoiceController extends Controller
                             $stockEntryItemId = $seItem->id;
                         }
                     }
-
-                    if (!$isExtra && !empty($invoiceData['so_ids'])) {
+					
+					if (!$isExtra && !empty($invoiceData['so_ids'])) {
                         $soIdsArr = is_array($invoiceData['so_ids']) ? $invoiceData['so_ids'] : json_decode($invoiceData['so_ids'], true);
                         if (!empty($soIdsArr)) {
                             $existsInSO = \App\Models\SalesOrderItem::whereIn('sale_order_id', $soIdsArr)
@@ -404,7 +404,7 @@ class SalesInvoiceController extends Controller
                             }
                         }
                     }
-
+					
                     SalesInvoiceItem::updateOrCreate(
                         ['id' => $item['id'] ?? null],
                         [
@@ -465,6 +465,12 @@ class SalesInvoiceController extends Controller
         $stores = StoreType::where('status', 'Active')->orderBy('id', 'desc')->get();
         $sales_agent = SalesAgent::where('status', 'Active')->orderBy('id', 'desc')->get();
 
+        $nextInvNumber = '';
+        if (!$id) {
+            $lastInv = SalesInvoice::orderBy('id', 'desc')->first();
+            $nextInvNumber = 'SV-' . str_pad(($lastInv ? $lastInv->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+        }
+
         $brands = \App\Models\Brand::active()->orderBy('id', 'desc')->get();
         $transportModes = \App\Models\TransportMode::where('status', 'Active')->orderBy('id', 'desc')->get();
 
@@ -475,7 +481,7 @@ class SalesInvoiceController extends Controller
             $saleOrders = collect(); 
         }
 
-        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'stores', 'sales_agent', 'brands', 'transportModes'));
+        return view('sales_invoice.add', compact('invoice', 'customers', 'saleOrders', 'brandCategories', 'uoms', 'nextInvNumber', 'stores', 'sales_agent', 'brands', 'transportModes'));
     }
 
     public function view($id)
@@ -719,17 +725,11 @@ class SalesInvoiceController extends Controller
                         'stock_entry_item_id' => $item->stock_entry_item_id,
                     ];
 
-                    $existingItemKey = $allItems->search(function($i) use ($itemData) {
-                        if (!empty($itemData['stock_entry_item_id']) && !empty($i['stock_entry_item_id'])) {
-                            return $i['stock_entry_item_id'] == $itemData['stock_entry_item_id'] && $i['rate'] == $itemData['rate'];
+                    $existingItemKey = $allItems->search(function($i) use ($item) {
+                        if (!empty($item->stock_entry_item_id) && !empty($i['stock_entry_item_id'])) {
+                            return $i['stock_entry_item_id'] == $item->stock_entry_item_id && $i['rate'] == $item->rate;
                         } else {
-                            return $i['sku'] == $itemData['sku'] && 
-                                   $i['rate'] == $itemData['rate'] && 
-                                   $i['size_id'] == $itemData['size_id'] && 
-                                   $i['color_id'] == $itemData['color_id'] && 
-                                   $i['art_no'] == $itemData['art_no'] && 
-                                   $i['sleeve'] == $itemData['sleeve'] &&
-                                   $i['item_code'] == $itemData['item_code'];
+                            return $i['sku'] == $item->sku && $i['rate'] == $item->rate && $i['size_id'] == $item->size_id && $i['color_id'] == $item->color_id && $i['art_no'] == $item->art_no;
                         }
                     });
                     
@@ -743,7 +743,7 @@ class SalesInvoiceController extends Controller
                 }
             }
         }
-        
+
         $transportModes = array_unique($transportModes);
         $transportModeId = (count($transportModes) === 1) ? reset($transportModes) : null;
 
@@ -757,7 +757,6 @@ class SalesInvoiceController extends Controller
         foreach ($saleOrders as $so) {
             $totalSubTotal += $so->sub_total ?? 0;
             $totalDiscountAmount += $so->discount_amount ?? 0;
-            
             if ($so->charges) {
                 $totalPreGstCharges += $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
                 
@@ -914,6 +913,21 @@ class SalesInvoiceController extends Controller
             $billingAddress = implode(', ', array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3, $c->city, $c->state, $c->pincode]));
         }
 
+        $preGstCharges = 0;
+        $courierCharge = 0;
+        $postGstCharges = 0;
+        if ($so->charges) {
+            $preGstCharges = $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
+            $courierCharge = $so->charges->where('tax_type', 'Post-GST')
+                ->filter(function($charge) {
+                    return stripos($charge->charge_name, 'COURIER') !== false;
+                })->sum('charge_amount');
+            $postGstCharges = $so->charges->where('tax_type', 'Post-GST')
+                ->filter(function($charge) {
+                    return stripos($charge->charge_name, 'COURIER') === false;
+                })->sum('charge_amount');
+        }
+
         return response()->json([
             'success' => true,
             'customer_id' => $so->customer_id,
@@ -958,6 +972,7 @@ class SalesInvoiceController extends Controller
                 ], 422);
             }
         }
+        // Allow the user to manually set the status, unless it's Paid without full payment (handled above)
         $oldData = $invoice->toArray();
         $invoice->invoice_status = $newStatus;
         $invoice->save();
@@ -1198,6 +1213,7 @@ class SalesInvoiceController extends Controller
         }
 
         $result = $eInvoiceService->generateEInvoice($invoice, $transporterData);
+        
         if (!$result['success'] && isset($result['message'])) {
             if (strpos($result['message'], 'is cancelled and document date') !== false) {
                 preg_match('/GSTIN - ([A-Z0-9]+)/', $result['message'], $matches);
@@ -1220,6 +1236,7 @@ class SalesInvoiceController extends Controller
                                    . "</ul>";
             }
         }
+        
         return response()->json($result);
     }
 
@@ -1755,6 +1772,8 @@ class SalesInvoiceController extends Controller
                 ];
             }
             $requiredQuantities[$identifier]['qty'] += (float)($item['quantity'] ?? 0);
+
+            // We still need to ensure stock_entry_item_id is somewhat valid to avoid the "Could not find matching stock" exception below
             $stockEntryItemId = $item['stock_entry_item_id'] ?? null;
             if (!$stockEntryItemId) {
                 $stockQuery = clone StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at');
@@ -1931,122 +1950,26 @@ class SalesInvoiceController extends Controller
 
             if ($stockEntryItemId) {
                 if ($revert) {
-                    $this->sequentialStockRevert($item, $item->quantity);
+                    StockEntryItem::where('id', $stockEntryItemId)
+                        ->where('qty_out', '>=', $item->quantity)
+                        ->decrement('qty_out', $item->quantity);
                 } else {
                     if (!empty($oldQuantities) && isset($oldQuantities[$item->id])) {
                         $oldQty = $oldQuantities[$item->id]['quantity'];
                         $delta = $item->quantity - $oldQty;
                         
                         if ($delta > 0) {
-                            $this->sequentialStockDeduct($item, $delta);
+                            StockEntryItem::where('id', $stockEntryItemId)->increment('qty_out', $delta);
                         } elseif ($delta < 0) {
                             $returnQty = abs($delta);
                             $this->createReturnStockEntry($item, $returnQty, $oldQuantities[$item->id]['inv_no']);
                         }
                     } else {
-                        $this->sequentialStockDeduct($item, $item->quantity);
+                        StockEntryItem::where('id', $stockEntryItemId)
+                            ->increment('qty_out', $item->quantity);
                     }
                 }
             }
-        }
-    }
-
-    private function sequentialStockDeduct($item, $quantityToDeduct)
-    {
-        if ($quantityToDeduct <= 0) return;
-
-        $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at')
-            ->where(function ($q) use ($item) {
-                if (!empty($item->sku)) {
-                    $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
-                } else {
-                    $code = $item->item_name ?? $item->art_no;
-                    $q->where('finished_item_code', $code)->orWhere('art_no', $code);
-                }
-            });
-
-        if (!empty($item->size)) {
-            $stockQuery->where('size', $item->size);
-        }
-
-        if (!empty($item->sleeve_type)) {
-            $sleeveUpper = strtoupper(trim($item->sleeve_type));
-            if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
-            } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
-            } else {
-                $sleeveDbValues = [$item->sleeve_type];
-            }
-            $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
-        }
-
-        $availableItems = $stockQuery->orderByRaw('(qty_in - qty_out) DESC')->orderBy('id', 'asc')->get();
-        $remaining = (float)$quantityToDeduct;
-
-        foreach ($availableItems as $stItem) {
-            if ($remaining <= 0) break;
-            
-            $balance = (float)$stItem->qty_in - (float)$stItem->qty_out;
-            
-            if ($balance > 0) {
-                $deduct = min($balance, $remaining);
-                $stItem->increment('qty_out', $deduct);
-                $remaining -= $deduct;
-            }
-        }
-
-        if ($remaining > 0 && $availableItems->count() > 0) {
-            $availableItems->first()->increment('qty_out', $remaining);
-        }
-    }
-
-    private function sequentialStockRevert($item, $quantityToRevert)
-    {
-        if ($quantityToRevert <= 0) return;
-
-        $stockQuery = StockEntryItem::where('stock_type', 'finished_goods')
-            ->whereNull('deleted_at')
-            ->where(function ($q) use ($item) {
-                if (!empty($item->sku)) {
-                    $q->where('sku', $item->sku)->orWhere('barcode', $item->sku);
-                } else {
-                    $code = $item->item_name ?? $item->art_no;
-                    $q->where('finished_item_code', $code)->orWhere('art_no', $code);
-                }
-            });
-
-        if (!empty($item->size)) {
-            $stockQuery->where('size', $item->size);
-        }
-
-        if (!empty($item->sleeve_type)) {
-            $sleeveUpper = strtoupper(trim($item->sleeve_type));
-            if ($sleeveUpper === 'FS' || $sleeveUpper === 'F/S' || $sleeveUpper === 'FULL') {
-                $sleeveDbValues = ['FULL', 'Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve', 'FS'];
-            } elseif ($sleeveUpper === 'HS' || $sleeveUpper === 'H/S' || $sleeveUpper === 'HALF') {
-                $sleeveDbValues = ['HALF', 'Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve', 'HS'];
-            } else {
-                $sleeveDbValues = [$item->sleeve_type];
-            }
-            $stockQuery->whereIn('sleeve_type', $sleeveDbValues);
-        }
-
-        $deductedItems = $stockQuery->where('qty_out', '>', 0)->orderBy('id', 'desc')->get();
-        $remaining = (float)$quantityToRevert;
-
-        foreach ($deductedItems as $stItem) {
-            if ($remaining <= 0) break;
-            
-            $out = (float)$stItem->qty_out;
-            $revert = min($out, $remaining);
-            $stItem->decrement('qty_out', $revert);
-            $remaining -= $revert;
-        }
-
-        if ($remaining > 0 && $item->stock_entry_item_id) {
-            StockEntryItem::where('id', $item->stock_entry_item_id)->decrement('qty_out', $remaining);
         }
     }
 
@@ -2057,16 +1980,7 @@ class SalesInvoiceController extends Controller
         }
 
         if ($request->ajax()) {
-            $query = SalesInvoice::with(['customer', 'brand'])
-                ->where(function($q) {
-                    $q->whereNotNull('irn')
-                      ->orWhere(function($q2) {
-                          $q2->whereNull('irn')
-                             ->whereHas('customer', function($q3) {
-                                 $q3->where('name', 'like', '%CASH%');
-                             });
-                      });
-                })->orderBy('id', 'desc');
+            $query = SalesInvoice::with(['customer', 'brand'])->whereNotNull('irn')->orderBy('id', 'desc');
 
             if ($request->customer_id) {
                 $query->where('customer_id', $request->customer_id);
@@ -2075,7 +1989,7 @@ class SalesInvoiceController extends Controller
                 $query->where('brand_id', $request->brand_id);
             }
             if ($request->inv_no) {
-                $query->where('inv_no', $request->inv_no); 
+                $query->where('inv_no', $request->inv_no); // Or 'like' but exact match is better if it says "entered invoice number does not exist"
             }
             if ($request->inv_date_range) {
                 $dates = explode(' to ', $request->inv_date_range);
@@ -2131,6 +2045,7 @@ class SalesInvoiceController extends Controller
         $filters = $request->only(['customer_id', 'brand_id', 'inv_date_range', 'inv_no']);
         return Excel::download(new SalesInvoiceItemsExport($filters), 'Sales_Invoice_Items.xlsx');
     }
+
     private function generateInvoiceNumber($brandId, $date, $ignoreId = null)
     {
         $brand = \App\Models\Brand::find($brandId);
@@ -2141,15 +2056,6 @@ class SalesInvoiceController extends Controller
         $brandCode = trim($brand->code);
         if (empty($brandCode)) {
             $brandCode = strtoupper(substr($brand->brand_name, 0, 2));
-        }
-
-        // Map core brands to main brand prefixes to share the same running sequence
-        if ($brandCode === 'CDC') {
-            $brandCode = 'CDS';
-        } elseif ($brandCode === 'CBC') {
-            $brandCode = 'CB';
-        } elseif ($brandCode === 'CFC') {
-            $brandCode = 'CF';
         }
 
         $year = (int)$date->format('Y');
@@ -2173,8 +2079,8 @@ class SalesInvoiceController extends Controller
             }
         }
 
-        // Search by the mapped common prefix instead of brand_id to ensure sequences are shared
-        $invoices = SalesInvoice::where('inv_no', 'like', "{$brandCode}/%/{$financialYear}")
+        $invoices = SalesInvoice::where('brand_id', $brandId)
+            ->where('inv_no', 'like', "%/%/{$financialYear}")
             ->when($ignoreId, function ($q) use ($ignoreId) {
                 $q->where('id', '!=', $ignoreId);
             })

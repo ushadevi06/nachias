@@ -241,13 +241,20 @@ class PurchaseCommissionAgentController extends Controller
                 $oldData = PurchaseCommissionAgent::find($id)->toArray();
                 PurchaseCommissionAgent::where('id', $id)->update($data);
                 $newData = PurchaseCommissionAgent::find($id)->toArray();
-                addLog('update', 'Purchase Commission Agent', 'purchase_commission_agents', $id, $oldData, $newData);
+                
+                $formattedOldData = formatLocationLogData($oldData);
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('update', 'Purchase Commission Agent', 'purchase_commission_agents', $id, $formattedOldData, $formattedNewData);
                 $message = 'Purchase Commission Agent updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $agent = PurchaseCommissionAgent::create($data);
                 $newData = $agent->toArray();
-                addLog('create', 'Purchase Commission Agent', 'purchase_commission_agents', $agent->id, null, $newData);
+                
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('create', 'Purchase Commission Agent', 'purchase_commission_agents', $agent->id, null, $formattedNewData);
                 $message = 'Purchase Commission Agent added successfully';
             }
             return redirect('purchase_commission_agent')->with('success', $message);

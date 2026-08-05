@@ -109,7 +109,7 @@ class CreditNoteController extends Controller
 
         if ($request->isMethod('POST')) {
             $request->validate([
-                'note_no' => ['required', 'string', 'max:50', 'not_regex:/^0+$/', 'unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
+                'note_no' => 'required|string|max:50|unique:credit_notes,note_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
                 'note_date' => 'required|date',
                 'sales_invoice_ids' => 'required|array|min:1',
                 'sales_invoice_ids.*' => 'exists:sales_invoices,id',
@@ -134,8 +134,6 @@ class CreditNoteController extends Controller
                 '*.required' => 'This field is required.',
                 '*.exists' => 'Selected value is invalid.',
                 '*.unique' => 'This field already exists.',
-                '*.not_regex' => 'This field is an invalid format.',
-                '*.regex' => 'This field is an invalid format.',
                 '*.date' => 'Please enter a valid date.',
                 '*.numeric' => 'This field must be a number.',
                 '*.min' => 'This field must be at least :min characters.',
@@ -277,7 +275,7 @@ class CreditNoteController extends Controller
         })->get();
         $zones = \App\Models\Zone::active()->get();
         $sales_agent = \App\Models\SalesAgent::active()->get();
-        $charges = \App\Models\Charge::where('status', 'Active')->orderBy('id','desc')->get();
+        $charges = \App\Models\Charge::where('status', 'Active')->orderBy('charge_name')->get();
         
         $salesInvoices = [];
         $creditNoteCharges = collect();
@@ -482,7 +480,7 @@ class CreditNoteController extends Controller
 
     public function print($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view credit-note')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view credit-notes')) {
             return unauthorizedRedirect();
         }
 
@@ -517,7 +515,7 @@ class CreditNoteController extends Controller
 
     public function download($id)
     {
-        if (auth()->id() != 1 && !auth()->user()->can('view credit-note')) {
+        if (auth()->id() != 1 && !auth()->user()->can('view credit-notes')) {
             return unauthorizedRedirect();
         }
 

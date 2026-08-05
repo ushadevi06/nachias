@@ -18,6 +18,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}">
+                                    <input type="hidden" name="is_manual_inv_no" id="is_manual_inv_no" value="{{ old('is_manual_inv_no', '0') }}">
                                     <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
                                     @error('inv_no')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -122,12 +123,12 @@
                                     <label for="agent_id">Sales Executive</label>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" step="0.01" class="form-control" id="commission_percent" name="commission_percent" placeholder="Commission %" value="{{ old('commission_percent', isset($invoice) ? $invoice->commission_percent : '') }}">
                                     <label for="commission_percent">Commission %</label>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" min="1" step="1" class="form-control @error('no_of_box') is-invalid @enderror"
@@ -340,7 +341,6 @@
                                                     'sku' => $item->sku,
                                                     'stock_entry_item_id' => $item->stock_entry_item_id,
                                                     'is_extra' => $item->is_extra,
-                                                    'is_open_order' => (isset($invoice) && $invoice->salesOrder && $invoice->salesOrder->order_type == 'Open') ? 1 : 0,
                                                     'id' => $item->id,
                                                 ];
                                             })->toArray();
@@ -422,11 +422,11 @@
                                             </td>
                                             <td>
                                                 <div class="form-floating form-floating-outline">
-                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ (isset($row->is_open_order) && $row->is_open_order == 1) ? '' : ($row->max_qty ?? '') }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
+                                                    <input type="number" step="any" class="form-control qty" name="items[{{ $index }}][quantity]" value="{{ $row->quantity ?? '' }}" data-max="{{ $row->max_qty ?? '' }}" data-stock="{{ $row->stock_qty ?? '' }}" max="{{ $row->max_qty ?? '' }}" placeholder="Qty" {{ (isset($invoice) && ($invoice->einvoice_status === 'generated' || $invoice->delivery_status === 'Dispatched')) ? 'readonly' : '' }}>
                                                     <label>Qty *</label>
                                                 </div>
                                                 <div class="qty-error text-danger small" style="display:none;"></div>
-                                                @if(isset($row->max_qty) && $row->max_qty !== '' && (!isset($row->is_open_order) || $row->is_open_order != 1))
+                                                @if(isset($row->max_qty) && $row->max_qty !== '')
                                                     <small class="text-info d-block">Ordered: {{ $row->max_qty }}</small>
                                                 @endif
                                                 @if(!isset($invoice) && isset($row->stock_qty) && $row->stock_qty !== '')
@@ -530,7 +530,7 @@
                                                         <input type="text" class="form-control" value="{{ $displayName }}" readonly tabindex="-1">
                                                         <label>Stock Item*</label>
                                                     </div>
-                                                    <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" class="stock-entry-item-id" value="{{ $row->stock_entry_item_id ?? '' }}">
+                                                    <input type="hidden" name="items[{{ $index }}][stock_entry_item_id]" value="{{ $row->stock_entry_item_id ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][item_id]" value="{{ $row->item_id ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][brand_cat_id]" value="{{ $row->brand_cat_id ?? '' }}">
                                                     <input type="hidden" name="items[{{ $index }}][is_extra]" value="1">
@@ -554,7 +554,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="form-floating form-floating-outline">
-                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control art-no-input" value="{{ $row->art_no ?? '' }}" readonly tabindex="-1">
+                                                        <input type="text" name="items[{{ $index }}][art_no]" class="form-control" value="{{ $row->art_no ?? '' }}" readonly tabindex="-1">
                                                     </div>
                                                 </td>
                                                 <td>
@@ -663,8 +663,9 @@
                                         </div>
                                     </div>
 
+
                                     <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
+                                        <div class="form-floating form-floating-outline mb-4">
                                             <input type="number" step="any" class="form-control" id="other_charges" name="other_charges" placeholder="Courier Charge" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
                                             <label for="other_charges">Courier Charge</label>
                                         </div>
@@ -858,16 +859,21 @@
                                         <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
                                         <input type="hidden" name="discount_percent" id="discount_percent" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Pre-GST Charges:</span>
+                                        <span class="fw-bold mb-0" id="pre_gst_charges_val">{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="pre_gst_charges" id="pre_gst_charges" value="{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <span class="text-secondary fw-medium">Taxable Amount:</span>
+                                        <span class="text-secondary fw-medium">Net Amount (Before Tax):</span>
                                         <span class="fw-bold h5 mb-0" id="total_val">{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="total" id="total" value="{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-5">
+                                    {{-- <div class="d-flex justify-content-between align-items-center mb-5">
                                         <span class="text-secondary fw-medium">Commission Amount:</span>
                                         <span class="fw-bold" id="commission_amount_val">{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="commission_amount" id="commission_amount" value="{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}">
-                                    </div>
+                                    </div> --}}
                                     <div class="mb-4 pt-2 border-top">
                                         <label class="text-secondary fw-medium mb-2 d-block">Other State?</label>
                                         <div class="d-flex gap-4">
@@ -923,6 +929,16 @@
                                         <span class="fw-bold" id="tax_amount_val">{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="tax_amount" id="tax_amount" value="{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Courier Charge:</span>
+                                        <span class="fw-bold mb-0" id="other_charges_val">{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="other_charges" id="other_charges" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Post GST charges:</span>
+                                        <span class="fw-bold mb-0" id="post_gst_charges_val">{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="post_gst_charges" id="post_gst_charges" value="{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
                                     <div class="row g-2 align-items-center mb-1 pb-1">
                                         <div class="col-4"><span class="text-secondary fw-medium">Total Before Round Off:</span></div>
                                         <div class="col-8 d-flex align-items-center justify-content-end">
@@ -957,6 +973,17 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
+                                    <select name="transport_mode" id="transport_mode" class="form-select select2" data-placeholder="Select Transport Mode">
+                                        <option value="">Select Transport Mode</option>
+                                        @foreach($transportModes as $mode)
+                                            <option value="{{ $mode->id }}" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == $mode->id ? 'selected' : '' }}>{{ $mode->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="transport_mode">Transport Mode</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="transporter_name" name="transporter_name" placeholder="Transporter Name" value="{{ old('transporter_name', isset($invoice) ? $invoice->transporter_name : '') }}">
                                     <label for="transporter_name">Transporter Name</label>
                                 </div>
@@ -969,25 +996,15 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="transport_mode" id="transport_mode" class="form-select select2">
-                                        <option value="1" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '1') == '1' ? 'selected' : '' }}>Road</option>
-                                        <option value="2" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '2' ? 'selected' : '' }}>Rail</option>
-                                        <option value="3" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '3' ? 'selected' : '' }}>Air</option>
-                                        <option value="4" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '4' ? 'selected' : '' }}>Ship</option>
-                                    </select>
-                                    <label for="transport_mode">Transport Mode</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="vehicle_no" name="vehicle_no" placeholder="Vehicle No" value="{{ old('vehicle_no', isset($invoice) ? $invoice->vehicle_no : '') }}">
                                     <label for="vehicle_no">Vehicle No</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <select name="veh_type" id="veh_type" class="form-select select2">
-                                        <option value="R" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : 'R') == 'R' ? 'selected' : '' }}>Regular</option>
+                                    <select name="veh_type" id="veh_type" class="form-select select2" data-placeholder="Select Vehicle Type">
+                                        <option value="">Select Vehicle Type</option>
+                                        <option value="R" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : '') == 'R' ? 'selected' : '' }}>Regular</option>
                                         <option value="O" {{ old('veh_type', isset($invoice) ? $invoice->veh_type : '') == 'O' ? 'selected' : '' }}>ODC (Over Dimensional Cargo)</option>
                                     </select>
                                     <label for="veh_type">Vehicle Type</label>
@@ -995,7 +1012,18 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control" id="transport_distance" name="transport_distance" placeholder="Distance (in km)" value="{{ old('transport_distance', isset($invoice) ? $invoice->transport_distance : '') }}">
+                                    <style>
+                                        /* Hide spinners for number input */
+                                        input[type=number].no-spinners::-webkit-inner-spin-button, 
+                                        input[type=number].no-spinners::-webkit-outer-spin-button { 
+                                            -webkit-appearance: none; 
+                                            margin: 0; 
+                                        }
+                                        input[type=number].no-spinners {
+                                            -moz-appearance: textfield;
+                                        }
+                                    </style>
+                                    <input type="number" step="any" class="form-control no-spinners" id="transport_distance" name="transport_distance" placeholder="Distance (in km)" value="{{ old('transport_distance', isset($invoice) ? $invoice->transport_distance : '') }}" onkeydown="if(event.key==='ArrowUp' || event.key==='ArrowDown') event.preventDefault();">
                                     <label for="transport_distance">Distance (in km)</label>
                                 </div>
                             </div>
@@ -1025,7 +1053,60 @@
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
+    function updateColorFromArtNo($row) {
+        let artNo = $row.find('input[name$="[art_no]"]').val();
+        if (!artNo) {
+            artNo = $row.find('.art-no-text').text();
+        }
+        if (!artNo) {
+            artNo = $row.find('.art-no').val();
+        }
+        artNo = String(artNo || '').trim();
+        
+        let color = 'A';
+        if (artNo) {
+            let parts = artNo.split('-');
+            if (parts.length > 1) {
+                color = parts[parts.length - 1];
+            }
+        }
+        
+        let $colorSpan = $row.find('.color-text');
+        if ($colorSpan.length) $colorSpan.text(color);
+        
+        let $colorInput = $row.find('input[name$="[api_color]"], .api-color');
+        if ($colorInput.length) {
+            $colorInput.val(color);
+            $colorInput.prop('readonly', true).attr('tabindex', '-1');
+        }
+        
+        let $colorName = $row.find('input[name$="[color_name]"], .color-name');
+        if ($colorName.length) $colorName.val(color);
+    }
+
     $(document).ready(function() {
+        $('.item-row').each(function() {
+            updateColorFromArtNo($(this));
+        });
+
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                    $(mutation.addedNodes).each(function() {
+                        if (typeof $(this).hasClass === 'function' && $(this).hasClass('item-row')) {
+                            updateColorFromArtNo($(this));
+                        }
+                    });
+                }
+            });
+        });
+        
+        if (document.getElementById('item-rows')) {
+            observer.observe(document.getElementById('item-rows'), { childList: true, subtree: true });
+        }
+        if (document.getElementById('open-order-item-rows')) {
+            observer.observe(document.getElementById('open-order-item-rows'), { childList: true, subtree: true });
+        }
         $('.select2').select2({
             width: '100%',
             dropdownParent: $('body')
@@ -1126,8 +1207,10 @@
                             if(data.transport_gst_no && !$('#transporter_id').val()) {
                                 $('#transporter_id').val(data.transport_gst_no);
                             }
-                            if(data.transport_mode_id && !$('#transport_mode').val()) {
+                            if(data.transport_mode_id) {
                                 $('#transport_mode').val(data.transport_mode_id).trigger('change');
+                            } else {
+                                $('#transport_mode').val('').trigger('change');
                             }
                             if (data.other_state == 'yes') {
                                 $('#other_state_yes').prop('checked', true);
@@ -1145,6 +1228,18 @@
                             if (data.sales_discount !== undefined) {
                                 $('#sales_discount_val').text(parseFloat(data.sales_discount).toFixed(2) + '%');
                                 $('#sales_discount').val(parseFloat(data.sales_discount).toFixed(2));
+                            }
+                            if (data.pre_gst_charges !== undefined) {
+                                $('#pre_gst_charges_val').text(parseFloat(data.pre_gst_charges).toFixed(2));
+                                $('#pre_gst_charges').val(parseFloat(data.pre_gst_charges).toFixed(2));
+                            }
+                            if (data.courier_charge !== undefined) {
+                                $('#other_charges_val').text(parseFloat(data.courier_charge).toFixed(2));
+                                $('#other_charges').val(parseFloat(data.courier_charge).toFixed(2));
+                            }
+                            if (data.post_gst_charges !== undefined) {
+                                $('#post_gst_charges_val').text(parseFloat(data.post_gst_charges).toFixed(2));
+                                $('#post_gst_charges').val(parseFloat(data.post_gst_charges).toFixed(2));
                             }
                             if (data.box_discount_amount !== undefined) {
                                 $('#box_discount_amount_val').text('₹' + parseFloat(data.box_discount_amount).toFixed(2));
@@ -1184,12 +1279,10 @@
             }
             var existingRow = null;
             $('#item-rows .item-row').each(function() {
-                var rowArtNo = $(this).find('.art-no').val();
-                if (rowArtNo == (matchedItem.art_no || '') && 
+                if ($(this).find('.sku').val() == (matchedItem.sku || '') && 
+                    $(this).find('.art-no').val() == (matchedItem.art_no || '') && 
                     $(this).find('.size-id').val() == (matchedItem.size_id || '') && 
-                    $(this).find('.color-id').val() == (matchedItem.color_id || '') &&
-                    $(this).find('.sleeve-type').val() == (matchedItem.sleeve || '') &&
-                    $(this).find('.sku').val() == (matchedItem.sku || '')) {
+                    $(this).find('.sleeve-type').val() == (matchedItem.sleeve || matchedItem.sleeve_type || '')) {
                     existingRow = $(this);
                 }
             });
@@ -1257,11 +1350,11 @@
                     </td>
                     <td>
                         <div class="form-floating form-floating-outline">
-                            <input type="number" step="any" class="form-control qty" name="items[${index}][quantity]" value="${qty}" data-max="${matchedItem.is_open_order == 1 ? '' : (maxQty || '')}" data-stock="${matchedItem.stock_qty !== undefined ? matchedItem.stock_qty : ''}" max="${matchedItem.is_open_order == 1 ? '' : (maxQty || '')}">
+                            <input type="number" step="any" class="form-control qty" name="items[${index}][quantity]" value="${qty}" data-max="${maxQty || ''}" data-stock="${matchedItem.stock_qty !== undefined ? matchedItem.stock_qty : ''}" max="${maxQty || ''}">
                             <label>Qty *</label>
                         </div>
                         <div class="qty-error text-danger small" style="display:none;"></div>
-                        ${(maxQty && matchedItem.is_open_order != 1) ? `<small class="text-info d-block">Ordered: ${maxQty}</small>` : ''}
+                        ${maxQty ? `<small class="text-info d-block">Ordered: ${maxQty}</small>` : ''}
                         ${matchedItem.stock_qty !== undefined ? `<small class="${matchedItem.stock_qty < (maxQty || Infinity) ? 'text-danger' : 'text-muted'} d-block" style="font-weight: 500;">Stock: ${matchedItem.stock_qty}</small>` : ''}
                     </td>
                     <td>
@@ -1342,14 +1435,23 @@
                 response(formatted);
             },
             minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+                $(this).val(ui.item.label);
+            },
             select: function (event, ui) {
+                event.preventDefault();
                 if (ui.item && ui.item.noResult) {
-                    event.preventDefault();
+                    return false;
+                }
+                if (ui.item && ui.item.disabled) {
                     return false;
                 }
 
                 addInvoiceItem(ui.item.itemData);
-                $(this).val(ui.item.value).focus();
+                setTimeout(function() {
+                    $(event.target).val('').focus();
+                }, 10);
                 return false;
             }
         }).autocomplete("instance")._renderItem = function (ul, item) {
@@ -1362,15 +1464,33 @@
             var it = item.itemData;
             var skuInfo = it.sku ? ` | SKU: ${it.sku}` : '';
             var sizeInfo = it.size_name ? ` | Size: ${it.size_name}` : (it.size_id ? ` | Size: ${it.size_id}` : '');
-            return $("<li>")
+            
+            var stockQty = parseFloat(it.stock_qty || 0);
+            var outOfStock = stockQty <= 0;
+            if (outOfStock) {
+                item.disabled = true;
+            }
+            
+            var stockHtml = outOfStock 
+                ? `<span class="search-item-balance text-danger fw-bold">Stock: ${stockQty.toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance">SO Qty: ${parseFloat(it.qty).toFixed(2)} | Stock: ${stockQty.toFixed(2)}</span>`;
+
+            var $li = $("<li>")
                 .append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
-                    <span class="search-item-balance">SO Qty: ${parseFloat(it.qty).toFixed(2)}</span>
+                    ${stockHtml}
                     <div class="search-item-info">
                         Art No: ${it.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(it.rate || it.mrp || 0).toFixed(2)}
                     </div>
                 </div>`)
                 .appendTo(ul);
+                
+            if (outOfStock) {
+                $li.addClass('ui-state-disabled');
+                // Ensure readability by resetting opacity if jQuery UI drops it too low
+                $li.css('opacity', '0.6');
+            }
+            return $li;
         };
 
         $('#barcode_scanner').on('keypress', function(e) {
@@ -1389,7 +1509,7 @@
                         title: 'No Items',
                         text: 'Please select a Sales Order first, or no items exist in the selected Sales Order.',
                     });
-                    $(this).val('');
+                    $(this).focus();
                     return;
                 }
 
@@ -1401,6 +1521,7 @@
 
                 if (matchedItem) {
                     addInvoiceItem(matchedItem);
+                    $(this).val('');
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -1411,7 +1532,6 @@
                     });
                 }
 
-                $(this).val('');
                 $(this).focus();
                 if ($(this).data('ui-autocomplete')) {
                     $(this).autocomplete('close');
@@ -1525,7 +1645,8 @@
             $('#discount_val').text('- ₹' + discount.toFixed(2));
             $('#discount').val(discount.toFixed(2));
 
-            var total = subTotal - discount;
+            var preGstCharges = parseFloat($('#pre_gst_charges').val()) || 0;
+            var total = subTotal - discount + preGstCharges;
             $('#total_val').text(total.toFixed(2));
             $('#total').val(total.toFixed(2));
 
@@ -1564,8 +1685,9 @@
             $('#tax_amount').val(taxAmount.toFixed(2));
 
             var otherCharges = parseFloat($('#other_charges').val()) || 0;
+            var postGstCharges = parseFloat($('#post_gst_charges').val()) || 0;
 
-            var totalBeforeRoundOff = total + taxAmount + otherCharges;
+            var totalBeforeRoundOff = total + taxAmount + otherCharges + postGstCharges;
             $('#total_before_round_off').val(totalBeforeRoundOff.toFixed(2));
             
             var nearestWhole = Math.round(totalBeforeRoundOff);
@@ -1586,7 +1708,7 @@
             $('#grand_total').val(grandTotal.toFixed(2));
         }
 
-        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
+        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #pre_gst_charges, #post_gst_charges, #received_amount', function() {
             calculateTotals();
         });
 
@@ -1962,37 +2084,44 @@
                 });
             },
             minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+                $(this).val(ui.item.label);
+            },
             select: function(event, ui) {
+                event.preventDefault();
                 let $this = $(this);
                 if (ui.item && ui.item.noResult) {
-                    event.preventDefault();
                     return false;
                 }
-                if (ui.item && ui.item.balance <= 0) {
-                    Swal.fire({ icon: 'warning', title: 'Out of Stock', text: 'This item is out of stock and cannot be selected.', timer: 2000, showConfirmButton: false });
-                    event.preventDefault();
+                if (ui.item && ui.item.disabled) {
                     return false;
                 }
                 
                 if (ui.item) {
                     let sleeveParam = ui.item.sleeve_type ? `&sleeve_type=${encodeURIComponent(ui.item.sleeve_type)}` : '';
                     let sizeParam = ui.item.size ? `&size=${encodeURIComponent(ui.item.size)}` : '';
-                    let itemCodeParam = ui.item.id ? `&item_code=${encodeURIComponent(ui.item.id)}` : '';
-                    let artNoParam = ui.item.art_no ? `&art_no=${encodeURIComponent(ui.item.art_no)}` : '';
                     $.ajax({
-                        url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}${itemCodeParam}${artNoParam}`,
+                        url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}`,
                         type: 'GET',
                         success: function(res) {
                             if (res.success) {
                                 handleOpenOrderScan(res);
-                                $this.val(ui.item.value).focus();
+                                setTimeout(function() {
+                                    $this.val('');
+                                    if ($this.data('ui-autocomplete')) {
+                                        $this.autocomplete('close');
+                                    }
+                                    $this.focus();
+                                }, 50);
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
-                                $this.val(ui.item.value).focus();
+                                $this.focus();
                             }
                         },
                         error: function() {
                             Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                            $this.focus();
                         }
                     });
                 }
@@ -2005,16 +2134,30 @@
                     .appendTo(ul);
             }
 
+            let balance = parseFloat(item.balance || 0);
+            let outOfStock = balance <= 0;
+            if (outOfStock) {
+                item.disabled = true;
+            }
+
             let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
-            return $("<li>")
-                .append(`<div class="ui-menu-item-wrapper">
+            let stockHtml = outOfStock 
+                ? `<span class="search-item-balance text-danger fw-bold">Stock: ${balance.toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance">Stock: ${balance.toFixed(2)}</span>`;
+
+            let $li = $("<li>").append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
-                    <span class="search-item-balance">Stock: ${parseFloat(item.balance).toFixed(2)}</span>
+                    ${stockHtml}
                     <div class="search-item-info">
                         Art No: ${item.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(item.price).toFixed(2)}
                     </div>
-                </div>`)
-                .appendTo(ul);
+                </div>`).appendTo(ul);
+                
+            if (outOfStock) {
+                $li.addClass('ui-state-disabled');
+                $li.css('opacity', '0.6');
+            }
+            return $li;
         };
 
         $('#open_order_barcode_scanner').on('keypress', function(e) {
@@ -2029,14 +2172,21 @@
                         success: function(res) {
                             if (res.success) {
                                 handleOpenOrderScan(res);
-                                $('#open_order_barcode_scanner').val('').focus();
+                                setTimeout(function() {
+                                    $('#open_order_barcode_scanner').val('');
+                                    if ($('#open_order_barcode_scanner').data('ui-autocomplete')) {
+                                        $('#open_order_barcode_scanner').autocomplete('close');
+                                    }
+                                    $('#open_order_barcode_scanner').focus();
+                                }, 50);
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
-                                $('#open_order_barcode_scanner').val('').focus();
+                                $('#open_order_barcode_scanner').focus();
                             }
                         },
                         error: function() {
                             Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                            $('#open_order_barcode_scanner').focus();
                         }
                     });
                 }
@@ -2046,11 +2196,9 @@
         function handleOpenOrderScan(res) {
             let $existing = $('#open-order-item-rows .item-row').filter(function() {
                 return $(this).find('.sku-input').val() == (res.sku || '') &&
-                    $(this).find('.size-input').val() == (res.size || '') &&
-                    $(this).find('.color-id-input').val() == (res.color_id || '') &&
-                    $(this).find('input[name*="[sleeve_type]"]').val() == (res.sleeve_type || '') &&
-                    $(this).find('.art-no-input').val() == (res.art_no || '') &&
-                    $(this).find('.stock-entry-item-id').val() == (res.stock_entry_item_id || '');
+                    $(this).find('input[name$="[art_no]"]').val() == (res.art_no || '') &&
+                    $(this).find('input[name$="[sleeve_type]"]').val() == (res.sleeve_type || res.sleeve || '') &&
+                    $(this).find('.size-input').val() == (res.size || '');
             }).first();
 
             if ($existing.length) {
@@ -2080,7 +2228,7 @@
                         <input type="text" class="form-control" value="${displayName}" readonly tabindex="-1">
                         <label>Stock Item*</label>
                     </div>
-                    <input type="hidden" name="items[open_${index}][stock_entry_item_id]" class="stock-entry-item-id" value="${res.stock_entry_item_id || ''}">
+                    <input type="hidden" name="items[open_${index}][stock_entry_item_id]" value="${res.stock_entry_item_id || ''}">
                     <input type="hidden" name="items[open_${index}][item_id]" value="${res.item_id || ''}">
                     <input type="hidden" name="items[open_${index}][brand_cat_id]" value="${res.brand_cat_id || ''}">
                     <input type="hidden" name="items[open_${index}][is_extra]" value="1">
@@ -2104,7 +2252,7 @@
                 </td>
                 <td>
                     <div class="form-floating form-floating-outline">
-                        <input type="text" name="items[open_${index}][art_no]" class="form-control art-no-input" value="${res.art_no || ''}" readonly tabindex="-1">
+                        <input type="text" name="items[open_${index}][art_no]" class="form-control" value="${res.art_no || ''}" readonly tabindex="-1">
                     </div>
                 </td>
                 <td>
@@ -2253,7 +2401,12 @@
             return (month >= 4) ? year : (year - 1);
         }
 
+        $('#inv_no').on('input', function() {
+            $('#is_manual_inv_no').val('1');
+        });
+
         function updateInvoiceNo() {
+
             let brandId = $('#brand_id').val();
             let invDate = $('input[name="inv_date"]').val();
 
@@ -2277,6 +2430,7 @@
                 success: function(response) {
                     if (response.success) {
                         $('#inv_no').val(response.inv_no);
+                        $('#is_manual_inv_no').val('0');
                     } else {
                         console.error(response.message);
                     }

@@ -86,7 +86,7 @@ class ZoneController extends Controller
 
         if ($id) {
             $zone = Zone::findOrFail($id);
-            $oldData = $zone->toArray();
+            $oldData = formatLocationLogData($zone->toArray());
         }
 
         if (request()->isMethod('post')) {
@@ -130,13 +130,13 @@ class ZoneController extends Controller
             if ($id) {
                 $data['updated_by'] = auth()->id();
                 Zone::where('id', $id)->update($data);
-                $newData = Zone::find($id)->toArray();
+                $newData = formatLocationLogData(Zone::find($id)->toArray());
                 addLog('update', 'Zone', 'zones', $id, $oldData, $newData);
                 $message = 'Zone updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $zone = Zone::create($data);
-                $newData = $zone->toArray();
+                $newData = formatLocationLogData($zone->toArray());
                 addLog('create', 'Zone', 'zones', $zone->id, null, $newData);
                 $message = 'Zone added successfully';
             }
@@ -171,7 +171,7 @@ class ZoneController extends Controller
                 return redirect('zones');
             }
         }
-        $oldData = $zone->toArray();
+        $oldData = formatLocationLogData($zone->toArray());
         $zone->delete();
         addLog('delete', 'Zone', 'zones', $id, $oldData, null);
         return redirect('zones')->with('success', 'Zone deleted successfully');
@@ -180,12 +180,12 @@ class ZoneController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $zone = Zone::findOrFail($id);
-        $oldData = $zone->toArray();
+        $oldData = formatLocationLogData($zone->toArray());
 
         $zone->status = $request->status;
         $zone->save();
 
-        $newData = $zone->toArray();
+        $newData = formatLocationLogData($zone->toArray());
         addLog('update_status', 'Zone Status', 'zones', $zone->id, $oldData, $newData);
 
         return response()->json(['success' => true, 'status' => $zone->status]);

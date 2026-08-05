@@ -20,7 +20,11 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
 
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
-            if (!isset($row['name']) && !isset($row['code']) && !isset($row['store_category']) && !isset($row['uom'])) {
+            $isEmpty = collect($row)->filter(function ($value) {
+                return !is_null($value) && trim((string)$value) !== '';
+            })->isEmpty();
+
+            if ($isEmpty) {
                 continue;
             }
 
@@ -68,12 +72,12 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
             ];
 
             $messages = [
-                '*.required' => 'This field is required.',
-                '*.unique'   => 'This field already exists.',
+                '*.required' => 'The :attribute field is required.',
+                '*.unique'   => 'The :attribute field already exists.',
                 'code.regex' => 'Code can only contain letters, numbers, dashes, and underscores.',
-                'code.not_in' => 'This field is an invalid format.',
-                'min'      => 'This field must be at least :min characters.',
-                'max'      => 'This field should not be more than :max characters.',
+                'code.not_in' => 'The :attribute field is an invalid format.',
+                'min'      => 'The :attribute field must be at least :min characters.',
+                'max'      => 'The :attribute field should not be more than :max characters.',
             ];
 
             $existingId = null;
@@ -87,6 +91,11 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
+            $attributes = [
+                'store_category_id' => 'store category',
+                'uom_id' => 'uom',
+            ];
+
             $validator = Validator::make($data, [
                 'store_category_id' => 'required|exists:store_categories,id',
                 'code' => 'required|string|min:3|max:50|not_in:0|regex:/^[a-zA-Z0-9\-_]+$/',
@@ -94,7 +103,7 @@ class RawMaterialImport implements ToCollection, WithHeadingRow
                 'uom_id' => 'required|exists:uoms,id',
                 'status' => 'required|in:Active,Inactive',
                 'min_stock' => 'nullable|numeric|min:0',
-            ], $messages);
+            ], $messages, $attributes);
 
             if (!empty($data['code'])) {
                 if (in_array($data['code'], $seenCodes)) {

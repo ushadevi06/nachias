@@ -128,7 +128,7 @@ class CustomerController extends Controller
                 'contact_email' => 'nullable|email:rfc,dns|max:128',
                 'tax_type_id' => 'nullable|exists:taxes,id',
                 'gst_no' => [
-                    'nullable',
+                    'required',
                     'string',
                     'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
                 ],
@@ -218,14 +218,21 @@ class CustomerController extends Controller
 
                 Customer::where('id', $id)->update($data);
                 $newData = Customer::find($id)->toArray();
-                addLog('update', 'Customer', 'customers', $id, $oldData, $newData);
+                
+                $formattedOldData = formatLocationLogData($oldData);
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('update', 'Customer', 'customers', $id, $formattedOldData, $formattedNewData);
                 $message = 'Customer updated successfully';
 
             } else {
                 $data['created_by'] = auth()->id();
                 $customer = Customer::create($data);
                 $newData = $customer->toArray();
-                addLog('create', 'Customer', 'customers', $customer->id, null, $newData);
+                
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('create', 'Customer', 'customers', $customer->id, null, $formattedNewData);
                 $message = 'Customer added successfully';
             }
 

@@ -26,7 +26,7 @@
                                 <select name="state" id="state" class="form-select select2"
                                     data-placeholder="Select State">
                                     <option value="">Select State</option>
-                                    @foreach(\App\Models\State::where('status','Active')->get() as $state)
+                                    @foreach(\App\Models\State::where('status','Active')->orderBy('id', 'desc')->get() as $state)
                                     <option value="{{ $state->state_code }}">{{ $state->state_name }}</option>
                                     @endforeach
                                 </select>
@@ -84,7 +84,8 @@
                     data: 'DT_RowIndex'
                 },
                 {
-                    data: 'state'
+                    data: 'state',  
+                    searchable: false
                 },
                 {
                     data: 'city_code'

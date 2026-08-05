@@ -160,3 +160,60 @@ if (!function_exists('formatStockItemName')) {
     }
 }
 
+
+if (!function_exists('formatLocationLogData')) {
+    function formatLocationLogData($data)
+    {
+        if (!$data) return $data;
+
+        if (isset($data['state_id'])) {
+            $state = \App\Models\State::find($data['state_id']);
+            $data['state'] = $state ? $state->state_name : '';
+            unset($data['state_id']);
+        }
+
+        if (isset($data['state_ids'])) {
+            $stateIds = array_filter(explode(',', $data['state_ids']));
+            $data['states'] = \App\Models\State::whereIn('id', $stateIds)->pluck('state_name')->implode(', ');
+            unset($data['state_ids']);
+        }
+
+        if (isset($data['city_id'])) {
+            $city = \App\Models\City::find($data['city_id']);
+            $data['city'] = $city ? $city->city_name : '';
+            unset($data['city_id']);
+        }
+
+        if (isset($data['city_ids'])) {
+            $cityIds = array_filter(explode(',', $data['city_ids']));
+            $data['cities'] = \App\Models\City::whereIn('id', $cityIds)->pluck('city_name')->implode(', ');
+            unset($data['city_ids']);
+        }
+
+        if (isset($data['place_id'])) {
+            $place = \App\Models\Place::find($data['place_id']);
+            $data['place'] = $place ? $place->place_name : '';
+            unset($data['place_id']);
+        }
+
+        if (isset($data['place_ids'])) {
+            $placeIds = array_filter(explode(',', $data['place_ids']));
+            $data['places'] = \App\Models\Place::whereIn('id', $placeIds)->pluck('place_name')->implode(', ');
+            unset($data['place_ids']);
+        }
+
+        if (isset($data['zone_id'])) {
+            $zone = \App\Models\Zone::find($data['zone_id']);
+            $data['zone'] = $zone ? $zone->zone_name : '';
+            unset($data['zone_id']);
+        }
+
+        if (isset($data['zone_ids'])) {
+            $zoneIds = array_filter(explode(',', $data['zone_ids']));
+            $data['zones'] = \App\Models\Zone::whereIn('id', $zoneIds)->pluck('zone_name')->implode(', ');
+            unset($data['zone_ids']);
+        }
+
+        return $data;
+    }
+}

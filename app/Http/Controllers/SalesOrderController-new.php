@@ -28,6 +28,7 @@ use App\Services\OrderaxeService;
 
 class SalesOrderController extends Controller
 {
+
     public function index(Request $request)
     {
         if (auth()->id() != 1 && !auth()->user()->can('view sales-order')) {
@@ -156,7 +157,7 @@ class SalesOrderController extends Controller
             $request = request();
 
             $rules = [
-                'so_no' => 'required|string|min:3|max:50|unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'so_no' => ['required', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'so_date' => 'required|date_format:d-m-Y',
                 'request_date' => 'nullable|date_format:d-m-Y',
                 'delivery_date' => 'nullable|date_format:d-m-Y',
@@ -200,6 +201,7 @@ class SalesOrderController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
                 '*.exists' => 'Selected value is invalid.',
+                '*.not_regex' => 'This field is an invalid format.',
                 '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
                 '*.numeric' => 'This field must be a valid number.',
                 '*.regex' => 'This field is an invalid format.',
@@ -240,6 +242,36 @@ class SalesOrderController extends Controller
 
                 if (!$valid) {
                     return back()->with('error', 'Invalid status transition from ' . $oldStatus . ' to ' . $newStatus)->withInput();
+                }
+            }
+
+            // Stock validation
+            $requiredQuantities = [];
+            foreach ($request->items as $item) {
+                $sku = $item['sku'] ?? null;
+                if (!$sku) continue;
+                if (!isset($requiredQuantities[$sku])) {
+                    $requiredQuantities[$sku] = [
+                        'qty' => 0,
+                        'name' => $item['item_name'] ?? $item['art_no'] ?? $sku
+                    ];
+                }
+                $requiredQuantities[$sku]['qty'] += (float)($item['qty'] ?? 0);
+            }
+
+            foreach ($requiredQuantities as $sku => $data) {
+                $stockQuery = \App\Models\StockEntryItem::where('stock_type', 'finished_goods')
+                    ->whereNull('deleted_at')
+                    ->where(function ($q) use ($sku) {
+                        $q->where('sku', $sku)->orWhere('barcode', $sku);
+                    });
+                    
+                $totalIn = (clone $stockQuery)->sum('qty_in');
+                $totalOut = (clone $stockQuery)->sum('qty_out');
+                $available = $totalIn - $totalOut;
+
+                if ($available < $data['qty']) {
+                    return back()->withInput()->withErrors(['error' => "Insufficient stock for " . $data['name'] . " (Available: " . $available . ", Required: " . $data['qty'] . ")"]);
                 }
             }
 
@@ -335,6 +367,7 @@ class SalesOrderController extends Controller
                 }
                 else {
                     $soData['created_by'] = auth()->id();
+                    $soData['submitted_by'] = auth()->user()->name;
                     $salesOrder = SalesOrder::create($soData);
                     $message = 'Sale Order created successfully';
                 }
@@ -574,9 +607,9 @@ class SalesOrderController extends Controller
         }
 
         $zones = Zone::where('status', 'Active')->get();
-        $shippingMethods = ShippingMethod::where('status', 'Active')->get();
-        $transportModes = TransportMode::where('status', 'Active')->get();
-        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
+        $shippingMethods = ShippingMethod::where('status', 'Active')->orderBy('id','desc')->get();
+        $transportModes = TransportMode::where('status', 'Active')->orderBy('id','desc')->get();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->orderBy('id','desc')->get();
 
         return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders', 'charges'));
 
@@ -774,7 +807,7 @@ class SalesOrderController extends Controller
                     'size' => $stockItem->size,
                     'mrp' => $stockItem->price,
                     'uom_id' => $stockItem->uom_id,
-                    'balance' => max(0, (float)$stockItem->balance),
+                    'balance' => $stockItem->balance,
                     'color_name' => $color ? $color->color_name : 'No Color',
                     'sleeve' => str_contains($code, 'F/S') || str_contains($code, 'Full') ? 'Full' : (str_contains($code, 'H/S') || str_contains($code, 'Half') ? 'Half' : 'Full')
                 ]
@@ -787,65 +820,38 @@ class SalesOrderController extends Controller
     public function getFinishedItemStock(Request $request)
     {
         $code = $request->code;
-        $itemCode = $request->item_code;
         $soId = $request->so_id;
         $sleeveType = $request->sleeve_type;
         $size = $request->size;
-        $artNo = $request->art_no;
-        
+
         $exactMatchQuery = DB::table('stock_entry_items')->where('sku', $code)->where('stock_type', 'finished_goods')->whereNull('deleted_at');
-        if ($itemCode) {
-            $exactMatchQuery->where('finished_item_code', $itemCode);
-        }
         if ($sleeveType) {
             $exactMatchQuery->where('sleeve_type', $sleeveType);
         }
         if ($size) {
             $exactMatchQuery->where('size', $size);
         }
-        if ($artNo) {
-            $exactMatchQuery->where('art_no', $artNo);
-        }
         $exactMatch = $exactMatchQuery->first();
 
-        $query = DB::table('stock_entry_items')
-            ->select('stock_entry_items.*', 'items.name as item_name', 'brands.brand_name', 'brand_categories.id as brand_cat_id')
-            ->leftJoin('items', 'stock_entry_items.item_id', '=', 'items.id')
-            ->leftJoin('brands', 'items.brand_id', '=', 'brands.id')
-            ->leftJoin('brand_categories', 'items.brand_category_id', '=', 'brand_categories.id')
-            ->where('stock_entry_items.stock_type', 'finished_goods')
-            ->whereNull('stock_entry_items.deleted_at');
+        $query = DB::table('stock_entry_items')->where('stock_type', 'finished_goods')->whereNull('deleted_at');
 
         if ($exactMatch) {
             $query->where('sku', $code);
-            if ($itemCode) {
-                $query->where('finished_item_code', $itemCode);
-            }
             if ($sleeveType) {
                 $query->where('sleeve_type', $sleeveType);
             }
-            if ($size) {
-                $query->where('size', $size);
-            }
-            if ($artNo) {
-                $query->where('art_no', $artNo);
-            }
         } else {
-            $query->where(function($q) use ($code, $itemCode) {
-                if ($itemCode) {
-                    $q->where('finished_item_code', $itemCode);
-                } else {
-                    $q->where('finished_item_code', $code)
-                      ->orWhere(DB::raw("REPLACE(finished_item_code, ' ', '')"), str_replace(' ', '', $code));
-                }
+            $query->where(function($q) use ($code) {
+                $q->where('finished_item_code', $code)
+                  ->orWhere(DB::raw("REPLACE(finished_item_code, ' ', '')"), str_replace(' ', '', $code));
             });
             if ($sleeveType) {
                 $query->where('sleeve_type', $sleeveType);
             }
         }
 
-        $items = $query->select('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku', DB::raw('MAX(stock_entry_items.id) as stock_entry_item_id'), DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance'))
-            ->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku')
+        $items = $query->select('finished_item_code', 'color_id', 'item_id', 'art_no', 'size', 'price', 'uom_id', 'sleeve_type', 'sku', DB::raw('MAX(id) as stock_entry_item_id'), DB::raw('SUM(qty_in - qty_out) as balance'))
+            ->groupBy('finished_item_code', 'color_id', 'item_id', 'art_no', 'size', 'price', 'uom_id', 'sleeve_type', 'sku')
             ->get();
 
         if ($items->isNotEmpty()) {
@@ -861,9 +867,7 @@ class SalesOrderController extends Controller
             $item = Item::find($target->item_id);
             $sizeStock = [];
             foreach ($items as $si) {
-                if ($si->finished_item_code === $target->finished_item_code) {
-                    $sizeStock[$si->size] = ($sizeStock[$si->size] ?? 0) + (float)$si->balance;
-                }
+                $sizeStock[$si->size] = ($sizeStock[$si->size] ?? 0) + (float)$si->balance;
             }
             $sizePrices = [];
             foreach (['36', '38', '40', '42', '44', '46', '48', '50'] as $sz) {
@@ -941,8 +945,8 @@ class SalesOrderController extends Controller
                 'uom_id' => $target->uom_id,
                 'sleeve_type' => $target->sleeve_type,
                 'sku' => $target->sku,
-                'balance' => max(0, (float)$target->balance),
-                'size_stock' => collect($sizeStock)->map(function ($stock) { return max(0, $stock); })->toArray()
+                'balance' => $target->balance ?? 0,
+                'size_stock' => $sizeStock
             ]);
         }
 
@@ -1029,7 +1033,7 @@ class SalesOrderController extends Controller
                 'size' => $item->size,
                 'price' => $finalPrice,
                 'mrp' => $finalMrp,
-                'balance' => max(0, $item->balance),
+                'balance' => $item->balance,
                 'sleeve_type' => $item->sleeve_type,
             ];
         }

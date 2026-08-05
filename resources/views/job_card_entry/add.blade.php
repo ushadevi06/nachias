@@ -888,14 +888,14 @@
                                             <tr>
                                                 @foreach($fabrics as $index => $fabric)
                                                     <td class="fw-bold">IN/OUT</td>
-                                                    <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center" value="{{ $fabric['in_out'] ?? 'NO' }}"></td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][in_out]" class="form-control form-control-sm text-center" value="{{ $fabric['in_out'] ?? 'NO' }}" readonly></td>
                                                 @endforeach
                                             </tr>
 
                                             <tr>
                                                 @foreach($fabrics as $index => $fabric)
                                                     <td class="fw-bold">N.PATTI</td>
-                                                    <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}"></td>
+                                                    <td><input type="text" name="fabrics[{{ $index }}][n_patti]" class="form-control form-control-sm text-center" value="{{ $fabric['n_patti'] ?? 'WHITE' }}" readonly></td>
                                                 @endforeach
                                             </tr>
                                         @endif
@@ -2660,37 +2660,23 @@
                     oldF = Object.values(oldFabrics).find(f => String(f.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]);
                 }
 
-                let vWidth = captured.width[art] || (oldF ? oldF.width : '') || '';
-                let vMtr = captured.mtr[art] || (oldF ? (oldF.used_qty !== undefined ? oldF.used_qty : oldF.mtr) : '') || '';
-                let vInOut = captured.in_out[art] || (oldF ? oldF.in_out : '') || '';
-                let vNPatti = captured.n_patti[art] || (oldF ? oldF.n_patti : '') || '';
-
-                if (!vWidth && currentArtData && currentArtData.length > 0) {
-                    const d = currentArtData.find(d => String(d.art_no).replace(/\s+/g, '') == String(art).replace(/\s+/g, ''));
-                    if (d && d.width) vWidth = d.width;
+                let m = null;
+                if (existingMatrix && existingMatrix.length > 0) {
+                    m = existingMatrix.find(m => String(m.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]);
                 }
 
-                if (!vWidth && existingMatrix.length > 0) {
-                    const m = existingMatrix.find(m => String(m.art_no).replace(/\s+/g, '').split('|')[0] == String(art).replace(/\s+/g, '').split('|')[0]);
-                    if (m) {
-                        vWidth = m.width || '';
-                        vMtr = m.used_qty !== undefined && m.used_qty !== null ? m.used_qty : (m.mtr || '');
-                        vInOut = m.in_out || '';
-                        vNPatti = m.n_patti || '';
-                    }
+                let d = null;
+                if (currentArtData && currentArtData.length > 0) {
+                    d = currentArtData.find(d => String(d.art_no).replace(/\s+/g, '') == String(art).replace(/\s+/g, ''));
                 }
 
-                if (!vWidth) {
-                    vWidth = $('#width').val() || '';
-                }
-
-                if (!vInOut) vInOut = 'NO';
-                if (!vNPatti) vNPatti = 'WHITE';
+                let vWidth = captured.width[art] || (oldF ? oldF.width : '') || (m ? m.width : '') || (d ? d.width : '') || $('#width').val() || '';
+                let vMtr = captured.mtr[art] || (oldF ? (oldF.used_qty !== undefined ? oldF.used_qty : oldF.mtr) : '') || (m ? (m.used_qty !== undefined && m.used_qty !== null ? m.used_qty : m.mtr) : '') || '';
+                let vInOut = captured.in_out[art] || (oldF ? oldF.in_out : '') || (m ? m.in_out : '') || 'NO';
+                let vNPatti = captured.n_patti[art] || (oldF ? oldF.n_patti : '') || (m ? m.n_patti : '') || 'WHITE';
 
                 if (vMtr !== '' && vMtr !== undefined && vMtr !== null) {
-                } else if (currentArtData && currentArtData.length > 0) {
-                    const d = currentArtData.find(d => d.art_no == art);
-                    if (d) {
+                } else if (d) {
                         let totalQty;
                         if (isEditMode && d.saved_stock_total_qty) {
                             totalQty = parseFloat(d.saved_stock_total_qty);
@@ -2707,7 +2693,6 @@
                         vMtr = (d.already_issued !== undefined && d.already_issued !== null && parseFloat(d.already_issued) > 0) 
                             ? d.already_issued 
                             : fallbackMtr;
-                    }
                 }
 
                 const isTaskReadOnly = hasTasks ? 'readonly' : '';
@@ -2732,8 +2717,8 @@
                         </div>
                         ${validationErrors[`fabrics.${index}.mtr`] ? `<div class="text-danger small mt-1" style="font-size: 11px;">${validationErrors[`fabrics.${index}.mtr`][0]}</div>` : ''}
                     </td>`;
-                inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center in-out-input" data-art="${art}" value="${vInOut}" ${isTaskReadOnly}></td>`;
-                nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center n-patti-input" data-art="${art}" value="${vNPatti}" ${isTaskReadOnly}></td>`;
+                inOutRow += `<td class="fw-bold">IN/OUT</td><td><input type="text" name="fabrics[${index}][in_out]" class="form-control form-control-sm text-center in-out-input" data-art="${art}" value="${vInOut}" readonly ${isTaskReadOnly}></td>`;
+                nPattiRow += `<td class="fw-bold">N.PATTI</td><td><input type="text" name="fabrics[${index}][n_patti]" class="form-control form-control-sm text-center n-patti-input" data-art="${art}" value="${vNPatti}" readonly ${isTaskReadOnly}></td>`;
 
 
 

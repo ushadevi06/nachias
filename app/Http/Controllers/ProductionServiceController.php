@@ -17,7 +17,16 @@ class ProductionServiceController extends Controller
         }
 
         if ($request->ajax()) {
-            $services = ProductionService::with(['operationStage', 'processGroups'])->orderBy('operation_stage_id')->orderBy('sequence')->latest('id')->get();
+            $query = ProductionService::with(['operationStage', 'processGroups'])
+                        ->orderBy('operation_stage_id')
+                        ->orderBy('sequence')
+                        ->latest('id');
+
+            if (!empty($request->stage_id)) {
+                $query->where('operation_stage_id', $request->stage_id);
+            }
+
+            $services = $query->get();
             $data = [];
             $i = 1;
 
@@ -65,7 +74,8 @@ class ProductionServiceController extends Controller
             return response()->json(['data' => $data]);
         }
 
-        return view('production_services.view');
+        $stages = OperationStage::active()->orderBy('id', 'desc')->get();
+        return view('production_services.view', compact('stages'));
     }
 
     public function add(Request $request, $id = null)

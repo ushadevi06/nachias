@@ -112,13 +112,13 @@ class CityController extends Controller
             if ($id) {
                 $validated['updated_by'] = auth()->id();
                 $city->update($validated);
-                $newData = City::find($id)->toArray();
-                addLog('update', 'City', 'cities', $city->id, $oldData, $newData);
+                $newData = formatLocationLogData(City::find($id)->toArray());
+                addLog('update', 'City', 'cities', $city->id, formatLocationLogData($oldData), $newData);
                 return redirect('cities')->with('success', 'City updated successfully.');
             } else {
                 $validated['created_by'] = auth()->id();
                 $newCity = City::create($validated);
-                $newData = City::find($newCity->id)->toArray();
+                $newData = formatLocationLogData(City::find($newCity->id)->toArray());
                 addLog('create', 'City', 'cities', $newCity->id, null, $newData);
                 return redirect('cities')->with('success', 'City added successfully.');
             }
@@ -131,10 +131,10 @@ class CityController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $city = City::findOrFail($id);
-        $oldData = $city->toArray();
+        $oldData = formatLocationLogData($city->toArray());
         $city->status = $request->status;
         $city->save();
-        $newData = $city->toArray();
+        $newData = formatLocationLogData($city->toArray());
         addLog('update_status', 'City Status', 'cities', $city->id, $oldData, $newData);
         return response()->json([
             'success' => true,
@@ -175,7 +175,7 @@ class CityController extends Controller
             return redirect('cities');
         }
 
-        $oldData = $city->toArray();
+        $oldData = formatLocationLogData($city->toArray());
         $city->delete();
         addLog('delete', 'City', 'cities', $id, $oldData, null);
         session()->flash('success', 'City deleted successfully');  

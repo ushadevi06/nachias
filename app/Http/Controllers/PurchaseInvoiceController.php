@@ -13,6 +13,7 @@ use App\Models\PurchaseInvoicePayment;
 use Illuminate\Http\Request;
 use App\Models\Brand;
 use App\Models\FabricSize;
+use App\Models\FabricType;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -413,6 +414,12 @@ class PurchaseInvoiceController extends Controller
                 if ($request->has('items')) {
                     foreach ($request->items as $item) {
                         if (isset($item['selected']) && $item['selected'] == '1') {
+                            if (isset($item['fabric_type_id']) && !empty($item['fabric_type_id']) && !empty($item['purchase_order_item_id'])) {
+                                \App\Models\PurchaseOrderItem::where('id', $item['purchase_order_item_id'])->update([
+                                    'fabric_type_id' => $item['fabric_type_id']
+                                ]);
+                            }
+
                             if ($id) {
                                 $existingItem = PurchaseInvoiceItem::where('purchase_invoice_id', $id)->where('purchase_order_item_id', $item['purchase_order_item_id'] ?? null)->first();
                                 if ($existingItem) {
@@ -521,11 +528,12 @@ class PurchaseInvoiceController extends Controller
             ->get();
         $brands = Brand::active()->orderBy('brand_name')->get();
         $fabricSizes = FabricSize::active()->orderBy('width')->get();
+        $fabricTypes = FabricType::active()->orderBy('fabric_type')->get();
         $suppliers = Supplier::where('status', 'Active')->get();
         $paid_so_far = $invoice ? $invoice->payments()->sum('amount') : 0;
         $nextInvoiceNumber = '';
 
-        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber', 'brands', 'fabricSizes'));
+        return view('purchase_invoice.add', compact('invoice', 'purchaseOrders', 'suppliers', 'charges', 'paid_so_far', 'nextInvoiceNumber', 'brands', 'fabricSizes', 'fabricTypes'));
     }
 
     public function view($id)
@@ -654,6 +662,9 @@ class PurchaseInvoiceController extends Controller
             }),
             'all_fabric_widths' => FabricSize::orderBy('width')->get()->map(function($f) {
                 return ['id' => $f->id, 'name' => $f->width];
+            }),
+            'all_fabric_types' => FabricType::orderBy('fabric_type')->get()->map(function($f) {
+                return ['id' => $f->id, 'name' => $f->fabric_type];
             }),
             'items' => $items,
         ]);

@@ -100,33 +100,6 @@ $isSuper = $user->id == 1;
                                         <div>Dashboard</div>
                                     </a>
                                 </li>
-                                <!-- Employees -->
-                                @if($user && ($isSuper || $user->can('view roles') || $user->can('view employees')))
-                                    <li
-                                        class="menu-item {{ request()->is('employees*') || request()->is('roles*') ? 'active' : '' }}">
-                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
-                                            <i class="menu-icon icon-base ri ri-user-add-line"></i>
-                                            <div class="itm">Employees</div>
-                                        </a>
-                                        <ul class="menu-sub">
-                                            @if($isSuper || $user->can('view roles'))
-                                                <li class="menu-item {{ request()->is('roles*') ? 'active' : '' }}">
-                                                    <a href="{{ url('roles') }}" class="menu-link">
-                                                        <div>Roles</div>
-                                                    </a>
-                                                </li>
-                                            @endif
-
-                                            @if($isSuper || $user->can('view employees'))
-                                                <li class="menu-item {{ request()->is('employees*') ? 'active' : '' }}">
-                                                    <a href="{{ url('employees') }}" class="menu-link">
-                                                        <div>Employees</div>
-                                                    </a>
-                                                </li>
-                                            @endif
-                                        </ul>
-                                    </li>
-                                @endif
 
                                 <!-- Master -->
                                 @if($user && ($isSuper || $user->can('view states') || $user->can('view cities') || $user->can('view service-points') || $user->can('view uoms') || $user->can('view colors') || $user->can('view operation-stages') || $user->can('view zones') || $user->can('view size-ratio') || $user->can('view fabric-type') || $user->can('view fabric-sizes') || $user->can('view charges') || $user->can('view store-location') || $user->can('view departments') || $user->can('view taxes') || $user->can('view styles') || $user->can('view stores') || $user->can('view shipping-methods') || $user->can('view transport-mode') || $user->can('view fits') || $user->can('view patti-types') || $user->can('view collar-types') || $user->can('view cuff-types') || $user->can('view pocket-types') || $user->can('view bottom-cuts') || $user->can('view shifts') || $user->can('view production-services') || $user->can('view customers') || $user->can('view suppliers') || $user->can('view service-providers') || $user->can('view sales-agents') || $user->can('view purchase-commission-agent') || $user->can('view store-categories') || $user->can('view raw-materials') || $user->can('view brand-categories') || $user->can('view brands') || $user->can('view items') || $user->can('view process-groups') || $user->can('view seasons') || $user->can('view retailers') || $user->can('view devices')))
@@ -538,6 +511,34 @@ $isSuper = $user->id == 1;
                                                             </li>
                                                         @endif
                                                     </ul>
+                                                </li>
+                                            @endif
+                                        </ul>
+                                    </li>
+                                @endif
+                                
+                                <!-- Employees -->
+                                @if($user && ($isSuper || $user->can('view roles') || $user->can('view employees')))
+                                    <li
+                                        class="menu-item {{ request()->is('employees*') || request()->is('roles*') ? 'active' : '' }}">
+                                        <a href="javascript:void(0)" class="menu-link menu-toggle">
+                                            <i class="menu-icon icon-base ri ri-user-add-line"></i>
+                                            <div class="itm">Employees</div>
+                                        </a>
+                                        <ul class="menu-sub">
+                                            @if($isSuper || $user->can('view roles'))
+                                                <li class="menu-item {{ request()->is('roles*') ? 'active' : '' }}">
+                                                    <a href="{{ url('roles') }}" class="menu-link">
+                                                        <div>Roles</div>
+                                                    </a>
+                                                </li>
+                                            @endif
+
+                                            @if($isSuper || $user->can('view employees'))
+                                                <li class="menu-item {{ request()->is('employees*') ? 'active' : '' }}">
+                                                    <a href="{{ url('employees') }}" class="menu-link">
+                                                        <div>Employees</div>
+                                                    </a>
                                                 </li>
                                             @endif
                                         </ul>

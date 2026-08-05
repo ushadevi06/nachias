@@ -689,7 +689,7 @@
                                             <label for="status">Order Status <span class="text-danger">*</span></label>
                                         </div>
                                     </div>
-                                    <div class="col-md-12">
+                                    {{-- <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
                                             <textarea class="form-control h-px-100" id="terms_conditions" name="terms_conditions" rows="3" placeholder="Terms & Conditions">{{ old('terms_conditions', $salesOrder->terms_conditions ?? $web_settings->terms_and_conditions ?? '') }}</textarea>
                                             <label for="terms_conditions">Terms & Conditions</label>
@@ -697,7 +697,7 @@
                                         @error('terms_conditions')
                                             <div class="text-danger mt-1">{{ $message }}</div>
                                         @enderror
-                                    </div>
+                                    </div> --}}
                                     <div class="col-md-12">
                                         <div class="form-floating form-floating-outline">
                                             <textarea class="form-control" id="internal_remarks" name="internal_remarks" rows="2" placeholder="Internal Notes">{{ old('internal_remarks', $salesOrder->internal_remarks ?? '') }}</textarea>
@@ -963,6 +963,35 @@
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
 $(document).ready(function () {
+    function updateColorFromArtNo($row) {
+        let artNo = $row.find('.art-no-input').val();
+        let color = 'A';
+        if (artNo) {
+            let parts = String(artNo).split('-');
+            if (parts.length > 1) {
+                color = parts[parts.length - 1];
+            }
+        }
+        $row.find('.color-input').val(color);
+    }
+
+    $(document).on('input', '.art-no-input', function() {
+        updateColorFromArtNo($(this).closest('.item-row'));
+    });
+
+    $(document).on('focus', '.color-input', function() {
+        $(this).prop('readonly', true).attr('tabindex', '-1');
+    });
+
+    setTimeout(function() {
+        $('.color-input').prop('readonly', true).attr('tabindex', '-1');
+        $('.item-row').each(function() {
+            if ($(this).find('.art-no-input').val()) {
+                updateColorFromArtNo($(this));
+            }
+        });
+    }, 500);
+
     let itemIndex = Number($('#itemIndex').val()) || 0;
 
     $('.so_date').flatpickr({ dateFormat: 'd-m-Y', allowInput: true });
@@ -1130,55 +1159,47 @@ $(document).ready(function () {
                 });
             },
             minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+                $(this).val(ui.item.label);
+            },
             select: function(event, ui) {
+                event.preventDefault();
                 let $this = $(this);
                 let $row = $this.closest('.item-row');
 
                 if (ui.item && ui.item.noResult) {
-                    event.preventDefault();
+                    return false;
+                }
+                if (ui.item && ui.item.disabled) {
                     return false;
                 }
                 
                 if (ui.item && ui.item.balance <= 0) {
                     Swal.fire({ icon: 'warning', title: 'Out of Stock', text: 'This item is out of stock and cannot be selected.', timer: 2000, showConfirmButton: false });
-                    event.preventDefault();
                     return false;
                 }
                 
                 if (ui.item) {
-                    let sleeveParam = ui.item.sleeve_type ? `&sleeve_type=${encodeURIComponent(ui.item.sleeve_type)}` : '';
-                    let sizeParam = ui.item.size ? `&size=${encodeURIComponent(ui.item.size)}` : '';
-                    let itemCodeParam = ui.item.id ? `&item_code=${encodeURIComponent(ui.item.id)}` : '';
-                    let artNoParam = ui.item.art_no ? `&art_no=${encodeURIComponent(ui.item.art_no)}` : '';
-                    let ajaxUrl = `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}${itemCodeParam}${artNoParam}&so_id={{ $salesOrder->id ?? '' }}`;
-
                     if ($row.length) {
                         $this.val(ui.item.label);
-                        $.ajax({
-                            url: ajaxUrl,
-                            type: 'GET',
-                            success: function(res) {
-                                if (res.success) {
-                                    populateRowData($row, res);
-                                } else {
-                                    alert("Failed to fetch item details. Please try again.");
-                                }
-                            },
-                            error: function() {
-                                alert("Error fetching item stock. Please check your connection.");
-                            }
-                        });
+                        $row.find('.stock-item-select').val(ui.item.value).trigger('change');
                     } else if ($this.attr('id') === 'global_item_search') {
+                        let sleeveParam = ui.item.sleeve_type ? `&sleeve_type=${encodeURIComponent(ui.item.sleeve_type)}` : '';
+                        let sizeParam = ui.item.size ? `&size=${encodeURIComponent(ui.item.size)}` : '';
+                        let itemCodeParam = ui.item.id ? `&item_code=${encodeURIComponent(ui.item.id)}` : '';
                         $.ajax({
-                            url: ajaxUrl,
+                            url: `{{ url('get-finished-item-stock') }}?code=${encodeURIComponent(ui.item.value)}${sleeveParam}${sizeParam}${itemCodeParam}&so_id={{ $salesOrder->id ?? '' }}`,
                             type: 'GET',
                             success: function(res) {
                                 if (res.success) {
                                     handleGlobalItemSelection(res);
-                                    $this.val(ui.item.value).focus();
+                                    setTimeout(function() {
+                                        $this.val('').focus();
+                                    }, 10);
                                 } else {
                                     alert("Failed to fetch item details. Please try again.");
-                                    $this.val(ui.item.value).focus();
+                                    $this.focus();
                                 }
                             },
                             error: function() {
@@ -1196,16 +1217,30 @@ $(document).ready(function () {
                     .appendTo(ul);
             }
 
+            let balance = parseFloat(item.balance || 0);
+            let outOfStock = balance <= 0;
+            if (outOfStock) {
+                item.disabled = true;
+            }
+
             let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
-            return $("<li>")
-                .append(`<div class="ui-menu-item-wrapper">
+            let stockHtml = outOfStock 
+                ? `<span class="search-item-balance text-danger fw-bold">Stock: ${balance.toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance">Stock: ${balance.toFixed(2)}</span>`;
+
+            let $li = $("<li>").append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
-                    <span class="search-item-balance">Stock: ${parseFloat(item.balance).toFixed(2)}</span>
+                    ${stockHtml}
                     <div class="search-item-info">
                         Art No: ${item.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(item.price).toFixed(2)}
                     </div>
-                </div>`)
-                .appendTo(ul);
+                </div>`).appendTo(ul);
+                
+            if (outOfStock) {
+                $li.addClass('ui-state-disabled');
+                $li.css('opacity', '0.6');
+            }
+            return $li;
         };
 
         $el.on('keydown', function(e) {
@@ -1256,12 +1291,10 @@ $(document).ready(function () {
 
     function handleGlobalItemSelection(res) {
         let $existing = $('.item-row').filter(function() {
-            return $(this).find('.sku-input').val() === res.sku &&
-                $(this).find('.size-select').val() == res.size &&
-                $(this).find('.color-input').val() == (res.api_color || res.color_name || '') &&
-                $(this).find('.sleeve-input').val() == (res.sleeve_type || '') &&
+            return $(this).find('.sku-input').val() == (res.sku || '') &&
                 $(this).find('.art-no-input').val() == (res.art_no || '') &&
-                $(this).find('.stock-entry-item-id').val() == (res.stock_entry_item_id || '');
+                $(this).find('.sleeve-input').val() == (res.sleeve_type || '') &&
+                $(this).find('.size-select').val() == (res.size || '');
         }).first();
 
         if ($existing.length) {
@@ -1301,12 +1334,10 @@ $(document).ready(function () {
         $row.find('.stock-entry-item-id').val(res.stock_entry_item_id);
         $row.find('.sku-input').val(res.sku);
         
-        if (res.api_color || res.color_name) {
-            $row.find('.color-input').val(res.api_color || res.color_name);
-        }
-        
         $row.find('.sleeve-input').val(res.sleeve_type);
         $row.find('.art-no-input').val(res.art_no);
+        
+        updateColorFromArtNo($row);
         
         let mrp = parseFloat(res.mrp || 0);
         let price = parseFloat(res.price || 0);
@@ -1331,9 +1362,17 @@ $(document).ready(function () {
         $sizeSelect.html(sizeOpts);
         
         $row.data('size-stock', res.size_stock);
-        if (res.size && $sizeSelect.val() != res.size) {
-            $sizeSelect.val(res.size).trigger('change');
+        if (res.size) {
+            $sizeSelect.css({'pointer-events': 'none', 'background-color': '#e9ecef'});
+            $sizeSelect.next('.select2-container').css({'pointer-events': 'none', 'opacity': '0.7'});
+            if ($sizeSelect.val() != res.size) {
+                $sizeSelect.val(res.size).trigger('change');
+            } else {
+                updateStockAndRate($row);
+            }
         } else {
+            $sizeSelect.css({'pointer-events': 'auto', 'background-color': ''});
+            $sizeSelect.next('.select2-container').css({'pointer-events': 'auto', 'opacity': '1'});
             updateStockAndRate($row);
         }
         
@@ -1451,7 +1490,11 @@ $(document).ready(function () {
             $row.find('.available-stock-display').text('0.00');
             $row.find('.mrp-input').val('');
             $row.find('.rate-input').val('');
-            $row.find('.size-select').html('<option value="">Select Size</option>').trigger('change');
+            $row.find('.size-select')
+                .html('<option value="">Select Size</option>')
+                .css({'pointer-events': 'auto', 'background-color': ''})
+                .trigger('change');
+            $row.find('.size-select').next('.select2-container').css({'pointer-events': 'auto', 'opacity': '1'});
             $row.data('size-stock', {});
             calculateTotals();
         }

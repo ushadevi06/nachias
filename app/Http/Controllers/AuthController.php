@@ -37,6 +37,61 @@ class AuthController extends Controller
                 Cookie::queue(Cookie::forget('password'));
                 Cookie::queue(Cookie::forget('remember'));
             }
+            
+            $isSuper = $user->id == 1;
+            $dashboardPerms = [
+                'view-sales-order dashboard', 
+                'view-attendance dashboard',
+                'view-accounts-financial dashboard', 
+                'view-production dashboard', 
+                'view-maintenance dashboard',
+                'dashboard'
+            ];
+
+            if ($isSuper || $user->hasAnyPermission($dashboardPerms)) {
+                return redirect()->intended('dashboard');
+            }
+
+            $permissions = $user->getAllPermissions();
+
+            if ($permissions->isEmpty()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return redirect('/')->with('danger', 'You do not have permission to access any module. Please contact the administrator.')->withInput();
+            }
+
+            // Find first view permission to determine redirect route
+            $firstViewPerm = $permissions->first(function($p) {
+                return str_starts_with($p->name, 'view ');
+            });
+
+            if ($firstViewPerm) {
+                $module = str_replace('view ', '', $firstViewPerm->name);
+                
+                // Common route mappings
+                $routeMap = [
+                    'fabric-sizes' => 'fabric-sizes',
+                    'fg-min-stocks' => 'fg-min-stocks',
+                    'stock-entry-raw-materials' => 'stock_entry/rm',
+                    'stock-entry-finished-goods' => 'stock_entry/fg',
+                    'job-card' => 'job_cards',
+                    'production-receipts' => 'production_receipts',
+                    'sales-order' => 'sales_orders',
+                    'sales-invoice' => 'sales_invoices',
+                    'purchase-order' => 'purchase_orders',
+                    'purchase-invoice' => 'purchase_invoices',
+                    'manage-payments' => 'payments',
+                    'manage-leaves' => 'leaves',
+                    'monthly-payroll' => 'salary',
+                    'payroll-reports' => 'payroll_reports',
+                    'attendance' => 'attendance'
+                ];
+
+                $route = $routeMap[$module] ?? str_replace('-', '_', $module);
+                return redirect($route);
+            }
+
             return redirect()->intended('dashboard');
         }
         return redirect('/')->with('danger','Enter a valid credentials.')->withInput();

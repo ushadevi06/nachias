@@ -22,7 +22,11 @@ class ItemPricesImport implements ToCollection, WithHeadingRow
             $rowNumber = $index + 2;
             $rowErrors = [];
 
-            if (!isset($row['finished_item_code']) && !isset($row['effective_from'])) {
+            $isEmpty = collect($row)->filter(function ($value) {
+                return !is_null($value) && trim((string)$value) !== '';
+            })->isEmpty();
+
+            if ($isEmpty) {
                 continue;
             }
 

@@ -17,6 +17,25 @@
             </div>
             <div class="card">
                 <div class="card-body">
+                    <div class="filter-box">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <h5>Filter</h5>
+                            </div>
+                            <div class="col-md-4 col-lg-3">
+                                <select name="stage_id" id="stage_id" class="form-select select2" data-placeholder="Select Stage">
+                                    <option value="">Select Stage</option>
+                                    @foreach($stages as $stage)
+                                    <option value="{{ $stage->id }}">{{ $stage->operation_stage_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-primary filterBtn">Filter</button>
+                                <button type="button" class="btn btn-secondary resetBtn">Reset</button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="card-datatable">
                         <table class="table" id="serviceTable">
                             <thead>
@@ -52,12 +71,17 @@
             ordering: true,
             info: true,
             lengthChange: true,
-            ajax: "{{ url('production_services') }}",
+            ajax: {
+                url: "{{ url('production_services') }}",
+                data: function(d) {
+                    d.stage_id = $('#stage_id').val();
+                }
+            },
             columns: [
                 { data: 'DT_RowIndex' },
                 { data: 'service_name' },
                 { data: 'service_code' },
-                { data: 'operation_stage' },
+                { data: 'operation_stage', searchable: false },
                 { data: 'applies_to' },
                 {
                     data: 'cost',
@@ -100,6 +124,15 @@
                     $('.status_msg_' + id).html(msg).fadeIn().delay(1200).fadeOut();
                 }
             });
+        });
+
+        $('.filterBtn').on('click', function() {
+            $('#serviceTable').DataTable().ajax.reload();
+        });
+
+        $('.resetBtn').on('click', function() {
+            $('#stage_id').val('').trigger('change');
+            $('#serviceTable').DataTable().ajax.reload();
         });
     });
 </script>

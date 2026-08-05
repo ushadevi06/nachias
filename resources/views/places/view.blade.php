@@ -96,10 +96,12 @@
                     data: 'DT_RowIndex'
                 },
                 {
-                    data: 'state'
+                    data: 'state',
+                    searchable: false
                 },
                 {
-                    data: 'city'
+                    data: 'city',
+                    searchable: false
                 },
                 {
                     data: 'place_name'

@@ -24,7 +24,16 @@ class SalesInvoiceItemsExport implements FromCollection, WithHeadings, WithMappi
 
     public function collection()
     {
-        $query = SalesInvoice::with(['brand', 'items', 'items.item'])->whereNotNull('irn')->orderBy('id', 'asc');
+        $query = SalesInvoice::with(['brand', 'items', 'items.item'])
+            ->where(function($q) {
+                $q->whereNotNull('irn')
+                  ->orWhere(function($q2) {
+                      $q2->whereNull('irn')
+                         ->whereHas('customer', function($q3) {
+                             $q3->where('name', 'like', '%CASH%');
+                         });
+                  });
+            })->orderBy('id', 'asc');
 
         if (!empty($this->filters['customer_id'])) {
             $query->where('customer_id', $this->filters['customer_id']);

@@ -224,14 +224,21 @@ class SalesAgentController extends Controller
                 $oldData = SalesAgent::find($id)->toArray();
                 SalesAgent::where('id', $id)->update($data);
                 $newData = SalesAgent::find($id)->toArray();
-                addLog('update', 'Sales Agent', 'sales_agents', $id, $oldData, $newData);
+                
+                $formattedOldData = formatLocationLogData($oldData);
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('update', 'Sales Agent', 'sales_agents', $id, $formattedOldData, $formattedNewData);
                 $message = 'Sales Agent updated successfully';
             }
             else {
                 $data['created_by'] = auth()->id();
                 $agent = SalesAgent::create($data);
                 $newData = $agent->toArray();
-                addLog('create', 'Sales Agent', 'sales_agents', $agent->id, null, $newData);
+                
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('create', 'Sales Agent', 'sales_agents', $agent->id, null, $formattedNewData);
                 $message = 'Sales Agent added successfully';
             }
 

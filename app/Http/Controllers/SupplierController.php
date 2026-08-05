@@ -316,13 +316,20 @@ class SupplierController extends Controller
                 $oldData = Supplier::find($id)->toArray();
                 Supplier::where('id', $id)->update($data);
                 $newData = Supplier::find($id)->toArray();
-                addLog('update', 'Supplier', 'suppliers', $id, $oldData, $newData);
+                
+                $formattedOldData = formatLocationLogData($oldData);
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('update', 'Supplier', 'suppliers', $id, $formattedOldData, $formattedNewData);
                 $message = 'Supplier updated successfully';
             } else {
                 $data['created_by'] = auth()->id();
                 $supplier = Supplier::create($data);
                 $newData = $supplier->toArray();
-                addLog('create', 'Supplier', 'suppliers', $supplier->id, null, $newData);
+                
+                $formattedNewData = formatLocationLogData($newData);
+                
+                addLog('create', 'Supplier', 'suppliers', $supplier->id, null, $formattedNewData);
                 $message = 'Supplier added successfully';
             }
 
