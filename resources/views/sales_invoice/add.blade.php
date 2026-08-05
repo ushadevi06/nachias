@@ -1342,6 +1342,10 @@
                 response(formatted);
             },
             minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+                return false;
+            },
             select: function (event, ui) {
                 if (ui.item && ui.item.noResult) {
                     event.preventDefault();
@@ -1349,7 +1353,12 @@
                 }
 
                 addInvoiceItem(ui.item.itemData);
-                $(this).val(ui.item.value).focus();
+                $('#barcode_scanner').val('');
+                if ($('#barcode_scanner').data('ui-autocomplete')) {
+                    $('#barcode_scanner').autocomplete('close');
+                }
+                setTimeout(function() { $('#barcode_scanner').val('').focus(); }, 300);
+                event.preventDefault();
                 return false;
             }
         }).autocomplete("instance")._renderItem = function (ul, item) {
@@ -1389,7 +1398,7 @@
                         title: 'No Items',
                         text: 'Please select a Sales Order first, or no items exist in the selected Sales Order.',
                     });
-                    $(this).val('');
+                    $(this).focus();
                     return;
                 }
 
@@ -1399,8 +1408,14 @@
                             (item.item_code && String(item.item_code).toLowerCase() === barcode.toLowerCase());
                 });
 
+                let $this = $(this);
                 if (matchedItem) {
                     addInvoiceItem(matchedItem);
+                    $this.val('');
+                    if ($this.data('ui-autocomplete')) {
+                        $this.autocomplete('close');
+                    }
+                    setTimeout(function() { $this.val('').focus(); }, 300);
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -1409,10 +1424,9 @@
                         timer: 2000,
                         showConfirmButton: false
                     });
+                    setTimeout(function() { $this.focus(); }, 100);
                 }
 
-                $(this).val('');
-                $(this).focus();
                 if ($(this).data('ui-autocomplete')) {
                     $(this).autocomplete('close');
                 }
@@ -1585,6 +1599,9 @@
             $('#grand_total_val').text(grandTotal.toFixed(2));
             $('#grand_total').val(grandTotal.toFixed(2));
         }
+
+        // Expose to global scope so that functions outside this $(document).ready block can call it
+        window.calculateTotals = calculateTotals;
 
         $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
             calculateTotals();
@@ -1962,6 +1979,10 @@
                 });
             },
             minLength: 1,
+            focus: function(event, ui) {
+                event.preventDefault();
+                return false;
+            },
             select: function(event, ui) {
                 let $this = $(this);
                 if (ui.item && ui.item.noResult) {
@@ -1985,17 +2006,23 @@
                         success: function(res) {
                             if (res.success) {
                                 handleOpenOrderScan(res);
-                                $this.val(ui.item.value).focus();
+                                $('#open_order_barcode_scanner').val('');
+                                if ($('#open_order_barcode_scanner').data('ui-autocomplete')) {
+                                    $('#open_order_barcode_scanner').autocomplete('close');
+                                }
+                                setTimeout(function() { $('#open_order_barcode_scanner').val('').focus(); }, 300);
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
-                                $this.val(ui.item.value).focus();
+                                setTimeout(function() { $('#open_order_barcode_scanner').focus(); }, 150);
                             }
                         },
                         error: function() {
                             Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                            setTimeout(function() { $('#open_order_barcode_scanner').focus(); }, 150);
                         }
                     });
                 }
+                event.preventDefault();
                 return false;
             }
         }).autocomplete("instance")._renderItem = function(ul, item) {
@@ -2029,14 +2056,19 @@
                         success: function(res) {
                             if (res.success) {
                                 handleOpenOrderScan(res);
-                                $('#open_order_barcode_scanner').val('').focus();
+                                $('#open_order_barcode_scanner').val('');
+                                if ($('#open_order_barcode_scanner').data('ui-autocomplete')) {
+                                    $('#open_order_barcode_scanner').autocomplete('close');
+                                }
+                                setTimeout(function() { $('#open_order_barcode_scanner').val('').focus(); }, 300);
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Item Not Found', text: 'Item not found or out of stock.', timer: 2000 });
-                                $('#open_order_barcode_scanner').val('').focus();
+                                $('#open_order_barcode_scanner').focus();
                             }
                         },
                         error: function() {
                             Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch item details.', timer: 2000 });
+                            $('#open_order_barcode_scanner').focus();
                         }
                     });
                 }
@@ -2152,7 +2184,9 @@
 
             $('#open-order-item-rows tbody').append(rowHtml);
             $('#openOrderItemIndex').val(index + 1);
-            calculateTotals();
+            if (typeof window.calculateTotals === 'function') {
+                window.calculateTotals();
+            }
         }
 
         $(document).on('input', '.open-qty, .open-rate', function() {
@@ -2171,12 +2205,12 @@
             }
 
             $row.find('.open-amount').val((qty * rate).toFixed(2));
-            calculateTotals();
+            if (typeof window.calculateTotals === 'function') window.calculateTotals();
         });
 
         $(document).on('click', '.open_delete_row', function() {
             $(this).closest('.item-row').remove();
-            calculateTotals();
+            if (typeof window.calculateTotals === 'function') window.calculateTotals();
         });
 
         let openOrderHtml5QrCode = null;

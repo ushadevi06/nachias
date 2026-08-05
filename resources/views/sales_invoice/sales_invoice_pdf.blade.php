@@ -326,8 +326,7 @@ if ($showPrice) $colsAfterQty++;
         }
     }
     @endphp
-    @foreach($pages as $pageIndex => $pageItems)
-    <div class="container" style="{{ ($index < count($copies) - 1 || $pageIndex < count($pages) - 1) ? 'page-break-after: always;' : '' }}">
+    <div class="container" style="{{ ($index < count($copies) - 1) ? 'page-break-after: always;' : '' }}">
         <table class="item-table" style="margin-top: 0;  font-size: 11px;">
             <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
@@ -349,7 +348,7 @@ if ($showPrice) $colsAfterQty++;
                 </tr>
             </thead>
             <tbody>
-                @foreach($pageItems as $itemIndex => $item)
+                @foreach($invoice->items as $itemIndex => $item)
                     <tr>
                         <td class="text-center">{{ $loop->iteration }}</td>
                         <td>
@@ -535,15 +534,6 @@ if ($showPrice) $colsAfterQty++;
                 
             </tbody>
             
-            @if($pageIndex < count($pages) - 1)
-            <tbody>
-                <tr>
-                    <td colspan="{{ $showAmount ? 9 : 7 }}" class="text-right bold" style="border-top: 1px solid #000000; padding: 10px;">
-                        Continue to Page No. {{ $pageIndex + 2 }}
-                    </td>
-                </tr>
-            </tbody>
-            @else
             <tbody>
                 <tr>
                     <td style="border-top: none;"></td>
@@ -675,6 +665,7 @@ if ($showPrice) $colsAfterQty++;
                     </td>
                 </tr>
             </tbody>
+            @endif
         </table>
         
         <div class="bold" style="margin-top: 5px; display: none;">Amount of Tax(in words) : {{ $totalTaxInWords }}</div>
@@ -752,7 +743,7 @@ if ($showPrice) $colsAfterQty++;
             </tfoot>
         </table>
         @endif
-        
+        @endif
         
         
         <table class="no-border" style="margin-top: 15px; width: 100%;">
@@ -784,7 +775,6 @@ if ($showPrice) $colsAfterQty++;
         </table>
         @endif
     </div>
-    @endforeach
     @endforeach
     @if(isset($is_print) && $is_print)
     <script>

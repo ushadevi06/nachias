@@ -913,6 +913,20 @@ class SalesInvoiceController extends Controller
             $c = $so->customer;
             $billingAddress = implode(', ', array_filter([$c->address_line_1, $c->address_line_2, $c->address_line_3, $c->city, $c->state, $c->pincode]));
         }
+        $preGstCharges = 0;
+        $courierCharge = 0;
+        $postGstCharges = 0;
+        if ($so->charges) {
+            $preGstCharges = $so->charges->where('tax_type', 'Pre-GST')->sum('charge_amount');
+            $courierCharge = $so->charges->where('tax_type', 'Post-GST')
+                ->filter(function($charge) {
+                    return stripos($charge->charge_name, 'COURIER') !== false;
+                })->sum('charge_amount');
+            $postGstCharges = $so->charges->where('tax_type', 'Post-GST')
+                ->filter(function($charge) {
+                    return stripos($charge->charge_name, 'COURIER') === false;
+                })->sum('charge_amount');
+        }
 
         return response()->json([
             'success' => true,
@@ -1036,7 +1050,7 @@ class SalesInvoiceController extends Controller
         $totalInWords = numberToWords($invoice->grand_total);
         $totalTaxInWords = numberToWords($invoice->tax_amount);
 
-        $pdf = Pdf::loadView('sales_invoice.pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords'));
+        $pdf = Pdf::loadView('sales_invoice.sales_invoice_pdf', compact('invoice', 'setting', 'taxSummary', 'totalInWords', 'totalTaxInWords'));
         $pdf->setPaper('A4', 'portrait');
         
         $safeInvoiceNo = str_replace(['/', '\\'], '_', $invoice->inv_no);

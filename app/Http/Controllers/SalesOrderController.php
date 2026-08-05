@@ -156,7 +156,7 @@ class SalesOrderController extends Controller
             $request = request();
 
             $rules = [
-                'so_no' => 'required|string|min:3|max:50|unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL',
+                'so_no' => ['required', 'string', 'min:3', 'max:50', 'not_regex:/^0+$/', 'unique:sales_orders,so_no,' . ($id ?? 'NULL') . ',id,deleted_at,NULL'],
                 'so_date' => 'required|date_format:d-m-Y',
                 'request_date' => 'nullable|date_format:d-m-Y',
                 'delivery_date' => 'nullable|date_format:d-m-Y',
@@ -200,6 +200,7 @@ class SalesOrderController extends Controller
                 '*.required' => 'This field is required.',
                 '*.unique' => 'This field already exists.',
                 '*.exists' => 'Selected value is invalid.',
+				'*.not_regex' => 'This field is an invalid format.',
                 '*.date_format' => 'Please enter a valid date in DD-MM-YYYY format.',
                 '*.numeric' => 'This field must be a valid number.',
                 '*.regex' => 'This field is an invalid format.',
@@ -242,7 +243,36 @@ class SalesOrderController extends Controller
                     return back()->with('error', 'Invalid status transition from ' . $oldStatus . ' to ' . $newStatus)->withInput();
                 }
             }
+			
+			$requiredQuantities = [];
+            foreach ($request->items as $item) {
+                $sku = $item['sku'] ?? null;
+                if (!$sku) continue;
+                if (!isset($requiredQuantities[$sku])) {
+                    $requiredQuantities[$sku] = [
+                        'qty' => 0,
+                        'name' => $item['item_name'] ?? $item['art_no'] ?? $sku
+                    ];
+                }
+                $requiredQuantities[$sku]['qty'] += (float)($item['qty'] ?? 0);
+            }
 
+            foreach ($requiredQuantities as $sku => $data) {
+                $stockQuery = \App\Models\StockEntryItem::where('stock_type', 'finished_goods')
+                    ->whereNull('deleted_at')
+                    ->where(function ($q) use ($sku) {
+                        $q->where('sku', $sku)->orWhere('barcode', $sku);
+                    });
+                    
+                $totalIn = (clone $stockQuery)->sum('qty_in');
+                $totalOut = (clone $stockQuery)->sum('qty_out');
+                $available = $totalIn - $totalOut;
+
+                if ($available < $data['qty']) {
+                    return back()->withInput()->withErrors(['error' => "Insufficient stock for " . $data['name'] . " (Available: " . $available . ", Required: " . $data['qty'] . ")"]);
+                }
+            }
+			
             DB::beginTransaction();
             try {
                 $taxableAmount = $request->taxable_amount ?? 0;
@@ -335,6 +365,7 @@ class SalesOrderController extends Controller
                 }
                 else {
                     $soData['created_by'] = auth()->id();
+                    $soData['submitted_by'] = auth()->user()->name;
                     $salesOrder = SalesOrder::create($soData);
                     $message = 'Sale Order created successfully';
                 }
@@ -574,9 +605,9 @@ class SalesOrderController extends Controller
         }
 
         $zones = Zone::where('status', 'Active')->get();
-        $shippingMethods = ShippingMethod::where('status', 'Active')->get();
-        $transportModes = TransportMode::where('status', 'Active')->get();
-        $serviceProviders = ServiceProvider::where('status', 'Active')->get();
+        $shippingMethods = ShippingMethod::where('status', 'Active')->orderBy('id','desc')->get();
+        $transportModes = TransportMode::where('status', 'Active')->orderBy('id','desc')->get();
+        $serviceProviders = ServiceProvider::where('status', 'Active')->orderBy('id','desc')->get();
 
         return view('sales_order.add', compact('salesOrder', 'seasons', 'customers', 'stores', 'sales_agent', 'stockItems', 'colors', 'uoms', 'sizes', 'dynamicSizes', 'nextSoNumber', 'zones', 'shippingMethods', 'transportModes', 'serviceProviders', 'charges'));
 
@@ -791,8 +822,8 @@ class SalesOrderController extends Controller
         $soId = $request->so_id;
         $sleeveType = $request->sleeve_type;
         $size = $request->size;
-        $artNo = $request->art_no;
-        
+		$artNo = $request->art_no;
+		
         $exactMatchQuery = DB::table('stock_entry_items')->where('sku', $code)->where('stock_type', 'finished_goods')->whereNull('deleted_at');
         if ($itemCode) {
             $exactMatchQuery->where('finished_item_code', $itemCode);
@@ -803,7 +834,7 @@ class SalesOrderController extends Controller
         if ($size) {
             $exactMatchQuery->where('size', $size);
         }
-        if ($artNo) {
+		if ($artNo) {
             $exactMatchQuery->where('art_no', $artNo);
         }
         $exactMatch = $exactMatchQuery->first();
@@ -824,7 +855,7 @@ class SalesOrderController extends Controller
             if ($sleeveType) {
                 $query->where('sleeve_type', $sleeveType);
             }
-            if ($size) {
+			if ($size) {
                 $query->where('size', $size);
             }
             if ($artNo) {
@@ -845,8 +876,7 @@ class SalesOrderController extends Controller
         }
 
         $items = $query->select('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku', DB::raw('MAX(stock_entry_items.id) as stock_entry_item_id'), DB::raw('SUM(stock_entry_items.qty_in - stock_entry_items.qty_out) as balance'))
-            ->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku')
-            ->get();
+            ->groupBy('stock_entry_items.finished_item_code', 'stock_entry_items.color_id', 'stock_entry_items.item_id', 'stock_entry_items.art_no', 'stock_entry_items.size', 'stock_entry_items.price', 'stock_entry_items.uom_id', 'stock_entry_items.sleeve_type', 'stock_entry_items.sku')->get();
 
         if ($items->isNotEmpty()) {
             $first = $items->first();
@@ -923,6 +953,14 @@ class SalesOrderController extends Controller
 
             $finalMrp = $itemPrice ? $itemPrice->selling_price : ($item ? $item->mrp : $target->price);
             $finalPrice = $itemPrice ? $itemPrice->unit_price : $target->price;
+            //05-08
+            $api_color = 'A';
+            if ($target->art_no) {
+                $parts = explode('-', (string)$target->art_no);
+                if (count($parts) > 1) {
+                    $api_color = end($parts);
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -933,6 +971,8 @@ class SalesOrderController extends Controller
                 'brand_cat_id' => $item ? $item->brand_category_id : null,
                 'stock_entry_item_id' => $target->stock_entry_item_id ?? $target->id,
                 'color_id' => $target->color_id,
+                // 05-08
+                'api_color' => $api_color,
                 'size' => $target->size,
                 'art_no' => $target->art_no,
                 'price' => $finalPrice,
@@ -1039,19 +1079,21 @@ class SalesOrderController extends Controller
 
     public function syncFromOrderaxe(Request $request, OrderaxeService $orderaxeService)
     {
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
         if (auth()->id() != 1 && !auth()->user()->can('create sales-order')) {
             return unauthorizedRedirect();
         }
 
         $limit = $request->query('limit', 1000);
-        $count = $orderaxeService->syncOrders($limit);
+        $result = $orderaxeService->syncOrders($limit);
 
-
-        if ($count > 0) {
-            return redirect('sales_orders')->with('success', "Successfully synced $count orders from Orderaxe.");
+        if ($result['synced'] > 0 || $result['skipped'] > 0 || $result['failed'] > 0) {
+            $msg = "OrderAxe Order Synced Successfully";
+            return redirect('sales_orders')->with('success', $msg);
         }
 
-        return redirect('sales_orders')->with('error', "No new orders found to sync.");
+        return redirect('sales_orders')->with('info', "No new orders found to sync.");
     }
 
     public function deleteCharge($id)
@@ -1074,6 +1116,8 @@ class SalesOrderController extends Controller
     }
     public function syncOrderaxe(Request $request)
     {
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
         if (auth()->id() != 1 && !auth()->user()->can('create sales-order')) {
             return unauthorizedRedirect();
         }
@@ -1081,9 +1125,10 @@ class SalesOrderController extends Controller
         try {
             $service = new \App\Services\OrderaxeService();
             $limit = $request->query('limit', 1000);
-            $syncCount = $service->syncOrders((int)$limit);
-            if ($syncCount > 0) {
-                return redirect('sales_orders')->with('success', $syncCount . ' orders synced successfully from Orderaxe');
+            $result = $service->syncOrders((int)$limit);
+            if ($result['synced'] > 0 || $result['skipped'] > 0 || $result['failed'] > 0) {
+                $msg = "OrderAxe Order Synced Successfully";
+                return redirect('sales_orders')->with('success', $msg);
             } else {
                 return redirect('sales_orders')->with('info', 'No new orders found to sync from Orderaxe');
             }

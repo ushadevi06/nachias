@@ -27,7 +27,7 @@ class SyncOrderaxeOrders extends Command
     {
         $limit = $this->option('limit');
         $this->info('Starting Orderaxe sync' . ($limit ? " (limit: $limit)" : "") . '...');
-        $count = $orderaxeService->syncOrders($limit);
-        $this->info("Successfully synced $count orders.");
+        $result = $orderaxeService->syncOrders($limit);
+        $this->info("Orderaxe Sync Completed: {$result['synced']} synced, {$result['skipped']} skipped, {$result['failed']} failed.");
     }
 }

@@ -675,6 +675,7 @@ if ($showPrice) $colsAfterQty++;
                     </td>
                 </tr>
             </tbody>
+            @endif
         </table>
         
         <div class="bold" style="margin-top: 5px; display: none;">Amount of Tax(in words) : {{ $totalTaxInWords }}</div>
@@ -752,7 +753,7 @@ if ($showPrice) $colsAfterQty++;
             </tfoot>
         </table>
         @endif
-        
+        @endif
         
         
         <table class="no-border" style="margin-top: 15px; width: 100%;">
@@ -782,6 +783,7 @@ if ($showPrice) $colsAfterQty++;
                 </td>
             </tr>
         </table>
+        @endif
         @endif
     </div>
     @endforeach

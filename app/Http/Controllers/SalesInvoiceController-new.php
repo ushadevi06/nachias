@@ -1989,7 +1989,7 @@ class SalesInvoiceController extends Controller
                 $query->where('brand_id', $request->brand_id);
             }
             if ($request->inv_no) {
-                $query->where('inv_no', $request->inv_no); // Or 'like' but exact match is better if it says "entered invoice number does not exist"
+                $query->where('inv_no', $request->inv_no); 
             }
             if ($request->inv_date_range) {
                 $dates = explode(' to ', $request->inv_date_range);

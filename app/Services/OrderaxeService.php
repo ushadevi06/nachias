@@ -11,6 +11,7 @@ use App\Models\StockEntryItem;
 use App\Models\ItemPrice;
 use App\Models\SalesAgent;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class OrderaxeService
 {
@@ -27,7 +28,7 @@ class OrderaxeService
 
     public function getToken()
     {
-        $response = Http::withOptions(['verify' => false])->post($this->baseUrl . '/script/generateJwt', [
+        $response = Http::withOptions(['verify' => false])->timeout(300)->post($this->baseUrl . '/script/generateJwt', [
             'clientId' => $this->clientId,
             'clientSecret' => $this->clientSecret
         ]);
@@ -48,6 +49,7 @@ class OrderaxeService
         $authHeader = (stripos($token, 'Bearer ') === 0) ? $token : 'Bearer ' . $token;
 
         $response = Http::withOptions(['verify' => false])
+            ->timeout(300)
             ->withHeaders([
                 'Authorization' => $authHeader,
                 'Accept' => 'application/json'
@@ -65,20 +67,50 @@ class OrderaxeService
         return null;
     }
 
-    public function syncOrders($limit = 100)
+    public function syncOrders($limit = 1000)
     {
-        $orders = $this->fetchOrders(0, $limit);
+        $lastTimestamp = \Illuminate\Support\Facades\Cache::get('orderaxe_last_sync_timestamp');
 
-        if (!$orders)
-            return 0;
-
-        $syncCount = 0;
-        foreach ($orders as $orderData) {
-            if ($this->processOrder($orderData)) {
-                $syncCount++;
+        if (!$lastTimestamp) {
+            $latestOrder = \App\Models\SalesOrder::whereNotNull('orderaxe_id')->orderBy('id', 'desc')->first();
+            if ($latestOrder && $latestOrder->created_at) {
+                $lastTimestamp = (strtotime($latestOrder->created_at) - (30 * 24 * 60 * 60)) * 1000;
+            } else {
+                $lastTimestamp = 0;
             }
         }
-        return $syncCount;
+
+        $orders = $this->fetchOrders($lastTimestamp, $limit);
+
+        if (!$orders)
+            return ['synced' => 0, 'skipped' => 0, 'failed' => 0];
+
+        $syncCount = 0;
+        $skipCount = 0;
+        $failCount = 0;
+        $maxTimestamp = $lastTimestamp;
+
+        foreach ($orders as $orderData) {
+            $effectiveDateMs = $orderData['updated_at'] ?? $orderData['created_at'] ?? 0;
+            if ($effectiveDateMs > $maxTimestamp) {
+                $maxTimestamp = (int) $effectiveDateMs;
+            }
+
+            $status = $this->processOrder($orderData);
+            if ($status === 'synced') {
+                $syncCount++;
+            } elseif ($status === 'skipped') {
+                $skipCount++;
+            } else {
+                $failCount++;
+            }
+        }
+
+        if ($maxTimestamp > $lastTimestamp) {
+            \Illuminate\Support\Facades\Cache::put('orderaxe_last_sync_timestamp', $maxTimestamp);
+        }
+
+        return ['synced' => $syncCount, 'skipped' => $skipCount, 'failed' => $failCount];
     }
 
     protected function processOrder($orderData)
@@ -87,25 +119,30 @@ class OrderaxeService
             $orderAxeId = $orderData['_id'] ?? null;
             $orderNo = $orderData['order_no'] ?? null;
 
-            if (!$orderNo) return false;
+            if (!$orderNo) {
+                Log::info('Orderaxe Sync: Skipped order with empty order_no.');
+                return 'skipped';
+            }
 
-            if (in_array($orderNo, ['100008782', '100008821'])) return false;
+            if (in_array($orderNo, ['100008782', '100008821'])) {
+                Log::info('Orderaxe Sync: Skipped ignored order_no.', ['order_no' => $orderNo]);
+                return 'skipped';
+            }
+
+            $existingOrder = SalesOrder::where('order_no', $orderNo)->first();
+            
+            if ($existingOrder) {
+                Log::info("Orderaxe Sync: Skipped existing order_no {$orderNo}");
+                return 'skipped';
+            }
 
             $effectiveDateMs = $orderData['updated_at'] ?? $orderData['created_at'] ?? 0;
             $orderDate = date('Y-m-d');
             if ($effectiveDateMs > 0) {
                 $orderDate = date('Y-m-d', (int)($effectiveDateMs / 1000));
                 if ($orderDate < '2026-07-02') {
-                    return false;
+                    return 'skipped';
                 }
-            }
-
-            $existingOrder = null;
-            if ($orderAxeId) {
-                $existingOrder = SalesOrder::where('orderaxe_id', $orderAxeId)->first();
-            }
-            if (!$existingOrder && $orderNo) {
-                $existingOrder = SalesOrder::where('order_no', $orderNo)->first();
             }
 
             $customerData = $orderData['retailer'] ?? [];
@@ -129,7 +166,7 @@ class OrderaxeService
                     'reference_id' => $referenceId,
                     'order_no' => $orderNo
                 ]);
-                return false;
+                return 'skipped';
             }
 
             $agentId = null;
@@ -167,138 +204,7 @@ class OrderaxeService
                 $deliveryDate = date('Y-m-d', (int)($orderData['delivery_date'] / 1000));
             }
 
-            if ($existingOrder) {
-                $updateData = [];
-                if ($existingOrder->customer_id != $customer->id) {
-                    $updateData['customer_id'] = $customer->id;
-                }
-                if (is_null($existingOrder->agent_id) && $agentId) {
-                    $updateData['agent_id'] = $agentId;
-                }
-                if (is_null($existingOrder->zone_id) && $zoneId) {
-                    $updateData['zone_id'] = $zoneId;
-                }
-                
-                $submittedBy = isset($orderData['updated_by']) && is_array($orderData['updated_by']) && count($orderData['updated_by']) > 0 ? $orderData['updated_by'][0]['name'] : null;
-                if (is_null($existingOrder->submitted_by) && $submittedBy) {
-                    $updateData['submitted_by'] = $submittedBy;
-                }
-
-                if (is_null($existingOrder->orderaxe_ref_id) && $orderaxeRefId) {
-                    $updateData['orderaxe_ref_id'] = $orderaxeRefId;
-                }
-                
-                if (is_null($existingOrder->delivery_date) && $deliveryDate) {
-                    $updateData['delivery_date'] = $deliveryDate;
-                }
-
-                if (is_null($existingOrder->internal_remarks) && !empty($orderData['remarks'])) {
-                    $updateData['internal_remarks'] = $orderData['remarks'];
-                }
-
-                if (!$existingOrder->so_date || $existingOrder->so_date->format('Y-m-d') !== $orderDate) {
-                    $updateData['so_date'] = $orderDate;
-                    $updateData['request_date'] = $orderDate;
-                }
-
-                if (!empty($updateData)) {
-                    $existingOrder->update($updateData);
-                }
-
-                $products = $orderData['products'] ?? [];
-                foreach ($products as $product) {
-                    $combinations = $product['combinations'] ?? [];
-                    foreach ($combinations as $itemData) {
-                        $barcode = $itemData['sku'] ?? $itemData['barcode'] ?? null;
-                        if (!$barcode) continue;
-
-                        $attributes = $itemData['attributes'] ?? [];
-                        $apiColor = null;
-                        $apiSize = null;
-                        $apiFit = null;
-                        foreach ($attributes as $attr) {
-                            $attrId = $attr['attr_id'] ?? null;
-                            $attrName = strtolower($attr['name'] ?? $attr['key'] ?? '');
-                            $attrVal = $attr['value'] ?? $attr['val'] ?? null;
-                            if ($attrId === '672d9a34a4af6e35050547fe' || $attrName === 'color') {
-                                $apiColor = $attrVal;
-                            } elseif ($attrId === '672d9a34a4af6e35050547fd' || $attrName === 'size') {
-                                $apiSize = $attrVal;
-                            } elseif ($attrId === '672d9a34a4af6e35050547ff' || $attrName === 'fit' || $attrName === 'sleeve') {
-                                $apiFit = $attrVal;
-                            }
-                        }
-
-                        $orderaxeItemName = $product['name'] ?? $product['title'] ?? $product['product_name'] ?? $itemData['name'] ?? $itemData['title'] ?? $itemData['variationDescription'] ?? null;
-
-                        $sleeveDbValues = [];
-                        if ($apiFit) {
-                            $apiFitUpper = strtoupper(trim($apiFit));
-                            if ($apiFitUpper === 'FS' || $apiFitUpper === 'F/S' || $apiFitUpper === 'FULL') {
-                                $sleeveDbValues = ['Full', 'F/S', 'Fs', 'Full Sleeve', 'F/S Sleeve'];
-                            } elseif ($apiFitUpper === 'HS' || $apiFitUpper === 'H/S' || $apiFitUpper === 'HALF') {
-                                $sleeveDbValues = ['Half', 'H/S', 'Hs', 'Half Sleeve', 'H/S Sleeve'];
-                            } else {
-                                $sleeveDbValues = [$apiFit];
-                            }
-                        }
-
-                        $stockEntryItemQuery = StockEntryItem::where(function ($q) use ($barcode) {
-                                $q->where('sku', $barcode)
-                                  ->orWhere('barcode', $barcode);
-                            })
-                            ->where('stock_type', 'finished_goods');
-
-                        if (!empty($apiSize)) {
-                            $stockEntryItemQuery->where('size', $apiSize);
-                        }
-
-                        if (!empty($sleeveDbValues)) {
-                            $stockEntryItemQuery->whereIn('sleeve_type', $sleeveDbValues);
-                        }
-
-                        $stockEntryItem = $stockEntryItemQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')
-                            ->orderBy('id', 'desc')
-                            ->first();
-
-                        $updateItemData = [];
-                        
-                        $categoryName = $product['category']['name'] ?? null;
-                        if ($categoryName) {
-                            $updateItemData['category_name'] = $categoryName;
-                        }
-
-                        $categoriesPathVal = $product['categories_path_val'] ?? null;
-                        if ($categoriesPathVal) {
-                            $updateItemData['categories_path_val'] = $categoriesPathVal;
-                        }
-                        
-                        if ($apiColor) {
-                            $updateItemData['api_color'] = $apiColor;
-                        }
-
-                        if ($orderaxeItemName) {
-                            $updateItemData['item_name'] = $orderaxeItemName;
-                        }
-
-                        if ($stockEntryItem) {
-                            $updateItemData['art_no'] = $stockEntryItem->art_no;
-                        } else {
-                            if ($orderaxeItemName) {
-                                $updateItemData['art_no'] = strtoupper(trim(str_ireplace('Aero Cut', '', $orderaxeItemName)));
-                            }
-                        }
-
-                        if (!empty($updateItemData)) {
-                            SalesOrderItem::where('sale_order_id', $existingOrder->id)
-                                ->where('sku', $barcode)
-                                ->update($updateItemData);
-                        }
-                    }
-                }
-                
-                return false;
-            }
+            DB::beginTransaction();
 
             $salesOrder = SalesOrder::create([
                 'so_no'        => SalesOrder::generateSoNo(),
@@ -513,13 +419,15 @@ class OrderaxeService
                 'total_amount' => $grandTotal,
             ]);
 
-            return true;
+            DB::commit();
+            return 'synced';
 
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Orderaxe Sync Error for Order ' . ($orderData['order_no'] ?? 'Unknown'), [
                 'error' => $e->getMessage()
             ]);
-            return false;
+            return 'failed';
         }
     }
     private function formatAddress(array $address): string
