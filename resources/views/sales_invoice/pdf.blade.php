@@ -284,6 +284,96 @@ if ($showPrice) $w_colsAfterQty += $colWidths['price'];
 $colsAfterQty = 0;
 if ($showMrp) $colsAfterQty++;
 if ($showPrice) $colsAfterQty++;
+//changed line 
+$logoPath = public_path('assets/images/jc_logo.png');
+$logoBase64 = '';
+if (file_exists($logoPath)) {
+    $logoData = file_get_contents($logoPath);
+    $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+}
+$qrBase64 = '';
+if (!empty($setting->qr_code)) {
+    $uploadedQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
+    if (file_exists($uploadedQrPath)) {
+        $qrData = file_get_contents($uploadedQrPath);
+        $qrBase64 = 'data:image/' . pathinfo($uploadedQrPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($qrData);
+    }
+}
+if (!$qrBase64) {
+    $qrPath = public_path('assets/images/qr_code.png');
+    if (file_exists($qrPath)) {
+        $qrData = file_get_contents($qrPath);
+        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
+    }
+}
+$einvoiceQr = '';
+if (!empty($invoice->signed_qr_code)) {
+    try {
+        $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->signed_qr_code));
+    } catch (\Exception $e) {
+        \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
+    }
+}
+$PAGE_HEIGHT_PX   = 1075; 
+$HEADER_HEIGHT_PX = 300;  
+$ROW_HEIGHT_PX    = 24;   
+$CONTINUE_NOTE_PX = 30;   
+
+$footerHeight = 0;
+// Base height for the summary table (bank details, notes, signatures)
+$footerHeight += 180; 
+
+$summaryLines = 1;
+if ($showDiscount && ($invoice->discount ?? 0) > 0) $summaryLines++;
+if ($showSubTotal) $summaryLines++;
+if ($showTax) $summaryLines += (!$invoice->other_state ? 2 : 1);
+if (($invoice->other_charges ?? 0) > 0) $summaryLines++;
+$footerHeight += $summaryLines * 16;
+
+if ($showGrandTotal) $footerHeight += 25;
+
+if ($showTax) {
+    $footerHeight += 30; 
+    $footerHeight += (count($taxSummary ?? []) * 18);
+    $footerHeight += 40;
+}
+
+$footerHeight += 140; // Terms and Remarks
+$footerHeight += 20; // Safe Buffer
+
+$contentAreaHeight = $PAGE_HEIGHT_PX - $HEADER_HEIGHT_PX;
+$rowsPerFullPage = max(1, (int) floor(($contentAreaHeight - $CONTINUE_NOTE_PX) / $ROW_HEIGHT_PX));
+$rowsPerLastPage = max(1, (int) floor(($contentAreaHeight - $footerHeight) / $ROW_HEIGHT_PX));
+
+$allItems = collect($invoice->items)->values();
+$totalItemsCount = $allItems->count();
+$MIN_LAST_PAGE_ROWS = 0;
+$pages = [];
+$footerPlacedOnValidChunk = false;
+
+if ($totalItemsCount === 0) {
+    $pages[] = collect();
+    $footerPlacedOnValidChunk = true;
+} else {
+    $remaining = $allItems;
+    while ($remaining->count() > 0) {
+        if ($remaining->count() <= $rowsPerLastPage) {
+            $pages[] = $remaining;
+            $remaining = collect();
+            $footerPlacedOnValidChunk = true;
+        } else {
+            $take = min($rowsPerFullPage, $remaining->count());
+            $pages[] = $remaining->take($take);
+            $remaining = $remaining->slice($take)->values();
+        }
+    }
+}
+
+if (!$footerPlacedOnValidChunk) {
+    $pages[] = collect();
+}
+$totalChunks = count($pages);
+//
 @endphp
 
 <div class="footer-page">
@@ -292,42 +382,172 @@ if ($showPrice) $colsAfterQty++;
 </div>
 
 @foreach($copies as $index => $copyLabel)
-    
-    @php
-    $logoPath = public_path('assets/images/jc_logo.png');
-    $logoBase64 = '';
-    if (file_exists($logoPath)) {
-        $logoData = file_get_contents($logoPath);
-        $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
-    }
-
-    $qrBase64 = '';
-    if (!empty($setting->qr_code)) {
-        $uploadedQrPath = public_path('uploads/qr_code/' . $setting->qr_code);
-        if (file_exists($uploadedQrPath)) {
-            $qrData = file_get_contents($uploadedQrPath);
-            $qrBase64 = 'data:image/' . pathinfo($uploadedQrPath, PATHINFO_EXTENSION) . ';base64,' . base64_encode($qrData);
-        }
-    }
-    if (!$qrBase64) {
-        $qrPath = public_path('assets/images/qr_code.png');
-        if (file_exists($qrPath)) {
-            $qrData = file_get_contents($qrPath);
-            $qrBase64 = 'data:image/png;base64,' . base64_encode($qrData);
-        }
-    }
-
-    $einvoiceQr = '';
-    if (!empty($invoice->signed_qr_code)) {
-        try {
-            $einvoiceQr = 'data:image/svg+xml;base64,' . base64_encode(SimpleSoftwareIO\QrCode\Facades\QrCode::size(80)->generate($invoice->signed_qr_code));
-        } catch (\Exception $e) {
-            \Log::error('E-Invoice QR Generation failed: ' . $e->getMessage());
-        }
-    }
-    @endphp
-    @foreach($pages as $pageIndex => $pageItems)
-    <div class="container" style="{{ ($index < count($copies) - 1 || $pageIndex < count($pages) - 1) ? 'page-break-after: always;' : '' }}">
+    @php $rowCounter = 0; @endphp
+    @foreach($pages as $chunkIndex => $chunk)
+        @php
+            $isLastChunk = ($chunkIndex == $totalChunks - 1);
+        @endphp
+    <div class="container" style="{{ ($index < count($copies) - 1) || !$isLastChunk ? 'page-break-after: always;' : '' }}">
+        <div style="position: relative;">
+            <div style="position: absolute; right: 0; top: 0; text-align: right; width: 100px; z-index: 10;">
+                <div style="font-weight: bold; font-size: 14px;">{{ $copyLabel }}</div>
+                @if($einvoiceQr)
+                    <img src="{{ $einvoiceQr }}" class="qr-code" style="max-width: 100px; margin-top: 5px;">
+                @endif
+            </div>
+            <table class="header-table" style="width: 100%;">
+                <tr>
+                    <td width="70%">
+                        <table style="border: none;">
+                            <tr>
+                                <td style="border: none; vertical-align: top; width:30%;">
+                                    @if($logoBase64)
+                                        <img src="{{ $logoBase64 }}" style="width: 220px;">
+                                    @else
+                                        <img src="{{ isset($is_print) && $is_print ? asset('assets/images/jc_logo.png') : public_path('assets/images/jc_logo.png') }}" style="width: 220px;">
+                                    @endif
+                                 </td>
+                                 <td style="border: none; vertical-align: top; padding-left: 15px; width:75%;" >
+                                     <div style="font-size: 12px; line-height: 1.3;">
+                                         {{ $setting->address }} 
+                                         <table style="width: 100%; border-collapse: collapse; margin-top: 2px; font-size: 12px;">
+                                            <tr>
+                                                <td style="border: none; padding: 0; width: 45px;">Mobile</td>
+                                                <td style="border: none; padding: 0; width: 10px;">:</td>
+                                                <td style="border: none; padding: 0;">{!! implode(', ', array_map('trim', explode(',', $setting->toll_free_no ?? ''))) !!}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border: none; padding: 0;">Email</td>
+                                                <td style="border: none; padding: 0;">:</td>
+                                                <td style="border: none; padding: 0; white-space: nowrap;">{!! implode(', ', array_map('trim', explode(',', $setting->email ?? ''))) !!}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border: none; padding: 0;">GSTIN</td>
+                                                <td style="border: none; padding: 0;">:</td>
+                                                <td style="border: none; padding: 0;">{{ $setting->gst_no ?? '' }}</td>
+                                            </tr>
+                                         </table>
+                                     </div>
+                                 </td>
+                             </tr>
+                         </table>
+                     </td>
+                     <td width="30%">&nbsp;</td>
+                </tr>
+            </table>
+        </div>
+        <div class="header-title">Tax Invoice</div>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
+                        <tr>
+                            <td width="10%">Bill To</td>
+                            <td width="5%">:</td>
+                            <td>
+                                <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
+                                {{ strtoupper($invoice->customer->address_line_1 ?? '') }}<br>
+                                {{ strtoupper($invoice->customer->city->city_name ?? '') }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}<br>
+                                {{ $invoice->customer->mobile_no ?? ''}}
+                            </td>
+                        </tr>   
+                        <tr>
+                            <td width="20%">State</td>
+                            <td width="5%">:</td>
+                            <td width="75%">{{ $invoice->customer->state->state_name ?? 'N/A' }}({{ $invoice->customer->state->state_code ?? '' }})</td>
+                        </tr>
+                        <tr>
+                            <td width="20%">GSTIN</td>
+                            <td width="5%">:</td>
+                            <td width="75%">{{ $invoice->customer->gst_no ?? 'N/A' }}</td>
+                        </tr>
+                    </table>
+                </td>
+                <td width="50%" style="padding: 0; vertical-align: top; border-bottom: 1px solid #000;">
+                    <table class="no-border" style="margin: 0; width: 100%; font-size:12px;">
+                        <tr>
+                            <td width="30%">Invoice No.</td>
+                            <td width="5%">:</td>
+                            <td width="65%">{{ $invoice->inv_no }}</td>
+                        </tr>
+                        <tr>
+                            <td>Invoice Date</td>
+                            <td>:</td>
+                            <td>{{ $invoice->inv_date->format('d/m/Y') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Order No.</td>
+                            <td>:</td>
+                            <td>{{ $invoice->salesOrder->so_no ?? 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <td>Destination</td>
+                            <td>:</td>
+                            <td>{{ $invoice->customer->city->city_name ?? 'N/A' }}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td width="50%" style="padding: 0; vertical-align: top; border-right: 1px solid #000; border-bottom: 1px solid #000;">
+                    <table class="no-border compact-details" style="margin: 0; width: 100%; font-size:12px;">
+                        <tr>
+                            <td width="20%">Ship To</td>
+                            <td width="5%">:</td>
+                            <td>
+                                <span>{{ $invoice->customer->name ?? 'N/A' }}</span><br>
+                                @if($invoice->delivery_address)
+                                    {!! nl2br(e(mb_strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->delivery_address ?? ''), 'UTF-8'))) !!}
+                                @else
+                                   {!! nl2br(e(mb_strtoupper(\App\Models\SalesInvoice::cleanAddress($invoice->customer->address ?? ''), 'UTF-8'))) !!}
+                                    {{ $invoice->customer->city->city_name ?? '' }}{{ $invoice->customer->zip_code ? '-' . $invoice->customer->zip_code : '' }}
+                                @endif <br>
+                                {{ $invoice->customer->mobile_no ?? ''}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td width="20%">State</td>
+                            <td width="5%">:</td>
+                            <td width="75%">{{ $invoice->customer->state->state_name ?? 'N/A' }}({{ $invoice->customer->state->state_code ?? '' }})</td>
+                        </tr>
+                        <tr>
+                            <td width="20%">GSTIN/UIN</td>
+                            <td width="5%">:</td>
+                            <td width="75%">{{ $invoice->customer->gst_no ?? 'N/A' }}</td>
+                        </tr>
+                    </table>
+                </td>
+                <td width="50%" style="padding: 0; vertical-align: top;">
+                    <table class="no-border" style="margin: 0; width: 100%; font-size: 12px;">
+                        <tr>
+                            <td width="30%">Transport</td>
+                            <td width="5%">:</td>
+                            <td width="65%">{{ $invoice->salesOrder->transporter_name ?? '' }}</td>
+                        </tr>
+                        <tr>
+                            <td>Doc No.</td>
+                            <td>:</td>
+                            <td>{{ $invoice->inv_no }}</td>
+                        </tr>
+                        <tr>
+                            <td>Sales Group</td>
+                            <td>:</td>
+                            <td>{{ is_object($invoice->customer->zone) || is_array($invoice->customer->zone) ? ($invoice->customer->zone->zone_name ?? $invoice->customer->zone['zone_name'] ?? 'N/A') : (is_string($invoice->customer->zone) ? json_decode($invoice->customer->zone)->zone_name ?? $invoice->customer->zone : 'N/A') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Sales Executive</td>
+                            <td>:</td>
+                            <td>{{ $invoice->salesOrder->salesAgent->name ?? 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <td>Total Pkgs</td>
+                            <td>:</td>
+                            <td>{{ count($invoice->items) }}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
         <table class="item-table" style="margin-top: 0;  font-size: 11px;">
             <thead style="border-bottom: 1px solid #000; border-top: 1px solid #000;">
                 <tr>
@@ -349,9 +569,10 @@ if ($showPrice) $colsAfterQty++;
                 </tr>
             </thead>
             <tbody>
-                @foreach($pageItems as $itemIndex => $item)
+                @foreach($chunk as $item)
+                    @php $rowCounter++; @endphp
                     <tr>
-                        <td class="text-center">{{ $loop->iteration }}</td>
+                        <td class="text-center">{{ $rowCounter }}</td>
                         <td>
                             @php
                                 $soItem = \App\Models\SalesOrderItem::where('sale_order_id', $invoice->so_id)
@@ -533,17 +754,29 @@ if ($showPrice) $colsAfterQty++;
                     </tr>
                 @endforeach
                 
+                @if($chunk->count() === 0)
+                    @for($j = 0; $j < 10; $j++)
+                        <tr>
+                            <td class="text-center">&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            @if($showMrp)
+                            <td>&nbsp;</td>
+                            @endif
+                            @if($showPrice)
+                            <td>&nbsp;</td>
+                            @endif
+                            @if($showAmount)
+                            <td>&nbsp;</td>
+                            @endif
+                        </tr>
+                    @endfor
+                @endif
             </tbody>
-            
-            @if($pageIndex < count($pages) - 1)
-            <tbody>
-                <tr>
-                    <td colspan="{{ $showAmount ? 9 : 7 }}" class="text-right bold" style="border-top: 1px solid #000000; padding: 10px;">
-                        Continue to Page No. {{ $pageIndex + 2 }}
-                    </td>
-                </tr>
-            </tbody>
-            @else
+            @if($isLastChunk)
             <tbody>
                 <tr>
                     <td style="border-top: none;"></td>
@@ -675,8 +908,9 @@ if ($showPrice) $colsAfterQty++;
                     </td>
                 </tr>
             </tbody>
+            @endif
         </table>
-        
+        @if($isLastChunk)
         <div class="bold" style="margin-top: 5px; display: none;">Amount of Tax(in words) : {{ $totalTaxInWords }}</div>
         @if($showTax)
         <table class="item-table" style="margin-top: 5px; border-bottom: none; border-top: 1px solid #000;">
@@ -752,9 +986,13 @@ if ($showPrice) $colsAfterQty++;
             </tfoot>
         </table>
         @endif
-        
-        
-        
+        @endif
+        @if(!$isLastChunk)
+        <div style="text-align: right; padding: 10px; font-weight: bold; font-size: 13px;">
+            Continue to Page No. {{ $chunkIndex + 2 }}
+        </div>
+        @endif
+        @if($isLastChunk)
         <table class="no-border" style="margin-top: 15px; width: 100%;">
             <tr>
                 <td width="60%" style="vertical-align: top; padding-left: 4px;">
@@ -785,7 +1023,7 @@ if ($showPrice) $colsAfterQty++;
         @endif
     </div>
     @endforeach
-    @endforeach
+@endforeach
     @if(isset($is_print) && $is_print)
     <script>
         window.onload = function() {

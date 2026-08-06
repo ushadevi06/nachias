@@ -1762,11 +1762,13 @@
             var stockAttr = qtyInput.attr('data-stock');
             var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
             var errorDiv = row.find('.qty-error');
+            
+            var isExistingItem = row.find('input[name^="items"][name$="[id]"]').length > 0 && row.find('input[name^="items"][name$="[id]"]').val() !== '';
 
             if (!isNaN(max) && qty > max) {
                 errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                 qtyInput.addClass('is-invalid');
-            } else if (!isNaN(stock) && qty > stock) {
+            } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) {
                 errorDiv.text('Exceeds stock!').show();
                 qtyInput.addClass('is-invalid');
             } else {
@@ -1795,12 +1797,14 @@
                 var stockAttr = qtyInput.attr('data-stock');
                 var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
                 var errorDiv = row.find('.qty-error');
+                
+                var isExistingItem = row.find('input[name^="items"][name$="[id]"]').length > 0 && row.find('input[name^="items"][name$="[id]"]').val() !== '';
 
                 if (!isNaN(max) && qty > max) {
                     errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                     qtyInput.addClass('is-invalid');
                     hasError = true;
-                } else if (!isNaN(stock) && qty > stock) {
+                } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) {
                     errorDiv.text('Exceeds stock!').show();
                     qtyInput.addClass('is-invalid');
                     hasError = true;

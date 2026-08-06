@@ -1761,12 +1761,20 @@ class SalesInvoiceController extends Controller
         foreach ($items as $item) {
             $sku = $item['sku'] ?? null;
             $size = $item['size'] ?? null;
-            $identifier = $sku ? $sku . '_' . $size : ($item['item_name'] ?? $item['art_no'] ?? 'unknown');
+            $stockEntryItemId = $item['stock_entry_item_id'] ?? null;
+            
+            $finishedItemCode = null;
+            if ($stockEntryItemId) {
+                $finishedItemCode = \App\Models\StockEntryItem::where('id', $stockEntryItemId)->value('finished_item_code');
+            }
+            
+            $identifier = $sku ? $sku . '_' . $size . '_' . $finishedItemCode : ($item['item_name'] ?? $item['art_no'] ?? 'unknown');
             
             if (!isset($requiredQuantities[$identifier])) {
                 $requiredQuantities[$identifier] = [
                     'sku' => $sku,
                     'size' => $size,
+                    'finished_item_code' => $finishedItemCode,
                     'qty' => 0,
                     'display' => $sku ?: $identifier
                 ];
@@ -1774,7 +1782,6 @@ class SalesInvoiceController extends Controller
             $requiredQuantities[$identifier]['qty'] += (float)($item['quantity'] ?? 0);
 
             // We still need to ensure stock_entry_item_id is somewhat valid to avoid the "Could not find matching stock" exception below
-            $stockEntryItemId = $item['stock_entry_item_id'] ?? null;
             if (!$stockEntryItemId) {
                 $stockQuery = clone StockEntryItem::where('stock_type', 'finished_goods')->whereNull('deleted_at');
                 if (!empty($item['sku'])) {
@@ -1783,9 +1790,9 @@ class SalesInvoiceController extends Controller
                     });
                 } else {
                     $stockQuery->where(function ($q) use ($item) {
-                        $finishedItemCode = $item['item_name'] ?? ($item['art_no'] ?? '');
-                        $q->where('finished_item_code', $finishedItemCode)
-                          ->orWhere('art_no', $finishedItemCode);
+                        $fic = $item['item_name'] ?? ($item['art_no'] ?? '');
+                        $q->where('finished_item_code', $fic)
+                          ->orWhere('art_no', $fic);
                     });
                 }
                 if (!empty($item['size'])) {
@@ -1794,6 +1801,7 @@ class SalesInvoiceController extends Controller
                 $matchedStockItem = $stockQuery->orderByRaw('(qty_in - qty_out) > 0 DESC')->orderBy('id', 'desc')->first();
                 if ($matchedStockItem) {
                     $stockEntryItemId = $matchedStockItem->id;
+                    $requiredQuantities[$identifier]['finished_item_code'] = $matchedStockItem->finished_item_code;
                 }
             }
 
@@ -1812,6 +1820,9 @@ class SalesInvoiceController extends Controller
                 });
             if ($req['size']) {
                 $stockQuery->where('size', $req['size']);
+            }
+            if ($req['finished_item_code']) {
+                $stockQuery->where('finished_item_code', $req['finished_item_code']);
             }
             
             $totalIn = (clone $stockQuery)->sum('qty_in');

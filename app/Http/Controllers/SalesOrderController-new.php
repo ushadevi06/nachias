@@ -245,35 +245,7 @@ class SalesOrderController extends Controller
                 }
             }
 
-            // Stock validation
-            $requiredQuantities = [];
-            foreach ($request->items as $item) {
-                $sku = $item['sku'] ?? null;
-                if (!$sku) continue;
-                if (!isset($requiredQuantities[$sku])) {
-                    $requiredQuantities[$sku] = [
-                        'qty' => 0,
-                        'name' => $item['item_name'] ?? $item['art_no'] ?? $sku
-                    ];
-                }
-                $requiredQuantities[$sku]['qty'] += (float)($item['qty'] ?? 0);
-            }
 
-            foreach ($requiredQuantities as $sku => $data) {
-                $stockQuery = \App\Models\StockEntryItem::where('stock_type', 'finished_goods')
-                    ->whereNull('deleted_at')
-                    ->where(function ($q) use ($sku) {
-                        $q->where('sku', $sku)->orWhere('barcode', $sku);
-                    });
-                    
-                $totalIn = (clone $stockQuery)->sum('qty_in');
-                $totalOut = (clone $stockQuery)->sum('qty_out');
-                $available = $totalIn - $totalOut;
-
-                if ($available < $data['qty']) {
-                    return back()->withInput()->withErrors(['error' => "Insufficient stock for " . $data['name'] . " (Available: " . $available . ", Required: " . $data['qty'] . ")"]);
-                }
-            }
 
             DB::beginTransaction();
             try {

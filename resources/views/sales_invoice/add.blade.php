@@ -18,6 +18,7 @@
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control @error('inv_no') is-invalid @enderror" id="inv_no" placeholder="Enter Invoice No" name="inv_no" value="{{ old('inv_no', isset($invoice) ? $invoice->inv_no : '') }}">
+                                    <input type="hidden" name="is_manual_inv_no" id="is_manual_inv_no" value="{{ old('is_manual_inv_no', '0') }}">
                                     <label for="inv_no">Invoice No. <span class="text-danger">*</span> </label>
                                     @error('inv_no')
                                         <div class="text-danger small mt-1">{{ $message }}</div>
@@ -122,12 +123,12 @@
                                     <label for="agent_id">Sales Executive</label>
                                 </div>
                             </div>
-                            <div class="col-md-6 col-xl-4">
+                            {{-- <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" step="0.01" class="form-control" id="commission_percent" name="commission_percent" placeholder="Commission %" value="{{ old('commission_percent', isset($invoice) ? $invoice->commission_percent : '') }}">
                                     <label for="commission_percent">Commission %</label>
                                 </div>
-                            </div>
+                            </div> --}}
                             <div class="col-md-6 col-xl-4">
                                 <div class="form-floating form-floating-outline">
                                     <input type="number" min="1" step="1" class="form-control @error('no_of_box') is-invalid @enderror"
@@ -664,7 +665,7 @@
                                     </div>
 
                                     <div class="col-md-6">
-                                        <div class="form-floating form-floating-outline">
+                                        <div class="form-floating form-floating-outline mb-4">
                                             <input type="number" step="any" class="form-control" id="other_charges" name="other_charges" placeholder="Courier Charge" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
                                             <label for="other_charges">Courier Charge</label>
                                         </div>
@@ -858,16 +859,21 @@
                                         <input type="hidden" name="discount" id="discount" value="{{ old('discount', isset($invoice) ? number_format($invoice->discount, 2, '.', '') : '0.00') }}">
                                         <input type="hidden" name="discount_percent" id="discount_percent" value="{{ old('discount_percent', isset($invoice) ? number_format($invoice->discount_percent, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Pre-GST Charges:</span>
+                                        <span class="fw-bold mb-0" id="pre_gst_charges_val">{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="pre_gst_charges" id="pre_gst_charges" value="{{ old('pre_gst_charges', isset($invoice) ? number_format($invoice->pre_gst_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <span class="text-secondary fw-medium">Taxable Amount:</span>
+                                        <span class="text-secondary fw-medium">Net Amount (Before Tax):</span>
                                         <span class="fw-bold h5 mb-0" id="total_val">{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="total" id="total" value="{{ old('total', isset($invoice) ? number_format($invoice->total, 2, '.', '') : '0.00') }}">
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-5">
+                                    {{-- <div class="d-flex justify-content-between align-items-center mb-5">
                                         <span class="text-secondary fw-medium">Commission Amount:</span>
                                         <span class="fw-bold" id="commission_amount_val">{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="commission_amount" id="commission_amount" value="{{ old('commission_amount', isset($invoice) ? number_format($invoice->commission_amount, 2, '.', '') : '0.00') }}">
-                                    </div>
+                                    </div> --}}
                                     <div class="mb-4 pt-2 border-top">
                                         <label class="text-secondary fw-medium mb-2 d-block">Other State?</label>
                                         <div class="d-flex gap-4">
@@ -923,6 +929,16 @@
                                         <span class="fw-bold" id="tax_amount_val">{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}</span>
                                         <input type="hidden" name="tax_amount" id="tax_amount" value="{{ old('tax_amount', isset($invoice) ? number_format($invoice->tax_amount, 2, '.', '') : '0.00') }}">
                                     </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Courier Charge:</span>
+                                        <span class="fw-bold mb-0" id="other_charges_val">{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="other_charges" id="other_charges" value="{{ old('other_charges', isset($invoice) ? number_format($invoice->other_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span class="text-secondary fw-medium">Post GST charges:</span>
+                                        <span class="fw-bold mb-0" id="post_gst_charges_val">{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}</span>
+                                        <input type="hidden" name="post_gst_charges" id="post_gst_charges" value="{{ old('post_gst_charges', isset($invoice) ? number_format($invoice->post_gst_charges, 2, '.', '') : '0.00') }}">
+                                    </div>
                                     <div class="row g-2 align-items-center mb-1 pb-1">
                                         <div class="col-4"><span class="text-secondary fw-medium">Total Before Round Off:</span></div>
                                         <div class="col-8 d-flex align-items-center justify-content-end">
@@ -957,6 +973,17 @@
                         <div class="row g-4">
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
+                                    <select name="transport_mode" id="transport_mode" class="form-select select2" data-placeholder="Select Transport Mode">
+                                        <option value="">Select Transport Mode</option>
+                                        @foreach($transportModes as $mode)
+                                            <option value="{{ $mode->id }}" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == $mode->id ? 'selected' : '' }}>{{ $mode->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label for="transport_mode">Transport Mode</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="transporter_name" name="transporter_name" placeholder="Transporter Name" value="{{ old('transporter_name', isset($invoice) ? $invoice->transporter_name : '') }}">
                                     <label for="transporter_name">Transporter Name</label>
                                 </div>
@@ -965,17 +992,6 @@
                                 <div class="form-floating form-floating-outline">
                                     <input type="text" class="form-control" id="transporter_id" name="transporter_id" placeholder="Transporter GSTIN" value="{{ old('transporter_id', isset($invoice) ? $invoice->transporter_id : '') }}">
                                     <label for="transporter_id">Transporter GSTIN / ID</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
-                                <div class="form-floating form-floating-outline">
-                                    <select name="transport_mode" id="transport_mode" class="form-select select2">
-                                        <option value="1" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '1') == '1' ? 'selected' : '' }}>Road</option>
-                                        <option value="2" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '2' ? 'selected' : '' }}>Rail</option>
-                                        <option value="3" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '3' ? 'selected' : '' }}>Air</option>
-                                        <option value="4" {{ old('transport_mode', isset($invoice) ? $invoice->transport_mode : '') == '4' ? 'selected' : '' }}>Ship</option>
-                                    </select>
-                                    <label for="transport_mode">Transport Mode</label>
                                 </div>
                             </div>
                             <div class="col-md-6 col-xl-3">
@@ -995,7 +1011,18 @@
                             </div>
                             <div class="col-md-6 col-xl-3">
                                 <div class="form-floating form-floating-outline">
-                                    <input type="number" class="form-control" id="transport_distance" name="transport_distance" placeholder="Distance (in km)" value="{{ old('transport_distance', isset($invoice) ? $invoice->transport_distance : '') }}">
+                                    <style>
+                                        /* Hide spinners for number input */
+                                        input[type=number].no-spinners::-webkit-inner-spin-button, 
+                                        input[type=number].no-spinners::-webkit-outer-spin-button { 
+                                            -webkit-appearance: none; 
+                                            margin: 0; 
+                                        }
+                                        input[type=number].no-spinners {
+                                            -moz-appearance: textfield;
+                                        }
+                                    </style>
+                                    <input type="number" step="any" class="form-control no-spinners" id="transport_distance" name="transport_distance" placeholder="Distance (in km)" value="{{ old('transport_distance', isset($invoice) ? $invoice->transport_distance : '') }}" onkeydown="if(event.key==='ArrowUp' || event.key==='ArrowDown') event.preventDefault();">
                                     <label for="transport_distance">Distance (in km)</label>
                                 </div>
                             </div>
@@ -1025,7 +1052,60 @@
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
+    function updateColorFromArtNo($row) {
+        let artNo = $row.find('input[name$="[art_no]"]').val();
+        if (!artNo) {
+            artNo = $row.find('.art-no-text').text();
+        }
+        if (!artNo) {
+            artNo = $row.find('.art-no').val();
+        }
+        artNo = String(artNo || '').trim();
+        
+        let color = 'A';
+        if (artNo) {
+            let parts = artNo.split('-');
+            if (parts.length > 1) {
+                color = parts[parts.length - 1];
+            }
+        }
+        
+        let $colorSpan = $row.find('.color-text');
+        if ($colorSpan.length) $colorSpan.text(color);
+        
+        let $colorInput = $row.find('input[name$="[api_color]"], .api-color');
+        if ($colorInput.length) {
+            $colorInput.val(color);
+            $colorInput.prop('readonly', true).attr('tabindex', '-1');
+        }
+        
+        let $colorName = $row.find('input[name$="[color_name]"], .color-name');
+        if ($colorName.length) $colorName.val(color);
+    }
+
     $(document).ready(function() {
+        $('.item-row').each(function() {
+            updateColorFromArtNo($(this));
+        });
+
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                    $(mutation.addedNodes).each(function() {
+                        if (typeof $(this).hasClass === 'function' && $(this).hasClass('item-row')) {
+                            updateColorFromArtNo($(this));
+                        }
+                    });
+                }
+            });
+        });
+        
+        if (document.getElementById('item-rows')) {
+            observer.observe(document.getElementById('item-rows'), { childList: true, subtree: true });
+        }
+        if (document.getElementById('open-order-item-rows')) {
+            observer.observe(document.getElementById('open-order-item-rows'), { childList: true, subtree: true });
+        }
         $('.select2').select2({
             width: '100%',
             dropdownParent: $('body')
@@ -1126,8 +1206,10 @@
                             if(data.transport_gst_no && !$('#transporter_id').val()) {
                                 $('#transporter_id').val(data.transport_gst_no);
                             }
-                            if(data.transport_mode_id && !$('#transport_mode').val()) {
+                            if(data.transport_mode_id) {
                                 $('#transport_mode').val(data.transport_mode_id).trigger('change');
+                            } else {
+                                $('#transport_mode').val('').trigger('change');
                             }
                             if (data.other_state == 'yes') {
                                 $('#other_state_yes').prop('checked', true);
@@ -1145,6 +1227,18 @@
                             if (data.sales_discount !== undefined) {
                                 $('#sales_discount_val').text(parseFloat(data.sales_discount).toFixed(2) + '%');
                                 $('#sales_discount').val(parseFloat(data.sales_discount).toFixed(2));
+                            }
+                             if (data.pre_gst_charges !== undefined) {
+                                $('#pre_gst_charges_val').text(parseFloat(data.pre_gst_charges).toFixed(2));
+                                $('#pre_gst_charges').val(parseFloat(data.pre_gst_charges).toFixed(2));
+                            }
+                            if (data.courier_charge !== undefined) {
+                                $('#other_charges_val').text(parseFloat(data.courier_charge).toFixed(2));
+                                $('#other_charges').val(parseFloat(data.courier_charge).toFixed(2));
+                            }
+                            if (data.post_gst_charges !== undefined) {
+                                $('#post_gst_charges_val').text(parseFloat(data.post_gst_charges).toFixed(2));
+                                $('#post_gst_charges').val(parseFloat(data.post_gst_charges).toFixed(2));
                             }
                             if (data.box_discount_amount !== undefined) {
                                 $('#box_discount_amount_val').text('₹' + parseFloat(data.box_discount_amount).toFixed(2));
@@ -1184,12 +1278,10 @@
             }
             var existingRow = null;
             $('#item-rows .item-row').each(function() {
-                var rowArtNo = $(this).find('.art-no').val();
-                if (rowArtNo == (matchedItem.art_no || '') && 
+                if ($(this).find('.sku').val() == (matchedItem.sku || '') && 
+                    $(this).find('.art-no').val() == (matchedItem.art_no || '') && 
                     $(this).find('.size-id').val() == (matchedItem.size_id || '') && 
-                    $(this).find('.color-id').val() == (matchedItem.color_id || '') &&
-                    $(this).find('.sleeve-type').val() == (matchedItem.sleeve || '') &&
-                    $(this).find('.sku').val() == (matchedItem.sku || '')) {
+                    $(this).find('.sleeve-type').val() == (matchedItem.sleeve || matchedItem.sleeve_type || '')) {
                     existingRow = $(this);
                 }
             });
@@ -1347,8 +1439,11 @@
                 return false;
             },
             select: function (event, ui) {
+                event.preventDefault();
                 if (ui.item && ui.item.noResult) {
-                    event.preventDefault();
+                    return false;
+                }
+                if (ui.item && ui.item.disabled) {
                     return false;
                 }
 
@@ -1539,7 +1634,8 @@
             $('#discount_val').text('- ₹' + discount.toFixed(2));
             $('#discount').val(discount.toFixed(2));
 
-            var total = subTotal - discount;
+            var preGstCharges = parseFloat($('#pre_gst_charges').val()) || 0;
+            var total = subTotal - discount + preGstCharges;
             $('#total_val').text(total.toFixed(2));
             $('#total').val(total.toFixed(2));
 
@@ -1578,8 +1674,9 @@
             $('#tax_amount').val(taxAmount.toFixed(2));
 
             var otherCharges = parseFloat($('#other_charges').val()) || 0;
+            var postGstCharges = parseFloat($('#post_gst_charges').val()) || 0;
 
-            var totalBeforeRoundOff = total + taxAmount + otherCharges;
+           var totalBeforeRoundOff = total + taxAmount + otherCharges + postGstCharges;
             $('#total_before_round_off').val(totalBeforeRoundOff.toFixed(2));
             
             var nearestWhole = Math.round(totalBeforeRoundOff);
@@ -1600,10 +1697,9 @@
             $('#grand_total').val(grandTotal.toFixed(2));
         }
 
-        // Expose to global scope so that functions outside this $(document).ready block can call it
         window.calculateTotals = calculateTotals;
 
-        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #received_amount', function() {
+        $(document).on('input', '#sales_discount, #box_discount_amount, #discount_percent, #commission_percent, #igst_percent, #cgst_percent, #sgst_percent, #other_charges, #pre_gst_charges, #post_gst_charges, #received_amount', function() {
             calculateTotals();
         });
 
@@ -1657,11 +1753,13 @@
             var stockAttr = qtyInput.attr('data-stock');
             var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
             var errorDiv = row.find('.qty-error');
+            
+            var isExistingItem = row.find('input[name^="items"][name$="[id]"]').length > 0 && row.find('input[name^="items"][name$="[id]"]').val() !== '';
 
             if (!isNaN(max) && qty > max) {
                 errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                 qtyInput.addClass('is-invalid');
-            } else if (!isNaN(stock) && qty > stock) {
+            } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) {
                 errorDiv.text('Exceeds stock!').show();
                 qtyInput.addClass('is-invalid');
             } else {
@@ -1690,12 +1788,14 @@
                 var stockAttr = qtyInput.attr('data-stock');
                 var stock = (stockAttr !== undefined && stockAttr !== '') ? parseFloat(stockAttr) : NaN;
                 var errorDiv = row.find('.qty-error');
+                
+                var isExistingItem = row.find('input[name^="items"][name$="[id]"]').length > 0 && row.find('input[name^="items"][name$="[id]"]').val() !== '';
 
                 if (!isNaN(max) && qty > max) {
                     errorDiv.text('Exceeds ordered qty (' + max + ')').show();
                     qtyInput.addClass('is-invalid');
                     hasError = true;
-                } else if (!isNaN(stock) && qty > stock) {
+                } else if (!isNaN(stock) && qty > stock && (!window.isEditMode || !isExistingItem)) {
                     errorDiv.text('Exceeds stock!').show();
                     qtyInput.addClass('is-invalid');
                     hasError = true;
@@ -2032,16 +2132,29 @@
                     .appendTo(ul);
             }
 
+            // Calculate stock status
+            let balance = parseFloat(item.balance) || 0;
+            let outOfStock = balance <= 0;
+
             let skuInfo = item.sku ? ` | SKU: ${item.sku}` : '';
-            return $("<li>")
-                .append(`<div class="ui-menu-item-wrapper">
+            let stockHtml = outOfStock 
+                ? `<span class="search-item-balance text-danger fw-bold">Stock: ${balance.toFixed(2)}<br>OUT OF STOCK</span>`
+                : `<span class="search-item-balance">Stock: ${balance.toFixed(2)}</span>`;
+
+            let $li = $("<li>").append(`<div class="ui-menu-item-wrapper">
                     <span class="search-item-title">${item.label}</span>
-                    <span class="search-item-balance">Stock: ${parseFloat(item.balance).toFixed(2)}</span>
+                    ${stockHtml}
                     <div class="search-item-info">
                         Art No: ${item.art_no || '-'} ${skuInfo} | Price: ₹${parseFloat(item.price).toFixed(2)}
                     </div>
-                </div>`)
-                .appendTo(ul);
+                </div>`).appendTo(ul);
+                
+            if (outOfStock) {
+                $li.addClass('ui-state-disabled');
+                $li.css('opacity', '0.6');
+                item.disabled = true;
+            }
+            return $li;
         };
 
         $('#open_order_barcode_scanner').on('keypress', function(e) {
@@ -2287,6 +2400,10 @@
             return (month >= 4) ? year : (year - 1);
         }
 
+        $('#inv_no').on('input', function() {
+            $('#is_manual_inv_no').val('1');
+        });
+
         function updateInvoiceNo() {
             let brandId = $('#brand_id').val();
             let invDate = $('input[name="inv_date"]').val();
@@ -2311,6 +2428,7 @@
                 success: function(response) {
                     if (response.success) {
                         $('#inv_no').val(response.inv_no);
+                        $('#is_manual_inv_no').val('0');
                     } else {
                         console.error(response.message);
                     }
